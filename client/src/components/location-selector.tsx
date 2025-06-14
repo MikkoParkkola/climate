@@ -12,6 +12,7 @@ interface LocationSelectorProps {
   selectedLocation?: ClimateLocation;
   selectedYear: number;
   onLocationChange: (location: ClimateLocation) => void;
+  onLocationSelect: (latitude: number, longitude: number) => void;
   onYearChange: (year: number) => void;
   onGetProjection: () => void;
   onCompareMode: () => void;
@@ -25,6 +26,7 @@ export default function LocationSelector({
   selectedLocation,
   selectedYear,
   onLocationChange,
+  onLocationSelect,
   onYearChange,
   onGetProjection,
   onCompareMode,
@@ -64,14 +66,11 @@ export default function LocationSelector({
   }, [searchQuery, handleSearch]);
 
   const handleSelectSearchResult = (result: {name: string, latitude: number, longitude: number}) => {
-    const location: ClimateLocation = {
-      id: 0, // Will be set by API
-      name: result.name,
-      latitude: result.latitude,
-      longitude: result.longitude,
-    };
+    console.log('Search result selected:', result);
     
-    onLocationChange(location);
+    // Call the location creation flow directly
+    onLocationSelect(result.latitude, result.longitude);
+    
     setSearchQuery("");
     setShowResults(false);
   };

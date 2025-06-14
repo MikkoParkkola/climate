@@ -204,6 +204,7 @@ export default function ClimateDashboard() {
                   selectedLocation={selectedLocation}
                   selectedYear={selectedYear}
                   onLocationChange={setSelectedLocation}
+                  onLocationSelect={handleLocationSelect}
                   onYearChange={setSelectedYear}
                   onGetProjection={handleGetProjection}
                   onCompareMode={() => setComparisonMode(!comparisonMode)}
