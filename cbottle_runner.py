@@ -402,7 +402,7 @@ def calculate_flood_risk(monthly_precip, latitude):
     
     # Risk from seasonal concentration
     precip_std = np.std(monthly_precip)
-    seasonal_factor = min(0.6, float(precip_std) / 100) * infrastructure_factor
+    seasonal_factor = min(0.6, precip_std / 100) * infrastructure_factor
     
     return min(1.0, (extreme_factor + seasonal_factor) / 2.0)
 
@@ -494,16 +494,15 @@ def calculate_habitability_score(temps, precip, heat_days, drought_risk, flood_r
     final_score = base_score - heat_penalty - drought_penalty - flood_penalty - extreme_temp_penalty - extreme_dry_penalty
     
     # Return both overall score and detailed breakdown
-    # Penalties should be negative values for proper waterfall chart display
     breakdown = {
         'temperature_comfort': temp_component,
         'precipitation_adequacy': precip_component,
         'infrastructure_adaptation': infrastructure_component,
-        'heat_stress_penalty': -heat_penalty,  # Negative for waterfall chart
-        'drought_risk_penalty': -drought_penalty,  # Negative for waterfall chart
-        'flood_risk_penalty': -flood_penalty,  # Negative for waterfall chart
-        'extreme_temperature_penalty': -extreme_temp_penalty,  # Negative for waterfall chart
-        'extreme_aridity_penalty': -extreme_dry_penalty,  # Negative for waterfall chart
+        'heat_stress_penalty': heat_penalty,
+        'drought_risk_penalty': drought_penalty,
+        'flood_risk_penalty': flood_penalty,
+        'extreme_temperature_penalty': extreme_temp_penalty,
+        'extreme_aridity_penalty': extreme_dry_penalty,
         'base_score': base_score,
         'final_score': max(10, min(100, final_score))
     }
@@ -760,42 +759,16 @@ def generate_global_habitability_rankings(target_year):
             else:
                 humidity_score = max(30, 60 - abs(future_annual_precip - 900) / 60)
             
-            # Infrastructure adaptation score (based on actual infrastructure and wealth)
+            # Infrastructure adaptation score (climate zone based)
             abs_lat = abs(location["lat"])
-            
-            # Major developed cities with excellent climate infrastructure
-            high_infrastructure_cities = [
-                "Netherlands", "Denmark", "Singapore", "Switzerland", "Norway", "Sweden", 
-                "Finland", "Germany", "Japan", "South Korea", "Australia", "Canada",
-                "United Kingdom", "New Zealand", "Austria", "Luxembourg"
-            ]
-            
-            # Check if location is in a well-developed region
-            is_developed = False
-            # Northern Europe (excellent infrastructure)
-            if 50 <= abs_lat <= 70 and -10 <= location["lng"] <= 30:
-                is_developed = True
-            # North America (developed regions)
-            elif 30 <= abs_lat <= 60 and -130 <= location["lng"] <= -60:
-                is_developed = True
-            # East Asia developed (Japan, South Korea, Singapore)
-            elif 25 <= abs_lat <= 45 and 120 <= location["lng"] <= 145:
-                is_developed = True
-            # Australia/New Zealand
-            elif -45 <= location["lat"] <= -25 and 110 <= location["lng"] <= 180:
-                is_developed = True
-            
-            if is_developed:
-                infrastructure_score = 85 + np.random.uniform(-5, 10)  # 80-95 range
-            elif 30 <= abs_lat <= 50:  # Mid-latitude developing regions
-                infrastructure_score = 60 + np.random.uniform(-10, 15)  # 50-75 range
-            elif abs_lat < 30:  # Tropical/subtropical (more challenging)
-                infrastructure_score = 45 + np.random.uniform(-10, 20)  # 35-65 range
-            else:  # Extreme latitudes (harsh conditions)
-                infrastructure_score = 40 + np.random.uniform(-15, 25)  # 25-65 range
-            
-            # Ensure reasonable bounds
-            infrastructure_score = max(20, min(95, infrastructure_score))
+            if 45 <= abs_lat <= 65:  # Northern cities with excellent infrastructure
+                infrastructure_score = 95
+            elif 20 <= abs_lat <= 45:  # Temperate cities
+                infrastructure_score = 85
+            elif abs_lat < 20:  # Tropical cities
+                infrastructure_score = 75
+            else:  # Extreme latitudes
+                infrastructure_score = 65
             
             # Calculate change
             habitability_change = future_habitability - baseline_habitability

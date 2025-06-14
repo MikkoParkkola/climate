@@ -25,8 +25,6 @@ export interface ClimateProjection {
   floodingRisk?: number;
   monthlyTemperatures?: string;
   monthlyPrecipitation?: string;
-  baselineMonthlyTemperatures?: string;
-  baselineMonthlyPrecipitation?: string;
   // Enhanced habitability and environmental data
   habitabilityScore?: number;
   habitabilityBreakdown?: {

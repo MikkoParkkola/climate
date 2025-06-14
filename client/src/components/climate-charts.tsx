@@ -57,11 +57,9 @@ export default function ClimateCharts({ currentData, projectedData, selectedYear
     const ctx = temperatureChartRef.current.getContext('2d');
     if (!ctx) return;
 
-    const currentTemps = currentData?.baselineMonthlyTemperatures ? 
-      parseMonthlyData(currentData.baselineMonthlyTemperatures) :
-      (currentData?.monthlyTemperatures ? 
-        parseMonthlyData(currentData.monthlyTemperatures) :
-        generateDefaultTemperatureData(currentData?.averageTemperature));
+    const currentTemps = currentData?.monthlyTemperatures ? 
+      parseMonthlyData(currentData.monthlyTemperatures) :
+      generateDefaultTemperatureData(currentData?.averageTemperature);
 
     const projectedTemps = projectedData?.monthlyTemperatures ?
       parseMonthlyData(projectedData.monthlyTemperatures) :
@@ -162,11 +160,9 @@ export default function ClimateCharts({ currentData, projectedData, selectedYear
     const ctx = precipitationChartRef.current.getContext('2d');
     if (!ctx) return;
 
-    const currentPrecip = currentData?.baselineMonthlyPrecipitation ?
-      parseMonthlyData(currentData.baselineMonthlyPrecipitation) :
-      (currentData?.monthlyPrecipitation ?
-        parseMonthlyData(currentData.monthlyPrecipitation) :
-        generateDefaultPrecipitationData(currentData?.annualPrecipitation ? currentData.annualPrecipitation / 12 : undefined));
+    const currentPrecip = currentData?.monthlyPrecipitation ?
+      parseMonthlyData(currentData.monthlyPrecipitation) :
+      generateDefaultPrecipitationData(currentData?.annualPrecipitation ? currentData.annualPrecipitation / 12 : undefined);
 
     const projectedPrecip = projectedData?.monthlyPrecipitation ?
       parseMonthlyData(projectedData.monthlyPrecipitation) :

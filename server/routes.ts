@@ -63,7 +63,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       if (projection) {
         projection.dataSource = "NVIDIA_API";
-        projection.fetchedAt = new Date().toISOString();
+        projection.fetchedAt = new Date();
         console.log(`✅ SUCCESS: NVIDIA API returned data for ${locationId}/${year}`);
         
         // Save to database but with fresh timestamp
@@ -103,7 +103,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       if (projection) {
         projection.dataSource = "NVIDIA_API";
-        projection.fetchedAt = new Date().toISOString();
+        projection.fetchedAt = new Date();
         console.log(`✅ SUCCESS: NVIDIA API returned data for ${locationId}/${year}`);
         
         // Save to database but with fresh timestamp
@@ -407,8 +407,6 @@ async function fetchClimateProjectionFromAPI(locationId: number, year: number) {
       floodingRisk: calculateRiskScore(climateData.sea_level.flood_risk),
       monthlyTemperatures: JSON.stringify(climateData.temperature.monthly),
       monthlyPrecipitation: JSON.stringify(climateData.precipitation.monthly),
-      baselineMonthlyTemperatures: climateData.temperature.baseline_monthly ? JSON.stringify(climateData.temperature.baseline_monthly) : null,
-      baselineMonthlyPrecipitation: climateData.precipitation.baseline_monthly ? JSON.stringify(climateData.precipitation.baseline_monthly) : null,
       habitabilityScore: calculateHabitabilityScore(climateData),
       habitabilityBreakdown: climateData.habitability?.breakdown ? JSON.stringify(climateData.habitability.breakdown) : null,
       elevationChange: climateData.elevation.change_from_baseline,
