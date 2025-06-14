@@ -7,7 +7,7 @@ export const climateApi = {
     return response.json();
   },
 
-  createLocation: async (location: Omit<ClimateLocation, 'id' | 'createdAt'>): Promise<ClimateLocation> => {
+  createLocation: async (location: { name: string; latitude: number; longitude: number; country?: string; region?: string }): Promise<ClimateLocation> => {
     const response = await apiRequest("POST", "/api/locations", location);
     return response.json();
   },
@@ -91,5 +91,9 @@ export const geocodingUtils = {
       console.error("Location search error:", error);
       return [];
     }
+  },
+
+  getLocationName: async (latitude: number, longitude: number): Promise<string> => {
+    return geocodingUtils.reverseGeocode(latitude, longitude);
   }
 };

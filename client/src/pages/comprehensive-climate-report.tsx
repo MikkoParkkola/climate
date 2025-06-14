@@ -124,13 +124,16 @@ export default function ComprehensiveClimateReport() {
 
   const createLocationMutation = useMutation({
     mutationFn: async (locationData: { name: string; latitude: number; longitude: number; country?: string; region?: string }) => {
+      console.log("Creating location with data:", locationData);
       return await climateApi.createLocation(locationData);
     },
     onSuccess: (newLocation) => {
+      console.log("Location created successfully:", newLocation);
       setSelectedLocation(newLocation);
       queryClient.invalidateQueries({ queryKey: ['/api/projections'] });
     },
     onError: (error: Error) => {
+      console.error("Location creation failed:", error);
       setApiError(error.message);
       toast({
         title: "Location Creation Failed",
@@ -158,7 +161,7 @@ export default function ComprehensiveClimateReport() {
       setApiError(null);
 
       // Get location name from coordinates
-      const locationName = await geocodingUtils.getLocationName(latitude, longitude);
+      const locationName = await geocodingUtils.reverseGeocode(latitude, longitude);
       
       const locationData = {
         name: locationName,
