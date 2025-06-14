@@ -516,35 +516,138 @@ export default function ComprehensiveClimateReport() {
               </CardContent>
             </Card>
 
-            {/* Climate Data Visualization */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Climate Summary</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <ClimateSummary
-                    currentData={currentData}
-                    projectedData={projectionData}
-                    selectedYear={selectedYear}
-                  />
-                </CardContent>
-              </Card>
+            {/* Climate Summary */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <BarChart3 className="h-5 w-5" />
+                  Climate Summary Overview
+                </CardTitle>
+                <div className="text-sm text-gray-600 mt-2">
+                  <p><strong>Climate summary interpretation:</strong> This section provides a comprehensive overview of all climate metrics. 
+                  Values show projected conditions compared to current baseline. Temperature and precipitation changes indicate climate shifts, 
+                  while risk metrics show potential impacts on human activities and natural systems.</p>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <ClimateSummary
+                  currentData={currentData}
+                  projectedData={projectionData}
+                  selectedYear={selectedYear}
+                />
+              </CardContent>
+            </Card>
 
-              <Card>
-                <CardHeader>
-                  <CardTitle>Temperature & Precipitation Charts</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <ClimateCharts
-                    currentData={currentData}
-                    projectedData={projectionData}
-                    selectedYear={selectedYear}
-                    onExport={handleExportData}
-                  />
-                </CardContent>
-              </Card>
-            </div>
+            {/* Temperature Analysis */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <TrendingUp className="h-5 w-5" />
+                  Temperature Analysis
+                </CardTitle>
+                <div className="text-sm text-gray-600 mt-2">
+                  <p><strong>Reading temperature data:</strong> Annual average shows year-round temperature, monthly data reveals seasonal patterns. 
+                  Temperature changes indicate warming trends compared to current conditions. 
+                  Positive values mean warmer temperatures, negative values mean cooler temperatures.</p>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  {/* Temperature Chart */}
+                  <div>
+                    <h4 className="text-lg font-semibold mb-4">Temperature Trends</h4>
+                    <ClimateCharts
+                      currentData={currentData}
+                      projectedData={projectionData}
+                      selectedYear={selectedYear}
+                      onExport={handleExportData}
+                    />
+                  </div>
+                  
+                  {/* Monthly Temperature Data */}
+                  <div>
+                    <h4 className="text-lg font-semibold mb-4">Monthly Temperature Breakdown</h4>
+                    {projectionData?.temperature?.monthly && (
+                      <div className="space-y-3">
+                        <div className="grid grid-cols-3 gap-2 text-sm">
+                          {['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'].map((month, index) => (
+                            <div key={month} className="bg-gray-50 p-2 rounded text-center">
+                              <div className="font-medium text-xs text-gray-600">{month}</div>
+                              <div className="text-sm font-semibold">
+                                {projectionData.temperature.monthly[index]?.toFixed(1)}°C
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                        <div className="text-xs text-gray-500 mt-2">
+                          <p><strong>Seasonal patterns:</strong> Northern hemisphere locations show coldest temperatures in January-February and warmest in July-August. 
+                          Southern hemisphere shows opposite pattern. Temperature variations increase with distance from equator.</p>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Precipitation Analysis */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <BarChart3 className="h-5 w-5" />
+                  Precipitation Analysis
+                </CardTitle>
+                <div className="text-sm text-gray-600 mt-2">
+                  <p><strong>Reading precipitation data:</strong> Annual total shows yearly rainfall/snowfall amount, monthly data reveals wet and dry seasons. 
+                  Precipitation changes indicate shifts in rainfall patterns. 
+                  Higher values generally mean more water availability, but extreme values can indicate flooding risks.</p>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  {/* Precipitation Chart */}
+                  <div>
+                    <h4 className="text-lg font-semibold mb-4">Precipitation Trends</h4>
+                    <div className="h-64 bg-gradient-to-br from-blue-50 to-cyan-50 rounded-lg flex items-center justify-center">
+                      <div className="text-center">
+                        <div className="text-2xl font-bold text-blue-700">
+                          {projectionData?.precipitation?.annual_total?.toFixed(0)}mm
+                        </div>
+                        <div className="text-sm text-blue-600">Annual Total</div>
+                        <div className="text-xs text-blue-500 mt-2">
+                          Change: {projectionData?.precipitation?.change_from_baseline > 0 ? '+' : ''}
+                          {projectionData?.precipitation?.change_from_baseline?.toFixed(0)}mm
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  {/* Monthly Precipitation Data */}
+                  <div>
+                    <h4 className="text-lg font-semibold mb-4">Monthly Precipitation Breakdown</h4>
+                    {projectionData?.precipitation?.monthly && (
+                      <div className="space-y-3">
+                        <div className="grid grid-cols-3 gap-2 text-sm">
+                          {['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'].map((month, index) => (
+                            <div key={month} className="bg-blue-50 p-2 rounded text-center">
+                              <div className="font-medium text-xs text-gray-600">{month}</div>
+                              <div className="text-sm font-semibold text-blue-700">
+                                {projectionData.precipitation.monthly[index]}mm
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                        <div className="text-xs text-gray-500 mt-2">
+                          <p><strong>Seasonal patterns:</strong> Tropical regions often have distinct wet/dry seasons. 
+                          Temperate regions typically receive more precipitation in winter. 
+                          Mediterranean climates show dry summers and wet winters.</p>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
 
             {/* Habitability Assessment */}
             <Card>
