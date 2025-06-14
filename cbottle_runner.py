@@ -138,13 +138,13 @@ def get_baseline_temperature(latitude, longitude=None):
                         (10 <= longitude <= 35 and 15 <= abs_lat <= 30) or   # Sahara
                         (-125 <= longitude <= -100 and 25 <= abs_lat <= 40))  # SW US/Mexico
         if is_desert:
-            base_temp = 28.0 - (abs_lat - 23.5) * 0.2  # Hot desert gradient
+            base_temp = 25.0 - (abs_lat - 23.5) * 0.15  # Hot desert gradient (Cairo ~22°C)
         else:
-            base_temp = 26.5 - (abs_lat - 23.5) * 0.57  # ~20°C at 35°N
+            base_temp = 23.0 - (abs_lat - 23.5) * 0.57  # Mediterranean gradient (Madrid ~15°C)
     elif abs_lat < 45:  # Temperate zone
-        base_temp = 20.0 - (abs_lat - 35) * 0.8  # ~12°C at 45°N
+        base_temp = 17.0 - (abs_lat - 35) * 0.7  # Reduced baseline (Prague ~10°C)
     elif abs_lat < 55:  # Cool temperate zone
-        base_temp = 12.0 - (abs_lat - 45) * 0.2  # ~10°C at 55°N
+        base_temp = 10.0 - (abs_lat - 45) * 0.3  # Reduced for Northern Europe (Helsinki ~6°C)
     elif abs_lat < 65:  # Subarctic zone
         base_temp = 10.0 - (abs_lat - 55) * 0.4  # ~6°C at 60°N, ~2°C at 65°N
     else:  # Arctic zone
@@ -170,23 +170,20 @@ def get_baseline_precipitation(latitude, longitude):
     """Get realistic baseline precipitation based on actual meteorological data"""
     abs_lat = abs(latitude)
     
-    # Desert climate detection (major arid regions)
-    is_desert = False
-    if 20 <= abs_lat <= 35:  # Desert belt latitudes
-        # Sahara, Arabian Peninsula, Middle East (excluding Mediterranean coast)
-        if 25 <= longitude <= 55 and 20 <= abs_lat <= 35:  # Arabian Peninsula core
-            is_desert = True
-        elif 10 <= longitude <= 35 and 15 <= abs_lat <= 30:  # Sahara core
-            is_desert = True
+    # Desert climate detection (major arid regions) - Early return for desert regions
+    if 15 <= abs_lat <= 35:  # Desert belt latitudes
+        # Arabian Peninsula/Middle East deserts (Dubai, Riyadh, etc.)
+        if 20 <= longitude <= 60 and 15 <= abs_lat <= 35:
+            return 100  # Dubai ~96mm, Riyadh ~100mm
+        # Sahara desert (Cairo, etc.)
+        elif 10 <= longitude <= 35 and 15 <= abs_lat <= 30:
+            return 25   # Cairo ~25mm
         # Southwestern US, Northern Mexico
-        elif -125 <= longitude <= -100:
-            is_desert = True
-        # Australian interior deserts (excluding coastal cities)
+        elif -125 <= longitude <= -100 and 25 <= abs_lat <= 40:
+            return 50   # Phoenix ~20mm, Las Vegas ~100mm
+        # Australian interior deserts
         elif 115 <= longitude <= 145 and 20 <= abs_lat <= 30:
-            is_desert = True
-    
-    if is_desert:
-        return 25  # Desert precipitation (Cairo: ~25mm, Phoenix: ~20mm)
+            return 80   # Alice Springs ~280mm (semi-arid)
     
     # Location-specific precipitation adjustments based on longitude
     longitude_factor = 1.0
