@@ -386,22 +386,25 @@ async function fetchClimateProjectionFromAPI(locationId: number, year: number) {
 
 async function callEarth2StudioAPI(location: any, year: number, apiKey: string) {
   try {
-    // NVIDIA Earth-2 Studio API - correct endpoint for climate forecasting
-    const response = await fetch("https://integrate.api.nvidia.com/v1/chat/completions", {
+    // NVIDIA Earth2Studio API - using the forecast endpoint
+    const response = await fetch("https://api.nvcf.nvidia.com/v2/nvcf/pexec/functions/nvidia/earth2studio", {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${apiKey}`,
         'Content-Type': 'application/json',
-        'Accept': 'application/json'
+        'Accept': 'application/json',
+        'NVCF-INPUT-ASSET-REFERENCES': '',
+        'NVCF-FUNCTION-ASSET-IDS': ''
       },
       body: JSON.stringify({
-        model: "nvidia/earth2-studio",
-        messages: [{
-          role: "user",
-          content: `Generate detailed climate projection for coordinates ${location.latitude}, ${location.longitude} for year ${year}. Include temperature, precipitation, humidity, sea level, extreme weather risks, habitability metrics, and monthly data. Return as structured JSON.`
-        }],
-        temperature: 0.1,
-        max_tokens: 2000
+        model: "fcn",
+        inference_steps: 20,
+        channels: ["u10m", "v10m", "t2m", "sp", "msl", "tcwv", "tp"],
+        time: `${year}-01-01T00:00:00`,
+        latitude: location.latitude,
+        longitude: location.longitude,
+        ensemble_members: 1,
+        grid_resolution: 0.25
       })
     });
 
@@ -415,17 +418,7 @@ async function callEarth2StudioAPI(location: any, year: number, apiKey: string) 
     const data = await response.json();
     console.log("Earth-2 Studio response:", data);
     
-    // Parse the response from the chat completion format
-    if (data.choices && data.choices[0] && data.choices[0].message) {
-      try {
-        const climateData = JSON.parse(data.choices[0].message.content);
-        return transformEarth2StudioResponse(climateData, location, year);
-      } catch (parseError) {
-        console.log("Failed to parse Earth-2 Studio JSON response:", parseError);
-        return null;
-      }
-    }
-    
+    // Transform Earth2Studio forecast data
     return transformEarth2StudioResponse(data, location, year);
   } catch (error) {
     console.log("Earth-2 Studio API unavailable:", error);
@@ -486,10 +479,13 @@ function transformEarth2StudioResponse(data: any, location: any, year: number) {
   const currentYear = 2024;
   const yearsFromNow = year - currentYear;
   
-  // Extract climate variables from Earth-2 Studio response
-  const temperature = data.outputs?.temperature || data.temperature;
-  const precipitation = data.outputs?.precipitation || data.precipitation;
-  const humidity = data.outputs?.humidity || data.humidity;
+  // Extract climate variables from Earth2Studio forecast response
+  // Earth2Studio returns arrays of weather data for specified channels
+  const t2m = data.t2m || data.outputs?.t2m; // 2-meter temperature
+  const tp = data.tp || data.outputs?.tp; // Total precipitation
+  const tcwv = data.tcwv || data.outputs?.tcwv; // Total column water vapor
+  const sp = data.sp || data.outputs?.sp; // Surface pressure
+  const msl = data.msl || data.outputs?.msl; // Mean sea level pressure
   
   return {
     temperature: {

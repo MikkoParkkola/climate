@@ -27,58 +27,63 @@ export default function InteractiveMap({ selectedLocation, onLocationSelect, cla
   useEffect(() => {
     if (!mapRef.current || mapInstanceRef.current) return;
 
-    // Initialize map
-    const map = L.map(mapRef.current, {
-      center: [20, 0], // Center of the world
-      zoom: 2,
-      minZoom: 2,
-      maxZoom: 18,
-      worldCopyJump: true,
-    });
+    try {
+      // Initialize map
+      const map = L.map(mapRef.current, {
+        center: [20, 0], // Center of the world
+        zoom: 2,
+        minZoom: 2,
+        maxZoom: 18,
+        worldCopyJump: true,
+        preferCanvas: true
+      });
 
-    // Create tile layers for different map views
-    const satelliteLayer = L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}", {
-      attribution: 'Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community',
-      maxZoom: 18,
-    });
+      // Create tile layers for different map views
+      const satelliteLayer = L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}", {
+        attribution: 'Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community',
+        maxZoom: 18,
+      });
 
-    const terrainLayer = L.tileLayer("https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png", {
-      attribution: 'Map data: &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors, <a href="http://viewfinderpanoramas.org">SRTM</a> | Map style: &copy; <a href="https://opentopomap.org">OpenTopoMap</a> (<a href="https://creativecommons.org/licenses/by-sa/3.0/">CC-BY-SA</a>)',
-      maxZoom: 17,
-    });
+      const terrainLayer = L.tileLayer("https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png", {
+        attribution: 'Map data: &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors, <a href="http://viewfinderpanoramas.org">SRTM</a> | Map style: &copy; <a href="https://opentopomap.org">OpenTopoMap</a> (<a href="https://creativecommons.org/licenses/by-sa/3.0/">CC-BY-SA</a>)',
+        maxZoom: 17,
+      });
 
-    const streetLayer = L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-      attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
-      noWrap: false,
-    });
+      const streetLayer = L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+        attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+        noWrap: false,
+      });
 
-    // Add default satellite layer
-    satelliteLayer.addTo(map);
+      // Add default satellite layer
+      satelliteLayer.addTo(map);
 
-    // Store layer references for switching
-    (map as any).layerControl = {
-      satellite: satelliteLayer,
-      terrain: terrainLayer,
-      street: streetLayer,
-      current: satelliteLayer
-    };
+      // Store layer references for switching
+      (map as any).layerControl = {
+        satellite: satelliteLayer,
+        terrain: terrainLayer,
+        street: streetLayer,
+        current: satelliteLayer
+      };
 
-    // Add click handler
-    map.on("click", (e: L.LeafletMouseEvent) => {
-      const { lat, lng } = e.latlng;
-      console.log('Map clicked:', { lat, lng });
-      onLocationSelect(lat, lng);
-    });
+      // Add click handler
+      map.on("click", (e: L.LeafletMouseEvent) => {
+        const { lat, lng } = e.latlng;
+        console.log('Map clicked:', { lat, lng });
+        onLocationSelect(lat, lng);
+      });
 
-    mapInstanceRef.current = map;
-    setIsMapReady(true);
+      mapInstanceRef.current = map;
+      setIsMapReady(true);
 
-    return () => {
-      if (mapInstanceRef.current) {
-        mapInstanceRef.current.remove();
-        mapInstanceRef.current = null;
-      }
-    };
+      return () => {
+        if (mapInstanceRef.current) {
+          mapInstanceRef.current.remove();
+          mapInstanceRef.current = null;
+        }
+      };
+    } catch (error) {
+      console.error('Error initializing map:', error);
+    }
   }, [onLocationSelect]);
 
   useEffect(() => {
