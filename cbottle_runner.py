@@ -223,9 +223,10 @@ def get_baseline_precipitation(latitude, longitude):
     elif abs_lat < 45:  # Temperate - westerlies, moderate precipitation
         base = 750
     elif abs_lat < 55:  # Cool temperate - consistent westerly flow
-        base = 650
+        # Higher base for this latitude band which includes maritime Western Europe
+        base = 750
     elif abs_lat < 65:  # Subarctic - continental, summer precipitation peak
-        base = 600
+        base = 650
     else:  # Arctic - low precipitation
         base = 400
     
@@ -234,7 +235,11 @@ def get_baseline_precipitation(latitude, longitude):
     
     # Adjust for continental/maritime effects
     if is_coastal(latitude, longitude) and not is_desert:
-        base *= 1.05  # Modest maritime increase
+        # Strong maritime effect for Western European Atlantic coasts
+        if 45 <= abs_lat <= 65 and -10 <= longitude <= 10:  # Western Europe Atlantic coast
+            base *= 1.15  # Strong maritime increase for Atlantic-facing coasts
+        else:
+            base *= 1.05  # Modest maritime increase for other coastal areas
     
     return base
 
