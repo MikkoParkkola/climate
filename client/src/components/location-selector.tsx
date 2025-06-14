@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
+import { Slider } from "@/components/ui/slider";
 import { Search, MapPin, TrendingUp, Scale } from "lucide-react";
 import { geocodingUtils } from "@/lib/climate-api";
 import type { ClimateLocation } from "@/types/climate";
@@ -17,7 +18,8 @@ interface LocationSelectorProps {
   isLoading?: boolean;
 }
 
-const PROJECTION_YEARS = [2030, 2050, 2100];
+const MIN_YEAR = 2025;
+const MAX_YEAR = 2100;
 
 export default function LocationSelector({
   selectedLocation,
@@ -139,23 +141,48 @@ export default function LocationSelector({
           {/* Time Horizon Selector */}
           <div>
             <Label className="block text-sm font-medium text-slate-700 mb-3">
-              Projection Year
+              Projection Year: {selectedYear}
             </Label>
-            <div className="grid grid-cols-3 gap-2">
-              {PROJECTION_YEARS.map((year) => (
+            <div className="space-y-4">
+              <Slider
+                value={[selectedYear]}
+                onValueChange={(values) => onYearChange(values[0])}
+                min={MIN_YEAR}
+                max={MAX_YEAR}
+                step={1}
+                className="w-full"
+              />
+              <div className="flex justify-between text-xs text-slate-500">
+                <span>{MIN_YEAR}</span>
+                <span>Present + {selectedYear - 2024} years</span>
+                <span>{MAX_YEAR}</span>
+              </div>
+              <div className="grid grid-cols-3 gap-2 mt-3">
                 <Button
-                  key={year}
-                  variant={selectedYear === year ? "default" : "outline"}
-                  onClick={() => onYearChange(year)}
-                  className={`text-sm font-medium transition-colors ${
-                    selectedYear === year
-                      ? "bg-blue-600 text-white border-blue-600 hover:bg-blue-700"
-                      : "border-slate-300 text-slate-700 hover:border-blue-600 hover:text-blue-600"
-                  }`}
+                  size="sm"
+                  variant="outline"
+                  onClick={() => onYearChange(2030)}
+                  className="text-xs"
                 >
-                  {year}
+                  2030
                 </Button>
-              ))}
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => onYearChange(2050)}
+                  className="text-xs"
+                >
+                  2050
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => onYearChange(2100)}
+                  className="text-xs"
+                >
+                  2100
+                </Button>
+              </div>
             </div>
           </div>
 

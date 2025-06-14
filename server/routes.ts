@@ -172,6 +172,21 @@ async function fetchClimateProjectionFromAPI(locationId: number, year: number) {
       floodingRisk: calculateRiskScore(apiData.sea_level?.flood_risk || 0),
       monthlyTemperatures: JSON.stringify(apiData.temperature?.monthly || []),
       monthlyPrecipitation: JSON.stringify(apiData.precipitation?.monthly || []),
+      // Enhanced habitability and environmental data
+      habitabilityScore: calculateHabitabilityScore(apiData),
+      elevationChange: apiData.elevation?.change_from_baseline || 0,
+      coastalFloodingRisk: calculateRiskScore(apiData.coastal?.flood_risk || 0),
+      extremeWeatherEvents: apiData.extreme_weather?.frequency || 0,
+      biodiversityLoss: apiData.biodiversity?.loss_percentage || 0,
+      agriculturalViability: calculateRiskScore(100 - (apiData.agriculture?.stress_level || 0)),
+      waterStressLevel: calculateRiskScore(apiData.water?.stress_level || 0),
+      airQualityIndex: apiData.air_quality?.index || 50,
+      // Comparable location data (to be calculated)
+      comparableLocationName: null,
+      comparableLocationLat: null,
+      comparableLocationLng: null,
+      comparableLocationCountry: null,
+      climateSimilarityScore: null,
     };
 
     return projection;
@@ -184,6 +199,19 @@ async function fetchClimateProjectionFromAPI(locationId: number, year: number) {
 function calculateRiskScore(value: number): number {
   // Convert various risk indicators to 0-100 scale
   return Math.min(100, Math.max(0, Math.round(value * 100)));
+}
+
+function calculateHabitabilityScore(apiData: any): number {
+  // Calculate overall habitability based on multiple factors
+  const tempScore = Math.max(0, 100 - Math.abs((apiData.temperature?.annual_average || 20) - 20) * 5);
+  const precipScore = Math.min(100, Math.max(0, (apiData.precipitation?.annual_total || 800) / 10));
+  const riskScore = 100 - Math.max(
+    apiData.temperature?.extreme_heat_days || 0,
+    apiData.precipitation?.drought_index || 0,
+    apiData.sea_level?.flood_risk || 0
+  );
+  
+  return Math.round((tempScore + precipScore + riskScore) / 3);
 }
 
 function generateCSV(location: any, projection: any): string {

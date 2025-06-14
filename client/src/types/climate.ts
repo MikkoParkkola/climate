@@ -25,6 +25,21 @@ export interface ClimateProjection {
   floodingRisk?: number;
   monthlyTemperatures?: string;
   monthlyPrecipitation?: string;
+  // Enhanced habitability and environmental data
+  habitabilityScore?: number;
+  elevationChange?: number;
+  coastalFloodingRisk?: number;
+  extremeWeatherEvents?: number;
+  biodiversityLoss?: number;
+  agriculturalViability?: number;
+  waterStressLevel?: number;
+  airQualityIndex?: number;
+  // Comparable location data
+  comparableLocationName?: string;
+  comparableLocationLat?: number;
+  comparableLocationLng?: number;
+  comparableLocationCountry?: string;
+  climateSimilarityScore?: number;
   fetchedAt?: Date;
 }
 

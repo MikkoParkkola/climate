@@ -35,6 +35,21 @@ export const climateProjections = pgTable("climate_projections", {
   floodingRisk: integer("flooding_risk"), // 0-100 scale
   monthlyTemperatures: text("monthly_temperatures"), // JSON array
   monthlyPrecipitation: text("monthly_precipitation"), // JSON array
+  // Enhanced habitability and environmental data
+  habitabilityScore: integer("habitability_score"), // 0-100 scale
+  elevationChange: real("elevation_change"), // meters
+  coastalFloodingRisk: integer("coastal_flooding_risk"), // 0-100 scale
+  extremeWeatherEvents: integer("extreme_weather_events"), // frequency per year
+  biodiversityLoss: real("biodiversity_loss"), // percentage
+  agriculturalViability: integer("agricultural_viability"), // 0-100 scale
+  waterStressLevel: integer("water_stress_level"), // 0-100 scale
+  airQualityIndex: integer("air_quality_index"), // 0-500 scale
+  // Comparable location data
+  comparableLocationName: text("comparable_location_name"),
+  comparableLocationLat: real("comparable_location_lat"),
+  comparableLocationLng: real("comparable_location_lng"),
+  comparableLocationCountry: text("comparable_location_country"),
+  climateSimilarityScore: real("climate_similarity_score"), // 0-1 scale
   fetchedAt: timestamp("fetched_at").defaultNow(),
 });
 
