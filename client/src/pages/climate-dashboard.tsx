@@ -4,8 +4,9 @@ import { queryClient } from "@/lib/queryClient";
 import { climateApi, geocodingUtils } from "@/lib/climate-api";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
-import { Globe, Download, FileText, Share2, X } from "lucide-react";
+import { Globe, Download, FileText, Share2, X, Settings, BarChart3, Waves, Calendar } from "lucide-react";
 import InteractiveMap from "@/components/interactive-map";
 import LocationSelector from "@/components/location-selector";
 import ClimateSummary from "@/components/climate-summary";
@@ -16,6 +17,10 @@ import ApiErrorDisplay from "@/components/api-error-display";
 import ClimateTimeline from "@/components/climate-timeline";
 import ClimateImpactExplanation from "@/components/climate-impact-explanation";
 import HabitabilityRanking from "@/components/habitability-ranking";
+import ApiKeyManager from "@/components/api-key-manager";
+import MultiLocationComparison from "@/components/multi-location-comparison";
+import LivabilityIndexBreakdown from "@/components/livability-index-breakdown";
+import QuickYearSelector from "@/components/quick-year-selector";
 import type { ClimateLocation, ClimateProjection, MapMarker } from "@/types/climate";
 
 export default function ClimateDashboard() {
