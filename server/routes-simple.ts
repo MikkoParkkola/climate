@@ -1,5 +1,7 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
+import { exec } from "child_process";
+import { promisify } from "util";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Get API key for testing
@@ -80,8 +82,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Run local CBottle implementation
       console.log('Running local CBottle climate model...');
       
-      const { exec } = require('child_process');
-      const { promisify } = require('util');
       const execAsync = promisify(exec);
 
       try {
