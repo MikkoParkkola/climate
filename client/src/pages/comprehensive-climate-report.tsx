@@ -129,6 +129,18 @@ export default function ComprehensiveClimateReport() {
     },
   });
 
+  const getProjectionMutation = useMutation({
+    mutationFn: async ({ locationId, year }: { locationId: number; year: number }) => {
+      return await climateApi.getClimateProjection(locationId, year);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/projections'] });
+    },
+    onError: (error: Error) => {
+      setApiError(error.message);
+    },
+  });
+
   const handleLocationSelect = useCallback(async (latitude: number, longitude: number) => {
     try {
       setIsLoadingProjection(true);
@@ -198,7 +210,7 @@ export default function ComprehensiveClimateReport() {
     } finally {
       setIsLoadingProjection(false);
     }
-  }, [selectedLocation, selectedYear, getProjectionMutation]);
+  }, [selectedLocation, selectedYear]);
 
   const handlePrintReport = useCallback(() => {
     window.print();
