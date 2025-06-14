@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { Thermometer, Droplets, MapPin, TrendingUp, TrendingDown, AlertTriangle, Waves, Cloud, FileText, Globe, Award, CheckCircle } from "lucide-react";
 import LivabilityIndexBreakdown from "@/components/livability-index-breakdown";
 import HabitabilityRanking from "@/components/habitability-ranking";
+import GlobalRankingDisplay from "@/components/global-ranking-display";
 
 interface LocationOption {
   name: string;

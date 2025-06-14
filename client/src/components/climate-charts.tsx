@@ -214,8 +214,14 @@ export default function ClimateCharts({ currentData, projectedData, selectedYear
             ticks: {
               font: {
                 size: 10
-              }
-            }
+              },
+              maxRotation: 0,
+              minRotation: 0
+            },
+            grid: {
+              display: false
+            },
+            offset: true
           }
         },
         interaction: {
