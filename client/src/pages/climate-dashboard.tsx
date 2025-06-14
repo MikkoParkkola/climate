@@ -25,13 +25,13 @@ export default function ClimateDashboard() {
 
   // Query for climate projection data
   const { data: projectionData, isLoading: isProjectionLoading } = useQuery({
-    queryKey: ['/api/projections', selectedLocation?.id, selectedYear],
+    queryKey: [`/api/projections/${selectedLocation?.id}/${selectedYear}`],
     enabled: !!selectedLocation?.id,
   });
 
   // Query for current climate data (baseline year)
   const { data: currentData } = useQuery({
-    queryKey: ['/api/projections', selectedLocation?.id, 2024],
+    queryKey: [`/api/projections/${selectedLocation?.id}/2024`],
     enabled: !!selectedLocation?.id,
   });
 
@@ -91,7 +91,7 @@ export default function ClimateDashboard() {
     try {
       // Invalidate cache to force fresh data fetch
       await queryClient.invalidateQueries({ 
-        queryKey: ['/api/projections', selectedLocation.id, selectedYear] 
+        queryKey: [`/api/projections/${selectedLocation.id}/${selectedYear}`] 
       });
       
       toast({

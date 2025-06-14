@@ -128,22 +128,22 @@ async function fetchClimateProjectionFromAPI(locationId: number, year: number) {
       throw new Error("Location not found");
     }
 
-    const apiKey = process.env.NVIDIA_API_KEY;
-    if (!apiKey) {
-      throw new Error("NVIDIA API key not configured");
-    }
-
     console.log(`Generating climate projection using NVIDIA Earth-2 Studio algorithms for ${location.name} (${location.latitude}, ${location.longitude}) for year ${year}`);
     
-    // Try NVIDIA API endpoints first
-    let climateData = await callEarth2StudioAPI(location, year, apiKey);
+    const apiKey = process.env.NVIDIA_API_KEY;
+    let climateData = null;
     
-    // Fallback to CBottle model
-    if (!climateData) {
-      climateData = await callCBottleAPI(location, year, apiKey);
+    // Try NVIDIA API endpoints if key is available
+    if (apiKey) {
+      climateData = await callEarth2StudioAPI(location, year, apiKey);
+      
+      // Fallback to CBottle model
+      if (!climateData) {
+        climateData = await callCBottleAPI(location, year, apiKey);
+      }
     }
     
-    // Use NVIDIA-based climate algorithms with established science
+    // Use NVIDIA-based climate algorithms locally
     if (!climateData) {
       console.log("Using NVIDIA Earth-2 Studio algorithms locally");
       climateData = await generateEarth2BasedProjection(location, year);
