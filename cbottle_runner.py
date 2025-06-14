@@ -402,7 +402,7 @@ def calculate_flood_risk(monthly_precip, latitude):
     
     # Risk from seasonal concentration
     precip_std = np.std(monthly_precip)
-    seasonal_factor = min(0.6, precip_std / 100) * infrastructure_factor
+    seasonal_factor = min(0.6, float(precip_std) / 100) * infrastructure_factor
     
     return min(1.0, (extreme_factor + seasonal_factor) / 2.0)
 

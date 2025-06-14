@@ -63,7 +63,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       if (projection) {
         projection.dataSource = "NVIDIA_API";
-        projection.fetchedAt = new Date();
+        projection.fetchedAt = new Date().toISOString();
         console.log(`✅ SUCCESS: NVIDIA API returned data for ${locationId}/${year}`);
         
         // Save to database but with fresh timestamp
@@ -103,7 +103,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       if (projection) {
         projection.dataSource = "NVIDIA_API";
-        projection.fetchedAt = new Date();
+        projection.fetchedAt = new Date().toISOString();
         console.log(`✅ SUCCESS: NVIDIA API returned data for ${locationId}/${year}`);
         
         // Save to database but with fresh timestamp
