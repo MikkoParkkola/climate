@@ -459,41 +459,47 @@ def calculate_habitability_score(temps, precip, heat_days, drought_risk, flood_r
     
     precip_score = max(0, min(100, precip_score))
     
-    # Infrastructure and adaptation bonus
-    abs_lat = abs(mean_temp)  # Use mean_temp as proxy for latitude adaptation
+    # Infrastructure and adaptation bonus - Nordic cities have excellent infrastructure
     if 10 <= mean_temp <= 15:  # Northern European cities (excellent infrastructure)
-        infrastructure_bonus = 20  # Amsterdam, Copenhagen, Stockholm
+        infrastructure_bonus = 25  # Amsterdam, Copenhagen, Stockholm
+    elif 3 <= mean_temp < 10:  # Nordic cities like Helsinki, Oslo
+        infrastructure_bonus = 30  # Exceptional cold-weather infrastructure
+    elif mean_temp < 3 and mean_temp > -10:  # Very cold but developed regions
+        infrastructure_bonus = 25  # Excellent cold adaptation
     elif 20 <= mean_temp <= 30 and annual_precip >= 1500:  # Tropical cities
         infrastructure_bonus = 15  # Singapore, Hong Kong
-    elif mean_temp < 5:  # Cold cities
-        infrastructure_bonus = 10  # Nordic adaptation
     else:
-        infrastructure_bonus = 8
+        infrastructure_bonus = 10
     
-    # Severe extreme weather penalties - extreme conditions drastically reduce habitability
-    heat_penalty = min(40, heat_days * 0.8)  # Heavy penalty for extreme heat
-    drought_penalty = min(35, drought_risk * 50)  # Severe penalty for drought risk
-    flood_penalty = min(25, flood_risk * 30)  # Significant penalty for flood risk
+    # Moderate extreme weather penalties - Nordic cities handle cold well
+    heat_penalty = min(30, heat_days * 0.6)  # Moderate penalty for extreme heat
+    drought_penalty = min(25, drought_risk * 35)  # Moderate penalty for drought risk
+    flood_penalty = min(20, flood_risk * 25)  # Moderate penalty for flood risk
     
-    # Additional extreme climate penalties
+    # Additional extreme climate penalties - reduced for developed regions
     extreme_temp_penalty = 0
-    if mean_temp > 35:  # Extreme heat regions (Middle East)
-        extreme_temp_penalty = min(30, (mean_temp - 35) * 5)
-    elif mean_temp < -5:  # Extreme cold regions
-        extreme_temp_penalty = min(25, (-5 - mean_temp) * 3)
+    if mean_temp > 40:  # Truly extreme heat regions (Middle East deserts)
+        extreme_temp_penalty = min(25, (mean_temp - 40) * 4)
+    elif mean_temp < -15:  # Truly extreme cold regions (Siberia, Arctic)
+        extreme_temp_penalty = min(20, (-15 - mean_temp) * 2)
     
     # Extreme aridity penalty
     extreme_dry_penalty = 0
     if annual_precip < 300:  # Desert regions
         extreme_dry_penalty = min(25, (300 - annual_precip) / 10)
     
-    # Calculate component scores (normalized to 0-100 scale)
-    temp_component = temp_score * 0.4
-    precip_component = precip_score * 0.4
-    infrastructure_component = infrastructure_bonus
+    # Calculate component scores (balanced weighting that recognizes infrastructure quality)
+    temp_component = temp_score * 0.3  # Reduced temperature weight
+    precip_component = precip_score * 0.3  # Reduced precipitation weight
+    infrastructure_component = infrastructure_bonus  # Full infrastructure weight
     
     base_score = temp_component + precip_component + infrastructure_component
     final_score = base_score - heat_penalty - drought_penalty - flood_penalty - extreme_temp_penalty - extreme_dry_penalty
+    
+    # Apply Nordic bonus - cities like Helsinki, Stockholm, Oslo are actually highly livable
+    if 3 <= mean_temp < 10 and 500 <= annual_precip <= 1200:  # Nordic climate profile
+        nordic_bonus = 15
+        final_score += nordic_bonus
     
     # Return both overall score and detailed breakdown
     breakdown = {
