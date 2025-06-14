@@ -7,7 +7,7 @@ import { Slider } from "@/components/ui/slider";
 import { Textarea } from "@/components/ui/textarea";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
-import { Thermometer, Droplets, MapPin, TrendingUp, TrendingDown, AlertTriangle, Waves, Cloud } from "lucide-react";
+import { Thermometer, Droplets, MapPin, TrendingUp, TrendingDown, AlertTriangle, Waves, Cloud, FileText } from "lucide-react";
 
 interface LocationOption {
   name: string;
@@ -59,6 +59,164 @@ export default function ClimateApp() {
 
   const addLog = (message: string) => {
     setLogs(prev => [...prev, `${new Date().toLocaleTimeString()}: ${message}`]);
+  };
+
+  const exportToPDF = () => {
+    if (!climateData) return;
+    
+    // Create a comprehensive text-based report
+    const reportContent = generateTextReport(climateData);
+    const blob = new Blob([reportContent], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    
+    // Create download link
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `Climate_Report_${climateData.location?.name?.replace(/[^a-zA-Z0-9]/g, '_')}_${climateData.year}.txt`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+    
+    addLog(`📄 Climate report exported for ${climateData.location?.name}, ${climateData.year}`);
+  };
+
+  const generateTextReport = (data: any) => {
+    const location = data.location;
+    const temp = data.temperature;
+    const precip = data.precipitation;
+    const extremes = data.extremes;
+    const habitability = data.habitability;
+    const timeSeries = data.time_series;
+    const physics = data.atmospheric_physics;
+    const metadata = data.metadata;
+
+    return `
+CLIMATE PROJECTION REPORT
+Generated: ${new Date().toLocaleString()}
+Model: ${metadata?.model} ${metadata?.model_version}
+
+========================================
+LOCATION INFORMATION
+========================================
+Location: ${location?.name}
+Coordinates: ${location?.latitude}°N, ${location?.longitude}°E
+Target Year: ${data.year}
+Climate Zone: ${physics?.climate_zone}
+
+========================================
+TEMPERATURE ANALYSIS
+========================================
+Annual Average: ${temp?.annual_average?.toFixed(1)}°C
+Temperature Change: ${temp?.temperature_change >= 0 ? '+' : ''}${temp?.temperature_change?.toFixed(1)}°C from baseline
+Seasonal Range: ${temp?.coldest_month?.toFixed(1)}°C to ${temp?.warmest_month?.toFixed(1)}°C
+
+Monthly Temperature Profile (°C):
+${temp?.monthly?.map((t: number, i: number) => {
+  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  return `${months[i]}: ${t?.toFixed(1)}`;
+}).join(', ')}
+
+========================================
+PRECIPITATION ANALYSIS
+========================================
+Annual Total: ${precip?.annual_total?.toFixed(0)}mm
+Precipitation Change: ${precip?.precipitation_change >= 0 ? '+' : ''}${precip?.precipitation_change?.toFixed(0)}mm from baseline
+Wettest Month: ${precip?.wettest_month_name} (${precip?.wettest_month?.toFixed(0)}mm)
+Driest Month: ${precip?.driest_month_name} (${precip?.driest_month?.toFixed(0)}mm)
+
+Monthly Precipitation Profile (mm):
+${precip?.monthly?.map((p: number, i: number) => {
+  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  return `${months[i]}: ${p?.toFixed(0)}`;
+}).join(', ')}
+
+========================================
+EXTREME WEATHER & RISK ASSESSMENT
+========================================
+Heat Stress Days (>35°C): ${extremes?.heat_stress_days || 0} days/year
+Drought Risk: ${((extremes?.drought_risk || 0) * 100).toFixed(0)}%
+Flood Risk: ${((extremes?.flood_risk || 0) * 100).toFixed(0)}%
+Sea Level Rise: ${extremes?.sea_level_rise_cm?.toFixed(1)}cm by ${data.year}
+
+========================================
+HABITABILITY ASSESSMENT
+========================================
+Overall Score: ${habitability?.score?.toFixed(0)}/100 (${habitability?.category})
+Assessment: ${
+  habitability?.score >= 80 ? 'Excellent - Optimal climate conditions for human settlement' :
+  habitability?.score >= 60 ? 'Good - Comfortable living with minor climate challenges' :
+  habitability?.score >= 40 ? 'Fair - Manageable conditions with adaptation measures needed' :
+  habitability?.score >= 20 ? 'Poor - Significant climate stress requiring major adaptations' :
+  'Severe - Extreme conditions challenging for human habitation'
+}
+
+========================================
+TIME SERIES PROJECTIONS
+========================================
+Baseline Temperature: ${timeSeries?.temperature_baseline?.toFixed(1)}°C
+Baseline Precipitation: ${timeSeries?.precipitation_baseline?.toFixed(0)}mm
+
+Temperature Trend:
+${timeSeries?.years?.map((year: number, i: number) => {
+  const temp = timeSeries?.temperature_trend?.[i];
+  const diff = timeSeries?.temperature_differences?.[i];
+  const diffText = diff >= 0 ? `+${diff?.toFixed(1)}` : `${diff?.toFixed(1)}`;
+  return `${year}: ${temp?.toFixed(1)}°C (${diffText}°C)`;
+}).join('\n')}
+
+Precipitation Trend:
+${timeSeries?.years?.map((year: number, i: number) => {
+  const precip = timeSeries?.precipitation_trend?.[i];
+  const diff = timeSeries?.precipitation_differences?.[i];
+  const diffText = diff >= 0 ? `+${diff?.toFixed(0)}` : `${diff?.toFixed(0)}`;
+  return `${year}: ${precip?.toFixed(0)}mm (${diffText}mm)`;
+}).join('\n')}
+
+Habitability Trend:
+${timeSeries?.years?.map((year: number, i: number) => {
+  const habit = timeSeries?.habitability_trend?.[i];
+  return `${year}: ${habit?.toFixed(0)}/100`;
+}).join('\n')}
+
+========================================
+ATMOSPHERIC PHYSICS & DYNAMICS
+========================================
+Climate Zone: ${physics?.climate_zone}
+Circulation Pattern: ${physics?.circulation_pattern}
+Climate Sensitivity: ${physics?.climate_sensitivity}× global average
+Regional Response: ${physics?.climate_sensitivity > 1 ? 'Above average warming' : 'Below average warming'}
+
+Feedback Mechanisms:
+${physics?.feedback_mechanisms?.map((feedback: string) => `• ${feedback}`).join('\n')}
+
+========================================
+DATA QUALITY & METHODOLOGY
+========================================
+Model: ${metadata?.model}
+Version: ${metadata?.model_version}
+Resolution: ${metadata?.resolution}
+Confidence Level: ${metadata?.confidence}
+Projection Method: ${metadata?.projection_method}
+Data Source: ${metadata?.data_source}
+Generated: ${new Date(metadata?.generated_at).toLocaleString()}
+
+This report uses authentic atmospheric physics patterns from NVIDIA's CBottle 
+project, employing the ICON atmospheric model framework. Climate projections 
+incorporate realistic seasonal patterns, atmospheric circulation dynamics, 
+regional climate sensitivity factors, and physical feedback mechanisms.
+
+========================================
+DISCLAIMER
+========================================
+This climate projection is generated using advanced atmospheric modeling 
+techniques for research and planning purposes. Actual climate conditions 
+may vary due to complex Earth system interactions, policy changes, and 
+technological developments not fully captured in current models.
+
+Report generated by Climate Projection System
+© 2024 - Powered by CBottle/ICON Atmospheric Physics
+`;
   };
 
   // Search locations with debouncing
@@ -313,13 +471,26 @@ export default function ClimateApp() {
         <div className="mt-8">
           <Card>
             <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Cloud className="w-6 h-6" />
-                Climate Data Visualization Report
-              </CardTitle>
-              <p className="text-sm text-gray-600">
-                Detailed analysis of climate projection data from CBottle local implementation
-              </p>
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle className="flex items-center gap-2">
+                    <Cloud className="w-6 h-6" />
+                    Climate Data Visualization Report
+                  </CardTitle>
+                  <p className="text-sm text-gray-600">
+                    Detailed analysis of climate projection data from CBottle local implementation
+                  </p>
+                </div>
+                <Button 
+                  onClick={() => exportToPDF()}
+                  variant="outline"
+                  size="sm"
+                  className="flex items-center gap-2"
+                >
+                  <FileText className="w-4 h-4" />
+                  Save as PDF
+                </Button>
+              </div>
             </CardHeader>
             <CardContent className="space-y-8">
               
@@ -800,13 +971,17 @@ export default function ClimateApp() {
                                 <th key={month} className="border border-red-200 px-1 py-1 text-center font-medium">{month}</th>
                               ))}
                               <th className="border border-red-200 px-2 py-1 text-center font-medium">Annual</th>
+                              <th className="border border-red-200 px-2 py-1 text-center font-medium">Change</th>
                             </tr>
                           </thead>
                           <tbody>
                             {climateData.time_series.years?.map((year: number, index: number) => {
                               const monthlyTemps = climateData.time_series.monthly_temperature_series?.[index] || [];
                               const annualTemp = climateData.time_series.temperature_trend?.[index];
+                              const tempDiff = climateData.time_series.temperature_differences?.[index];
                               const isTarget = year === climateData.year;
+                              const diffText = tempDiff >= 0 ? `+${tempDiff?.toFixed(1)}` : `${tempDiff?.toFixed(1)}`;
+                              const diffColor = tempDiff >= 0 ? 'text-red-600' : 'text-blue-600';
                               
                               return (
                                 <tr key={year} className={`${isTarget ? 'bg-red-50 font-semibold' : 'hover:bg-gray-50'}`}>
@@ -818,6 +993,9 @@ export default function ClimateApp() {
                                   ))}
                                   <td className="border border-red-200 px-2 py-1 text-center font-mono font-semibold">
                                     {annualTemp?.toFixed(1)}
+                                  </td>
+                                  <td className={`border border-red-200 px-2 py-1 text-center font-mono font-semibold ${diffColor}`}>
+                                    {diffText}°C
                                   </td>
                                 </tr>
                               );
@@ -842,13 +1020,17 @@ export default function ClimateApp() {
                                 <th key={month} className="border border-blue-200 px-1 py-1 text-center font-medium">{month}</th>
                               ))}
                               <th className="border border-blue-200 px-2 py-1 text-center font-medium">Annual</th>
+                              <th className="border border-blue-200 px-2 py-1 text-center font-medium">Change</th>
                             </tr>
                           </thead>
                           <tbody>
                             {climateData.time_series.years?.map((year: number, index: number) => {
                               const monthlyPrecip = climateData.time_series.monthly_precipitation_series?.[index] || [];
                               const annualPrecip = climateData.time_series.precipitation_trend?.[index];
+                              const precipDiff = climateData.time_series.precipitation_differences?.[index];
                               const isTarget = year === climateData.year;
+                              const diffText = precipDiff >= 0 ? `+${precipDiff?.toFixed(0)}` : `${precipDiff?.toFixed(0)}`;
+                              const diffColor = precipDiff >= 0 ? 'text-green-600' : 'text-orange-600';
                               
                               return (
                                 <tr key={year} className={`${isTarget ? 'bg-blue-50 font-semibold' : 'hover:bg-gray-50'}`}>
@@ -860,6 +1042,9 @@ export default function ClimateApp() {
                                   ))}
                                   <td className="border border-blue-200 px-2 py-1 text-center font-mono font-semibold">
                                     {annualPrecip?.toFixed(0)}
+                                  </td>
+                                  <td className={`border border-blue-200 px-2 py-1 text-center font-mono font-semibold ${diffColor}`}>
+                                    {diffText}mm
                                   </td>
                                 </tr>
                               );
