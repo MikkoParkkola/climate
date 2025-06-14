@@ -522,7 +522,7 @@ export default function ClimateApp() {
                                 <polyline
                                   fill="none"
                                   stroke="#dc2626"
-                                  strokeWidth="1.5"
+                                  strokeWidth="2"
                                   vectorEffect="non-scaling-stroke"
                                   points={monthlyTemps.map((temp: number, index: number) => {
                                     const x = (index / 11) * 100; // 0%, 9.09%, 18.18%, ... 100%
@@ -530,38 +530,23 @@ export default function ClimateApp() {
                                     return `${x},${y}`;
                                   }).join(' ')}
                                 />
-                                {/* Data points with proper circular shape */}
-                                {monthlyTemps.map((temp: number, index: number) => {
-                                  const x = (index / 11) * 100; // Match the polyline positioning exactly
-                                  const y = 100 - ((temp - scaleMin) / scaleRange) * 100;
-                                  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-                                  return (
-                                    <circle 
-                                      key={index}
-                                      cx={x} 
-                                      cy={y} 
-                                      r="2" 
-                                      fill={temp >= 0 ? "#dc2626" : "#2563eb"}
-                                      className="hover:r-3 cursor-pointer"
-                                    >
-                                      <title>{`${months[index]}: ${temp.toFixed(1)}°C`}</title>
-                                    </circle>
-                                  );
-                                })}
                               </svg>
                             </div>
                             
-                            {/* Month labels - perfectly aligned with data points */}
-                            <div className="absolute bottom-0 left-14 right-4 h-4">
+                            {/* Month labels with temperature values */}
+                            <div className="absolute bottom-0 left-14 right-4 h-8">
                               <div className="relative w-full h-full">
                                 {['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'].map((month, index) => (
-                                  <span 
+                                  <div 
                                     key={index} 
-                                    className="absolute text-xs text-gray-600 transform -translate-x-1/2"
+                                    className="absolute text-xs text-center transform -translate-x-1/2"
                                     style={{ left: `${(index / 11) * 100}%` }}
                                   >
-                                    {month}
-                                  </span>
+                                    <div className="text-gray-600 font-medium">{month}</div>
+                                    <div className={`font-mono text-xs ${monthlyTemps[index] >= 0 ? 'text-red-600' : 'text-blue-600'}`}>
+                                      {monthlyTemps[index]?.toFixed(1)}°C
+                                    </div>
+                                  </div>
                                 ))}
                               </div>
                             </div>
