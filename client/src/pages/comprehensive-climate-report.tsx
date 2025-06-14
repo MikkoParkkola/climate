@@ -181,6 +181,25 @@ export default function ComprehensiveClimateReport() {
     }
   }, [selectedLocation, selectedYear, toast]);
 
+  const handleGetProjection = useCallback(async () => {
+    if (!selectedLocation) return;
+    
+    setIsLoadingProjection(true);
+    setApiError(null);
+    
+    try {
+      await getProjectionMutation.mutateAsync({
+        locationId: selectedLocation.id,
+        year: selectedYear
+      });
+    } catch (error) {
+      console.error("Projection error:", error);
+      setApiError(error instanceof Error ? error.message : "Failed to get projection");
+    } finally {
+      setIsLoadingProjection(false);
+    }
+  }, [selectedLocation, selectedYear, getProjectionMutation]);
+
   const handlePrintReport = useCallback(() => {
     window.print();
   }, []);
@@ -310,53 +329,65 @@ export default function ComprehensiveClimateReport() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="location-search" className="text-sm font-medium">
-                    Search Location
-                  </Label>
-                  <div className="relative">
-                    <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
-                    <Input
-                      id="location-search"
-                      type="text"
-                      placeholder="Enter city name (e.g., Helsinki, New York)"
-                      value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
-                      className="pl-10"
-                    />
-                    {isSearching && (
-                      <div className="absolute right-3 top-3">
-                        <div className="animate-spin h-4 w-4 border-2 border-blue-600 border-t-transparent rounded-full"></div>
+            <div className="space-y-6">
+              {/* Interactive Map First */}
+              <div>
+                <h3 className="text-lg font-medium mb-2">Interactive Map</h3>
+                <InteractiveMap
+                  selectedLocation={selectedLocation}
+                  onLocationSelect={handleLocationSelect}
+                  className="h-80 w-full rounded-lg border"
+                />
+              </div>
+
+              {/* Search Below Map */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="location-search" className="text-sm font-medium">
+                      Search Location
+                    </Label>
+                    <div className="relative">
+                      <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                      <Input
+                        id="location-search"
+                        type="text"
+                        placeholder="Enter city name (e.g., Helsinki, New York)"
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        className="pl-10"
+                      />
+                      {isSearching && (
+                        <div className="absolute right-3 top-3">
+                          <div className="animate-spin h-4 w-4 border-2 border-blue-600 border-t-transparent rounded-full"></div>
+                        </div>
+                      )}
+                    </div>
+                    
+                    {/* Search Results */}
+                    {searchResults.length > 0 && (
+                      <div className="mt-2 max-h-60 overflow-y-auto border rounded-lg bg-white shadow-lg">
+                        {searchResults.map((location, index) => (
+                          <button
+                            key={index}
+                            onClick={() => {
+                              handleLocationSelect(location.latitude, location.longitude);
+                              setSearchQuery("");
+                              setSearchResults([]);
+                            }}
+                            className="w-full text-left px-4 py-3 hover:bg-gray-50 border-b border-gray-100 last:border-b-0"
+                          >
+                            <div className="font-medium text-sm text-gray-900 truncate">
+                              {location.name}
+                            </div>
+                            <div className="text-xs text-gray-500">
+                              {location.latitude.toFixed(4)}, {location.longitude.toFixed(4)}
+                            </div>
+                          </button>
+                        ))}
                       </div>
                     )}
                   </div>
-                  
-                  {/* Search Results */}
-                  {searchResults.length > 0 && (
-                    <div className="mt-2 max-h-60 overflow-y-auto border rounded-lg bg-white shadow-lg">
-                      {searchResults.map((location, index) => (
-                        <button
-                          key={index}
-                          onClick={() => {
-                            handleLocationSelect(location.latitude, location.longitude);
-                            setSearchQuery("");
-                            setSearchResults([]);
-                          }}
-                          className="w-full text-left px-4 py-3 hover:bg-gray-50 border-b border-gray-100 last:border-b-0"
-                        >
-                          <div className="font-medium text-sm text-gray-900 truncate">
-                            {location.name}
-                          </div>
-                          <div className="text-xs text-gray-500">
-                            {location.latitude.toFixed(4)}, {location.longitude.toFixed(4)}
-                          </div>
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                </div>
                 {selectedLocation && (
                   <div className="p-4 bg-slate-50 rounded-lg">
                     <h3 className="font-medium text-slate-900">{selectedLocation.name}</h3>
@@ -384,13 +415,17 @@ export default function ComprehensiveClimateReport() {
                     </div>
                   </div>
                 )}
-              </div>
-              <div>
-                <InteractiveMap
-                  selectedLocation={mapMarker}
-                  onLocationSelect={handleLocationSelect}
-                  className="h-80 rounded-lg overflow-hidden"
-                />
+                </div>
+                
+                <div className="space-y-4">
+                  <Button
+                    onClick={handleGetProjection}
+                    disabled={!selectedLocation || isLoadingProjection}
+                    className="w-full"
+                  >
+                    {isLoadingProjection ? 'Generating Projection...' : 'Get Climate Projection'}
+                  </Button>
+                </div>
               </div>
             </div>
           </CardContent>
@@ -620,8 +655,8 @@ export default function ComprehensiveClimateReport() {
                         </div>
                         <div className="text-sm text-blue-600">Annual Total</div>
                         <div className="text-xs text-blue-500 mt-2">
-                          Change: {projectionData?.precipitationChange > 0 ? '+' : ''}
-                          {projectionData?.precipitationChange?.toFixed(0)}mm
+                          Change: {(projectionData?.precipitationChange || 0) > 0 ? '+' : ''}
+                          {(projectionData?.precipitationChange || 0)?.toFixed(0)}mm
                         </div>
                       </div>
                     </div>

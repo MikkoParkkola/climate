@@ -848,16 +848,17 @@ function generateMonthlyTemperatures(annualAvg: number, latitude: number): numbe
   const months = [];
   
   for (let i = 0; i < 12; i++) {
-    // Correct seasonal pattern: June (i=5), July (i=6), August (i=7) are warmest
-    // January (i=0), February (i=1), December (i=11) are coldest
+    // Months: Jan=0, Feb=1, Mar=2, Apr=3, May=4, Jun=5, Jul=6, Aug=7, Sep=8, Oct=9, Nov=10, Dec=11
+    // Northern hemisphere: July (i=6) warmest, January (i=0) coldest
     let seasonal;
     if (latitude >= 0) {
-      // Northern hemisphere: peak in July (month 6, index 6)
-      // Using cosine wave shifted so July = peak, January = trough
-      seasonal = Math.cos((i - 6) * Math.PI / 6) * amplitude;
-    } else {
-      // Southern hemisphere: peak in January, trough in July
+      // Northern hemisphere: Use sine wave where July (month 6) is peak
+      // sin((6-6)*π/6) = sin(0) = 0, need to shift to make July peak
+      // Use -cos((i-6)*π/6) so cos(0) = 1 at July
       seasonal = -Math.cos((i - 6) * Math.PI / 6) * amplitude;
+    } else {
+      // Southern hemisphere: January warmest, July coldest
+      seasonal = Math.cos((i - 6) * Math.PI / 6) * amplitude;
     }
     
     months.push(Math.round((annualAvg + seasonal) * 10) / 10);
