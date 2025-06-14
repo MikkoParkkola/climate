@@ -91,7 +91,7 @@ export default function HabitabilityAssessment({ currentData, projectedData, sel
               </div>
               <div className="flex justify-between items-center">
                 <span className="text-xs text-slate-600">Coastal Flooding Risk</span>
-                <Badge size="sm" className={`${
+                <Badge className={`text-xs ${
                   (projectedData?.coastalFloodingRisk || 0) < 25 ? 'bg-green-100 text-green-800' :
                   (projectedData?.coastalFloodingRisk || 0) < 50 ? 'bg-yellow-100 text-yellow-800' :
                   'bg-red-100 text-red-800'
@@ -101,7 +101,7 @@ export default function HabitabilityAssessment({ currentData, projectedData, sel
               </div>
               <div className="flex justify-between items-center">
                 <span className="text-xs text-slate-600">Elevation Change</span>
-                <Badge size="sm" className={`${
+                <Badge className={`text-xs ${
                   elevationImpact.color === 'green' ? 'bg-green-100 text-green-800' :
                   elevationImpact.color === 'yellow' ? 'bg-yellow-100 text-yellow-800' :
                   'bg-red-100 text-red-800'
@@ -161,7 +161,7 @@ export default function HabitabilityAssessment({ currentData, projectedData, sel
               </div>
               <div className="flex justify-between items-center">
                 <span className="text-xs text-slate-600">Air Quality</span>
-                <Badge size="sm" className={`${
+                <Badge className={`text-xs ${
                   airQuality.color === 'green' ? 'bg-green-100 text-green-800' :
                   airQuality.color === 'yellow' ? 'bg-yellow-100 text-yellow-800' :
                   airQuality.color === 'orange' ? 'bg-orange-100 text-orange-800' :

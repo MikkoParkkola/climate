@@ -10,6 +10,8 @@ import InteractiveMap from "@/components/interactive-map";
 import LocationSelector from "@/components/location-selector";
 import ClimateSummary from "@/components/climate-summary";
 import ClimateCharts from "@/components/climate-charts";
+import HabitabilityAssessment from "@/components/habitability-assessment";
+import ComparableLocation from "@/components/comparable-location";
 import type { ClimateLocation, ClimateProjection, MapMarker } from "@/types/climate";
 
 export default function ClimateDashboard() {
@@ -233,6 +235,30 @@ export default function ClimateDashboard() {
                   toast({
                     title: "Export Feature",
                     description: `${type} chart export will be available soon`,
+                  });
+                }}
+              />
+            </div>
+
+            {/* Habitability Assessment */}
+            <div className="mb-8">
+              <HabitabilityAssessment
+                currentData={currentData}
+                projectedData={projectionData}
+                selectedYear={selectedYear}
+              />
+            </div>
+
+            {/* Comparable Location Analysis */}
+            <div className="mb-8">
+              <ComparableLocation
+                projectedData={projectionData}
+                selectedYear={selectedYear}
+                onViewLocation={(lat, lng) => {
+                  // This would ideally pan the map to the comparable location
+                  toast({
+                    title: "Comparable Location",
+                    description: `Climate analog location at ${lat.toFixed(2)}°, ${lng.toFixed(2)}°`,
                   });
                 }}
               />
