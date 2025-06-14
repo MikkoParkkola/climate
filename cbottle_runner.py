@@ -132,8 +132,12 @@ def get_baseline_temperature(latitude):
         return 27.0
     elif abs_lat < 23.5:  # Tropical (Mumbai: 27°C, Bangkok: 28°C)
         return 26.5
-    elif abs_lat < 35:  # Subtropical (Los Angeles: 18°C, Athens: 19°C)
-        return 20.0 - (abs_lat - 23.5) * 0.17
+    elif abs_lat < 35:  # Subtropical - includes hot desert regions
+        # Check for desert climate (Middle East, North Africa)
+        if 20 <= abs_lat <= 35:  # Hot desert belt
+            return 28.0  # Dubai: 28°C, Riyadh: 26°C, Cairo: 22°C
+        else:
+            return 20.0 - (abs_lat - 23.5) * 0.17
     elif abs_lat < 45:  # Temperate (Paris: 12°C, New York: 13°C)
         return 18.0 - (abs_lat - 35) * 0.6
     elif abs_lat < 55:  # Cool temperate (London: 11°C, Berlin: 10°C)
@@ -230,8 +234,12 @@ def generate_monthly_temperature_series(annual_mean, latitude):
         amplitude = 25.0
     elif abs_lat > 45:  # Mid-latitudes
         amplitude = 15.0 + (abs_lat - 45) * 0.5
-    elif abs_lat > 23.5:  # Subtropics
-        amplitude = 8.0 + (abs_lat - 23.5) * 0.3
+    elif abs_lat > 23.5:  # Subtropics - includes hot desert regions
+        # Hot desert regions have larger temperature swings
+        if 20 <= abs_lat <= 35:  # Hot desert belt (Dubai, Riyadh, Phoenix)
+            amplitude = 18.0  # Dubai: 15°C winter, 45°C summer
+        else:
+            amplitude = 8.0 + (abs_lat - 23.5) * 0.3
     else:  # Tropics
         amplitude = 3.0 + abs_lat * 0.2
     
@@ -303,26 +311,27 @@ def calculate_heat_stress_days(monthly_temps):
     heat_days = 0
     
     for i, monthly_avg in enumerate(monthly_temps):
-        # Summer months (May-September for Northern Hemisphere)
-        is_summer = i in [4, 5, 6, 7, 8]  # May, Jun, Jul, Aug, Sep
+        # Daily max is typically 8-15°C higher than monthly average
+        estimated_daily_max = monthly_avg + 12
         
-        if is_summer and monthly_avg > 15:  # Only consider warm months
-            # Daily max is typically 8-12°C higher than monthly average
-            estimated_daily_max = monthly_avg + 10
+        if estimated_daily_max > 35:
+            days_in_month = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31][i]
             
-            if estimated_daily_max > 35:
-                # More days when temperature is much higher than threshold
-                days_in_month = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31][i]
-                
-                if estimated_daily_max > 40:
-                    # Very hot - most summer days exceed threshold
-                    heat_days += min(days_in_month * 0.7, days_in_month)
-                elif estimated_daily_max > 37:
-                    # Hot - about half of summer days exceed threshold
-                    heat_days += min(days_in_month * 0.4, days_in_month)
-                else:
-                    # Warm - some days exceed threshold
-                    heat_days += min(days_in_month * 0.2, days_in_month)
+            if estimated_daily_max > 50:
+                # Extreme heat - almost all days exceed threshold (Dubai summer)
+                heat_days += min(days_in_month * 0.95, days_in_month)
+            elif estimated_daily_max > 45:
+                # Very extreme heat - most days exceed threshold
+                heat_days += min(days_in_month * 0.85, days_in_month)
+            elif estimated_daily_max > 40:
+                # Very hot - most days exceed threshold
+                heat_days += min(days_in_month * 0.7, days_in_month)
+            elif estimated_daily_max > 37:
+                # Hot - about half of days exceed threshold
+                heat_days += min(days_in_month * 0.4, days_in_month)
+            else:
+                # Warm - some days exceed threshold
+                heat_days += min(days_in_month * 0.2, days_in_month)
     
     return int(heat_days)
 
@@ -334,7 +343,10 @@ def calculate_drought_risk(monthly_precip, latitude):
     
     # Regional drought susceptibility based on climate zones
     abs_lat = abs(latitude)
-    if 30 <= abs_lat <= 45:  # Mediterranean/subtropical (Spain, California, etc.)
+    if 15 <= abs_lat <= 35:  # Hot desert belt (Dubai, Riyadh, Phoenix, Cairo)
+        base_risk = 0.7  # Desert regions are inherently drought-prone
+        seasonal_threshold = 9  # Most months are dry
+    elif 30 <= abs_lat <= 45:  # Mediterranean/subtropical (Spain, California, etc.)
         base_risk = 0.3  # Inherently drought-prone
         seasonal_threshold = 6  # Summer drought expected
     elif abs_lat < 23.5:  # Tropical
@@ -356,10 +368,13 @@ def calculate_drought_risk(monthly_precip, latitude):
     severe_drought_factor = very_dry_months / 12.0
     summer_factor = 0.2 if summer_drought and 30 <= abs_lat <= 45 else 0
     
-    # Climate change amplification for drought-prone regions
-    climate_amplification = 0.15 if 30 <= abs_lat <= 45 else 0.05
+    # Enhanced drought risk for desert regions
+    desert_factor = 0.2 if 15 <= abs_lat <= 35 and annual_precip < 400 else 0
     
-    total_risk = base_risk + dry_season_stress * 0.4 + severe_drought_factor * 0.3 + summer_factor + climate_amplification
+    # Climate change amplification for drought-prone regions
+    climate_amplification = 0.25 if 15 <= abs_lat <= 35 else 0.15 if 30 <= abs_lat <= 45 else 0.05
+    
+    total_risk = base_risk + dry_season_stress * 0.4 + severe_drought_factor * 0.3 + summer_factor + desert_factor + climate_amplification
     
     return min(1.0, total_risk)
 
@@ -453,10 +468,22 @@ def calculate_habitability_score(temps, precip, heat_days, drought_risk, flood_r
     else:
         infrastructure_bonus = 8
     
-    # More realistic extreme weather penalties
-    heat_penalty = min(15, heat_days * 0.3)  # Reduced heat penalty
-    drought_penalty = min(10, drought_risk * 15)  # Reduced drought penalty
-    flood_penalty = min(8, flood_risk * 12)  # Reduced flood penalty
+    # Severe extreme weather penalties - extreme conditions drastically reduce habitability
+    heat_penalty = min(40, heat_days * 0.8)  # Heavy penalty for extreme heat
+    drought_penalty = min(35, drought_risk * 50)  # Severe penalty for drought risk
+    flood_penalty = min(25, flood_risk * 30)  # Significant penalty for flood risk
+    
+    # Additional extreme climate penalties
+    extreme_temp_penalty = 0
+    if mean_temp > 35:  # Extreme heat regions (Middle East)
+        extreme_temp_penalty = min(30, (mean_temp - 35) * 5)
+    elif mean_temp < -5:  # Extreme cold regions
+        extreme_temp_penalty = min(25, (-5 - mean_temp) * 3)
+    
+    # Extreme aridity penalty
+    extreme_dry_penalty = 0
+    if annual_precip < 300:  # Desert regions
+        extreme_dry_penalty = min(25, (300 - annual_precip) / 10)
     
     # Calculate component scores (normalized to 0-100 scale)
     temp_component = temp_score * 0.4
@@ -464,7 +491,7 @@ def calculate_habitability_score(temps, precip, heat_days, drought_risk, flood_r
     infrastructure_component = infrastructure_bonus
     
     base_score = temp_component + precip_component + infrastructure_component
-    final_score = base_score - heat_penalty - drought_penalty - flood_penalty
+    final_score = base_score - heat_penalty - drought_penalty - flood_penalty - extreme_temp_penalty - extreme_dry_penalty
     
     # Return both overall score and detailed breakdown
     breakdown = {
@@ -474,11 +501,13 @@ def calculate_habitability_score(temps, precip, heat_days, drought_risk, flood_r
         'heat_stress_penalty': heat_penalty,
         'drought_risk_penalty': drought_penalty,
         'flood_risk_penalty': flood_penalty,
+        'extreme_temperature_penalty': extreme_temp_penalty,
+        'extreme_aridity_penalty': extreme_dry_penalty,
         'base_score': base_score,
-        'final_score': max(40, min(100, final_score))
+        'final_score': max(10, min(100, final_score))
     }
     
-    return max(40, min(100, final_score)), breakdown
+    return max(10, min(100, final_score)), breakdown
 
 def get_habitability_category(score):
     """Convert habitability score to category"""
