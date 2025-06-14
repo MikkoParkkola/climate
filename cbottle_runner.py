@@ -123,32 +123,48 @@ def get_baseline_temperature(latitude, longitude=None):
     """Get realistic baseline temperature based on actual meteorological data"""
     abs_lat = abs(latitude)
     
-    # Specific cities with known temperature data (current climate normals 1991-2020)
-    if longitude and 59 <= abs_lat <= 61 and 23 <= longitude <= 26:  # Helsinki area
-        return 5.9  # Helsinki: 5.9°C annually
-    elif longitude and 51 <= abs_lat <= 53 and 3 <= longitude <= 6:  # Amsterdam area
-        return 10.2  # Amsterdam: 10.2°C annually (maritime climate)
-    elif longitude and 49 <= abs_lat <= 51 and 13 <= longitude <= 15:  # Prague area
-        return 9.0  # Prague: 9.0°C annually (continental climate)
-    # Use actual climate station data for accurate baselines
-    elif abs_lat < 10:  # Equatorial (Singapore: 27°C)
-        return 27.0
-    elif abs_lat < 23.5:  # Tropical (Mumbai: 27°C, Bangkok: 28°C)
-        return 26.5
-    elif abs_lat < 35:  # Subtropical - includes hot desert regions
-        # Check for desert climate (Middle East, North Africa)
-        if 20 <= abs_lat <= 35:  # Hot desert belt
-            return 28.0  # Dubai: 28°C, Riyadh: 26°C, Cairo: 22°C
+    # Generic global temperature model based on latitude with continental/maritime effects
+    
+    # Base temperature calculation using standard climatological gradients
+    if abs_lat < 10:  # Equatorial zone
+        base_temp = 27.0
+    elif abs_lat < 23.5:  # Tropical zone
+        base_temp = 27.0 - (abs_lat - 10) * 0.037  # ~26.5°C at Tropic
+    elif abs_lat < 35:  # Subtropical zone
+        # Check for hot desert regions using longitude bands (only if longitude provided)
+        is_desert = False
+        if longitude is not None:
+            is_desert = ((20 <= longitude <= 55 and 15 <= abs_lat <= 35) or  # Arabian Peninsula/Middle East
+                        (10 <= longitude <= 35 and 15 <= abs_lat <= 30) or   # Sahara
+                        (-125 <= longitude <= -100 and 25 <= abs_lat <= 40))  # SW US/Mexico
+        if is_desert:
+            base_temp = 28.0 - (abs_lat - 23.5) * 0.2  # Hot desert gradient
         else:
-            return 20.0 - (abs_lat - 23.5) * 0.17
-    elif abs_lat < 45:  # Temperate (Paris: 12°C, New York: 13°C)
-        return 18.0 - (abs_lat - 35) * 0.6
-    elif abs_lat < 55:  # Cool temperate (London: 11°C, Berlin: 10°C)
-        return 12.0 - (abs_lat - 45) * 0.2
-    elif abs_lat < 65:  # Subarctic (Helsinki: 6°C, Stockholm: 7°C, Oslo: 6°C)
-        return 9.0 - (abs_lat - 55) * 0.3  # Helsinki at 60°N should get ~6°C
-    else:  # Arctic (Reykjavik: 4°C, Anchorage: 2°C)
-        return 6.0 - (abs_lat - 65) * 0.4
+            base_temp = 26.5 - (abs_lat - 23.5) * 0.57  # ~20°C at 35°N
+    elif abs_lat < 45:  # Temperate zone
+        base_temp = 20.0 - (abs_lat - 35) * 0.8  # ~12°C at 45°N
+    elif abs_lat < 55:  # Cool temperate zone
+        base_temp = 12.0 - (abs_lat - 45) * 0.2  # ~10°C at 55°N
+    elif abs_lat < 65:  # Subarctic zone
+        base_temp = 10.0 - (abs_lat - 55) * 0.4  # ~6°C at 60°N, ~2°C at 65°N
+    else:  # Arctic zone
+        base_temp = 2.0 - (abs_lat - 65) * 0.2  # Decreasing to polar regions
+    
+    # Apply continental/maritime climate effects if longitude provided
+    if longitude is not None:
+        # Maritime climate adjustment (warmer winters, cooler summers)
+        if is_coastal(latitude, longitude):
+            # Stronger maritime effect at higher latitudes
+            maritime_effect = min(2.0, abs_lat * 0.05)
+            base_temp += maritime_effect
+        
+        # Continental climate adjustment (more extreme temperatures)
+        else:
+            # Continental climates are generally cooler due to lack of oceanic moderation
+            continental_effect = min(1.5, abs_lat * 0.03)
+            base_temp -= continental_effect
+    
+    return base_temp
 
 def get_baseline_precipitation(latitude, longitude):
     """Get realistic baseline precipitation based on actual meteorological data"""
@@ -193,28 +209,25 @@ def get_baseline_precipitation(latitude, longitude):
         elif abs_lat <= 47 and 0 <= longitude <= 30:
             longitude_factor = 0.7
     
-    # Use actual climate station data for accurate precipitation baselines
-    # Specific cities with known precipitation data
-    if 59 <= abs_lat <= 61 and 23 <= longitude <= 26:  # Helsinki area
-        base = 655  # Helsinki: 655mm annually
-    elif 51 <= abs_lat <= 53 and 3 <= longitude <= 6:  # Amsterdam area
-        base = 800  # Amsterdam: 838mm annually (maritime climate)
-    elif 49 <= abs_lat <= 51 and 13 <= longitude <= 15:  # Prague area
-        base = 508  # Prague: 508mm annually (continental climate)
-    elif abs_lat < 10:  # Equatorial (Singapore: 2165mm, Quito: 1200mm)
+    # Generic global precipitation model based on latitude and circulation patterns
+    if abs_lat < 10:  # Equatorial (ITCZ) - high precipitation
         base = 2200
-    elif abs_lat < 23.5:  # Tropical (Mumbai: 2200mm, Bangkok: 1500mm)
+    elif abs_lat < 23.5:  # Tropical - monsoon regions
         base = 1400
-    elif abs_lat < 35:  # Subtropical (Los Angeles: 380mm, Athens: 400mm, Mediterranean: 600mm)
-        base = 600
-    elif abs_lat < 45:  # Temperate (Paris: 640mm, New York: 1200mm)
-        base = 800
-    elif abs_lat < 55:  # Cool temperate (London: 600mm, Berlin: 580mm)
-        base = 700
-    elif abs_lat < 65:  # Subarctic (Helsinki: 655mm, Stockholm: 540mm, Oslo: 760mm)
+    elif abs_lat < 35:  # Subtropical - generally dry, Mediterranean climates
+        # Desert regions get less precipitation
+        is_desert = ((20 <= longitude <= 55 and 15 <= abs_lat <= 35) or  # Arabian Peninsula/Middle East
+                    (10 <= longitude <= 35 and 15 <= abs_lat <= 30) or   # Sahara
+                    (-125 <= longitude <= -100 and 25 <= abs_lat <= 40))  # SW US/Mexico
+        base = 200 if is_desert else 600
+    elif abs_lat < 45:  # Temperate - westerlies, moderate precipitation
+        base = 750
+    elif abs_lat < 55:  # Cool temperate - consistent westerly flow
         base = 650
-    else:  # Arctic (Reykjavik: 800mm, Anchorage: 400mm)
-        base = 500
+    elif abs_lat < 65:  # Subarctic - continental, summer precipitation peak
+        base = 600
+    else:  # Arctic - low precipitation
+        base = 400
     
     # Apply reduced longitude-based adjustments (they were too strong)
     base *= (longitude_factor * 0.3 + 0.7)  # Reduce impact of longitude factor
@@ -264,27 +277,26 @@ def generate_monthly_temperature_series(annual_mean, latitude):
     # CBottle uses authentic seasonal patterns from ICON atmospheric model
     abs_lat = abs(latitude)
     
-    # Realistic temperature amplitude based on actual climate data
-    # Specific cities with known seasonal patterns
-    if abs_lat >= 59 and abs_lat <= 61:  # Helsinki area
-        amplitude = 12.0  # Helsinki: July ~17°C, January ~-5°C (22°C range)
-    elif abs_lat >= 51 and abs_lat <= 53:  # Amsterdam area  
-        amplitude = 9.0   # Amsterdam: July ~17°C, January ~3°C (14°C range)
-    elif abs_lat >= 49 and abs_lat <= 51:  # Prague area
-        amplitude = 11.0  # Prague: July ~19°C, January ~-2°C (21°C range)
-    # General latitude-based patterns
-    elif abs_lat > 66.5:  # Polar regions
-        amplitude = 25.0
-    elif abs_lat > 45:  # Mid-latitudes
-        amplitude = 12.0 + (abs_lat - 45) * 0.3  # Reduced from 15.0 + 0.5
-    elif abs_lat > 23.5:  # Subtropics - includes hot desert regions
-        # Hot desert regions have larger temperature swings
-        if 20 <= abs_lat <= 35:  # Hot desert belt (Dubai, Riyadh, Phoenix)
-            amplitude = 18.0  # Dubai: 15°C winter, 45°C summer
+    # Generic seasonal amplitude model based on latitude and continental/maritime effects
+    # Temperature amplitude increases with latitude due to changing solar angle
+    if abs_lat < 10:  # Equatorial - minimal seasonal variation
+        amplitude = 3.0
+    elif abs_lat < 23.5:  # Tropical - small seasonal variation
+        amplitude = 3.0 + (abs_lat - 10) * 0.37  # ~8°C at Tropic
+    elif abs_lat < 35:  # Subtropical
+        # Desert regions have larger diurnal and seasonal ranges
+        if abs_lat >= 20:  # Potential desert latitudes
+            amplitude = 8.0 + (abs_lat - 23.5) * 0.87  # ~18°C for hot deserts
         else:
-            amplitude = 8.0 + (abs_lat - 23.5) * 0.3
-    else:  # Tropics
-        amplitude = 3.0 + abs_lat * 0.2
+            amplitude = 8.0 + (abs_lat - 23.5) * 0.35
+    elif abs_lat < 45:  # Temperate - moderate seasonal amplitude
+        amplitude = 8.0 + (abs_lat - 35) * 0.4  # ~12°C at 45°N
+    elif abs_lat < 55:  # Cool temperate - increasing amplitude
+        amplitude = 12.0 + (abs_lat - 45) * 0.1  # ~13°C at 55°N
+    elif abs_lat < 65:  # Subarctic - larger amplitude
+        amplitude = 13.0 + (abs_lat - 55) * 0.2  # ~15°C at 65°N
+    else:  # Arctic - maximum amplitude
+        amplitude = 15.0 + (abs_lat - 65) * 0.4  # Up to ~25°C at poles
     
     # Month indices (0=Jan, 11=Dec)
     months = np.arange(12)
@@ -368,30 +380,37 @@ def calculate_heat_stress_days(monthly_temps, latitude=None, longitude=None):
     # Realistic diurnal temperature ranges based on actual climate data
     abs_lat = abs(latitude) if latitude else 50
     
-    # Specific cities with known diurnal patterns
+    # Generic diurnal temperature range model based on climate physics
     if latitude and longitude:
-        if 59 <= abs_lat <= 61 and 23 <= longitude <= 26:  # Helsinki area
-            diurnal_range = 6  # Helsinki: moderate diurnal range, maritime influence
-        elif 51 <= abs_lat <= 53 and 3 <= longitude <= 6:  # Amsterdam area
-            diurnal_range = 5  # Amsterdam: small diurnal range, strong maritime climate
-        elif 49 <= abs_lat <= 51 and 13 <= longitude <= 15:  # Prague area
-            diurnal_range = 7  # Prague: moderate diurnal range, continental climate
-        # Desert regions (Dubai, Phoenix, Cairo)
-        elif (20 <= abs_lat <= 35) and ((25 <= longitude <= 55 and 20 <= abs_lat <= 35) or  # Arabian Peninsula
-                                      (10 <= longitude <= 35 and 15 <= abs_lat <= 30) or  # Sahara
-                                      (-125 <= longitude <= -100)):  # SW US
-            diurnal_range = 15  # Hot deserts have large day-night temperature differences
-        # Mediterranean climates (dry summers)
-        elif 30 <= abs_lat <= 45:
-            diurnal_range = 12
-        # Coastal temperate regions (smaller diurnal ranges)
+        # Desert regions have the largest diurnal ranges
+        is_desert = ((20 <= longitude <= 55 and 15 <= abs_lat <= 35) or  # Arabian Peninsula/Middle East
+                    (10 <= longitude <= 35 and 15 <= abs_lat <= 30) or   # Sahara
+                    (-125 <= longitude <= -100 and 25 <= abs_lat <= 40))  # SW US/Mexico
+        
+        if is_desert:
+            diurnal_range = 14  # Hot deserts: large day-night temperature differences
         elif is_coastal(latitude, longitude):
-            diurnal_range = 8
-        # Continental climates (larger diurnal ranges)
+            # Maritime climates have smaller diurnal ranges due to ocean thermal inertia
+            if abs_lat > 50:  # Northern maritime climates
+                diurnal_range = 5  # Small range due to strong oceanic influence
+            else:  # Lower latitude coastal areas
+                diurnal_range = 7
         else:
-            diurnal_range = 11
+            # Continental climates have larger diurnal ranges
+            if abs_lat > 50:  # Northern continental
+                diurnal_range = 8
+            elif abs_lat > 30:  # Mid-latitude continental
+                diurnal_range = 10
+            else:  # Lower latitude continental
+                diurnal_range = 12
     else:
-        diurnal_range = 10  # Default fallback
+        # Default based on latitude when longitude not provided
+        if abs_lat > 60:
+            diurnal_range = 6  # High latitude default
+        elif abs_lat > 30:
+            diurnal_range = 9  # Mid-latitude default
+        else:
+            diurnal_range = 11  # Lower latitude default
     
     for i, monthly_avg in enumerate(monthly_temps):
         # Calculate estimated daily maximum temperature
