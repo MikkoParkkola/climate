@@ -736,20 +736,25 @@ def generate_global_habitability_rankings(target_year):
 
 if __name__ == "__main__":
     try:
-        # Parse command line arguments
-        if len(sys.argv) != 5:
-            raise ValueError("Usage: python cbottle_runner.py <latitude> <longitude> <year> <api_key>")
-        
-        latitude = float(sys.argv[1])
-        longitude = float(sys.argv[2])
-        year = int(sys.argv[3])
-        api_key = sys.argv[4]
-        
-        # Generate projection
-        projection = generate_cbottle_projection(latitude, longitude, year, api_key)
-        
-        # Output as JSON
-        print(json.dumps(projection, indent=2))
+        # Check for rankings mode
+        if len(sys.argv) == 3 and sys.argv[1] == "--rankings":
+            year = int(sys.argv[2])
+            rankings = generate_global_habitability_rankings(year)
+            print(json.dumps(rankings, indent=2))
+        elif len(sys.argv) == 5:
+            # Standard projection mode
+            latitude = float(sys.argv[1])
+            longitude = float(sys.argv[2])
+            year = int(sys.argv[3])
+            api_key = sys.argv[4]
+            
+            # Generate projection
+            projection = generate_cbottle_projection(latitude, longitude, year, api_key)
+            
+            # Output as JSON
+            print(json.dumps(projection, indent=2))
+        else:
+            raise ValueError("Usage: python cbottle_runner.py <latitude> <longitude> <year> <api_key> OR python cbottle_runner.py --rankings <year>")
         
     except Exception as e:
         error_response = {

@@ -4,7 +4,7 @@ import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Info, Thermometer, Droplets, Wind, Home, Sprout, AlertTriangle } from "lucide-react";
+import { Info, Thermometer, Droplets, Wind, Home, Sprout, AlertTriangle, BarChart3 } from "lucide-react";
 import type { ClimateProjection } from "@/types/climate";
 
 interface LivabilityIndexBreakdownProps {
@@ -40,6 +40,92 @@ export default function LivabilityIndexBreakdown({
   const calculateComponentScore = (value: number, min: number, max: number, invert = false): number => {
     const normalized = Math.max(0, Math.min(100, ((value - min) / (max - min)) * 100));
     return invert ? 100 - normalized : normalized;
+  };
+
+  // Stacked bar component for habitability breakdown
+  const HabitabilityStackedBar = ({ 
+    breakdown, 
+    title 
+  }: { 
+    breakdown: any, 
+    title: string 
+  }) => {
+    if (!breakdown) return null;
+
+    const components = [
+      { 
+        key: 'temperature_comfort', 
+        label: 'Temperature Comfort', 
+        color: 'bg-blue-500', 
+        value: breakdown.temperature_comfort || 0 
+      },
+      { 
+        key: 'precipitation_adequacy', 
+        label: 'Water Adequacy', 
+        color: 'bg-cyan-500', 
+        value: breakdown.precipitation_adequacy || 0 
+      },
+      { 
+        key: 'infrastructure_adaptation', 
+        label: 'Infrastructure', 
+        color: 'bg-green-500', 
+        value: breakdown.infrastructure_adaptation || 0 
+      },
+      { 
+        key: 'heat_stress_penalty', 
+        label: 'Heat Stress', 
+        color: 'bg-red-500', 
+        value: Math.abs(breakdown.heat_stress_penalty || 0) 
+      },
+      { 
+        key: 'drought_penalty', 
+        label: 'Drought Risk', 
+        color: 'bg-orange-500', 
+        value: Math.abs(breakdown.drought_penalty || 0) 
+      },
+      { 
+        key: 'flood_penalty', 
+        label: 'Flood Risk', 
+        color: 'bg-purple-500', 
+        value: Math.abs(breakdown.flood_penalty || 0) 
+      }
+    ];
+
+    const maxValue = Math.max(100, Math.abs(breakdown.base_score || 0));
+    
+    return (
+      <div className="space-y-3">
+        <h4 className="font-medium text-sm">{title}</h4>
+        <div className="space-y-2">
+          {components.map((component) => (
+            <div key={component.key} className="flex items-center gap-3">
+              <div className="w-20 text-xs text-muted-foreground truncate">
+                {component.label}
+              </div>
+              <div className="flex-1 relative h-4 bg-muted rounded">
+                <div 
+                  className={`h-full rounded ${component.color} transition-all duration-300`}
+                  style={{ 
+                    width: `${Math.min(100, (component.value / maxValue) * 100)}%` 
+                  }}
+                />
+              </div>
+              <div className="w-12 text-xs text-right">
+                {component.value.toFixed(1)}
+              </div>
+            </div>
+          ))}
+          <div className="mt-3 pt-2 border-t">
+            <div className="flex items-center justify-between text-sm font-medium">
+              <span>Final Score:</span>
+              <span className={`${breakdown.final_score >= 70 ? 'text-green-600' : breakdown.final_score >= 50 ? 'text-yellow-600' : 'text-red-600'}`}>
+                {breakdown.final_score?.toFixed(1) || 'N/A'}
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
   };
 
   const getIndexComponents = (): IndexComponent[] => {
