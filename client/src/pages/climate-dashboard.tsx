@@ -24,15 +24,15 @@ export default function ClimateDashboard() {
   const { toast } = useToast();
 
   // Query for climate projection data
-  const { data: projectionData, isLoading: isProjectionLoading, error: projectionError } = useQuery({
+  const { data: projectionData, isLoading: isProjectionLoading, error: projectionError } = useQuery<ClimateProjection>({
     queryKey: [`/api/projections/${selectedLocation?.id}/${selectedYear}`],
-    enabled: !!selectedLocation?.id,
+    enabled: selectedLocation?.id !== undefined,
   });
 
   // Query for current climate data (baseline year)
-  const { data: currentData, error: currentError } = useQuery({
+  const { data: currentData, error: currentError } = useQuery<ClimateProjection>({
     queryKey: [`/api/projections/${selectedLocation?.id}/2024`],
-    enabled: !!selectedLocation?.id,
+    enabled: selectedLocation?.id !== undefined,
   });
 
   // Debug logging
@@ -57,21 +57,15 @@ export default function ClimateDashboard() {
   const handleLocationSelect = useCallback(async (latitude: number, longitude: number) => {
     try {
       const locationName = await geocodingUtils.reverseGeocode(latitude, longitude);
-      
-      const location: ClimateLocation = {
-        id: 0,
-        name: locationName,
-        latitude,
-        longitude,
-      };
 
-      // Create location in backend
+      // Create location in backend and get the real ID
       const createdLocation = await createLocationMutation.mutateAsync({
         name: locationName,
         latitude,
         longitude,
       });
 
+      console.log('Created location:', createdLocation);
       setSelectedLocation(createdLocation);
       
       toast({
