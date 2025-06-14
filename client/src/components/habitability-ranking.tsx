@@ -27,6 +27,12 @@ interface GlobalRankings {
   best_habitability: GlobalRankedLocation[];
   worst_habitability: GlobalRankedLocation[];
   biggest_decline: GlobalRankedLocation[];
+  best_temperature_comfort: GlobalRankedLocation[];
+  worst_temperature_comfort: GlobalRankedLocation[];
+  best_humidity: GlobalRankedLocation[];
+  worst_humidity: GlobalRankedLocation[];
+  best_infrastructure: GlobalRankedLocation[];
+  worst_infrastructure: GlobalRankedLocation[];
   year: number;
 }
 
