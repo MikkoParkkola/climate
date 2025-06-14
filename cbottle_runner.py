@@ -42,7 +42,7 @@ def generate_cbottle_projection(latitude, longitude, target_year, api_key):
         sea_level_rise = calculate_sea_level_rise(years_ahead, is_coastal(latitude, longitude))
         
         # Habitability assessment
-        habitability_score = calculate_habitability_score(
+        habitability_score, habitability_breakdown = calculate_habitability_score(
             monthly_temps, monthly_precip, heat_stress_days, drought_risk, flood_risk
         )
         
@@ -98,7 +98,8 @@ def generate_cbottle_projection(latitude, longitude, target_year, api_key):
             },
             "habitability": {
                 "score": float(habitability_score),
-                "category": get_habitability_category(habitability_score)
+                "category": get_habitability_category(habitability_score),
+                "breakdown": habitability_breakdown
             },
             "time_series": time_series,
             "atmospheric_physics": {
@@ -409,7 +410,7 @@ def is_coastal(latitude, longitude):
     return abs_lat < 70  # Most inhabited areas have some coastal influence
 
 def calculate_habitability_score(temps, precip, heat_days, drought_risk, flood_risk):
-    """Calculate overall habitability score (0-100) - globally calibrated"""
+    """Calculate overall habitability score (0-100) with detailed breakdown"""
     mean_temp = np.mean(temps)
     annual_precip = np.sum(precip)
     
@@ -457,10 +458,27 @@ def calculate_habitability_score(temps, precip, heat_days, drought_risk, flood_r
     drought_penalty = min(10, drought_risk * 15)  # Reduced drought penalty
     flood_penalty = min(8, flood_risk * 12)  # Reduced flood penalty
     
-    base_score = (temp_score * 0.4 + precip_score * 0.4 + infrastructure_bonus)
+    # Calculate component scores (normalized to 0-100 scale)
+    temp_component = temp_score * 0.4
+    precip_component = precip_score * 0.4
+    infrastructure_component = infrastructure_bonus
+    
+    base_score = temp_component + precip_component + infrastructure_component
     final_score = base_score - heat_penalty - drought_penalty - flood_penalty
     
-    return max(40, min(100, final_score))  # Minimum 40 for established cities
+    # Return both overall score and detailed breakdown
+    breakdown = {
+        'temperature_comfort': temp_component,
+        'precipitation_adequacy': precip_component,
+        'infrastructure_adaptation': infrastructure_component,
+        'heat_stress_penalty': -heat_penalty,
+        'drought_penalty': -drought_penalty,
+        'flood_penalty': -flood_penalty,
+        'base_score': base_score,
+        'final_score': max(40, min(100, final_score))
+    }
+    
+    return max(40, min(100, final_score)), breakdown
 
 def get_habitability_category(score):
     """Convert habitability score to category"""
@@ -492,6 +510,7 @@ def generate_climate_time_series(latitude, longitude, start_year, end_year):
         "precipitation_baseline": baseline_precip,
         "precipitation_differences": [],
         "habitability_trend": [],
+        "habitability_breakdowns": [],
         "monthly_temperature_series": [],
         "monthly_precipitation_series": []
     }
@@ -508,21 +527,25 @@ def generate_climate_time_series(latitude, longitude, start_year, end_year):
         monthly_temps = generate_monthly_temperature_series(annual_temp, latitude)
         monthly_precip = generate_monthly_precipitation_series(annual_precip, latitude)
         
+        # Calculate detailed habitability with breakdown
+        heat_stress_days = calculate_heat_stress_days(monthly_temps)
+        drought_risk = calculate_drought_risk(monthly_precip, latitude)
+        flood_risk = calculate_flood_risk(monthly_precip, latitude)
+        
+        habitability_score, habitability_breakdown = calculate_habitability_score(
+            monthly_temps, monthly_precip, heat_stress_days, drought_risk, flood_risk
+        )
+        
         # Calculate differences from baseline
         temp_diff = annual_temp - baseline_temp
         precip_diff = annual_precip - baseline_precip
-        
-        # Realistic habitability estimate for trend (adjusted for northern climates)
-        # Base score starts higher, less penalty for cold temperatures
-        temp_penalty = max(0, abs(annual_temp - 15) * 1.5)  # Optimal around 15°C for northern cities
-        precip_penalty = max(0, (600 - annual_precip) / 30) if annual_precip < 600 else 0  # Less penalty for adequate precipitation
-        habitability = max(20, min(100, 85 - temp_penalty - precip_penalty))  # More realistic range
         
         time_series["temperature_trend"].append(float(annual_temp))
         time_series["temperature_differences"].append(float(temp_diff))
         time_series["precipitation_trend"].append(float(annual_precip))
         time_series["precipitation_differences"].append(float(precip_diff))
-        time_series["habitability_trend"].append(float(habitability))
+        time_series["habitability_trend"].append(float(habitability_score))
+        time_series["habitability_breakdowns"].append(habitability_breakdown)
         time_series["monthly_temperature_series"].append([float(t) for t in monthly_temps])
         time_series["monthly_precipitation_series"].append([float(p) for p in monthly_precip])
     
@@ -585,6 +608,131 @@ def get_climate_feedbacks(latitude, temp_anomaly):
     feedbacks.append("Vegetation feedback: Changing plant cover affects carbon cycle and surface properties")
     
     return feedbacks
+
+def generate_global_habitability_rankings(target_year):
+    """Generate global habitability rankings for the target year"""
+    # Major world cities with representative coordinates
+    global_locations = [
+        {"name": "Singapore", "lat": 1.3521, "lng": 103.8198, "region": "Southeast Asia"},
+        {"name": "Tokyo, Japan", "lat": 35.6762, "lng": 139.6503, "region": "East Asia"},
+        {"name": "London, UK", "lat": 51.5074, "lng": -0.1278, "region": "Western Europe"},
+        {"name": "Paris, France", "lat": 48.8566, "lng": 2.3522, "region": "Western Europe"},
+        {"name": "Stockholm, Sweden", "lat": 59.3293, "lng": 18.0686, "region": "Northern Europe"},
+        {"name": "Amsterdam, Netherlands", "lat": 52.3676, "lng": 4.9041, "region": "Western Europe"},
+        {"name": "Copenhagen, Denmark", "lat": 55.6761, "lng": 12.5683, "region": "Northern Europe"},
+        {"name": "Zurich, Switzerland", "lat": 47.3769, "lng": 8.5417, "region": "Central Europe"},
+        {"name": "Sydney, Australia", "lat": -33.8688, "lng": 151.2093, "region": "Oceania"},
+        {"name": "Vancouver, Canada", "lat": 49.2827, "lng": -123.1207, "region": "North America"},
+        {"name": "San Francisco, USA", "lat": 37.7749, "lng": -122.4194, "region": "North America"},
+        {"name": "New York, USA", "lat": 40.7128, "lng": -74.0060, "region": "North America"},
+        {"name": "Berlin, Germany", "lat": 52.5200, "lng": 13.4050, "region": "Central Europe"},
+        {"name": "Vienna, Austria", "lat": 48.2082, "lng": 16.3738, "region": "Central Europe"},
+        {"name": "Barcelona, Spain", "lat": 41.3851, "lng": 2.1734, "region": "Southern Europe"},
+        {"name": "Madrid, Spain", "lat": 40.4168, "lng": -3.7038, "region": "Southern Europe"},
+        {"name": "Rome, Italy", "lat": 41.9028, "lng": 12.4964, "region": "Southern Europe"},
+        {"name": "Athens, Greece", "lat": 37.9838, "lng": 23.7275, "region": "Southern Europe"},
+        {"name": "Dubai, UAE", "lat": 25.2048, "lng": 55.2708, "region": "Middle East"},
+        {"name": "Tel Aviv, Israel", "lat": 32.0853, "lng": 34.7818, "region": "Middle East"},
+        {"name": "Mumbai, India", "lat": 19.0760, "lng": 72.8777, "region": "South Asia"},
+        {"name": "Bangkok, Thailand", "lat": 13.7563, "lng": 100.5018, "region": "Southeast Asia"},
+        {"name": "Hong Kong", "lat": 22.3193, "lng": 114.1694, "region": "East Asia"},
+        {"name": "Seoul, South Korea", "lat": 37.5665, "lng": 126.9780, "region": "East Asia"},
+        {"name": "Shanghai, China", "lat": 31.2304, "lng": 121.4737, "region": "East Asia"},
+        {"name": "Beijing, China", "lat": 39.9042, "lng": 116.4074, "region": "East Asia"},
+        {"name": "Melbourne, Australia", "lat": -37.8136, "lng": 144.9631, "region": "Oceania"},
+        {"name": "Auckland, New Zealand", "lat": -36.8485, "lng": 174.7633, "region": "Oceania"},
+        {"name": "Cape Town, South Africa", "lat": -33.9249, "lng": 18.4241, "region": "Africa"},
+        {"name": "São Paulo, Brazil", "lat": -23.5505, "lng": -46.6333, "region": "South America"},
+        {"name": "Buenos Aires, Argentina", "lat": -34.6037, "lng": -58.3816, "region": "South America"},
+        {"name": "Mexico City, Mexico", "lat": 19.4326, "lng": -99.1332, "region": "North America"},
+        {"name": "Toronto, Canada", "lat": 43.6532, "lng": -79.3832, "region": "North America"},
+        {"name": "Los Angeles, USA", "lat": 34.0522, "lng": -118.2437, "region": "North America"},
+        {"name": "Miami, USA", "lat": 25.7617, "lng": -80.1918, "region": "North America"},
+        {"name": "Cairo, Egypt", "lat": 30.0444, "lng": 31.2357, "region": "Africa"},
+        {"name": "Lagos, Nigeria", "lat": 6.5244, "lng": 3.3792, "region": "Africa"},
+        {"name": "Nairobi, Kenya", "lat": -1.2921, "lng": 36.8219, "region": "Africa"},
+        {"name": "Jakarta, Indonesia", "lat": -6.2088, "lng": 106.8456, "region": "Southeast Asia"},
+        {"name": "Manila, Philippines", "lat": 14.5995, "lng": 120.9842, "region": "Southeast Asia"},
+        {"name": "Karachi, Pakistan", "lat": 24.8607, "lng": 67.0011, "region": "South Asia"},
+        {"name": "Delhi, India", "lat": 28.7041, "lng": 77.1025, "region": "South Asia"},
+        {"name": "Dhaka, Bangladesh", "lat": 23.8103, "lng": 90.4125, "region": "South Asia"},
+        {"name": "Istanbul, Turkey", "lat": 41.0082, "lng": 28.9784, "region": "Europe/Asia"},
+        {"name": "Moscow, Russia", "lat": 55.7558, "lng": 37.6176, "region": "Eastern Europe"},
+        {"name": "Reykjavik, Iceland", "lat": 64.1466, "lng": -21.9426, "region": "Northern Europe"},
+        {"name": "Helsinki, Finland", "lat": 60.1699, "lng": 24.9384, "region": "Northern Europe"},
+        {"name": "Oslo, Norway", "lat": 59.9139, "lng": 10.7522, "region": "Northern Europe"},
+        {"name": "Lisbon, Portugal", "lat": 38.7223, "lng": -9.1393, "region": "Western Europe"},
+        {"name": "Dublin, Ireland", "lat": 53.3498, "lng": -6.2603, "region": "Western Europe"}
+    ]
+    
+    rankings = []
+    current_year = 2024
+    
+    for location in global_locations:
+        try:
+            # Calculate current baseline habitability
+            baseline_temp = get_baseline_temperature(location["lat"])
+            baseline_precip = get_baseline_precipitation(location["lat"], location["lng"])
+            baseline_monthly_temps = generate_monthly_temperature_series(baseline_temp, location["lat"])
+            baseline_monthly_precip = generate_monthly_precipitation_series(baseline_precip, location["lat"])
+            
+            baseline_heat_stress = calculate_heat_stress_days(baseline_monthly_temps)
+            baseline_drought = calculate_drought_risk(baseline_monthly_precip, location["lat"])
+            baseline_flood = calculate_flood_risk(baseline_monthly_precip, location["lat"])
+            
+            baseline_habitability, _ = calculate_habitability_score(
+                baseline_monthly_temps, baseline_monthly_precip, baseline_heat_stress, baseline_drought, baseline_flood
+            )
+            
+            # Calculate future habitability
+            years_ahead = target_year - current_year
+            temp_anomaly = calculate_temperature_anomaly(location["lat"], location["lng"], years_ahead)
+            precip_anomaly = calculate_precipitation_anomaly(location["lat"], location["lng"], years_ahead)
+            
+            future_temp = baseline_temp + temp_anomaly
+            future_precip = baseline_precip * (1 + precip_anomaly)
+            
+            future_monthly_temps = generate_monthly_temperature_series(future_temp, location["lat"])
+            future_monthly_precip = generate_monthly_precipitation_series(future_precip, location["lat"])
+            
+            future_heat_stress = calculate_heat_stress_days(future_monthly_temps)
+            future_drought = calculate_drought_risk(future_monthly_precip, location["lat"])
+            future_flood = calculate_flood_risk(future_monthly_precip, location["lat"])
+            
+            future_habitability, _ = calculate_habitability_score(
+                future_monthly_temps, future_monthly_precip, future_heat_stress, future_drought, future_flood
+            )
+            
+            # Calculate change
+            habitability_change = future_habitability - baseline_habitability
+            
+            rankings.append({
+                "name": location["name"],
+                "region": location["region"],
+                "latitude": location["lat"],
+                "longitude": location["lng"],
+                "baseline_habitability": baseline_habitability,
+                "future_habitability": future_habitability,
+                "habitability_change": habitability_change,
+                "temperature_change": temp_anomaly,
+                "precipitation_change": precip_anomaly * 100  # Convert to percentage
+            })
+            
+        except Exception as e:
+            # Skip locations that fail calculation
+            continue
+    
+    # Sort rankings
+    best_habitability = sorted(rankings, key=lambda x: x["future_habitability"], reverse=True)[:10]
+    worst_habitability = sorted(rankings, key=lambda x: x["future_habitability"])[:10]
+    biggest_decline = sorted(rankings, key=lambda x: x["habitability_change"])[:10]
+    
+    return {
+        "best_habitability": best_habitability,
+        "worst_habitability": worst_habitability,
+        "biggest_decline": biggest_decline,
+        "year": target_year
+    }
 
 if __name__ == "__main__":
     try:
