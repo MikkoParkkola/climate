@@ -861,11 +861,12 @@ function generateMonthlyTemperatures(annualAvg: number, latitude: number): numbe
   for (let i = 0; i < 12; i++) {
     let seasonal;
     if (latitude >= 0) {
-      // Northern hemisphere: July (i=6) warmest, January (i=0) coldest
-      seasonal = -Math.cos((i - 6) * Math.PI / 6) * amplitude;
+      // Northern hemisphere: June (i=5), July (i=6), August (i=7) warmest
+      // January (i=0) coldest
+      seasonal = -Math.cos((i - 5.5) * Math.PI / 6) * amplitude;
     } else {
-      // Southern hemisphere: January warmest, July coldest
-      seasonal = Math.cos((i - 6) * Math.PI / 6) * amplitude;
+      // Southern hemisphere: December (i=11), January (i=0), February (i=1) warmest
+      seasonal = Math.cos((i - 5.5) * Math.PI / 6) * amplitude;
     }
     
     months.push(Math.round((annualAvg + seasonal) * 10) / 10);

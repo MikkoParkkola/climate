@@ -449,6 +449,27 @@ export default function ComprehensiveClimateReport() {
                   >
                     {isLoadingProjection ? 'Generating Projection...' : 'Get Climate Projection'}
                   </Button>
+                  
+                  {selectedLocation && (
+                    <div className="flex flex-wrap gap-2">
+                      <Button
+                        onClick={() => setShowDebugInfo(!showDebugInfo)}
+                        variant="outline"
+                        size="sm"
+                      >
+                        <Bug className="h-4 w-4 mr-2" />
+                        {showDebugInfo ? 'Hide' : 'Show'} Debug
+                      </Button>
+                      <Button
+                        onClick={() => setShowFullReport(!showFullReport)}
+                        variant="outline"
+                        size="sm"
+                      >
+                        <FileText className="h-4 w-4 mr-2" />
+                        {showFullReport ? 'Hide' : 'Show'} Full Report
+                      </Button>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
@@ -464,14 +485,80 @@ export default function ComprehensiveClimateReport() {
           </div>
         )}
 
+        {/* Debug Information Panel */}
+        {showDebugInfo && debugData && (
+          <Card className="p-6 bg-gray-50">
+            <h3 className="text-lg font-semibold mb-4">API Debug Information</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <h4 className="font-medium mb-2">Request</h4>
+                <pre className="bg-white p-3 rounded border text-xs overflow-auto">
+                  {JSON.stringify(debugData.request, null, 2)}
+                </pre>
+              </div>
+              <div>
+                <h4 className="font-medium mb-2">Response</h4>
+                <pre className="bg-white p-3 rounded border text-xs overflow-auto max-h-60">
+                  {JSON.stringify(debugData.response, null, 2)}
+                </pre>
+              </div>
+            </div>
+          </Card>
+        )}
+
         {selectedLocation && projectionData && currentData ? (
           <div className="space-y-8">
-            {/* Key Metrics Overview with Ranges */}
+            {/* Always visible: Basic Climate Summary */}
             <Card>
               <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <BarChart3 className="h-5 w-5" />
-                  Key Climate Metrics Overview
+                <CardTitle>Climate Summary for {selectedLocation.name}</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  <div className="text-center">
+                    <div className="text-2xl font-bold text-blue-600">
+                      {projectionData?.averageTemperature?.toFixed(1)}°C
+                    </div>
+                    <div className="text-sm text-gray-600">Temperature {selectedYear}</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-2xl font-bold text-green-600">
+                      {projectionData?.annualPrecipitation?.toFixed(0)}mm
+                    </div>
+                    <div className="text-sm text-gray-600">Precipitation</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-2xl font-bold text-purple-600">
+                      {projectionData?.habitabilityScore}/100
+                    </div>
+                    <div className="text-sm text-gray-600">Habitability</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-2xl font-bold text-orange-600">
+                      {projectionData?.waterStressLevel}/100
+                    </div>
+                    <div className="text-sm text-gray-600">Water Stress</div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Climate Timeline - Always Visible */}
+            <ClimateTimeline 
+              selectedLocation={selectedLocation}
+              onYearSelect={setSelectedYear}
+            />
+
+            {showFullReport && (
+              <>
+                {/* Key Metrics Overview with Ranges */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <BarChart3 className="h-5 w-5" />
+                      Key Climate Metrics Overview
+                    </CardTitle>
+                  </CardHeader>
                 </CardTitle>
                 <div className="text-sm text-gray-600 mt-2">
                   <p><strong>How to read these metrics:</strong> Each value shows the projected change compared to current conditions. 
@@ -981,6 +1068,8 @@ export default function ComprehensiveClimateReport() {
                 <p>All values show actual ranges with optimal indicators for comprehensive analysis</p>
               </div>
             </div>
+              </>
+            )}
           </div>
         ) : (
           <Card>
