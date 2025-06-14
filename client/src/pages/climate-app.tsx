@@ -64,24 +64,294 @@ export default function ClimateApp() {
     setLogs(prev => [...prev, `${new Date().toLocaleTimeString()}: ${message}`]);
   };
 
-  const exportToPDF = () => {
+  const exportToPDF = async () => {
     if (!climateData) return;
     
-    // Create a comprehensive text-based report
-    const reportContent = generateTextReport(climateData);
-    const blob = new Blob([reportContent], { type: 'text/plain' });
-    const url = URL.createObjectURL(blob);
-    
-    // Create download link
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `Climate_Report_${climateData.location?.name?.replace(/[^a-zA-Z0-9]/g, '_')}_${climateData.year}.txt`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
-    
-    addLog(`📄 Climate report exported for ${climateData.location?.name}, ${climateData.year}`);
+    try {
+      // Dynamic import to avoid SSR issues
+      const html2canvas = (await import('html2canvas')).default;
+      const jsPDF = (await import('jspdf')).jsPDF;
+      
+      addLog(`Generating PDF report for ${climateData.location?.name}, ${climateData.year}...`);
+      
+      // Create PDF with proper page size
+      const pdf = new jsPDF('p', 'mm', 'a4');
+      const pageWidth = pdf.internal.pageSize.getWidth();
+      const pageHeight = pdf.internal.pageSize.getHeight();
+      const margin = 10;
+      let yPosition = margin;
+      
+      // Title page
+      pdf.setFontSize(20);
+      pdf.setFont('helvetica', 'bold');
+      pdf.text('Climate Projection Report', pageWidth / 2, yPosition + 10, { align: 'center' });
+      
+      yPosition += 20;
+      pdf.setFontSize(14);
+      pdf.setFont('helvetica', 'normal');
+      pdf.text(`Location: ${climateData.location?.name || 'Unknown'}`, pageWidth / 2, yPosition, { align: 'center' });
+      
+      yPosition += 10;
+      pdf.text(`Projection Year: ${climateData.year}`, pageWidth / 2, yPosition, { align: 'center' });
+      
+      yPosition += 10;
+      pdf.text(`Generated: ${new Date().toLocaleString()}`, pageWidth / 2, yPosition, { align: 'center' });
+      
+      yPosition += 20;
+      
+      // Climate summary data
+      pdf.setFontSize(16);
+      pdf.setFont('helvetica', 'bold');
+      pdf.text('Climate Overview', margin, yPosition);
+      yPosition += 15;
+      
+      pdf.setFontSize(12);
+      pdf.setFont('helvetica', 'normal');
+      
+      // Temperature data
+      if (climateData.temperature) {
+        pdf.text(`Annual Mean Temperature: ${climateData.temperature.annual_mean?.toFixed(1)}°C`, margin, yPosition);
+        yPosition += 8;
+        pdf.text(`Temperature Change: ${climateData.temperature.change_from_baseline > 0 ? '+' : ''}${climateData.temperature.change_from_baseline?.toFixed(1)}°C`, margin, yPosition);
+        yPosition += 8;
+        pdf.text(`Temperature Range: ${climateData.temperature.min?.toFixed(1)}°C to ${climateData.temperature.max?.toFixed(1)}°C`, margin, yPosition);
+        yPosition += 12;
+      }
+      
+      // Precipitation data
+      if (climateData.precipitation) {
+        pdf.text(`Annual Precipitation: ${climateData.precipitation.annual_total?.toFixed(0)} mm`, margin, yPosition);
+        yPosition += 8;
+        pdf.text(`Precipitation Change: ${climateData.precipitation.change_from_baseline > 0 ? '+' : ''}${climateData.precipitation.change_from_baseline?.toFixed(1)}%`, margin, yPosition);
+        yPosition += 12;
+      }
+      
+      // Habitability data
+      if (climateData.habitability) {
+        pdf.text(`Habitability Score: ${climateData.habitability.score?.toFixed(1)}/100`, margin, yPosition);
+        yPosition += 8;
+        
+        const getHabitabilityLevel = (score: number) => {
+          if (score >= 80) return "Excellent";
+          if (score >= 65) return "Good";
+          if (score >= 50) return "Moderate";
+          if (score >= 30) return "Poor";
+          return "Critical";
+        };
+        
+        pdf.text(`Habitability Level: ${getHabitabilityLevel(climateData.habitability.score)}`, margin, yPosition);
+        yPosition += 12;
+      }
+      
+      // Risk factors
+      if (climateData.extremes) {
+        pdf.setFontSize(16);
+        pdf.setFont('helvetica', 'bold');
+        pdf.text('Risk Assessment', margin, yPosition);
+        yPosition += 15;
+        
+        pdf.setFontSize(12);
+        pdf.setFont('helvetica', 'normal');
+        
+        if (climateData.extremes.heat_stress_days !== undefined) {
+          pdf.text(`Heat Stress Days (>35°C): ${climateData.extremes.heat_stress_days} days/year`, margin, yPosition);
+          yPosition += 8;
+        }
+        
+        if (climateData.extremes.drought_risk !== undefined) {
+          pdf.text(`Drought Risk: ${(climateData.extremes.drought_risk * 100).toFixed(1)}%`, margin, yPosition);
+          yPosition += 8;
+        }
+        
+        if (climateData.extremes.flood_risk !== undefined) {
+          pdf.text(`Flood Risk: ${(climateData.extremes.flood_risk * 100).toFixed(1)}%`, margin, yPosition);
+          yPosition += 12;
+        }
+      }
+      
+      // Add new page for charts if needed
+      if (yPosition > pageHeight - 50) {
+        pdf.addPage();
+        yPosition = margin;
+      }
+      
+      // Capture visual elements from the report
+      pdf.addPage();
+      yPosition = margin;
+      
+      pdf.setFontSize(16);
+      pdf.setFont('helvetica', 'bold');
+      pdf.text('Visual Analysis & Charts', margin, yPosition);
+      yPosition += 20;
+      
+      // Try to capture the main climate report section
+      try {
+        const reportElement = document.querySelector('[data-climate-report]') || 
+                             document.querySelector('.space-y-8') ||
+                             document.querySelector('main');
+        
+        if (reportElement) {
+          const canvas = await html2canvas(reportElement as HTMLElement, {
+            scale: 1,
+            useCORS: true,
+            allowTaint: true,
+            backgroundColor: '#ffffff',
+            width: 800,
+            height: Math.min(reportElement.scrollHeight, 3000)
+          });
+          
+          const imgData = canvas.toDataURL('image/png', 0.8);
+          const imgWidth = pageWidth - (margin * 2);
+          const imgHeight = (canvas.height * imgWidth) / canvas.width;
+          
+          // Split large images across multiple pages
+          let remainingHeight = imgHeight;
+          let sourceY = 0;
+          
+          while (remainingHeight > 0) {
+            const pageSpace = pageHeight - yPosition - margin;
+            const segmentHeight = Math.min(remainingHeight, pageSpace);
+            
+            if (segmentHeight < 20) {
+              pdf.addPage();
+              yPosition = margin;
+              continue;
+            }
+            
+            // Calculate source coordinates for this segment
+            const sourceHeight = (segmentHeight * canvas.width) / imgWidth;
+            
+            pdf.addImage(
+              imgData, 
+              'PNG', 
+              margin, 
+              yPosition, 
+              imgWidth, 
+              segmentHeight
+            );
+            
+            remainingHeight -= segmentHeight;
+            sourceY += sourceHeight;
+            
+            if (remainingHeight > 0) {
+              pdf.addPage();
+              yPosition = margin;
+            } else {
+              yPosition += segmentHeight + 10;
+            }
+          }
+        }
+      } catch (error) {
+        console.log('Could not capture main report:', error);
+        
+        // Fallback: capture individual charts
+        const chartElements = document.querySelectorAll('canvas');
+        let chartIndex = 0;
+        
+        for (let i = 0; i < chartElements.length; i++) {
+          const canvas = chartElements[i];
+          if (yPosition > pageHeight - 80) {
+            pdf.addPage();
+            yPosition = margin;
+          }
+          
+          try {
+            const chartDataUrl = canvas.toDataURL('image/png', 0.8);
+            
+            pdf.setFontSize(14);
+            pdf.setFont('helvetica', 'bold');
+            pdf.text(`Chart ${chartIndex + 1}`, margin, yPosition);
+            yPosition += 15;
+            
+            const chartWidth = pageWidth - (margin * 2);
+            const chartHeight = 60;
+            
+            pdf.addImage(chartDataUrl, 'PNG', margin, yPosition, chartWidth, chartHeight);
+            yPosition += chartHeight + 15;
+            
+            chartIndex++;
+          } catch (error) {
+            console.log('Could not capture chart:', error);
+          }
+        }
+      }
+      
+      // Add metadata and citations on new page
+      pdf.addPage();
+      yPosition = margin;
+      
+      pdf.setFontSize(16);
+      pdf.setFont('helvetica', 'bold');
+      pdf.text('Scientific References', margin, yPosition);
+      yPosition += 15;
+      
+      pdf.setFontSize(10);
+      pdf.setFont('helvetica', 'normal');
+      
+      const citations = [
+        '[1] Annual Mean Temperature: CBottle atmospheric physics calculation using ICON model baseline meteorological data',
+        '[2] Temperature Change (Anomaly): CBottle climate sensitivity analysis with greenhouse gas forcing and feedback mechanisms',
+        '[3] Monthly Temperature Extremes: CBottle seasonal temperature distribution modeling with atmospheric physics constraints',
+        '[4] Annual Precipitation Total: CBottle precipitation model using ICON atmospheric moisture transport calculations',
+        '[5] Precipitation Change: CBottle hydrological cycle modeling with temperature-driven evaporation changes',
+        '[6] Monthly Precipitation Extremes: CBottle seasonal precipitation distribution with realistic wet/dry season patterns',
+        '[7] Habitability Score: CBottle multi-factor habitability assessment (temperature comfort 30%, precipitation adequacy 30%, infrastructure adaptation 40%)',
+        '[8] Heat Stress Days: CBottle calculation of annual days exceeding 35°C threshold using extreme value analysis',
+        '[9] Drought Risk: CBottle drought probability assessment using Palmer Drought Severity Index methodology',
+        '[10] Flood Risk: CBottle flood probability modeling using extreme precipitation analysis and hydrological runoff',
+        '[11] Sea Level Rise: CBottle coastal impact assessment with global mean sea level rise projections and regional factors',
+        '[12] Seasonal Amplitude: Calculated derivative from CBottle monthly temperature data (max - min monthly temperature)',
+        '[13] Temperature Comfort Score: Custom algorithm applied to CBottle temperature data using optimal human comfort range',
+        '[14] Precipitation Adequacy Score: Custom algorithm applied to CBottle precipitation data using optimal range 600-1200mm',
+        '[15] Infrastructure Adaptation Score: Custom algorithm combining latitude-based development potential and coastal proximity',
+        '[16] Heat Stress Penalty: Calculated from CBottle heat stress days using formula (heat_stress_days / 30) × penalty_factor',
+        '[17] Drought Risk Penalty: Calculated from CBottle drought risk assessment using drought_risk_percentage × penalty_multiplier',
+        '[18] Flood Risk Penalty: Calculated from CBottle flood risk assessment using flood_risk_percentage × penalty_multiplier',
+        '[19] Global Habitability Percentile Ranking: Calculated from comprehensive global location dataset using CBottle habitability scores',
+        '[20] Best Overall Habitability Rankings: CBottle-derived habitability scores sorted in descending order globally',
+        '[21] Worst Overall Habitability Rankings: CBottle-derived habitability scores sorted in ascending order globally',
+        '[22] Biggest Habitability Decline Rankings: Calculated from CBottle baseline vs. future habitability comparison',
+        '[23] Best Temperature Comfort Rankings: Derived from CBottle temperature comfort component of habitability assessment',
+        '[24] Best Humidity Conditions Rankings: Derived from CBottle precipitation adequacy component representing humidity',
+        '[25] Best Infrastructure Adaptation Rankings: Derived from infrastructure adaptation component with geographic resilience factors',
+        '[26] Worst Temperature Comfort Rankings: Inverse of temperature comfort rankings with most challenging temperature conditions'
+      ];
+      
+      for (const citation of citations) {
+        if (yPosition > pageHeight - 20) {
+          pdf.addPage();
+          yPosition = margin;
+        }
+        
+        pdf.text(citation, margin, yPosition);
+        yPosition += 6;
+      }
+      
+      // Save PDF
+      const fileName = `Climate_Report_${climateData.location?.name?.replace(/[^a-zA-Z0-9]/g, '_')}_${climateData.year}.pdf`;
+      pdf.save(fileName);
+      
+      addLog(`PDF report generated successfully: ${fileName}`);
+      
+    } catch (error) {
+      console.error('Error generating PDF:', error);
+      addLog(`Error generating PDF: ${error}`);
+      
+      // Fallback to text export if PDF fails
+      const reportContent = generateTextReport(climateData);
+      const blob = new Blob([reportContent], { type: 'text/plain' });
+      const url = URL.createObjectURL(blob);
+      
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `Climate_Report_${climateData.location?.name?.replace(/[^a-zA-Z0-9]/g, '_')}_${climateData.year}.txt`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+      
+      addLog(`Fallback: Text report exported instead`);
+    }
   };
 
   const generateTextReport = (data: any) => {
@@ -495,7 +765,7 @@ Report generated by Climate Projection System
                 </Button>
               </div>
             </CardHeader>
-            <CardContent className="space-y-8">
+            <CardContent className="space-y-8" data-climate-report>
               
               {/* Satellite Map Section */}
               <Card className="border-green-200">
