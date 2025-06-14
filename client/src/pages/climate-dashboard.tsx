@@ -13,6 +13,8 @@ import ClimateCharts from "@/components/climate-charts";
 import HabitabilityAssessment from "@/components/habitability-assessment";
 import ComparableLocation from "@/components/comparable-location";
 import ApiErrorDisplay from "@/components/api-error-display";
+import ClimateTimeline from "@/components/climate-timeline";
+import ClimateImpactExplanation from "@/components/climate-impact-explanation";
 import type { ClimateLocation, ClimateProjection, MapMarker } from "@/types/climate";
 
 export default function ClimateDashboard() {
@@ -227,6 +229,24 @@ export default function ClimateDashboard() {
         {/* Climate Data Display */}
         {selectedLocation && (
           <>
+            {/* Climate Timeline and Impact Analysis */}
+            <div className="mb-8">
+              <ClimateTimeline 
+                selectedLocation={selectedLocation}
+                onYearSelect={setSelectedYear}
+              />
+            </div>
+
+            {/* Detailed Impact Explanation */}
+            <div className="mb-8">
+              <ClimateImpactExplanation
+                currentData={currentData}
+                projectedData={projectionData}
+                selectedLocation={selectedLocation}
+                selectedYear={selectedYear}
+              />
+            </div>
+
             <div className="mb-8">
               <ClimateSummary
                 currentData={currentData}
