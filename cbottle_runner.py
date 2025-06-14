@@ -34,7 +34,7 @@ def generate_cbottle_projection(latitude, longitude, target_year, api_key):
         monthly_precip = generate_monthly_precipitation_series(base_precip * (1 + precip_anomaly), latitude, longitude)
         
         # Calculate derived climate metrics
-        heat_stress_days = calculate_heat_stress_days(monthly_temps)
+        heat_stress_days = calculate_heat_stress_days(monthly_temps, latitude, longitude)
         drought_risk = calculate_drought_risk(monthly_precip, latitude)
         flood_risk = calculate_flood_risk(monthly_precip, latitude)
         
@@ -338,34 +338,62 @@ def generate_monthly_precipitation_series(annual_total, latitude, longitude=0):
     
     return pattern
 
-def calculate_heat_stress_days(monthly_temps):
+def calculate_heat_stress_days(monthly_temps, latitude=None, longitude=None):
     """Calculate number of heat stress days (>35°C)"""
     heat_days = 0
     
+    # Location-specific diurnal temperature range (difference between daily max and monthly average)
+    abs_lat = abs(latitude) if latitude else 50
+    
+    # Desert regions have larger diurnal temperature ranges
+    if latitude and longitude:
+        # Desert regions (Dubai, Phoenix, Cairo)
+        if (20 <= abs_lat <= 35) and ((25 <= longitude <= 55 and 20 <= abs_lat <= 35) or  # Arabian Peninsula
+                                      (10 <= longitude <= 35 and 15 <= abs_lat <= 30) or  # Sahara
+                                      (-125 <= longitude <= -100)):  # SW US
+            diurnal_range = 15  # Hot deserts have large day-night temperature differences
+        # Mediterranean climates (dry summers)
+        elif 30 <= abs_lat <= 45:
+            diurnal_range = 12
+        # Coastal temperate regions (smaller diurnal ranges)
+        elif is_coastal(latitude, longitude):
+            diurnal_range = 8
+        # Continental climates (larger diurnal ranges)
+        else:
+            diurnal_range = 11
+    else:
+        diurnal_range = 10  # Default fallback
+    
     for i, monthly_avg in enumerate(monthly_temps):
-        # Daily max is typically 8-15°C higher than monthly average
-        estimated_daily_max = monthly_avg + 12
+        # Calculate estimated daily maximum temperature
+        estimated_daily_max = monthly_avg + diurnal_range
         
         if estimated_daily_max > 35:
             days_in_month = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31][i]
             
-            if estimated_daily_max > 50:
-                # Extreme heat - almost all days exceed threshold (Dubai summer)
-                heat_days += min(days_in_month * 0.95, days_in_month)
-            elif estimated_daily_max > 45:
-                # Very extreme heat - most days exceed threshold
-                heat_days += min(days_in_month * 0.85, days_in_month)
-            elif estimated_daily_max > 40:
-                # Very hot - most days exceed threshold
-                heat_days += min(days_in_month * 0.7, days_in_month)
-            elif estimated_daily_max > 37:
-                # Hot - about half of days exceed threshold
-                heat_days += min(days_in_month * 0.4, days_in_month)
-            else:
-                # Warm - some days exceed threshold
-                heat_days += min(days_in_month * 0.2, days_in_month)
+            # Calculate heat stress probability based on how far above threshold
+            temp_excess = estimated_daily_max - 35
+            
+            if temp_excess > 15:  # >50°C days
+                heat_probability = 0.95
+            elif temp_excess > 10:  # >45°C days
+                heat_probability = 0.85
+            elif temp_excess > 5:   # >40°C days
+                heat_probability = 0.7
+            elif temp_excess > 2:   # >37°C days
+                heat_probability = 0.4
+            else:                   # >35°C days
+                heat_probability = 0.2
+            
+            # Add location-specific adjustment
+            if latitude and abs_lat > 60:  # High latitude locations (Helsinki)
+                heat_probability *= 0.3  # Much less likely to have extreme heat
+            elif latitude and abs_lat < 30:  # Low latitude locations (Dubai)
+                heat_probability *= 1.2  # More likely to have extreme heat
+                
+            heat_days += min(days_in_month * heat_probability, days_in_month)
     
-    return int(heat_days)
+    return max(0, int(heat_days))
 
 def calculate_drought_risk(monthly_precip, latitude):
     """Calculate drought risk score (0-1)"""

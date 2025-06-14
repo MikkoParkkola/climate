@@ -373,46 +373,96 @@ export default function ComparisonCharts({ data, targetYear }: ComparisonChartsP
   // Monthly Temperature Trends
   const MonthlyTemperatureTrends = () => {
     const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const maxTemp = Math.max(...data.flatMap(d => d.temperature.monthly || []));
+    const minTemp = Math.min(...data.flatMap(d => d.temperature.monthly || []));
+    const tempRange = maxTemp - minTemp || 1;
+    
+    // Create temperature scale marks
+    const tempMarks = [];
+    const numMarks = 5;
+    for (let i = 0; i <= numMarks; i++) {
+      const temp = minTemp + (tempRange * i / numMarks);
+      tempMarks.push(temp);
+    }
     
     return (
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <TrendingUp className="w-5 h-5 text-purple-600" />
-            Monthly Temperature Trends
+            Monthly Temperature Trends ({targetYear})
           </CardTitle>
+          <div className="text-sm text-gray-500">
+            Temperature range: {minTemp.toFixed(1)}°C to {maxTemp.toFixed(1)}°C
+          </div>
         </CardHeader>
         <CardContent>
           <div className="relative h-64 bg-gray-50 rounded-lg p-4">
-            {/* Chart area */}
-            <svg className="w-full h-full" viewBox="0 0 100 100" preserveAspectRatio="none">
-              {data.map((item, dataIndex) => {
-                if (!item.temperature.monthly || item.temperature.monthly.length === 0) return null;
-                
-                const temps = item.temperature.monthly;
-                const maxTemp = Math.max(...data.flatMap(d => d.temperature.monthly || []));
-                const minTemp = Math.min(...data.flatMap(d => d.temperature.monthly || []));
-                const tempRange = maxTemp - minTemp || 1;
-                
-                const points = temps.map((temp, monthIndex) => {
-                  const x = (monthIndex / 11) * 100;
-                  const y = 100 - ((temp - minTemp) / tempRange) * 100;
-                  return `${x},${y}`;
-                }).join(' ');
-                
-                return (
-                  <polyline
-                    key={dataIndex}
-                    fill="none"
-                    stroke={colors[dataIndex]}
-                    strokeWidth="2"
+            {/* Y-axis temperature scale */}
+            <div className="absolute left-0 top-4 bottom-8 w-12 flex flex-col justify-between text-xs text-gray-600">
+              {tempMarks.reverse().map((temp, index) => (
+                <div key={index} className="flex items-center justify-end pr-1">
+                  <span>{temp.toFixed(0)}°C</span>
+                </div>
+              ))}
+            </div>
+            
+            {/* Chart area with margins for scales */}
+            <div className="ml-12 mr-4 mt-2 mb-8 h-48">
+              <svg className="w-full h-full" viewBox="0 0 100 100" preserveAspectRatio="none">
+                {/* Grid lines */}
+                {tempMarks.map((temp, index) => (
+                  <line
+                    key={index}
+                    x1="0"
+                    y1={index * 20}
+                    x2="100"
+                    y2={index * 20}
+                    stroke="#e5e7eb"
+                    strokeWidth="0.5"
                     vectorEffect="non-scaling-stroke"
-                    points={points}
-                    opacity="0.8"
                   />
-                );
-              })}
-            </svg>
+                ))}
+                
+                {/* Zero degree line if within range */}
+                {minTemp <= 0 && maxTemp >= 0 && (
+                  <line
+                    x1="0"
+                    y1={100 - ((-minTemp) / tempRange * 100)}
+                    x2="100"
+                    y2={100 - ((-minTemp) / tempRange * 100)}
+                    stroke="#374151"
+                    strokeWidth="1"
+                    strokeDasharray="2,2"
+                    vectorEffect="non-scaling-stroke"
+                  />
+                )}
+                
+                {/* Temperature trend lines */}
+                {data.map((item, dataIndex) => {
+                  if (!item.temperature.monthly || item.temperature.monthly.length === 0) return null;
+                  
+                  const temps = item.temperature.monthly;
+                  const points = temps.map((temp, monthIndex) => {
+                    const x = (monthIndex / 11) * 100;
+                    const y = 100 - ((temp - minTemp) / tempRange) * 100;
+                    return `${x},${y}`;
+                  }).join(' ');
+                  
+                  return (
+                    <polyline
+                      key={dataIndex}
+                      fill="none"
+                      stroke={colors[dataIndex]}
+                      strokeWidth="2"
+                      vectorEffect="non-scaling-stroke"
+                      points={points}
+                      opacity="0.9"
+                    />
+                  );
+                })}
+              </svg>
+            </div>
             
             {/* Legend */}
             <div className="absolute bottom-2 right-2 bg-white p-2 rounded shadow text-xs">
@@ -429,8 +479,8 @@ export default function ComparisonCharts({ data, targetYear }: ComparisonChartsP
             </div>
             
             {/* X-axis labels */}
-            <div className="absolute bottom-0 left-4 right-4 flex justify-between text-xs text-gray-500">
-              {months.slice(0, 6).map(month => (
+            <div className="absolute bottom-0 left-16 right-4 flex justify-between text-xs text-gray-500">
+              {months.map(month => (
                 <span key={month}>{month}</span>
               ))}
             </div>
