@@ -146,25 +146,41 @@ def get_baseline_precipitation(latitude, longitude):
     """Get realistic baseline precipitation based on actual meteorological data"""
     abs_lat = abs(latitude)
     
+    # Desert climate detection (major arid regions)
+    is_desert = False
+    if 20 <= abs_lat <= 35:  # Desert belt latitudes
+        # Sahara, Arabian Peninsula, Middle East
+        if -10 <= longitude <= 60:
+            is_desert = True
+        # Southwestern US, Northern Mexico
+        elif -125 <= longitude <= -100:
+            is_desert = True
+        # Australian deserts
+        elif 110 <= longitude <= 155:
+            is_desert = True
+    
+    if is_desert:
+        return 25  # Desert precipitation (Cairo: ~25mm, Phoenix: ~20mm)
+    
     # Use actual climate station data for accurate precipitation baselines
     if abs_lat < 10:  # Equatorial (Singapore: 2165mm, Quito: 1200mm)
-        base = 2000
+        base = 2200
     elif abs_lat < 23.5:  # Tropical (Mumbai: 2200mm, Bangkok: 1500mm)
         base = 1400
     elif abs_lat < 35:  # Subtropical (Los Angeles: 380mm, Athens: 400mm, Mediterranean: 600mm)
-        base = 500
+        base = 600
     elif abs_lat < 45:  # Temperate (Paris: 640mm, New York: 1200mm)
-        base = 750
+        base = 825
     elif abs_lat < 55:  # Cool temperate (London: 600mm, Berlin: 580mm)
-        base = 650
+        base = 715
     elif abs_lat < 65:  # Subarctic (Helsinki: 655mm, Stockholm: 540mm, Oslo: 760mm)
-        base = 650  # Helsinki gets around 655mm annually
+        base = 715  # Helsinki gets around 655mm annually
     else:  # Arctic (Reykjavik: 800mm, Anchorage: 400mm)
         base = 500
     
-    # Adjust for continental/maritime effects (less extreme adjustment)
-    if is_coastal(latitude, longitude):
-        base *= 1.1  # Modest maritime increase
+    # Adjust for continental/maritime effects
+    if is_coastal(latitude, longitude) and not is_desert:
+        base *= 1.05  # Modest maritime increase
     
     return base
 
@@ -338,35 +354,51 @@ def is_coastal(latitude, longitude):
     return abs_lat < 70  # Most inhabited areas have some coastal influence
 
 def calculate_habitability_score(temps, precip, heat_days, drought_risk, flood_risk):
-    """Calculate overall habitability score (0-100) - adjusted for northern climates"""
-    # More realistic temperature assessment for northern cities
+    """Calculate overall habitability score (0-100) - globally calibrated"""
     mean_temp = np.mean(temps)
+    annual_precip = np.sum(precip)
     
-    # Helsinki's optimal range is different from tropical cities
-    if mean_temp >= -5 and mean_temp <= 25:  # Reasonable range for northern cities
-        if mean_temp >= 5 and mean_temp <= 20:  # Ideal for Helsinki-type climate
-            temp_score = 100 - abs(mean_temp - 12.5) * 2  # Optimal around 12.5°C
-        else:
-            temp_score = 85 - abs(mean_temp - 12.5) * 1.5  # Less penalty for moderate temps
-    else:
-        temp_score = max(30, 100 - abs(mean_temp - 12.5) * 3)  # More penalty for extreme temps
+    # Temperature assessment based on global livability standards
+    if 18 <= mean_temp <= 25:  # Optimal range (Singapore, Mediterranean cities)
+        temp_score = 100 - abs(mean_temp - 21.5) * 1.5
+    elif 10 <= mean_temp <= 30:  # Good range (most temperate cities)
+        temp_score = 90 - abs(mean_temp - 18) * 2
+    elif 5 <= mean_temp <= 35:  # Acceptable range
+        temp_score = 75 - abs(mean_temp - 15) * 1.5
+    elif -5 <= mean_temp <= 40:  # Livable with adaptation
+        temp_score = 60 - abs(mean_temp - 12) * 1.2
+    else:  # Extreme climates
+        temp_score = max(25, 50 - abs(mean_temp - 15) * 2)
     
     temp_score = max(0, min(100, temp_score))
     
-    # Precipitation assessment - Helsinki gets ~600-700mm annually
-    annual_precip = np.sum(precip)
-    if annual_precip >= 300 and annual_precip <= 1200:  # Reasonable range
-        precip_score = 100 - abs(annual_precip - 650) / 15  # Optimal around 650mm
-    else:
-        precip_score = max(20, 100 - abs(annual_precip - 650) / 10)
+    # Precipitation assessment - globally adaptive
+    if 400 <= annual_precip <= 1500:  # Optimal range for most cities
+        precip_score = 100 - abs(annual_precip - 800) / 20
+    elif 200 <= annual_precip <= 2500:  # Acceptable range
+        precip_score = 85 - abs(annual_precip - 800) / 30
+    elif annual_precip < 200:  # Arid climates (manageable with infrastructure)
+        precip_score = max(40, 70 - (200 - annual_precip) / 10)
+    else:  # Very wet climates
+        precip_score = max(30, 70 - (annual_precip - 2500) / 50)
     
     precip_score = max(0, min(100, precip_score))
     
-    # Reduced extreme weather penalties for northern cities
-    extreme_penalty = heat_days * 1.5 + drought_risk * 20 + flood_risk * 15
+    # Infrastructure and adaptation bonus for major climate zones
+    if 25 <= mean_temp <= 30 and annual_precip >= 1500:  # Tropical cities
+        infrastructure_bonus = 20  # Singapore, Hong Kong adapt well
+    elif mean_temp < 5:  # Cold cities
+        infrastructure_bonus = 15  # Nordic cities adapt well
+    else:
+        infrastructure_bonus = 10
     
-    score = (temp_score * 0.6 + precip_score * 0.4) - extreme_penalty
-    return max(25, min(100, score))  # Minimum 25 for livable northern cities
+    # Extreme weather penalties
+    extreme_penalty = heat_days * 2 + drought_risk * 25 + flood_risk * 20
+    
+    base_score = (temp_score * 0.5 + precip_score * 0.3) + infrastructure_bonus * 0.2
+    final_score = base_score - extreme_penalty
+    
+    return max(30, min(100, final_score))  # Minimum 30 for any inhabited area
 
 def get_habitability_category(score):
     """Convert habitability score to category"""
