@@ -212,6 +212,10 @@ def interpolate_from_stations(latitude, longitude, stations):
     if not stations:
         return get_simple_physics_temperature(latitude, longitude)
     
+    # Handle case where longitude is None
+    if longitude is None:
+        longitude = 0.0  # Use equator as default
+    
     weighted_temp = 0
     total_weight = 0
     
@@ -232,6 +236,9 @@ def interpolate_from_stations(latitude, longitude, stations):
 
 def is_arid_region(latitude, longitude):
     """Determine if location is in major arid/desert region"""
+    if longitude is None:
+        return False
+    
     abs_lat = abs(latitude)
     return (
         (15 <= abs_lat <= 35 and 20 <= longitude <= 60) or  # Arabian Peninsula
@@ -334,6 +341,9 @@ def get_validated_physics_precipitation(latitude, longitude):
 
 def is_wet_tropical(latitude, longitude):
     """Determine if tropical location receives high precipitation"""
+    if longitude is None:
+        return True  # Default to wet tropical for safety
+    
     abs_lat = abs(latitude)
     if abs_lat > 15:
         return False
@@ -349,6 +359,10 @@ def interpolate_precipitation_from_stations(latitude, longitude, stations):
     """Interpolate precipitation from reference climate stations using distance weighting"""
     if not stations:
         return get_simple_physics_precipitation(latitude, longitude)
+    
+    # Handle case where longitude is None
+    if longitude is None:
+        longitude = 0.0  # Use equator as default
     
     weighted_precip = 0
     total_weight = 0
