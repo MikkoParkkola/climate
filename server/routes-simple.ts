@@ -80,32 +80,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Call Climate in a Bottle API
       console.log('Making request to NVIDIA Climate in a Bottle API...');
       
-      const response = await fetch("https://integrate.api.nvidia.com/v1/chat/completions", {
+      const response = await fetch("https://integrate.api.nvidia.com/v1/climate/projections", {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${apiKey}`,
           'Content-Type': 'application/json',
-          'Accept': 'application/json'
+          'Accept': 'application/json',
+          'User-Agent': 'ClimateProjectionApp/1.0'
         },
         body: JSON.stringify({
-          model: "meta/llama-3.1-405b-instruct",
-          messages: [{
-            role: "user",
-            content: `Provide climate projection data for ${location} (coordinates: ${coordinates.lat}, ${coordinates.lng}) in year ${year}. Return only valid JSON with the following structure:
-{
-  "location": "${location}",
-  "year": ${year},
-  "temperature_change": 2.3,
-  "precipitation_change": -15.2,
-  "extreme_heat_days": 45,
-  "drought_risk": "moderate",
-  "flood_risk": "low",
-  "habitability_score": 72
-}`
-          }],
-          temperature: 0.1,
-          max_tokens: 500,
-          stream: false
+          latitude: coordinates.lat,
+          longitude: coordinates.lng,
+          target_year: year,
+          location_name: location,
+          variables: ["temperature", "precipitation", "extreme_events", "sea_level_rise"]
         })
       });
       
