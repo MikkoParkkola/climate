@@ -32,7 +32,7 @@ export default function ComprehensiveClimateReport() {
   const [isLoadingProjection, setIsLoadingProjection] = useState(false);
   const [apiError, setApiError] = useState<string | null>(null);
   const [showDebugInfo, setShowDebugInfo] = useState(false);
-  const [debugData, setDebugData] = useState<{ request: any; response: any } | null>(null);
+  const [debugData, setDebugData] = useState<{ request: any; response: any; dataSource?: string; timestamp?: string } | null>(null);
   const [showFullReport, setShowFullReport] = useState(false);
   const { toast } = useToast();
 
@@ -49,10 +49,12 @@ export default function ComprehensiveClimateReport() {
       console.log("API Request:", requestData);
       console.log("API Response:", data);
       
-      // Store debug information
+      // Store debug information with data source
       setDebugData({
         request: requestData,
-        response: data
+        response: data,
+        dataSource: data.dataSource || "UNKNOWN",
+        timestamp: new Date().toISOString()
       });
       
       return data;
@@ -457,6 +459,21 @@ export default function ComprehensiveClimateReport() {
         {showDebugInfo && debugData && (
           <Card className="p-6 bg-gray-50 mb-8">
             <h3 className="text-lg font-semibold mb-4">API Debug Information</h3>
+            <div className="mb-4 p-3 bg-white rounded border">
+              <div className="flex items-center gap-2 mb-2">
+                <span className="font-medium">Data Source:</span>
+                <Badge variant={debugData.dataSource === 'NVIDIA_API' ? 'default' : 'secondary'}>
+                  {debugData.dataSource}
+                </Badge>
+                <span className="text-sm text-gray-500">{debugData.timestamp}</span>
+              </div>
+              {debugData.dataSource === 'NVIDIA_API' && (
+                <div className="text-sm text-green-600">✅ Authentic NVIDIA Earth-2 Studio API Data</div>
+              )}
+              {debugData.dataSource === 'CACHED_FALLBACK' && (
+                <div className="text-sm text-yellow-600">⚠️ Using cached fallback data - NVIDIA API unavailable</div>
+              )}
+            </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <h4 className="font-medium mb-2">Request</h4>

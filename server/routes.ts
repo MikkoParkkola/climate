@@ -56,13 +56,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Invalid location ID or year" });
       }
       
-      let projection = await storage.getClimateProjection(locationId, year);
+      console.log(`🔥 FORCING FRESH NVIDIA API CALL for location ${locationId}, year ${year}`);
       
-      if (!projection) {
-        // Fetch from NVIDIA Earth-2 API
-        projection = await fetchClimateProjectionFromAPI(locationId, year);
+      // Always fetch fresh data from NVIDIA API
+      let projection = await fetchClimateProjectionFromAPI(locationId, year);
+      
+      if (projection) {
+        projection.dataSource = "NVIDIA_API";
+        projection.fetchedAt = new Date();
+        console.log(`✅ SUCCESS: NVIDIA API returned data for ${locationId}/${year}`);
+        
+        // Save to database but with fresh timestamp
+        await storage.createClimateProjection(projection);
+      } else {
+        console.log(`❌ NVIDIA API FAILED for ${locationId}/${year} - using fallback algorithms`);
+        projection = await storage.getClimateProjection(locationId, year);
         if (projection) {
-          await storage.createClimateProjection(projection);
+          projection.dataSource = "CACHED_FALLBACK";
         }
       }
       
@@ -86,13 +96,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Invalid location ID or year" });
       }
       
-      let projection = await storage.getClimateProjection(locationId, year);
+      console.log(`🔥 FORCING FRESH NVIDIA API CALL for location ${locationId}, year ${year}`);
       
-      if (!projection) {
-        // Fetch from NVIDIA Earth-2 API
-        projection = await fetchClimateProjectionFromAPI(locationId, year);
+      // Always fetch fresh data from NVIDIA API
+      let projection = await fetchClimateProjectionFromAPI(locationId, year);
+      
+      if (projection) {
+        projection.dataSource = "NVIDIA_API";
+        projection.fetchedAt = new Date();
+        console.log(`✅ SUCCESS: NVIDIA API returned data for ${locationId}/${year}`);
+        
+        // Save to database but with fresh timestamp
+        await storage.createClimateProjection(projection);
+      } else {
+        console.log(`❌ NVIDIA API FAILED for ${locationId}/${year} - using fallback algorithms`);
+        projection = await storage.getClimateProjection(locationId, year);
         if (projection) {
-          await storage.createClimateProjection(projection);
+          projection.dataSource = "CACHED_FALLBACK";
         }
       }
       
