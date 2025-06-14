@@ -215,11 +215,18 @@ def get_baseline_precipitation(latitude, longitude):
     elif abs_lat < 23.5:  # Tropical - monsoon regions
         base = 1400
     elif abs_lat < 35:  # Subtropical - generally dry, Mediterranean climates
-        # Desert regions get less precipitation
+        # Desert regions get much less precipitation
         is_desert = ((20 <= longitude <= 55 and 15 <= abs_lat <= 35) or  # Arabian Peninsula/Middle East
                     (10 <= longitude <= 35 and 15 <= abs_lat <= 30) or   # Sahara
                     (-125 <= longitude <= -100 and 25 <= abs_lat <= 40))  # SW US/Mexico
-        base = 200 if is_desert else 600
+        # Mediterranean climates (like Madrid) are much drier than temperate
+        is_mediterranean = (35 <= abs_lat <= 45 and -10 <= longitude <= 45)
+        if is_desert:
+            base = 100  # Very low for deserts (Dubai ~96mm)
+        elif is_mediterranean:
+            base = 450  # Mediterranean climate (Madrid ~436mm)
+        else:
+            base = 600
     elif abs_lat < 45:  # Temperate - westerlies, moderate precipitation
         base = 750
     elif abs_lat < 55:  # Cool temperate - consistent westerly flow
