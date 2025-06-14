@@ -7,7 +7,7 @@ import { Slider } from "@/components/ui/slider";
 import { Textarea } from "@/components/ui/textarea";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
-import { Thermometer, Droplets, MapPin, TrendingUp, TrendingDown, AlertTriangle, Waves, Cloud, FileText, Globe, Award, CheckCircle } from "lucide-react";
+import { Thermometer, Droplets, MapPin, TrendingUp, TrendingDown, AlertTriangle, Waves, Cloud, FileText, Globe, Award, CheckCircle, GitCompare } from "lucide-react";
 import LivabilityIndexBreakdown from "@/components/livability-index-breakdown";
 import HabitabilityRanking from "@/components/habitability-ranking-refactored";
 import GlobalRankingDisplay from "@/components/global-ranking-display";
