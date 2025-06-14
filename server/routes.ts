@@ -598,16 +598,17 @@ function transformCBottleResponse(data: any, location: any, year: number) {
   const yearsFromNow = year - currentYear;
   
   // Extract climate variables from CBottle response
-  const temp2m = data.outputs?.["2m_temperature"] || data["2m_temperature"];
-  const precipitation = data.outputs?.total_precipitation || data.total_precipitation;
-  const humidity = data.outputs?.relative_humidity || data.relative_humidity;
+  const temp2m = data.outputs?.["2m_temperature"] || data["2m_temperature"] || data.temperature;
+  const precipitation = data.outputs?.total_precipitation || data.total_precipitation || data.precipitation;
+  const humidity = data.outputs?.relative_humidity || data.relative_humidity || data.humidity;
+  const habitability = data.habitability || {};
   
   return {
     temperature: {
-      annual_average: temp2m?.annual_mean || (getBaseTemperature(location.latitude) + (yearsFromNow / 76) * 3.5),
-      change_from_baseline: temp2m?.anomaly || (yearsFromNow / 76) * 3.5,
-      extreme_heat_days: temp2m?.extreme_events || Math.min(100, (yearsFromNow / 76) * 3.5 * 15),
-      monthly: temp2m?.monthly_means || generateMonthlyTemperatures(temp2m?.annual_mean || getBaseTemperature(location.latitude), location.latitude)
+      annual_average: temp2m?.annual_mean || temp2m?.annual_average || (getBaseTemperature(location.latitude) + (yearsFromNow / 76) * 3.5),
+      change_from_baseline: temp2m?.anomaly || temp2m?.change_from_baseline || (yearsFromNow / 76) * 3.5,
+      extreme_heat_days: temp2m?.extreme_events || temp2m?.extreme_heat_days || Math.min(100, (yearsFromNow / 76) * 3.5 * 15),
+      monthly: temp2m?.monthly_means || temp2m?.monthly || generateMonthlyTemperatures(temp2m?.annual_mean || getBaseTemperature(location.latitude), location.latitude)
     },
     precipitation: {
       annual_total: precipitation?.annual_sum || getBasePrecipitation(location.latitude, location.longitude),

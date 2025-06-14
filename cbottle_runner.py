@@ -611,11 +611,18 @@ def get_climate_feedbacks(latitude, temp_anomaly):
 
 def generate_global_habitability_rankings(target_year):
     """Generate global habitability rankings for the target year"""
-    # Major world cities with representative coordinates
+    # Major world cities and regions with representative coordinates
     global_locations = [
         {"name": "Singapore", "lat": 1.3521, "lng": 103.8198, "region": "Southeast Asia"},
         {"name": "Tokyo, Japan", "lat": 35.6762, "lng": 139.6503, "region": "East Asia"},
         {"name": "London, UK", "lat": 51.5074, "lng": -0.1278, "region": "Western Europe"},
+        {"name": "Northern Europe", "lat": 62.0, "lng": 15.0, "region": "Northern Europe"},
+        {"name": "Central Europe", "lat": 49.0, "lng": 15.0, "region": "Central Europe"},
+        {"name": "Mediterranean Basin", "lat": 40.0, "lng": 18.0, "region": "Southern Europe"},
+        {"name": "Sahel Region", "lat": 15.0, "lng": 0.0, "region": "Africa"},
+        {"name": "Amazon Basin", "lat": -5.0, "lng": -60.0, "region": "South America"},
+        {"name": "Great Plains, USA", "lat": 40.0, "lng": -100.0, "region": "North America"},
+        {"name": "Siberian Taiga", "lat": 60.0, "lng": 100.0, "region": "Northern Asia"},
         {"name": "Paris, France", "lat": 48.8566, "lng": 2.3522, "region": "Western Europe"},
         {"name": "Stockholm, Sweden", "lat": 59.3293, "lng": 18.0686, "region": "Northern Europe"},
         {"name": "Amsterdam, Netherlands", "lat": 52.3676, "lng": 4.9041, "region": "Western Europe"},
