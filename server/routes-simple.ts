@@ -80,18 +80,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Call Climate in a Bottle API
       console.log('Making request to NVIDIA Climate in a Bottle API...');
       
-      const response = await fetch("https://health.api.nvidia.com/v1/biology/nvidia/climate-in-a-bottle/generate", {
+      const response = await fetch("https://integrate.api.nvidia.com/v1/cbottle", {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${apiKey}`,
           'Content-Type': 'application/json',
-          'Accept': 'application/json'
+          'Accept': 'application/json',
+          'User-Agent': 'ClimateProjectionApp/1.0'
         },
         body: JSON.stringify({
           latitude: coordinates.lat,
           longitude: coordinates.lng,
           year: year,
-          location: location
+          location: location,
+          metrics: ["temperature", "precipitation", "extreme_weather", "habitability"]
         })
       });
       
