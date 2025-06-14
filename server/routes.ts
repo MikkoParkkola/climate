@@ -562,7 +562,7 @@ function transformEarth2StudioResponse(data: any, location: any, year: number) {
     humidity: {
       annual_average: avgHumidity,
       change_from_baseline: avgHumidity - 65,
-      monthly: Array(12).fill(0).map(() => avgHumidity + Math.random() * 10 - 5)
+      monthly: Array(12).fill(0).map((_, i) => avgHumidity + Math.sin(i * Math.PI / 6) * 5)
     },
     sea_level: {
       value: (yearsFromNow / 76) * 0.8,
@@ -617,9 +617,9 @@ function transformCBottleResponse(data: any, location: any, year: number) {
       monthly: precipitation?.monthly_sums || generateMonthlyPrecipitation(precipitation?.annual_sum || 800, location.latitude)
     },
     humidity: {
-      annual_average: humidity?.annual_mean || (65 + Math.random() * 20),
+      annual_average: humidity?.annual_mean || 75,
       change_from_baseline: humidity?.anomaly || (yearsFromNow / 76) * 5,
-      monthly: humidity?.monthly_means || Array(12).fill(0).map(() => 65 + Math.random() * 20)
+      monthly: humidity?.monthly_means || Array(12).fill(0).map((_, i) => 75 + Math.sin(i * Math.PI / 6) * 10)
     },
     sea_level: {
       value: (yearsFromNow / 76) * 0.8,
