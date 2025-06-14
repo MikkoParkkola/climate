@@ -407,6 +407,8 @@ async function fetchClimateProjectionFromAPI(locationId: number, year: number) {
       floodingRisk: calculateRiskScore(climateData.sea_level.flood_risk),
       monthlyTemperatures: JSON.stringify(climateData.temperature.monthly),
       monthlyPrecipitation: JSON.stringify(climateData.precipitation.monthly),
+      baselineMonthlyTemperatures: climateData.temperature.baseline_monthly ? JSON.stringify(climateData.temperature.baseline_monthly) : null,
+      baselineMonthlyPrecipitation: climateData.precipitation.baseline_monthly ? JSON.stringify(climateData.precipitation.baseline_monthly) : null,
       habitabilityScore: calculateHabitabilityScore(climateData),
       habitabilityBreakdown: climateData.habitability?.breakdown ? JSON.stringify(climateData.habitability.breakdown) : null,
       elevationChange: climateData.elevation.change_from_baseline,
