@@ -45,21 +45,21 @@ export const geocodingUtils = {
       const address = data.address;
       
       let locationName = "";
-      if (address.city) {
+      if (address?.city) {
         locationName = address.city;
-      } else if (address.town) {
+      } else if (address?.town) {
         locationName = address.town;
-      } else if (address.village) {
+      } else if (address?.village) {
         locationName = address.village;
-      } else if (address.county) {
+      } else if (address?.county) {
         locationName = address.county;
       }
       
-      if (address.state) {
+      if (address?.state) {
         locationName += locationName ? `, ${address.state}` : address.state;
       }
       
-      if (address.country) {
+      if (address?.country) {
         locationName += locationName ? `, ${address.country}` : address.country;
       }
       
