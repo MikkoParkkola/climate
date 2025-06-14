@@ -149,8 +149,10 @@ def get_baseline_precipitation(latitude, longitude):
     # Desert climate detection (major arid regions)
     is_desert = False
     if 20 <= abs_lat <= 35:  # Desert belt latitudes
-        # Sahara, Arabian Peninsula, Middle East
-        if -10 <= longitude <= 60:
+        # Sahara, Arabian Peninsula, Middle East (excluding Mediterranean coast)
+        if 25 <= longitude <= 55 and 20 <= abs_lat <= 35:  # Arabian Peninsula core
+            is_desert = True
+        elif 10 <= longitude <= 35 and 15 <= abs_lat <= 30:  # Sahara core
             is_desert = True
         # Southwestern US, Northern Mexico
         elif -125 <= longitude <= -100:
