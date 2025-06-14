@@ -26,38 +26,7 @@ interface TimelineData {
 export default function ClimateTimeline({ selectedLocation, onYearSelect }: ClimateTimelineProps) {
   const [selectedMetric, setSelectedMetric] = useState<'temperature' | 'habitability' | 'risks'>('habitability');
 
-  // Generate timeline data for visualization
-  const generateTimelineData = (): TimelineData[] => {
-    if (!selectedLocation) return [];
-
-    const data: TimelineData[] = [];
-    const baseTemp = getBaseTemperature(selectedLocation.latitude);
-    const basePrecip = getBasePrecipitation(selectedLocation.latitude, selectedLocation.longitude);
-    
-    for (let year = 2025; year <= 2100; year += 5) {
-      const yearsFromNow = year - 2024;
-      const tempChange = calculateTemperatureChange(selectedLocation.latitude, yearsFromNow);
-      const precipChange = calculatePrecipitationChange(selectedLocation.latitude, selectedLocation.longitude, yearsFromNow);
-      const habitability = calculateHabitabilityOverTime(selectedLocation.latitude, yearsFromNow);
-      
-      data.push({
-        year,
-        temperature: baseTemp + tempChange,
-        temperatureChange: tempChange,
-        precipitation: basePrecip * (1 + precipChange),
-        habitability,
-        heatStress: calculateHeatStressRisk(selectedLocation.latitude, tempChange),
-        drought: calculateDroughtRisk(selectedLocation.latitude, precipChange),
-        flooding: calculateFloodingRisk(selectedLocation.latitude, precipChange),
-        biodiversityLoss: calculateBiodiversityLossOverTime(selectedLocation.latitude, yearsFromNow)
-      });
-    }
-
-    return data;
-  };
-
-  const timelineData = generateTimelineData();
-
+  // Helper functions defined first
   const getBaseTemperature = (latitude: number): number => {
     const absLat = Math.abs(latitude);
     if (absLat > 66.5) return -15; // Arctic
@@ -96,27 +65,6 @@ export default function ClimateTimeline({ selectedLocation, onYearSelect }: Clim
     if (absLat > 60) return factor * 0.5; // Northern: modest increase
     if (absLat > 45) return factor * 0.2; // Temperate: slight increase
     return factor * -0.3; // Southern: decrease (drying)
-  };
-
-  const calculateHabitabilityOverTime = (latitude: number, yearsFromNow: number): number => {
-    const absLat = Math.abs(latitude);
-    const tempChange = calculateTemperatureChange(latitude, yearsFromNow);
-    
-    let baseScore = 80;
-    
-    // Northern regions face severe challenges from rapid warming
-    if (absLat > 60) {
-      baseScore = 80 - (tempChange * 15); // Rapid decline
-      // Infrastructure not designed for warmer temps
-      baseScore -= yearsFromNow * 0.3;
-    } else if (absLat > 45) {
-      baseScore = 85 - (tempChange * 8); // Moderate decline
-    } else {
-      baseScore = 75 - (tempChange * 5); // Slower decline
-      // Already adapted to heat
-    }
-
-    return Math.max(10, Math.min(100, baseScore));
   };
 
   const calculateHeatStressRisk = (latitude: number, tempChange: number): number => {
@@ -160,6 +108,57 @@ export default function ClimateTimeline({ selectedLocation, onYearSelect }: Clim
     }
   };
 
+  const calculateHabitabilityOverTime = (latitude: number, yearsFromNow: number): number => {
+    const absLat = Math.abs(latitude);
+    const tempChange = calculateTemperatureChange(latitude, yearsFromNow);
+    
+    let baseScore = 80;
+    
+    // Northern regions face severe challenges from rapid warming
+    if (absLat > 60) {
+      baseScore = 80 - (tempChange * 15); // Rapid decline
+      // Infrastructure not designed for warmer temps
+      baseScore -= yearsFromNow * 0.3;
+    } else if (absLat > 45) {
+      baseScore = 85 - (tempChange * 8); // Moderate decline
+    } else {
+      baseScore = 75 - (tempChange * 5); // Slower decline
+      // Already adapted to heat
+    }
+
+    return Math.max(10, Math.min(100, baseScore));
+  };
+
+  // Generate timeline data for visualization - now after all helper functions
+  const generateTimelineData = (): TimelineData[] => {
+    if (!selectedLocation) return [];
+
+    const data: TimelineData[] = [];
+    const baseTemp = getBaseTemperature(selectedLocation.latitude);
+    const basePrecip = getBasePrecipitation(selectedLocation.latitude, selectedLocation.longitude);
+    
+    for (let year = 2025; year <= 2100; year += 5) {
+      const yearsFromNow = year - 2024;
+      const tempChange = calculateTemperatureChange(selectedLocation.latitude, yearsFromNow);
+      const precipChange = calculatePrecipitationChange(selectedLocation.latitude, selectedLocation.longitude, yearsFromNow);
+      const habitability = calculateHabitabilityOverTime(selectedLocation.latitude, yearsFromNow);
+      
+      data.push({
+        year,
+        temperature: baseTemp + tempChange,
+        temperatureChange: tempChange,
+        precipitation: basePrecip * (1 + precipChange),
+        habitability,
+        heatStress: calculateHeatStressRisk(selectedLocation.latitude, tempChange),
+        drought: calculateDroughtRisk(selectedLocation.latitude, precipChange),
+        flooding: calculateFloodingRisk(selectedLocation.latitude, precipChange),
+        biodiversityLoss: calculateBiodiversityLossOverTime(selectedLocation.latitude, yearsFromNow)
+      });
+    }
+
+    return data;
+  };
+
   const getHabitabilityColor = (score: number) => {
     if (score >= 70) return "text-green-600";
     if (score >= 50) return "text-yellow-600";
@@ -183,6 +182,8 @@ export default function ClimateTimeline({ selectedLocation, onYearSelect }: Clim
       </Card>
     );
   }
+
+  const timelineData = generateTimelineData();
 
   return (
     <div className="space-y-6">
