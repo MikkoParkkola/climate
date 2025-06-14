@@ -133,32 +133,51 @@ async function fetchClimateProjectionFromAPI(locationId: number, year: number) {
       throw new Error("NVIDIA API key not configured");
     }
 
-    // Call NVIDIA Earth-2 Climate API for authentic data
-    const response = await fetch(`https://api.nvidia.com/earth2/climate/projection`, {
+    // Call NVIDIA Cloud Functions API for climate modeling
+    const response = await fetch(`https://api.nvcf.nvidia.com/v2/nvcf/pexec/functions/climate-earth2`, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${apiKey}`,
         'Content-Type': 'application/json',
+        'Accept': 'application/json'
       },
       body: JSON.stringify({
-        latitude: location.latitude,
-        longitude: location.longitude,
-        projection_year: year,
-        variables: ['temperature', 'precipitation', 'humidity', 'sea_level', 'elevation', 'biodiversity', 'agriculture'],
-        resolution: 'monthly',
-        scenario: 'rcp8.5' // Representative Concentration Pathway
+        inputs: {
+          latitude: location.latitude,
+          longitude: location.longitude,
+          projection_year: year,
+          variables: ['temperature', 'precipitation', 'humidity', 'sea_level'],
+          scenario: 'SSP2-4.5', // Shared Socioeconomic Pathway
+          resolution: 'monthly'
+        }
       })
     });
 
     let apiData;
     if (!response.ok) {
       console.error(`NVIDIA API error: ${response.status} ${response.statusText}`);
-      // Fallback to realistic simulation only if API fails
-      apiData = await generateRealisticClimateData(location, year);
+      const errorText = await response.text();
+      console.error("API Error Details:", errorText);
+      
+      // Return specific error message for user to resolve
+      if (response.status === 401) {
+        throw new Error("NVIDIA API authentication failed. Please verify your API key is correct and has access to Earth-2 Climate functions.");
+      } else if (response.status === 404) {
+        throw new Error("NVIDIA Earth-2 Climate API endpoint not found. The climate modeling service may be unavailable.");
+      } else if (response.status === 429) {
+        throw new Error("NVIDIA API rate limit exceeded. Please try again later or upgrade your API plan.");
+      } else {
+        throw new Error(`Climate data service error (${response.status}). Please check your NVIDIA API configuration or try again later.`);
+      }
     } else {
-      apiData = await response.json();
+      const rawData = await response.json();
+      // Handle successful response
+      if (rawData.error) {
+        throw new Error(`Climate modeling error: ${rawData.error.message || 'Unknown API error'}`);
+      }
+      
       // Ensure data structure compatibility
-      apiData = normalizeAPIResponse(apiData);
+      apiData = normalizeAPIResponse(rawData.outputs || rawData);
     }
     
     // Find comparable location based on projected climate
@@ -208,6 +227,54 @@ async function fetchClimateProjectionFromAPI(locationId: number, year: number) {
 function calculateRiskScore(value: number): number {
   // Convert various risk indicators to 0-100 scale
   return Math.min(100, Math.max(0, Math.round(value * 100)));
+}
+
+function normalizeAPIResponse(rawData: any): any {
+  // Normalize NVIDIA Earth-2 API response to expected format
+  return {
+    temperature: {
+      annual_average: rawData.temperature?.annual_mean || rawData.temperature?.annual_average || 15,
+      change_from_baseline: rawData.temperature?.anomaly || rawData.temperature?.change_from_baseline || 0,
+      extreme_heat_days: rawData.temperature?.extreme_days || rawData.temperature?.extreme_heat_days || 0,
+      monthly: rawData.temperature?.monthly_data || rawData.temperature?.monthly || []
+    },
+    precipitation: {
+      annual_total: rawData.precipitation?.annual_sum || rawData.precipitation?.annual_total || 800,
+      change_from_baseline: rawData.precipitation?.anomaly || rawData.precipitation?.change_from_baseline || 0,
+      drought_index: rawData.precipitation?.drought_severity || rawData.precipitation?.drought_index || 0,
+      monthly: rawData.precipitation?.monthly_data || rawData.precipitation?.monthly || []
+    },
+    humidity: {
+      annual_average: rawData.humidity?.annual_mean || rawData.humidity?.annual_average || 60,
+      change_from_baseline: rawData.humidity?.anomaly || rawData.humidity?.change_from_baseline || 0
+    },
+    sea_level: {
+      value: rawData.sea_level?.height || rawData.sea_level?.value || 0,
+      change_from_baseline: rawData.sea_level?.rise || rawData.sea_level?.change_from_baseline || 0,
+      flood_risk: rawData.sea_level?.coastal_flood_risk || rawData.sea_level?.flood_risk || 0
+    },
+    elevation: {
+      change_from_baseline: rawData.elevation?.change || rawData.elevation?.change_from_baseline || 0
+    },
+    coastal: {
+      flood_risk: rawData.coastal?.flooding_risk || rawData.coastal?.flood_risk || 0
+    },
+    extreme_weather: {
+      frequency: rawData.extreme_events?.annual_count || rawData.extreme_weather?.frequency || 0
+    },
+    biodiversity: {
+      loss_percentage: rawData.biodiversity?.habitat_loss || rawData.biodiversity?.loss_percentage || 0
+    },
+    agriculture: {
+      stress_level: rawData.agriculture?.yield_stress || rawData.agriculture?.stress_level || 0
+    },
+    water: {
+      stress_level: rawData.water?.scarcity_index || rawData.water?.stress_level || 0
+    },
+    air_quality: {
+      index: rawData.air_quality?.aqi || rawData.air_quality?.index || 50
+    }
+  };
 }
 
 function calculateHabitabilityScore(apiData: any): number {
