@@ -1,6 +1,8 @@
+import { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Info, Thermometer, Droplets, Wind, Home, Sprout, AlertTriangle } from "lucide-react";
 import type { ClimateProjection } from "@/types/climate";
@@ -33,6 +35,7 @@ export default function LivabilityIndexBreakdown({
   selectedYear,
   className = "" 
 }: LivabilityIndexBreakdownProps) {
+  const [viewMode, setViewMode] = useState<'overview' | 'components'>('overview');
   
   const calculateComponentScore = (value: number, min: number, max: number, invert = false): number => {
     const normalized = Math.max(0, Math.min(100, ((value - min) / (max - min)) * 100));

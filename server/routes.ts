@@ -366,22 +366,22 @@ async function fetchClimateProjectionFromAPI(locationId: number, year: number) {
 
 async function callEarth2StudioAPI(location: any, year: number, apiKey: string) {
   try {
-    // NVIDIA Earth-2 Studio API using NGC catalog
-    const response = await fetch("https://api.nvcf.nvidia.com/v2/nvcf/pexec/functions/0e208d4b-cd56-47a7-bb1a-4d81c32d2ff8", {
+    // NVIDIA Earth-2 Studio API - correct endpoint for climate forecasting
+    const response = await fetch("https://integrate.api.nvidia.com/v1/chat/completions", {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${apiKey}`,
         'Content-Type': 'application/json',
-        'Accept': 'application/json',
-        'NVCF-INPUT-ASSET-REFERENCES': '',
-        'NVCF-FUNCTION-ASSET-IDS': ''
+        'Accept': 'application/json'
       },
       body: JSON.stringify({
-        lat: location.latitude,
-        lon: location.longitude,
-        year: year,
-        variables: ["temperature", "precipitation", "humidity"],
-        scenario: "ssp245"
+        model: "nvidia/earth2-studio",
+        messages: [{
+          role: "user",
+          content: `Generate detailed climate projection for coordinates ${location.latitude}, ${location.longitude} for year ${year}. Include temperature, precipitation, humidity, sea level, extreme weather risks, habitability metrics, and monthly data. Return as structured JSON.`
+        }],
+        temperature: 0.1,
+        max_tokens: 2000
       })
     });
 
@@ -394,6 +394,18 @@ async function callEarth2StudioAPI(location: any, year: number, apiKey: string) 
 
     const data = await response.json();
     console.log("Earth-2 Studio response:", data);
+    
+    // Parse the response from the chat completion format
+    if (data.choices && data.choices[0] && data.choices[0].message) {
+      try {
+        const climateData = JSON.parse(data.choices[0].message.content);
+        return transformEarth2StudioResponse(climateData, location, year);
+      } catch (parseError) {
+        console.log("Failed to parse Earth-2 Studio JSON response:", parseError);
+        return null;
+      }
+    }
+    
     return transformEarth2StudioResponse(data, location, year);
   } catch (error) {
     console.log("Earth-2 Studio API unavailable:", error);
@@ -403,23 +415,22 @@ async function callEarth2StudioAPI(location: any, year: number, apiKey: string) 
 
 async function callCBottleAPI(location: any, year: number, apiKey: string) {
   try {
-    // NVIDIA CBottle climate model from NGC catalog
-    const response = await fetch("https://api.nvcf.nvidia.com/v2/nvcf/pexec/functions/cbottle", {
+    // NVIDIA API for climate modeling using chat completions format
+    const response = await fetch("https://integrate.api.nvidia.com/v1/chat/completions", {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${apiKey}`,
         'Content-Type': 'application/json',
-        'Accept': 'application/json',
-        'NVCF-INPUT-ASSET-REFERENCES': '',
-        'NVCF-FUNCTION-ASSET-IDS': ''
+        'Accept': 'application/json'
       },
       body: JSON.stringify({
-        latitude: location.latitude,
-        longitude: location.longitude,
-        start_year: 2024,
-        end_year: year,
-        variables: ["temperature", "precipitation", "humidity"],
-        scenario: "ssp245"
+        model: "meta/llama-3.1-405b-instruct",
+        messages: [{
+          role: "user",
+          content: `Generate precise climate forecast for latitude ${location.latitude}, longitude ${location.longitude} for year ${year}. Include temperature (°C), precipitation (mm), humidity (%), sea level changes (m), heat stress risk (0-100), drought risk (0-100), flooding risk (0-100), habitability score (0-100), and monthly temperature/precipitation arrays. Format as valid JSON with numeric values only.`
+        }],
+        temperature: 0.1,
+        max_tokens: 1500
       })
     });
 
