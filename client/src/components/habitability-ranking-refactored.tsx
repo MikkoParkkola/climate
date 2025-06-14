@@ -243,6 +243,7 @@ export default function HabitabilityRanking({ selectedYear, onLocationSelect }: 
           scoreLabel="Infrastructure Score"
           onLocationClick={handleLocationClick}
           icon={Building}
+          citation="[25]"
         />
         
         <RankingTable
@@ -252,6 +253,7 @@ export default function HabitabilityRanking({ selectedYear, onLocationSelect }: 
           scoreLabel="Temperature Score"
           onLocationClick={handleLocationClick}
           icon={Thermometer}
+          citation="[26]"
         />
       </div>
 
