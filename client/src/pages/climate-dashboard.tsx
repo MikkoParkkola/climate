@@ -24,15 +24,26 @@ export default function ClimateDashboard() {
   const { toast } = useToast();
 
   // Query for climate projection data
-  const { data: projectionData, isLoading: isProjectionLoading } = useQuery({
+  const { data: projectionData, isLoading: isProjectionLoading, error: projectionError } = useQuery({
     queryKey: [`/api/projections/${selectedLocation?.id}/${selectedYear}`],
     enabled: !!selectedLocation?.id,
   });
 
   // Query for current climate data (baseline year)
-  const { data: currentData } = useQuery({
+  const { data: currentData, error: currentError } = useQuery({
     queryKey: [`/api/projections/${selectedLocation?.id}/2024`],
     enabled: !!selectedLocation?.id,
+  });
+
+  // Debug logging
+  console.log('Climate Dashboard Debug:', {
+    selectedLocation: selectedLocation?.id,
+    selectedYear,
+    projectionData,
+    currentData,
+    isProjectionLoading,
+    projectionError: projectionError?.message,
+    currentError: currentError?.message
   });
 
   // Mutation for creating locations
