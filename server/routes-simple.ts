@@ -1,6 +1,6 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
-import { exec } from "child_process";
+import { exec, spawn } from "child_process";
 import { promisify } from "util";
 
 export async function registerRoutes(app: Express): Promise<Server> {
@@ -135,6 +135,49 @@ export async function registerRoutes(app: Express): Promise<Server> {
         error: 'Internal server error',
         message: error instanceof Error ? error.message : 'Unknown error'
       });
+    }
+  });
+
+  // Global habitability rankings endpoint
+  app.get("/api/climate/global-rankings", async (req, res) => {
+    try {
+      const year = parseInt(req.query.year as string) || 2050;
+      
+      // Call Python script to generate global rankings
+      const python = spawn('python', ['cbottle_runner.py', '--rankings', year.toString()]);
+      
+      let output = '';
+      let errorOutput = '';
+      
+      python.stdout.on('data', (data: Buffer) => {
+        output += data.toString();
+      });
+      
+      python.stderr.on('data', (data: Buffer) => {
+        errorOutput += data.toString();
+      });
+      
+      python.on('close', (code: number) => {
+        if (code !== 0) {
+          console.error("Python script error:", errorOutput);
+          return res.status(500).json({ 
+            message: "Failed to generate global rankings",
+            error: errorOutput 
+          });
+        }
+        
+        try {
+          const rankings = JSON.parse(output);
+          res.json(rankings);
+        } catch (parseError) {
+          console.error("Failed to parse rankings output:", parseError);
+          res.status(500).json({ message: "Failed to parse rankings data" });
+        }
+      });
+      
+    } catch (error) {
+      console.error("Error generating global rankings:", error);
+      res.status(500).json({ message: "Failed to generate global rankings" });
     }
   });
 
