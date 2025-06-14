@@ -66,6 +66,7 @@ export default function InteractiveMap({ selectedLocation, onLocationSelect, cla
     // Add click handler
     map.on("click", (e: L.LeafletMouseEvent) => {
       const { lat, lng } = e.latlng;
+      console.log('Map clicked:', { lat, lng });
       onLocationSelect(lat, lng);
     });
 

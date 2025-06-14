@@ -1,0 +1,899 @@
+Replit version cbc85ccb, pid2 version 0.0.1414
+_app-1f96056195aaa015.js:40 
+            
+            
+           Failed to load resource: net::ERR_BLOCKED_BY_CONTENT_BLOCKER
+(anonymous) @ _app-1f96056195aaa015.js:40
+cdn.segment.com/v1/projects/dMePKGC4BqfBivpe0Hvl8IoPpzSHgjdX/settings:1 
+            
+            
+           Failed to load resource: net::ERR_NAME_NOT_RESOLVED
+_app-1f96056195aaa015.js:38 Failed to fetch
+(anonymous) @ _app-1f96056195aaa015.js:38
+_app-1f96056195aaa015.js:38 [analytics.js] Failed to load Analytics.js TypeError: Failed to fetch
+    at o (sdk.min.js:1:23763)
+    at index.ts:34:26
+    at tslib.es6.js:103:23
+    at Object.next (tslib.es6.js:108:37)
+    at tslib.es6.js:80:8
+    at new Promise (<anonymous>)
+    at u (tslib.es6.js:72:27)
+    at re (index.ts:239:4)
+    at index.ts:338:7
+(anonymous) @ _app-1f96056195aaa015.js:38
+_app-1f96056195aaa015.js:38 
+      /////////////////////
+   ///////////////////////////
+  ////////@@@@@@@//////////////
+  ////////@@@@@@@//////////////
+  ////////@@@@@@@//////////////        Curious and driven?
+  ///////////////@@@@@@@///////        Work with us!
+  ///////////////@@@@@@@///////
+  ///////////////@@@@@@@///////        https://join.replit.com/hack.with.us
+  ////////@@@@@@@//////////////
+  ////////@@@@@@@//////////////
+  ////////@@@@@@#//////////////
+   ///////////////////////////
+      /////////////////////
+      
+api.segment.io/v1/m:1 
+            
+            
+           Failed to load resource: net::ERR_BLOCKED_BY_CONTENT_BLOCKER
+_app-1f96056195aaa015.js:38 Error sending segment performance metrics TypeError: Failed to fetch
+    at _app-1f96056195aaa015.js:38:9046
+    at o (sdk.min.js:1:23763)
+    at t.<anonymous> (remote-metrics.ts:138:12)
+    at tslib.es6.js:103:23
+    at Object.next (tslib.es6.js:108:37)
+    at tslib.es6.js:80:8
+    at new Promise (<anonymous>)
+    at u (tslib.es6.js:72:27)
+    at t.send (sdk.min.js:1:22021)
+    at t.<anonymous> (remote-metrics.ts:125:16)
+    at tslib.es6.js:103:23
+    at Object.next (tslib.es6.js:108:37)
+    at tslib.es6.js:80:8
+    at new Promise (<anonymous>)
+    at u (tslib.es6.js:72:27)
+    at t.flush (sdk.min.js:1:21754)
+    at t.increment (remote-metrics.ts:116:12)
+    at fe (standalone.ts:38:21)
+    at standalone.ts:47:5
+    at tslib.es6.js:103:23
+    at Object.throw (tslib.es6.js:108:37)
+    at u (tslib.es6.js:74:102)
+(anonymous) @ _app-1f96056195aaa015.js:38
+_app-1f96056195aaa015.js:38 [LaunchDarkly] LaunchDarkly client initialized
+/~:1 Blocked aria-hidden on an element because its descendant retained focus. The focus must not be hidden from assistive technology users. Avoid using aria-hidden on a focused element or its ancestor. Consider using the inert attribute instead, which will also prevent focus. For more details, see the aria-hidden section of the WAI-ARIA specification at https://w3c.github.io/aria/#aria-hidden.
+Element with focus: <div.cm-content cm-lineWrapping>
+Ancestor with aria-hidden: <div. useView_view__C2mnv css-17qdd0f Surface_surfaceRoot__TeA2u> <div class=​" useView_view__C2mnv css-17qdd0f Surface_surfaceRoot__TeA2u" aria-hidden=​"true" style=​"--useView--gap:​ 4px;​ border-color:​ var(--outline-dimmer)​;​ --focusedBorderColor:​ var(--accent-primary-default)​;​ --hoverBorderColor:​ var(--accent-primary-default)​;​">​…​</div>​
+/~:1 Banner not shown: beforeinstallpromptevent.preventDefault() called. The page must call beforeinstallpromptevent.prompt() to show the banner.
+_app-1f96056195aaa015.js:40 
+            
+            
+           Failed to load resource: net::ERR_BLOCKED_BY_CONTENT_BLOCKER
+(anonymous) @ _app-1f96056195aaa015.js:40
+_app-1f96056195aaa015.js:40 
+            
+            
+           Failed to load resource: net::ERR_BLOCKED_BY_CONTENT_BLOCKER
+(anonymous) @ _app-1f96056195aaa015.js:40
+_app-1f96056195aaa015.js:38 
+            
+            
+           Failed to load resource: net::ERR_BLOCKED_BY_CONTENT_BLOCKER
+(anonymous) @ _app-1f96056195aaa015.js:38
+logs.browser-intake-us5-datadoghq.com/api/v2/logs?ddsource=browser&ddtags=sdk_version%3A4.46.0%2Capi%3Axhr%2Cenv%3Aproduction%2Cservice%3Awebsite%2Cversion%3Acbc85ccb&dd-api-key=pub31a5047a3a4692afb84a423db984dc57&dd-evp-origin-version=4.46.0&dd-evp-origin=browser&dd-request-id=550fdc93-a588-47cb-ba9c-3712142556fb:1 
+            
+            
+           Failed to load resource: net::ERR_BLOCKED_BY_CONTENT_BLOCKER
+_app-1f96056195aaa015.js:38 
+            
+            
+           Failed to load resource: net::ERR_BLOCKED_BY_CONTENT_BLOCKER
+(anonymous) @ _app-1f96056195aaa015.js:38
+logs.browser-intake-us5-datadoghq.com/api/v2/logs?ddsource=browser&ddtags=sdk_version%3A4.46.0%2Capi%3Axhr%2Cenv%3Aproduction%2Cservice%3Awebsite%2Cversion%3Acbc85ccb&dd-api-key=pub31a5047a3a4692afb84a423db984dc57&dd-evp-origin-version=4.46.0&dd-evp-origin=browser&dd-request-id=d4dfcfc2-8797-499a-b96c-befdcc1d6283:1 
+            
+            
+           Failed to load resource: net::ERR_BLOCKED_BY_CONTENT_BLOCKER
+_app-1f96056195aaa015.js:38 
+            
+            
+           Failed to load resource: net::ERR_BLOCKED_BY_CONTENT_BLOCKER
+(anonymous) @ _app-1f96056195aaa015.js:38
+logs.browser-intake-us5-datadoghq.com/api/v2/logs?ddsource=browser&ddtags=sdk_version%3A4.46.0%2Capi%3Axhr%2Cenv%3Aproduction%2Cservice%3Awebsite%2Cversion%3Acbc85ccb&dd-api-key=pub31a5047a3a4692afb84a423db984dc57&dd-evp-origin-version=4.46.0&dd-evp-origin=browser&dd-request-id=72223f1d-e71a-4fc9-8308-d9cebb0c8161:1 
+            
+            
+           Failed to load resource: net::ERR_BLOCKED_BY_CONTENT_BLOCKER
+_app-1f96056195aaa015.js:38 
+            
+            
+           Failed to load resource: net::ERR_BLOCKED_BY_CONTENT_BLOCKER
+(anonymous) @ _app-1f96056195aaa015.js:38
+16Error while parsing the 'sandbox' attribute: 'allow-downloads-without-user-activation' is an invalid sandbox flag.
+framework-d6c8cf7aaf23a399.js:1 Unrecognized feature: 'ambient-light-sensor'.
+_ @ framework-d6c8cf7aaf23a399.js:1
+framework-d6c8cf7aaf23a399.js:1 Unrecognized feature: 'battery'.
+_ @ framework-d6c8cf7aaf23a399.js:1
+framework-d6c8cf7aaf23a399.js:1 Unrecognized feature: 'execution-while-not-rendered'.
+_ @ framework-d6c8cf7aaf23a399.js:1
+framework-d6c8cf7aaf23a399.js:1 Unrecognized feature: 'execution-while-out-of-viewport'.
+_ @ framework-d6c8cf7aaf23a399.js:1
+framework-d6c8cf7aaf23a399.js:1 Unrecognized feature: 'layout-animations'.
+_ @ framework-d6c8cf7aaf23a399.js:1
+framework-d6c8cf7aaf23a399.js:1 Unrecognized feature: 'legacy-image-formats'.
+_ @ framework-d6c8cf7aaf23a399.js:1
+framework-d6c8cf7aaf23a399.js:1 Unrecognized feature: 'navigation-override'.
+_ @ framework-d6c8cf7aaf23a399.js:1
+framework-d6c8cf7aaf23a399.js:1 Unrecognized feature: 'oversized-images'.
+_ @ framework-d6c8cf7aaf23a399.js:1
+framework-d6c8cf7aaf23a399.js:1 Unrecognized feature: 'publickey-credentials'.
+_ @ framework-d6c8cf7aaf23a399.js:1
+framework-d6c8cf7aaf23a399.js:1 Unrecognized feature: 'speaker-selection'.
+_ @ framework-d6c8cf7aaf23a399.js:1
+framework-d6c8cf7aaf23a399.js:1 Unrecognized feature: 'unoptimized-images'.
+_ @ framework-d6c8cf7aaf23a399.js:1
+framework-d6c8cf7aaf23a399.js:1 Unrecognized feature: 'unsized-media'.
+_ @ framework-d6c8cf7aaf23a399.js:1
+framework-d6c8cf7aaf23a399.js:1 Unrecognized feature: 'pointer-lock'.
+_ @ framework-d6c8cf7aaf23a399.js:1
+framework-d6c8cf7aaf23a399.js:1 Allow attribute will take precedence over 'allowfullscreen'.
+_ @ framework-d6c8cf7aaf23a399.js:1
+framework-d6c8cf7aaf23a399.js:1 Allow attribute will take precedence over 'allowpaymentrequest'.
+_ @ framework-d6c8cf7aaf23a399.js:1
+logs.browser-intake-us5-datadoghq.com/api/v2/logs?ddsource=browser&ddtags=sdk_version%3A4.46.0%2Capi%3Axhr%2Cenv%3Aproduction%2Cservice%3Awebsite%2Cversion%3Acbc85ccb&dd-api-key=pub31a5047a3a4692afb84a423db984dc57&dd-evp-origin-version=4.46.0&dd-evp-origin=browser&dd-request-id=91d57167-bbb6-4a0b-95ff-532e502317a3:1 
+            
+            
+           Failed to load resource: net::ERR_BLOCKED_BY_CONTENT_BLOCKER
+_app-1f96056195aaa015.js:38 
+            
+            
+           Failed to load resource: net::ERR_BLOCKED_BY_CONTENT_BLOCKER
+(anonymous) @ _app-1f96056195aaa015.js:38
+logs.browser-intake-us5-datadoghq.com/api/v2/logs?ddsource=browser&ddtags=sdk_version%3A4.46.0%2Capi%3Axhr%2Cenv%3Aproduction%2Cservice%3Awebsite%2Cversion%3Acbc85ccb&dd-api-key=pub31a5047a3a4692afb84a423db984dc57&dd-evp-origin-version=4.46.0&dd-evp-origin=browser&dd-request-id=401e0fb6-9f7e-4fd0-b59a-021615801a18:1 
+            
+            
+           Failed to load resource: net::ERR_BLOCKED_BY_CONTENT_BLOCKER
+_app-1f96056195aaa015.js:26 
+            
+            
+           Failed to load resource: net::ERR_BLOCKED_BY_CONTENT_BLOCKER
+(anonymous) @ _app-1f96056195aaa015.js:26
+_app-1f96056195aaa015.js:40 
+            
+            
+           Failed to load resource: net::ERR_BLOCKED_BY_CONTENT_BLOCKER
+(anonymous) @ _app-1f96056195aaa015.js:40
+logs.browser-intake-us5-datadoghq.com/api/v2/logs?ddsource=browser&ddtags=sdk_version%3A4.46.0%2Capi%3Axhr%2Cenv%3Aproduction%2Cservice%3Awebsite%2Cversion%3Acbc85ccb&dd-api-key=pub31a5047a3a4692afb84a423db984dc57&dd-evp-origin-version=4.46.0&dd-evp-origin=browser&dd-request-id=a0b487ae-6501-4639-92f9-ce400a443822:1 
+            
+            
+           Failed to load resource: net::ERR_BLOCKED_BY_CONTENT_BLOCKER
+b:1 
+            
+            
+           Failed to load resource: net::ERR_BLOCKED_BY_CLIENT
+b:1 
+            
+            
+           Failed to load resource: net::ERR_BLOCKED_BY_CLIENT
+_app-1f96056195aaa015.js:26 
+            
+            
+           Failed to load resource: net::ERR_BLOCKED_BY_CONTENT_BLOCKER
+(anonymous) @ _app-1f96056195aaa015.js:26
+_app-1f96056195aaa015.js:40 
+            
+            
+           Failed to load resource: net::ERR_BLOCKED_BY_CONTENT_BLOCKER
+(anonymous) @ _app-1f96056195aaa015.js:40
+logs.browser-intake-us5-datadoghq.com/api/v2/logs?ddsource=browser&ddtags=sdk_version%3A4.46.0%2Capi%3Axhr%2Cenv%3Aproduction%2Cservice%3Awebsite%2Cversion%3Acbc85ccb&dd-api-key=pub31a5047a3a4692afb84a423db984dc57&dd-evp-origin-version=4.46.0&dd-evp-origin=browser&dd-request-id=bd487a94-6902-41b9-a128-829a918de57c:1 
+            
+            
+           Failed to load resource: net::ERR_BLOCKED_BY_CONTENT_BLOCKER
+b:1 
+            
+            
+           Failed to load resource: net::ERR_BLOCKED_BY_CLIENT
+b:1 
+            
+            
+           Failed to load resource: net::ERR_BLOCKED_BY_CLIENT
+_app-1f96056195aaa015.js:38 
+            
+            
+           Failed to load resource: net::ERR_BLOCKED_BY_CONTENT_BLOCKER
+(anonymous) @ _app-1f96056195aaa015.js:38
+logs.browser-intake-us5-datadoghq.com/api/v2/logs?ddsource=browser&ddtags=sdk_version%3A4.46.0%2Capi%3Axhr%2Cenv%3Aproduction%2Cservice%3Awebsite%2Cversion%3Acbc85ccb&dd-api-key=pub31a5047a3a4692afb84a423db984dc57&dd-evp-origin-version=4.46.0&dd-evp-origin=browser&dd-request-id=4481fbee-ba79-407c-b60b-e7b0dfbfacf0:1 
+            
+            
+           Failed to load resource: net::ERR_BLOCKED_BY_CONTENT_BLOCKER
+_app-1f96056195aaa015.js:26 
+            
+            
+           Failed to load resource: net::ERR_BLOCKED_BY_CONTENT_BLOCKER
+(anonymous) @ _app-1f96056195aaa015.js:26
+_app-1f96056195aaa015.js:40 
+            
+            
+           Failed to load resource: net::ERR_BLOCKED_BY_CONTENT_BLOCKER
+(anonymous) @ _app-1f96056195aaa015.js:40
+logs.browser-intake-us5-datadoghq.com/api/v2/logs?ddsource=browser&ddtags=sdk_version%3A4.46.0%2Capi%3Axhr%2Cenv%3Aproduction%2Cservice%3Awebsite%2Cversion%3Acbc85ccb&dd-api-key=pub31a5047a3a4692afb84a423db984dc57&dd-evp-origin-version=4.46.0&dd-evp-origin=browser&dd-request-id=5970b367-bafe-48d0-acf6-55e04aeadca1:1 
+            
+            
+           Failed to load resource: net::ERR_BLOCKED_BY_CONTENT_BLOCKER
+b:1 
+            
+            
+           Failed to load resource: net::ERR_BLOCKED_BY_CLIENT
+b:1 
+            
+            
+           Failed to load resource: net::ERR_BLOCKED_BY_CLIENT
+_app-1f96056195aaa015.js:26 
+            
+            
+           Failed to load resource: net::ERR_BLOCKED_BY_CONTENT_BLOCKER
+(anonymous) @ _app-1f96056195aaa015.js:26
+_app-1f96056195aaa015.js:40 
+            
+            
+           Failed to load resource: net::ERR_BLOCKED_BY_CONTENT_BLOCKER
+(anonymous) @ _app-1f96056195aaa015.js:40
+logs.browser-intake-us5-datadoghq.com/api/v2/logs?ddsource=browser&ddtags=sdk_version%3A4.46.0%2Capi%3Axhr%2Cenv%3Aproduction%2Cservice%3Awebsite%2Cversion%3Acbc85ccb&dd-api-key=pub31a5047a3a4692afb84a423db984dc57&dd-evp-origin-version=4.46.0&dd-evp-origin=browser&dd-request-id=cb486ada-412d-4635-8352-905b6fa47be1:1 
+            
+            
+           Failed to load resource: net::ERR_BLOCKED_BY_CONTENT_BLOCKER
+b:1 
+            
+            
+           Failed to load resource: net::ERR_BLOCKED_BY_CLIENT
+b:1 
+            
+            
+           Failed to load resource: net::ERR_BLOCKED_BY_CLIENT
+_app-1f96056195aaa015.js:26 
+            
+            
+           Failed to load resource: net::ERR_BLOCKED_BY_CONTENT_BLOCKER
+(anonymous) @ _app-1f96056195aaa015.js:26
+_app-1f96056195aaa015.js:40 
+            
+            
+           Failed to load resource: net::ERR_BLOCKED_BY_CONTENT_BLOCKER
+(anonymous) @ _app-1f96056195aaa015.js:40
+logs.browser-intake-us5-datadoghq.com/api/v2/logs?ddsource=browser&ddtags=sdk_version%3A4.46.0%2Capi%3Axhr%2Cenv%3Aproduction%2Cservice%3Awebsite%2Cversion%3Acbc85ccb&dd-api-key=pub31a5047a3a4692afb84a423db984dc57&dd-evp-origin-version=4.46.0&dd-evp-origin=browser&dd-request-id=c80fc6f5-a79f-437f-ab5f-a751f7c5f019:1 
+            
+            
+           Failed to load resource: net::ERR_BLOCKED_BY_CONTENT_BLOCKER
+b:1 
+            
+            
+           Failed to load resource: net::ERR_BLOCKED_BY_CLIENT
+b:1 
+            
+            
+           Failed to load resource: net::ERR_BLOCKED_BY_CLIENT
+_app-1f96056195aaa015.js:38 
+            
+            
+           Failed to load resource: net::ERR_BLOCKED_BY_CONTENT_BLOCKER
+(anonymous) @ _app-1f96056195aaa015.js:38
+logs.browser-intake-us5-datadoghq.com/api/v2/logs?ddsource=browser&ddtags=sdk_version%3A4.46.0%2Capi%3Axhr%2Cenv%3Aproduction%2Cservice%3Awebsite%2Cversion%3Acbc85ccb&dd-api-key=pub31a5047a3a4692afb84a423db984dc57&dd-evp-origin-version=4.46.0&dd-evp-origin=browser&dd-request-id=9adea70f-abb8-418f-b064-eeb2e10aee8e:1 
+            
+            
+           Failed to load resource: net::ERR_BLOCKED_BY_CONTENT_BLOCKER
+_app-1f96056195aaa015.js:38 
+            
+            
+           Failed to load resource: net::ERR_BLOCKED_BY_CONTENT_BLOCKER
+(anonymous) @ _app-1f96056195aaa015.js:38
+logs.browser-intake-us5-datadoghq.com/api/v2/logs?ddsource=browser&ddtags=sdk_version%3A4.46.0%2Capi%3Axhr%2Cenv%3Aproduction%2Cservice%3Awebsite%2Cversion%3Acbc85ccb&dd-api-key=pub31a5047a3a4692afb84a423db984dc57&dd-evp-origin-version=4.46.0&dd-evp-origin=browser&dd-request-id=fbca8bdb-d269-4d92-b938-488396552a83:1 
+            
+            
+           Failed to load resource: net::ERR_BLOCKED_BY_CONTENT_BLOCKER
+_app-1f96056195aaa015.js:38 
+            
+            
+           Failed to load resource: net::ERR_BLOCKED_BY_CONTENT_BLOCKER
+(anonymous) @ _app-1f96056195aaa015.js:38
+logs.browser-intake-us5-datadoghq.com/api/v2/logs?ddsource=browser&ddtags=sdk_version%3A4.46.0%2Capi%3Axhr%2Cenv%3Aproduction%2Cservice%3Awebsite%2Cversion%3Acbc85ccb&dd-api-key=pub31a5047a3a4692afb84a423db984dc57&dd-evp-origin-version=4.46.0&dd-evp-origin=browser&dd-request-id=a7c23382-acce-4e29-a7ef-7dc10abc2431:1 
+            
+            
+           Failed to load resource: net::ERR_BLOCKED_BY_CONTENT_BLOCKER
+_app-1f96056195aaa015.js:38 
+            
+            
+           Failed to load resource: net::ERR_BLOCKED_BY_CONTENT_BLOCKER
+(anonymous) @ _app-1f96056195aaa015.js:38
+logs.browser-intake-us5-datadoghq.com/api/v2/logs?ddsource=browser&ddtags=sdk_version%3A4.46.0%2Capi%3Axhr%2Cenv%3Aproduction%2Cservice%3Awebsite%2Cversion%3Acbc85ccb&dd-api-key=pub31a5047a3a4692afb84a423db984dc57&dd-evp-origin-version=4.46.0&dd-evp-origin=browser&dd-request-id=c3328761-0bf5-44d4-952c-395d7874443c:1 
+            
+            
+           Failed to load resource: net::ERR_BLOCKED_BY_CONTENT_BLOCKER
+_app-1f96056195aaa015.js:38 
+            
+            
+           Failed to load resource: net::ERR_BLOCKED_BY_CONTENT_BLOCKER
+(anonymous) @ _app-1f96056195aaa015.js:38
+logs.browser-intake-us5-datadoghq.com/api/v2/logs?ddsource=browser&ddtags=sdk_version%3A4.46.0%2Capi%3Axhr%2Cenv%3Aproduction%2Cservice%3Awebsite%2Cversion%3Acbc85ccb&dd-api-key=pub31a5047a3a4692afb84a423db984dc57&dd-evp-origin-version=4.46.0&dd-evp-origin=browser&dd-request-id=6644581c-162c-4074-a72d-1664fad04247:1 
+            
+            
+           Failed to load resource: net::ERR_BLOCKED_BY_CONTENT_BLOCKER
+events.launchdarkly.com/events/diagnostic/62b35a865152ab14c5942820:1 
+            
+            
+           Failed to load resource: net::ERR_BLOCKED_BY_CONTENT_BLOCKER
+events.launchdarkly.com/events/diagnostic/62b35a865152ab14c5942820:1 
+            
+            
+           Failed to load resource: net::ERR_BLOCKED_BY_CONTENT_BLOCKER
+_app-1f96056195aaa015.js:40 
+            
+            
+           Failed to load resource: net::ERR_BLOCKED_BY_CONTENT_BLOCKER
+(anonymous) @ _app-1f96056195aaa015.js:40
+b:1 
+            
+            
+           Failed to load resource: net::ERR_BLOCKED_BY_CLIENT
+b:1 
+            
+            
+           Failed to load resource: net::ERR_BLOCKED_BY_CLIENT
+_app-1f96056195aaa015.js:38 
+            
+            
+           Failed to load resource: net::ERR_BLOCKED_BY_CONTENT_BLOCKER
+(anonymous) @ _app-1f96056195aaa015.js:38
+logs.browser-intake-us5-datadoghq.com/api/v2/logs?ddsource=browser&ddtags=sdk_version%3A4.46.0%2Capi%3Axhr%2Cenv%3Aproduction%2Cservice%3Awebsite%2Cversion%3Acbc85ccb&dd-api-key=pub31a5047a3a4692afb84a423db984dc57&dd-evp-origin-version=4.46.0&dd-evp-origin=browser&dd-request-id=fd981161-5087-4339-8a26-6df1169552ed:1 
+            
+            
+           Failed to load resource: net::ERR_BLOCKED_BY_CONTENT_BLOCKER
+_app-1f96056195aaa015.js:38 
+            
+            
+           Failed to load resource: net::ERR_BLOCKED_BY_CONTENT_BLOCKER
+(anonymous) @ _app-1f96056195aaa015.js:38
+logs.browser-intake-us5-datadoghq.com/api/v2/logs?ddsource=browser&ddtags=sdk_version%3A4.46.0%2Capi%3Axhr%2Cenv%3Aproduction%2Cservice%3Awebsite%2Cversion%3Acbc85ccb&dd-api-key=pub31a5047a3a4692afb84a423db984dc57&dd-evp-origin-version=4.46.0&dd-evp-origin=browser&dd-request-id=e115a408-9e93-4c64-b557-d95cefcd14be:1 
+            
+            
+           Failed to load resource: net::ERR_BLOCKED_BY_CONTENT_BLOCKER
+_app-1f96056195aaa015.js:40 
+            
+            
+           Failed to load resource: net::ERR_BLOCKED_BY_CONTENT_BLOCKER
+(anonymous) @ _app-1f96056195aaa015.js:40
+b:1 
+            
+            
+           Failed to load resource: net::ERR_BLOCKED_BY_CLIENT
+b:1 
+            
+            
+           Failed to load resource: net::ERR_BLOCKED_BY_CLIENT
+_app-1f96056195aaa015.js:38 
+            
+            
+           Failed to load resource: net::ERR_BLOCKED_BY_CONTENT_BLOCKER
+(anonymous) @ _app-1f96056195aaa015.js:38
+logs.browser-intake-us5-datadoghq.com/api/v2/logs?ddsource=browser&ddtags=sdk_version%3A4.46.0%2Capi%3Axhr%2Cenv%3Aproduction%2Cservice%3Awebsite%2Cversion%3Acbc85ccb&dd-api-key=pub31a5047a3a4692afb84a423db984dc57&dd-evp-origin-version=4.46.0&dd-evp-origin=browser&dd-request-id=e79f34d0-5c72-4ce9-9f15-37eb75c9d877:1 
+            
+            
+           Failed to load resource: net::ERR_BLOCKED_BY_CONTENT_BLOCKER
+_app-1f96056195aaa015.js:26 
+            
+            
+           Failed to load resource: net::ERR_BLOCKED_BY_CONTENT_BLOCKER
+(anonymous) @ _app-1f96056195aaa015.js:26
+_app-1f96056195aaa015.js:40 
+            
+            
+           Failed to load resource: net::ERR_BLOCKED_BY_CONTENT_BLOCKER
+(anonymous) @ _app-1f96056195aaa015.js:40
+logs.browser-intake-us5-datadoghq.com/api/v2/logs?ddsource=browser&ddtags=sdk_version%3A4.46.0%2Capi%3Axhr%2Cenv%3Aproduction%2Cservice%3Awebsite%2Cversion%3Acbc85ccb&dd-api-key=pub31a5047a3a4692afb84a423db984dc57&dd-evp-origin-version=4.46.0&dd-evp-origin=browser&dd-request-id=82ed2a3f-81ea-496e-8e6a-c75a43eab8a0:1 
+            
+            
+           Failed to load resource: net::ERR_BLOCKED_BY_CONTENT_BLOCKER
+b:1 
+            
+            
+           Failed to load resource: net::ERR_BLOCKED_BY_CLIENT
+b:1 
+            
+            
+           Failed to load resource: net::ERR_BLOCKED_BY_CLIENT
+_app-1f96056195aaa015.js:26 
+            
+            
+           Failed to load resource: net::ERR_BLOCKED_BY_CONTENT_BLOCKER
+(anonymous) @ _app-1f96056195aaa015.js:26
+_app-1f96056195aaa015.js:40 
+            
+            
+           Failed to load resource: net::ERR_BLOCKED_BY_CONTENT_BLOCKER
+(anonymous) @ _app-1f96056195aaa015.js:40
+logs.browser-intake-us5-datadoghq.com/api/v2/logs?ddsource=browser&ddtags=sdk_version%3A4.46.0%2Capi%3Axhr%2Cenv%3Aproduction%2Cservice%3Awebsite%2Cversion%3Acbc85ccb&dd-api-key=pub31a5047a3a4692afb84a423db984dc57&dd-evp-origin-version=4.46.0&dd-evp-origin=browser&dd-request-id=846324c6-0d90-4f17-ac82-60b083f2f7b3:1 
+            
+            
+           Failed to load resource: net::ERR_BLOCKED_BY_CONTENT_BLOCKER
+b:1 
+            
+            
+           Failed to load resource: net::ERR_BLOCKED_BY_CLIENT
+b:1 
+            
+            
+           Failed to load resource: net::ERR_BLOCKED_BY_CLIENT
+_app-1f96056195aaa015.js:38 
+            
+            
+           Failed to load resource: net::ERR_BLOCKED_BY_CONTENT_BLOCKER
+(anonymous) @ _app-1f96056195aaa015.js:38
+logs.browser-intake-us5-datadoghq.com/api/v2/logs?ddsource=browser&ddtags=sdk_version%3A4.46.0%2Capi%3Axhr%2Cenv%3Aproduction%2Cservice%3Awebsite%2Cversion%3Acbc85ccb&dd-api-key=pub31a5047a3a4692afb84a423db984dc57&dd-evp-origin-version=4.46.0&dd-evp-origin=browser&dd-request-id=e7acb2a6-d145-45c5-a389-4b04c066010d:1 
+            
+            
+           Failed to load resource: net::ERR_BLOCKED_BY_CONTENT_BLOCKER
+events.launchdarkly.com/events/diagnostic/62b35a865152ab14c5942820:1 
+            
+            
+           Failed to load resource: net::ERR_BLOCKED_BY_CONTENT_BLOCKER
+events.launchdarkly.com/events/diagnostic/62b35a865152ab14c5942820:1 
+            
+            
+           Failed to load resource: net::ERR_BLOCKED_BY_CONTENT_BLOCKER
+_app-1f96056195aaa015.js:38 
+            
+            
+           Failed to load resource: net::ERR_BLOCKED_BY_CONTENT_BLOCKER
+(anonymous) @ _app-1f96056195aaa015.js:38
+logs.browser-intake-us5-datadoghq.com/api/v2/logs?ddsource=browser&ddtags=sdk_version%3A4.46.0%2Capi%3Axhr%2Cenv%3Aproduction%2Cservice%3Awebsite%2Cversion%3Acbc85ccb&dd-api-key=pub31a5047a3a4692afb84a423db984dc57&dd-evp-origin-version=4.46.0&dd-evp-origin=browser&dd-request-id=095f59cf-6c6a-4d28-b7e1-ad60fc2eab82:1 
+            
+            
+           Failed to load resource: net::ERR_BLOCKED_BY_CONTENT_BLOCKER
+_app-1f96056195aaa015.js:38 
+            
+            
+           Failed to load resource: net::ERR_BLOCKED_BY_CONTENT_BLOCKER
+(anonymous) @ _app-1f96056195aaa015.js:38
+logs.browser-intake-us5-datadoghq.com/api/v2/logs?ddsource=browser&ddtags=sdk_version%3A4.46.0%2Capi%3Axhr%2Cenv%3Aproduction%2Cservice%3Awebsite%2Cversion%3Acbc85ccb&dd-api-key=pub31a5047a3a4692afb84a423db984dc57&dd-evp-origin-version=4.46.0&dd-evp-origin=browser&dd-request-id=7a227780-86fa-4c9b-8b2c-fb035a9c0484:1 
+            
+            
+           Failed to load resource: net::ERR_BLOCKED_BY_CONTENT_BLOCKER
+_app-1f96056195aaa015.js:38 
+            
+            
+           Failed to load resource: net::ERR_BLOCKED_BY_CONTENT_BLOCKER
+(anonymous) @ _app-1f96056195aaa015.js:38
+logs.browser-intake-us5-datadoghq.com/api/v2/logs?ddsource=browser&ddtags=sdk_version%3A4.46.0%2Capi%3Axhr%2Cenv%3Aproduction%2Cservice%3Awebsite%2Cversion%3Acbc85ccb&dd-api-key=pub31a5047a3a4692afb84a423db984dc57&dd-evp-origin-version=4.46.0&dd-evp-origin=browser&dd-request-id=5a37ac85-3d2c-4d08-b3bf-78d7bd0e82ce:1 
+            
+            
+           Failed to load resource: net::ERR_BLOCKED_BY_CONTENT_BLOCKER
+_app-1f96056195aaa015.js:26 
+            
+            
+           Failed to load resource: net::ERR_BLOCKED_BY_CONTENT_BLOCKER
+(anonymous) @ _app-1f96056195aaa015.js:26
+_app-1f96056195aaa015.js:40 
+            
+            
+           Failed to load resource: net::ERR_BLOCKED_BY_CONTENT_BLOCKER
+(anonymous) @ _app-1f96056195aaa015.js:40
+logs.browser-intake-us5-datadoghq.com/api/v2/logs?ddsource=browser&ddtags=sdk_version%3A4.46.0%2Capi%3Axhr%2Cenv%3Aproduction%2Cservice%3Awebsite%2Cversion%3Acbc85ccb&dd-api-key=pub31a5047a3a4692afb84a423db984dc57&dd-evp-origin-version=4.46.0&dd-evp-origin=browser&dd-request-id=9448d081-295d-4f49-bbe5-64237ee1cf49:1 
+            
+            
+           Failed to load resource: net::ERR_BLOCKED_BY_CONTENT_BLOCKER
+b:1 
+            
+            
+           Failed to load resource: net::ERR_BLOCKED_BY_CLIENT
+b:1 
+            
+            
+           Failed to load resource: net::ERR_BLOCKED_BY_CLIENT
+_app-1f96056195aaa015.js:26 
+            
+            
+           Failed to load resource: net::ERR_BLOCKED_BY_CONTENT_BLOCKER
+(anonymous) @ _app-1f96056195aaa015.js:26
+_app-1f96056195aaa015.js:40 
+            
+            
+           Failed to load resource: net::ERR_BLOCKED_BY_CONTENT_BLOCKER
+(anonymous) @ _app-1f96056195aaa015.js:40
+logs.browser-intake-us5-datadoghq.com/api/v2/logs?ddsource=browser&ddtags=sdk_version%3A4.46.0%2Capi%3Axhr%2Cenv%3Aproduction%2Cservice%3Awebsite%2Cversion%3Acbc85ccb&dd-api-key=pub31a5047a3a4692afb84a423db984dc57&dd-evp-origin-version=4.46.0&dd-evp-origin=browser&dd-request-id=e6c79272-b430-41af-8fc6-0b7d8b112a99:1 
+            
+            
+           Failed to load resource: net::ERR_BLOCKED_BY_CONTENT_BLOCKER
+b:1 
+            
+            
+           Failed to load resource: net::ERR_BLOCKED_BY_CLIENT
+b:1 
+            
+            
+           Failed to load resource: net::ERR_BLOCKED_BY_CLIENT
+_app-1f96056195aaa015.js:26 
+            
+            
+           Failed to load resource: net::ERR_BLOCKED_BY_CONTENT_BLOCKER
+(anonymous) @ _app-1f96056195aaa015.js:26
+logs.browser-intake-us5-datadoghq.com/api/v2/logs?ddsource=browser&ddtags=sdk_version%3A4.46.0%2Capi%3Axhr%2Cenv%3Aproduction%2Cservice%3Awebsite%2Cversion%3Acbc85ccb&dd-api-key=pub31a5047a3a4692afb84a423db984dc57&dd-evp-origin-version=4.46.0&dd-evp-origin=browser&dd-request-id=f201d781-bd78-4c70-bb96-10eaee129a59:1 
+            
+            
+           Failed to load resource: net::ERR_BLOCKED_BY_CONTENT_BLOCKER
+o1151714.ingest.sentry.io/api/6318792/envelope/?sentry_key=8aa91189a4274b5a8c9b7b01d46ea360&sentry_version=7&sentry_client=sentry.javascript.browser%2F7.112.0:1 
+            
+            
+           Failed to load resource: net::ERR_BLOCKED_BY_CONTENT_BLOCKER
+b:1 
+            
+            
+           Failed to load resource: net::ERR_BLOCKED_BY_CLIENT
+b:1 
+            
+            
+           Failed to load resource: net::ERR_BLOCKED_BY_CLIENT
+_app-1f96056195aaa015.js:26 
+            
+            
+           Failed to load resource: net::ERR_BLOCKED_BY_CONTENT_BLOCKER
+(anonymous) @ _app-1f96056195aaa015.js:26
+logs.browser-intake-us5-datadoghq.com/api/v2/logs?ddsource=browser&ddtags=sdk_version%3A4.46.0%2Capi%3Axhr%2Cenv%3Aproduction%2Cservice%3Awebsite%2Cversion%3Acbc85ccb&dd-api-key=pub31a5047a3a4692afb84a423db984dc57&dd-evp-origin-version=4.46.0&dd-evp-origin=browser&dd-request-id=69f908de-145f-4a06-a604-a9b6a3440474:1 
+            
+            
+           Failed to load resource: net::ERR_BLOCKED_BY_CONTENT_BLOCKER
+o1151714.ingest.sentry.io/api/6318792/envelope/?sentry_key=8aa91189a4274b5a8c9b7b01d46ea360&sentry_version=7&sentry_client=sentry.javascript.browser%2F7.112.0:1 
+            
+            
+           Failed to load resource: net::ERR_BLOCKED_BY_CONTENT_BLOCKER
+b:1 
+            
+            
+           Failed to load resource: net::ERR_BLOCKED_BY_CLIENT
+b:1 
+            
+            
+           Failed to load resource: net::ERR_BLOCKED_BY_CLIENT
+_app-1f96056195aaa015.js:26 
+            
+            
+           Failed to load resource: net::ERR_BLOCKED_BY_CONTENT_BLOCKER
+(anonymous) @ _app-1f96056195aaa015.js:26
+logs.browser-intake-us5-datadoghq.com/api/v2/logs?ddsource=browser&ddtags=sdk_version%3A4.46.0%2Capi%3Axhr%2Cenv%3Aproduction%2Cservice%3Awebsite%2Cversion%3Acbc85ccb&dd-api-key=pub31a5047a3a4692afb84a423db984dc57&dd-evp-origin-version=4.46.0&dd-evp-origin=browser&dd-request-id=531c9f3a-7fcc-4ef3-b258-9b566fd13dee:1 
+            
+            
+           Failed to load resource: net::ERR_BLOCKED_BY_CONTENT_BLOCKER
+o1151714.ingest.sentry.io/api/6318792/envelope/?sentry_key=8aa91189a4274b5a8c9b7b01d46ea360&sentry_version=7&sentry_client=sentry.javascript.browser%2F7.112.0:1 
+            
+            
+           Failed to load resource: net::ERR_BLOCKED_BY_CONTENT_BLOCKER
+b:1 
+            
+            
+           Failed to load resource: net::ERR_BLOCKED_BY_CLIENT
+b:1 
+            
+            
+           Failed to load resource: net::ERR_BLOCKED_BY_CLIENT
+_app-1f96056195aaa015.js:26 
+            
+            
+           Failed to load resource: net::ERR_BLOCKED_BY_CONTENT_BLOCKER
+(anonymous) @ _app-1f96056195aaa015.js:26
+logs.browser-intake-us5-datadoghq.com/api/v2/logs?ddsource=browser&ddtags=sdk_version%3A4.46.0%2Capi%3Axhr%2Cenv%3Aproduction%2Cservice%3Awebsite%2Cversion%3Acbc85ccb&dd-api-key=pub31a5047a3a4692afb84a423db984dc57&dd-evp-origin-version=4.46.0&dd-evp-origin=browser&dd-request-id=78d205f5-d866-4de2-81f6-f40ac915a8a9:1 
+            
+            
+           Failed to load resource: net::ERR_BLOCKED_BY_CONTENT_BLOCKER
+o1151714.ingest.sentry.io/api/6318792/envelope/?sentry_key=8aa91189a4274b5a8c9b7b01d46ea360&sentry_version=7&sentry_client=sentry.javascript.browser%2F7.112.0:1 
+            
+            
+           Failed to load resource: net::ERR_BLOCKED_BY_CONTENT_BLOCKER
+b:1 
+            
+            
+           Failed to load resource: net::ERR_BLOCKED_BY_CLIENT
+b:1 
+            
+            
+           Failed to load resource: net::ERR_BLOCKED_BY_CLIENT
+_app-1f96056195aaa015.js:26 
+            
+            
+           Failed to load resource: net::ERR_BLOCKED_BY_CONTENT_BLOCKER
+(anonymous) @ _app-1f96056195aaa015.js:26
+logs.browser-intake-us5-datadoghq.com/api/v2/logs?ddsource=browser&ddtags=sdk_version%3A4.46.0%2Capi%3Axhr%2Cenv%3Aproduction%2Cservice%3Awebsite%2Cversion%3Acbc85ccb&dd-api-key=pub31a5047a3a4692afb84a423db984dc57&dd-evp-origin-version=4.46.0&dd-evp-origin=browser&dd-request-id=19decde3-862d-4b15-8de9-b5ccc97fbc6e:1 
+            
+            
+           Failed to load resource: net::ERR_BLOCKED_BY_CONTENT_BLOCKER
+o1151714.ingest.sentry.io/api/6318792/envelope/?sentry_key=8aa91189a4274b5a8c9b7b01d46ea360&sentry_version=7&sentry_client=sentry.javascript.browser%2F7.112.0:1 
+            
+            
+           Failed to load resource: net::ERR_BLOCKED_BY_CONTENT_BLOCKER
+b:1 
+            
+            
+           Failed to load resource: net::ERR_BLOCKED_BY_CLIENT
+b:1 
+            
+            
+           Failed to load resource: net::ERR_BLOCKED_BY_CLIENT
+_app-1f96056195aaa015.js:38 
+            
+            
+           Failed to load resource: net::ERR_BLOCKED_BY_CONTENT_BLOCKER
+(anonymous) @ _app-1f96056195aaa015.js:38
+logs.browser-intake-us5-datadoghq.com/api/v2/logs?ddsource=browser&ddtags=sdk_version%3A4.46.0%2Capi%3Axhr%2Cenv%3Aproduction%2Cservice%3Awebsite%2Cversion%3Acbc85ccb&dd-api-key=pub31a5047a3a4692afb84a423db984dc57&dd-evp-origin-version=4.46.0&dd-evp-origin=browser&dd-request-id=a913db21-3050-4d02-8ccf-d9ed4131ef02:1 
+            
+            
+           Failed to load resource: net::ERR_BLOCKED_BY_CONTENT_BLOCKER
+_app-1f96056195aaa015.js:38 
+            
+            
+           Failed to load resource: net::ERR_BLOCKED_BY_CONTENT_BLOCKER
+(anonymous) @ _app-1f96056195aaa015.js:38
+logs.browser-intake-us5-datadoghq.com/api/v2/logs?ddsource=browser&ddtags=sdk_version%3A4.46.0%2Capi%3Axhr%2Cenv%3Aproduction%2Cservice%3Awebsite%2Cversion%3Acbc85ccb&dd-api-key=pub31a5047a3a4692afb84a423db984dc57&dd-evp-origin-version=4.46.0&dd-evp-origin=browser&dd-request-id=96c5cfde-82d9-4828-9b5b-157779f8c8f0:1 
+            
+            
+           Failed to load resource: net::ERR_BLOCKED_BY_CONTENT_BLOCKER
+_app-1f96056195aaa015.js:38 
+            
+            
+           Failed to load resource: net::ERR_BLOCKED_BY_CONTENT_BLOCKER
+(anonymous) @ _app-1f96056195aaa015.js:38
+logs.browser-intake-us5-datadoghq.com/api/v2/logs?ddsource=browser&ddtags=sdk_version%3A4.46.0%2Capi%3Axhr%2Cenv%3Aproduction%2Cservice%3Awebsite%2Cversion%3Acbc85ccb&dd-api-key=pub31a5047a3a4692afb84a423db984dc57&dd-evp-origin-version=4.46.0&dd-evp-origin=browser&dd-request-id=3bd5b7cc-5d81-4424-9a00-de8422390574:1 
+            
+            
+           Failed to load resource: net::ERR_BLOCKED_BY_CONTENT_BLOCKER
+_app-1f96056195aaa015.js:38 
+            
+            
+           Failed to load resource: net::ERR_BLOCKED_BY_CONTENT_BLOCKER
+(anonymous) @ _app-1f96056195aaa015.js:38
+logs.browser-intake-us5-datadoghq.com/api/v2/logs?ddsource=browser&ddtags=sdk_version%3A4.46.0%2Capi%3Axhr%2Cenv%3Aproduction%2Cservice%3Awebsite%2Cversion%3Acbc85ccb&dd-api-key=pub31a5047a3a4692afb84a423db984dc57&dd-evp-origin-version=4.46.0&dd-evp-origin=browser&dd-request-id=a3342cc8-de06-4bb0-8791-f40e38c4ecd0:1 
+            
+            
+           Failed to load resource: net::ERR_BLOCKED_BY_CONTENT_BLOCKER
+_app-1f96056195aaa015.js:38 
+            
+            
+           Failed to load resource: net::ERR_BLOCKED_BY_CONTENT_BLOCKER
+(anonymous) @ _app-1f96056195aaa015.js:38
+logs.browser-intake-us5-datadoghq.com/api/v2/logs?ddsource=browser&ddtags=sdk_version%3A4.46.0%2Capi%3Axhr%2Cenv%3Aproduction%2Cservice%3Awebsite%2Cversion%3Acbc85ccb&dd-api-key=pub31a5047a3a4692afb84a423db984dc57&dd-evp-origin-version=4.46.0&dd-evp-origin=browser&dd-request-id=7c7260b7-8312-440f-9eaf-75d136d25c4a:1 
+            
+            
+           Failed to load resource: net::ERR_BLOCKED_BY_CONTENT_BLOCKER
+_app-1f96056195aaa015.js:38 
+            
+            
+           Failed to load resource: net::ERR_BLOCKED_BY_CONTENT_BLOCKER
+(anonymous) @ _app-1f96056195aaa015.js:38
+logs.browser-intake-us5-datadoghq.com/api/v2/logs?ddsource=browser&ddtags=sdk_version%3A4.46.0%2Capi%3Axhr%2Cenv%3Aproduction%2Cservice%3Awebsite%2Cversion%3Acbc85ccb&dd-api-key=pub31a5047a3a4692afb84a423db984dc57&dd-evp-origin-version=4.46.0&dd-evp-origin=browser&dd-request-id=d582c519-78a8-41a2-817b-eaec0a35537e:1 
+            
+            
+           Failed to load resource: net::ERR_BLOCKED_BY_CONTENT_BLOCKER
+events.launchdarkly.com/events/diagnostic/62b35a865152ab14c5942820:1 
+            
+            
+           Failed to load resource: net::ERR_BLOCKED_BY_CONTENT_BLOCKER
+events.launchdarkly.com/events/diagnostic/62b35a865152ab14c5942820:1 
+            
+            
+           Failed to load resource: net::ERR_BLOCKED_BY_CONTENT_BLOCKER
+_app-1f96056195aaa015.js:38 
+            
+            
+           Failed to load resource: net::ERR_BLOCKED_BY_CONTENT_BLOCKER
+(anonymous) @ _app-1f96056195aaa015.js:38
+logs.browser-intake-us5-datadoghq.com/api/v2/logs?ddsource=browser&ddtags=sdk_version%3A4.46.0%2Capi%3Axhr%2Cenv%3Aproduction%2Cservice%3Awebsite%2Cversion%3Acbc85ccb&dd-api-key=pub31a5047a3a4692afb84a423db984dc57&dd-evp-origin-version=4.46.0&dd-evp-origin=browser&dd-request-id=621252d7-5944-44eb-bb97-10a3601f0e35:1 
+            
+            
+           Failed to load resource: net::ERR_BLOCKED_BY_CONTENT_BLOCKER
+_app-1f96056195aaa015.js:38 
+            
+            
+           Failed to load resource: net::ERR_BLOCKED_BY_CONTENT_BLOCKER
+(anonymous) @ _app-1f96056195aaa015.js:38
+logs.browser-intake-us5-datadoghq.com/api/v2/logs?ddsource=browser&ddtags=sdk_version%3A4.46.0%2Capi%3Axhr%2Cenv%3Aproduction%2Cservice%3Awebsite%2Cversion%3Acbc85ccb&dd-api-key=pub31a5047a3a4692afb84a423db984dc57&dd-evp-origin-version=4.46.0&dd-evp-origin=browser&dd-request-id=f4989f4c-9a85-471d-873d-cd185564dc5e:1 
+            
+            
+           Failed to load resource: net::ERR_BLOCKED_BY_CONTENT_BLOCKER
+_app-1f96056195aaa015.js:38 
+            
+            
+           Failed to load resource: net::ERR_BLOCKED_BY_CONTENT_BLOCKER
+(anonymous) @ _app-1f96056195aaa015.js:38
+logs.browser-intake-us5-datadoghq.com/api/v2/logs?ddsource=browser&ddtags=sdk_version%3A4.46.0%2Capi%3Axhr%2Cenv%3Aproduction%2Cservice%3Awebsite%2Cversion%3Acbc85ccb&dd-api-key=pub31a5047a3a4692afb84a423db984dc57&dd-evp-origin-version=4.46.0&dd-evp-origin=browser&dd-request-id=7324f957-0ca7-470b-bcf6-486dce02eb61:1 
+            
+            
+           Failed to load resource: net::ERR_BLOCKED_BY_CONTENT_BLOCKER
+_app-1f96056195aaa015.js:38 
+            
+            
+           Failed to load resource: net::ERR_BLOCKED_BY_CONTENT_BLOCKER
+(anonymous) @ _app-1f96056195aaa015.js:38
+logs.browser-intake-us5-datadoghq.com/api/v2/logs?ddsource=browser&ddtags=sdk_version%3A4.46.0%2Capi%3Axhr%2Cenv%3Aproduction%2Cservice%3Awebsite%2Cversion%3Acbc85ccb&dd-api-key=pub31a5047a3a4692afb84a423db984dc57&dd-evp-origin-version=4.46.0&dd-evp-origin=browser&dd-request-id=215eb2d5-ed3a-438a-81a5-eb4b1673301c:1 
+            
+            
+           Failed to load resource: net::ERR_BLOCKED_BY_CONTENT_BLOCKER
+_app-1f96056195aaa015.js:38 
+            
+            
+           Failed to load resource: net::ERR_BLOCKED_BY_CONTENT_BLOCKER
+(anonymous) @ _app-1f96056195aaa015.js:38
+logs.browser-intake-us5-datadoghq.com/api/v2/logs?ddsource=browser&ddtags=sdk_version%3A4.46.0%2Capi%3Axhr%2Cenv%3Aproduction%2Cservice%3Awebsite%2Cversion%3Acbc85ccb&dd-api-key=pub31a5047a3a4692afb84a423db984dc57&dd-evp-origin-version=4.46.0&dd-evp-origin=browser&dd-request-id=04541d49-bf5f-482e-afc8-8aa4e0b1d185:1 
+            
+            
+           Failed to load resource: net::ERR_BLOCKED_BY_CONTENT_BLOCKER
+_app-1f96056195aaa015.js:38 
+            
+            
+           Failed to load resource: net::ERR_BLOCKED_BY_CONTENT_BLOCKER
+(anonymous) @ _app-1f96056195aaa015.js:38
+logs.browser-intake-us5-datadoghq.com/api/v2/logs?ddsource=browser&ddtags=sdk_version%3A4.46.0%2Capi%3Axhr%2Cenv%3Aproduction%2Cservice%3Awebsite%2Cversion%3Acbc85ccb&dd-api-key=pub31a5047a3a4692afb84a423db984dc57&dd-evp-origin-version=4.46.0&dd-evp-origin=browser&dd-request-id=165e0a6e-6103-4495-b45e-039dd8b4024a:1 
+            
+            
+           Failed to load resource: net::ERR_BLOCKED_BY_CONTENT_BLOCKER
+_app-1f96056195aaa015.js:38 
+            
+            
+           Failed to load resource: net::ERR_BLOCKED_BY_CONTENT_BLOCKER
+(anonymous) @ _app-1f96056195aaa015.js:38
+logs.browser-intake-us5-datadoghq.com/api/v2/logs?ddsource=browser&ddtags=sdk_version%3A4.46.0%2Capi%3Axhr%2Cenv%3Aproduction%2Cservice%3Awebsite%2Cversion%3Acbc85ccb&dd-api-key=pub31a5047a3a4692afb84a423db984dc57&dd-evp-origin-version=4.46.0&dd-evp-origin=browser&dd-request-id=be3db17c-0e67-47f9-81f1-15b24b06758a:1 
+            
+            
+           Failed to load resource: net::ERR_BLOCKED_BY_CONTENT_BLOCKER
+_app-1f96056195aaa015.js:38 
+            
+            
+           Failed to load resource: net::ERR_BLOCKED_BY_CONTENT_BLOCKER
+(anonymous) @ _app-1f96056195aaa015.js:38
+logs.browser-intake-us5-datadoghq.com/api/v2/logs?ddsource=browser&ddtags=sdk_version%3A4.46.0%2Capi%3Axhr%2Cenv%3Aproduction%2Cservice%3Awebsite%2Cversion%3Acbc85ccb&dd-api-key=pub31a5047a3a4692afb84a423db984dc57&dd-evp-origin-version=4.46.0&dd-evp-origin=browser&dd-request-id=38058046-cdbd-4470-98e3-5cd216b896c1:1 
+            
+            
+           Failed to load resource: net::ERR_BLOCKED_BY_CONTENT_BLOCKER
+workspace_iframe.html:32 Unrecognized feature: 'ambient-light-sensor'.
+workspace_iframe.html:32 Unrecognized feature: 'battery'.
+workspace_iframe.html:32 Unrecognized feature: 'execution-while-not-rendered'.
+workspace_iframe.html:32 Unrecognized feature: 'execution-while-out-of-viewport'.
+workspace_iframe.html:32 Unrecognized feature: 'layout-animations'.
+workspace_iframe.html:32 Unrecognized feature: 'legacy-image-formats'.
+workspace_iframe.html:32 Unrecognized feature: 'navigation-override'.
+workspace_iframe.html:32 Unrecognized feature: 'oversized-images'.
+workspace_iframe.html:32 Unrecognized feature: 'publickey-credentials'.
+workspace_iframe.html:32 Unrecognized feature: 'speaker-selection'.
+workspace_iframe.html:32 Unrecognized feature: 'unoptimized-images'.
+workspace_iframe.html:32 Unrecognized feature: 'unsized-media'.
+workspace_iframe.html:32 Allow attribute will take precedence over 'allowfullscreen'.
+workspace_iframe.html:32 Allow attribute will take precedence over 'allowpaymentrequest'.
+Console.js:61 Climate Dashboard Debug: Object
+/public/js/beacon.js:1 
+            
+            
+           Failed to load resource: net::ERR_BLOCKED_BY_CONTENT_BLOCKER
+_app-1f96056195aaa015.js:26 
+            
+            
+           Failed to load resource: net::ERR_BLOCKED_BY_CONTENT_BLOCKER
+(anonymous) @ _app-1f96056195aaa015.js:26
+logs.browser-intake-us5-datadoghq.com/api/v2/logs?ddsource=browser&ddtags=sdk_version%3A4.46.0%2Capi%3Axhr%2Cenv%3Aproduction%2Cservice%3Awebsite%2Cversion%3Acbc85ccb&dd-api-key=pub31a5047a3a4692afb84a423db984dc57&dd-evp-origin-version=4.46.0&dd-evp-origin=browser&dd-request-id=48fa2ff6-eaff-44cd-ab0c-a1063690a11d:1 
+            
+            
+           Failed to load resource: net::ERR_BLOCKED_BY_CONTENT_BLOCKER
+o1151714.ingest.sentry.io/api/6318792/envelope/?sentry_key=8aa91189a4274b5a8c9b7b01d46ea360&sentry_version=7&sentry_client=sentry.javascript.browser%2F7.112.0:1 
+            
+            
+           Failed to load resource: net::ERR_BLOCKED_BY_CONTENT_BLOCKER
+b:1 
+            
+            
+           Failed to load resource: net::ERR_BLOCKED_BY_CLIENT
+b:1 
+            
+            
+           Failed to load resource: net::ERR_BLOCKED_BY_CLIENT
+_app-1f96056195aaa015.js:26 
+            
+            
+           Failed to load resource: net::ERR_BLOCKED_BY_CONTENT_BLOCKER
+(anonymous) @ _app-1f96056195aaa015.js:26
+logs.browser-intake-us5-datadoghq.com/api/v2/logs?ddsource=browser&ddtags=sdk_version%3A4.46.0%2Capi%3Axhr%2Cenv%3Aproduction%2Cservice%3Awebsite%2Cversion%3Acbc85ccb&dd-api-key=pub31a5047a3a4692afb84a423db984dc57&dd-evp-origin-version=4.46.0&dd-evp-origin=browser&dd-request-id=469d98ad-bfb3-4518-b2e9-fd0955d450e6:1 
+            
+            
+           Failed to load resource: net::ERR_BLOCKED_BY_CONTENT_BLOCKER
+o1151714.ingest.sentry.io/api/6318792/envelope/?sentry_key=8aa91189a4274b5a8c9b7b01d46ea360&sentry_version=7&sentry_client=sentry.javascript.browser%2F7.112.0:1 
+            
+            
+           Failed to load resource: net::ERR_BLOCKED_BY_CONTENT_BLOCKER
+b:1 
+            
+            
+           Failed to load resource: net::ERR_BLOCKED_BY_CLIENT
+b:1 
+            
+            
+           Failed to load resource: net::ERR_BLOCKED_BY_CLIENT
+Console.js:61 Climate Dashboard Debug: {selectedLocation: 0, selectedYear: 2030, projectionData: undefined, currentData: undefined, isProjectionLoading: false, …}
+Console.js:61 Climate Dashboard Debug: {selectedLocation: 0, selectedYear: 2031, projectionData: undefined, currentData: undefined, isProjectionLoading: false, …}
+Console.js:61 Climate Dashboard Debug: {selectedLocation: 0, selectedYear: 2032, projectionData: undefined, currentData: undefined, isProjectionLoading: false, …}
+Console.js:61 Climate Dashboard Debug: {selectedLocation: 0, selectedYear: 2033, projectionData: undefined, currentData: undefined, isProjectionLoading: false, …}
+Console.js:61 Climate Dashboard Debug: {selectedLocation: 0, selectedYear: 2034, projectionData: undefined, currentData: undefined, isProjectionLoading: false, …}
+Console.js:61 Climate Dashboard Debug: {selectedLocation: 0, selectedYear: 2036, projectionData: undefined, currentData: undefined, isProjectionLoading: false, …}
+Console.js:61 Climate Dashboard Debug: {selectedLocation: 0, selectedYear: 2037, projectionData: undefined, currentData: undefined, isProjectionLoading: false, …}
+Console.js:61 Climate Dashboard Debug: {selectedLocation: 0, selectedYear: 2038, projectionData: undefined, currentData: undefined, isProjectionLoading: false, …}
+Console.js:61 Climate Dashboard Debug: {selectedLocation: 0, selectedYear: 2039, projectionData: undefined, currentData: undefined, isProjectionLoading: false, …}
+Console.js:61 Climate Dashboard Debug: {selectedLocation: 0, selectedYear: 2040, projectionData: undefined, currentData: undefined, isProjectionLoading: false, …}
+Console.js:61 Climate Dashboard Debug: {selectedLocation: 0, selectedYear: 2041, projectionData: undefined, currentData: undefined, isProjectionLoading: false, …}
+Console.js:61 Climate Dashboard Debug: {selectedLocation: 0, selectedYear: 2042, projectionData: undefined, currentData: undefined, isProjectionLoading: false, …}
+Console.js:61 Climate Dashboard Debug: {selectedLocation: 0, selectedYear: 2043, projectionData: undefined, currentData: undefined, isProjectionLoading: false, …}
+Console.js:61 Climate Dashboard Debug: {selectedLocation: 0, selectedYear: 2044, projectionData: undefined, currentData: undefined, isProjectionLoading: false, …}
+Console.js:61 Climate Dashboard Debug: {selectedLocation: 0, selectedYear: 2045, projectionData: undefined, currentData: undefined, isProjectionLoading: false, …}
+Console.js:61 Climate Dashboard Debug: {selectedLocation: 0, selectedYear: 2047, projectionData: undefined, currentData: undefined, isProjectionLoading: false, …}
+Console.js:61 Climate Dashboard Debug: {selectedLocation: 0, selectedYear: 2048, projectionData: undefined, currentData: undefined, isProjectionLoading: false, …}
+Console.js:61 Climate Dashboard Debug: {selectedLocation: 0, selectedYear: 2049, projectionData: undefined, currentData: undefined, isProjectionLoading: false, …}
+Console.js:61 Climate Dashboard Debug: {selectedLocation: 0, selectedYear: 2050, projectionData: undefined, currentData: undefined, isProjectionLoading: false, …}
+Console.js:61 Climate Dashboard Debug: {selectedLocation: 0, selectedYear: 2051, projectionData: undefined, currentData: undefined, isProjectionLoading: false, …}
+Console.js:61 Climate Dashboard Debug: {selectedLocation: 0, selectedYear: 2052, projectionData: undefined, currentData: undefined, isProjectionLoading: false, …}
+Console.js:61 Climate Dashboard Debug: {selectedLocation: 0, selectedYear: 2053, projectionData: undefined, currentData: undefined, isProjectionLoading: false, …}
+Console.js:61 Climate Dashboard Debug: {selectedLocation: 0, selectedYear: 2054, projectionData: undefined, currentData: undefined, isProjectionLoading: false, …}
+Console.js:61 Climate Dashboard Debug: {selectedLocation: 0, selectedYear: 2055, projectionData: undefined, currentData: undefined, isProjectionLoading: false, …}
+Console.js:61 Climate Dashboard Debug: {selectedLocation: 0, selectedYear: 2056, projectionData: undefined, currentData: undefined, isProjectionLoading: false, …}
+Console.js:61 Climate Dashboard Debug: {selectedLocation: 0, selectedYear: 2057, projectionData: undefined, currentData: undefined, isProjectionLoading: false, …}
+Console.js:61 Climate Dashboard Debug: {selectedLocation: 0, selectedYear: 2058, projectionData: undefined, currentData: undefined, isProjectionLoading: false, …}
+Console.js:61 Climate Dashboard Debug: {selectedLocation: 0, selectedYear: 2059, projectionData: undefined, currentData: undefined, isProjectionLoading: false, …}
+Console.js:61 Climate Dashboard Debug: {selectedLocation: 0, selectedYear: 2060, projectionData: undefined, currentData: undefined, isProjectionLoading: false, …}
+Console.js:61 Climate Dashboard Debug: {selectedLocation: 0, selectedYear: 2061, projectionData: undefined, currentData: undefined, isProjectionLoading: false, …}
+Console.js:61 Climate Dashboard Debug: {selectedLocation: 0, selectedYear: 2062, projectionData: undefined, currentData: undefined, isProjectionLoading: false, …}
+Console.js:61 Climate Dashboard Debug: {selectedLocation: 0, selectedYear: 2063, projectionData: undefined, currentData: undefined, isProjectionLoading: false, …}
+Console.js:61 Climate Dashboard Debug: {selectedLocation: 0, selectedYear: 2064, projectionData: undefined, currentData: undefined, isProjectionLoading: false, …}
+Console.js:61 Climate Dashboard Debug: {selectedLocation: 0, selectedYear: 2065, projectionData: undefined, currentData: undefined, isProjectionLoading: false, …}
+Console.js:61 Climate Dashboard Debug: {selectedLocation: 0, selectedYear: 2066, projectionData: undefined, currentData: undefined, isProjectionLoading: false, …}
+Console.js:61 Climate Dashboard Debug: {selectedLocation: 0, selectedYear: 2067, projectionData: undefined, currentData: undefined, isProjectionLoading: false, …}
+Console.js:61 Climate Dashboard Debug: {selectedLocation: 0, selectedYear: 2068, projectionData: undefined, currentData: undefined, isProjectionLoading: false, …}
+Console.js:61 Climate Dashboard Debug: {selectedLocation: 0, selectedYear: 2069, projectionData: undefined, currentData: undefined, isProjectionLoading: false, …}
+_app-1f96056195aaa015.js:38 
+            
+            
+           POST https://logs.browser-intake-us5-datadoghq.com/api/v2/logs?ddsource=browser&ddtags=sdk_version%3A4.46.0%2Capi%3Afetch%2Cenv%3Aproduction%2Cservice%3Awebsite%2Cversion%3Acbc85ccb&dd-api-key=pub31a5047a3a4692afb84a423db984dc57&dd-evp-origin-version=4.46.0&dd-evp-origin=browser&dd-request-id=58589543-c469-4e18-b79f-cc53cccdef7b net::ERR_BLOCKED_BY_CONTENT_BLOCKER
+(anonymous) @ _app-1f96056195aaa015.js:38
+(anonymous) @ _app-1f96056195aaa015.js:6
+o @ _app-1f96056195aaa015.js:11
+a @ _app-1f96056195aaa015.js:26
+m @ _app-1f96056195aaa015.js:26
+g @ _app-1f96056195aaa015.js:26
+send @ _app-1f96056195aaa015.js:26
+e.flush @ _app-1f96056195aaa015.js:11
+(anonymous) @ _app-1f96056195aaa015.js:11
+(anonymous) @ _app-1f96056195aaa015.js:11
+e.notify @ _app-1f96056195aaa015.js:11
+f @ _app-1f96056195aaa015.js:11
+(anonymous) @ _app-1f96056195aaa015.js:11
+d @ _app-1f96056195aaa015.js:6
+(anonymous) @ _app-1f96056195aaa015.js:6
+r @ _app-1f96056195aaa015.js:38
+_app-1f96056195aaa015.js:38 
+            
+            
+           POST https://logs.browser-intake-us5-datadoghq.com/api/v2/logs?ddsource=browser&ddtags=sdk_version%3A4.46.0%2Capi%3Axhr%2Cenv%3Aproduction%2Cservice%3Awebsite%2Cversion%3Acbc85ccb&dd-api-key=pub31a5047a3a4692afb84a423db984dc57&dd-evp-origin-version=4.46.0&dd-evp-origin=browser&dd-request-id=7fcefcd9-f44c-4f47-9e74-e75e72d279d3 net::ERR_BLOCKED_BY_CONTENT_BLOCKER
+(anonymous) @ _app-1f96056195aaa015.js:38
+(anonymous) @ _app-1f96056195aaa015.js:38
+(anonymous) @ _app-1f96056195aaa015.js:11
+o @ _app-1f96056195aaa015.js:11
+S @ _app-1f96056195aaa015.js:26
+(anonymous) @ _app-1f96056195aaa015.js:26
+d @ _app-1f96056195aaa015.js:6
+(anonymous) @ _app-1f96056195aaa015.js:6
+Promise.then
+a @ _app-1f96056195aaa015.js:26
+m @ _app-1f96056195aaa015.js:26
+g @ _app-1f96056195aaa015.js:26
+send @ _app-1f96056195aaa015.js:26
+e.flush @ _app-1f96056195aaa015.js:11
+(anonymous) @ _app-1f96056195aaa015.js:11
+(anonymous) @ _app-1f96056195aaa015.js:11
+e.notify @ _app-1f96056195aaa015.js:11
+f @ _app-1f96056195aaa015.js:11
+(anonymous) @ _app-1f96056195aaa015.js:11
+d @ _app-1f96056195aaa015.js:6
+(anonymous) @ _app-1f96056195aaa015.js:6
+r @ _app-1f96056195aaa015.js:38
+Console.js:61 Climate Dashboard Debug: {selectedLocation: 0, selectedYear: 2070, projectionData: undefined, currentData: undefined, isProjectionLoading: false, …}

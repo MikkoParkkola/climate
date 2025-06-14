@@ -55,8 +55,10 @@ export default function ClimateDashboard() {
   });
 
   const handleLocationSelect = useCallback(async (latitude: number, longitude: number) => {
+    console.log('handleLocationSelect called with:', { latitude, longitude });
     try {
       const locationName = await geocodingUtils.reverseGeocode(latitude, longitude);
+      console.log('Geocoded location name:', locationName);
 
       // Create location in backend and get the real ID
       const createdLocation = await createLocationMutation.mutateAsync({
