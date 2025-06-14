@@ -71,6 +71,14 @@ export default function ClimateComparison({ onBack }: ClimateComparisonProps) {
     setLogs(prev => [...prev, `${new Date().toLocaleTimeString()}: ${message}`]);
   };
 
+  // Get API configuration
+  const { data: config } = useQuery({
+    queryKey: ['/api/config'],
+    staleTime: 10 * 60 * 1000,
+  });
+
+  const apiKey = (config as any)?.nvidiaApiKey;
+
   // Search for locations
   const { data: searchResults, isLoading: isSearching } = useQuery({
     queryKey: ['/api/locations/search', searchQuery],
@@ -87,6 +95,10 @@ export default function ClimateComparison({ onBack }: ClimateComparisonProps) {
   // Compare locations mutation
   const compareLocationsMutation = useMutation({
     mutationFn: async () => {
+      if (!apiKey) {
+        throw new Error("NVIDIA API key not configured. Please configure it in the main app first.");
+      }
+
       const results: ComparisonData[] = [];
       
       for (const location of selectedLocations) {
@@ -98,23 +110,31 @@ export default function ClimateComparison({ onBack }: ClimateComparisonProps) {
           body: JSON.stringify({
             location: location.name,
             coordinates: { lat: location.lat, lng: location.lng },
-            year: targetYear
+            year: targetYear,
+            apiKey: apiKey
           })
         });
         
-        if (!response.ok) throw new Error(`Failed to get data for ${location.name}`);
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(`Failed to get data for ${location.name}: ${errorData.error || response.statusText}`);
+        }
         
         const data = await response.json();
-        results.push({
-          location,
-          temperature: data.temperature,
-          precipitation: data.precipitation,
-          habitability: data.habitability,
-          extremes: data.extremes,
-          atmospheric_physics: data.atmospheric_physics
-        });
         
-        addLog(`✓ Data received for ${location.name}`);
+        if (data.success && data.data) {
+          results.push({
+            location,
+            temperature: data.data.temperature,
+            precipitation: data.data.precipitation,
+            habitability: data.data.habitability,
+            extremes: data.data.extremes,
+            atmospheric_physics: data.data.atmospheric_physics
+          });
+          addLog(`✓ Data received for ${location.name}`);
+        } else {
+          throw new Error(`Invalid data format received for ${location.name}`);
+        }
       }
       
       return results;
@@ -163,8 +183,14 @@ export default function ClimateComparison({ onBack }: ClimateComparisonProps) {
       return;
     }
     
+    if (!apiKey) {
+      addLog("Error: NVIDIA API key not configured. Please set it up in the main app first.");
+      return;
+    }
+    
     setIsComparing(true);
     addLog(`Starting comparison for ${selectedLocations.length} locations in ${targetYear}`);
+    addLog(`Using API key: ${apiKey.substring(0, 10)}...`);
     compareLocationsMutation.mutate();
   };
 
