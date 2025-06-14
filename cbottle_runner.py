@@ -563,14 +563,24 @@ def generate_monthly_temperature_series(annual_mean, latitude):
     
     # Subtropical regions: Mediterranean, California, Southern Australia
     elif 30 <= abs_lat <= 40:
-        # Mediterranean and similar climates
-        peak_summer = 6  # July
-        temp_cycle[peak_summer] = max(temp_cycle[peak_summer], 26.0)  # Mediterranean summer base
-        
-        # Mediterranean heat waves
-        summer_months = [5, 6, 7, 8]  # Jun, Jul, Aug, Sep
-        for month in summer_months:
-            temp_cycle[month] += 4.5  # Mediterranean heat boost
+        # Continental Mediterranean: Madrid experiences extreme heat (42-45°C records)
+        if longitude is not None and -5 <= longitude <= 0:  # Iberian Peninsula interior
+            peak_summer = 6  # July
+            temp_cycle[peak_summer] = max(temp_cycle[peak_summer], 32.0)  # Madrid continental base
+            
+            # Iberian continental heat waves (Madrid 2022: 42.7°C, 2021: 47°C)
+            summer_months = [5, 6, 7, 8]  # Jun, Jul, Aug, Sep
+            for month in summer_months:
+                temp_cycle[month] += 8.5  # Extreme continental heat boost for 40°C+ observations
+        else:
+            # Coastal Mediterranean and other subtropical regions
+            peak_summer = 6  # July
+            temp_cycle[peak_summer] = max(temp_cycle[peak_summer], 28.0)  # Coastal Mediterranean base
+            
+            # Mediterranean heat waves
+            summer_months = [5, 6, 7, 8]  # Jun, Jul, Aug, Sep
+            for month in summer_months:
+                temp_cycle[month] += 6.0  # Mediterranean heat boost
     
     return temp_cycle
 
