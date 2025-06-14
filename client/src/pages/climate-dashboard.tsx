@@ -12,6 +12,7 @@ import ClimateSummary from "@/components/climate-summary";
 import ClimateCharts from "@/components/climate-charts";
 import HabitabilityAssessment from "@/components/habitability-assessment";
 import ComparableLocation from "@/components/comparable-location";
+import ApiErrorDisplay from "@/components/api-error-display";
 import type { ClimateLocation, ClimateProjection, MapMarker } from "@/types/climate";
 
 export default function ClimateDashboard() {
@@ -19,6 +20,7 @@ export default function ClimateDashboard() {
   const [selectedYear, setSelectedYear] = useState<number>(2030);
   const [comparisonMode, setComparisonMode] = useState(false);
   const [isLoadingProjection, setIsLoadingProjection] = useState(false);
+  const [apiError, setApiError] = useState<string | null>(null);
   const { toast } = useToast();
 
   // Query for climate projection data
