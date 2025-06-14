@@ -88,32 +88,56 @@ export async function registerRoutes(app: Express): Promise<Server> {
           'Accept': 'application/json'
         },
         body: JSON.stringify({
-          model: "nvidia/climate-fourier-neural-operator",
+          model: "meta/llama-3.1-405b-instruct",
           messages: [{
             role: "user",
-            content: `Generate climate projection for location ${location} (latitude: ${coordinates.lat}, longitude: ${coordinates.lng}) for year ${year}. Include temperature change, precipitation patterns, extreme weather risks, and habitability assessment.`
+            content: `Provide climate projection data for ${location} (coordinates: ${coordinates.lat}, ${coordinates.lng}) in year ${year}. Return only valid JSON with the following structure:
+{
+  "location": "${location}",
+  "year": ${year},
+  "temperature_change": 2.3,
+  "precipitation_change": -15.2,
+  "extreme_heat_days": 45,
+  "drought_risk": "moderate",
+  "flood_risk": "low",
+  "habitability_score": 72
+}`
           }],
           temperature: 0.1,
-          max_tokens: 2000,
+          max_tokens: 500,
           stream: false
         })
       });
       
-      const apiResponse = await response.json();
-      
       console.log('NVIDIA API response status:', response.status);
-      console.log('NVIDIA API response:', JSON.stringify(apiResponse, null, 2));
+      console.log('NVIDIA API response headers:', Object.fromEntries(response.headers.entries()));
+      
+      const responseText = await response.text();
+      console.log('NVIDIA API raw response:', responseText);
       
       if (!response.ok) {
         return res.status(response.status).json({
           error: 'NVIDIA API error',
-          details: apiResponse
+          status: response.status,
+          statusText: response.statusText,
+          rawResponse: responseText
+        });
+      }
+      
+      let apiResponse;
+      try {
+        apiResponse = JSON.parse(responseText);
+      } catch (parseError) {
+        return res.status(500).json({
+          error: 'Invalid JSON response from NVIDIA API',
+          rawResponse: responseText,
+          parseError: parseError instanceof Error ? parseError.message : 'Unknown parse error'
         });
       }
       
       res.json({
         success: true,
-        input: { location, year },
+        input: { location, coordinates, year },
         apiResponse: apiResponse,
         timestamp: new Date().toISOString()
       });
