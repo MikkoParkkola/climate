@@ -799,10 +799,10 @@ async function generateRealisticClimateData(location: any, year: number) {
       stress_level: Math.min(100, (tempIncrease * 15) + Math.abs(precipChange * 40))
     },
     water: {
-      stress_level: Math.min(100, Math.max(0, 20 + (tempIncrease * 12) - (precipChange * 30)))
+      stress_level: calculateWaterStress(location.latitude, location.longitude, yearsFromNow)
     },
     air_quality: {
-      index: Math.round(Math.max(10, Math.min(150, 50 + (tempIncrease * 15) + (yearsFromNow * 0.3))))
+      index: calculateAirQualityIndex(location.latitude, location.longitude, yearsFromNow)
     }
   };
 }

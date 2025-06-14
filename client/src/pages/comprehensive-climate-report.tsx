@@ -5,7 +5,7 @@ import { climateApi, geocodingUtils } from "@/lib/climate-api";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { Globe, Download, Share2, Settings, MapPin, Calendar, BarChart3, TrendingUp, AlertTriangle, Search } from "lucide-react";
+import { Globe, Download, Share2, Settings, MapPin, Calendar, BarChart3, TrendingUp, AlertTriangle, Search, Bug, FileText, Printer } from "lucide-react";
 import InteractiveMap from "@/components/interactive-map";
 import ClimateSummary from "@/components/climate-summary";
 import ClimateCharts from "@/components/climate-charts";
@@ -31,18 +31,29 @@ export default function ComprehensiveClimateReport() {
   const [isSearching, setIsSearching] = useState(false);
   const [isLoadingProjection, setIsLoadingProjection] = useState(false);
   const [apiError, setApiError] = useState<string | null>(null);
+  const [showDebugInfo, setShowDebugInfo] = useState(false);
+  const [debugData, setDebugData] = useState<{ request: any; response: any } | null>(null);
+  const [showFullReport, setShowFullReport] = useState(false);
   const { toast } = useToast();
 
   // Query for climate projection data
   const { data: projectionData, isLoading: isProjectionLoading, error: projectionError } = useQuery<ClimateProjection>({
     queryKey: ['/api/projections', selectedLocation?.id, selectedYear],
     queryFn: async () => {
+      const requestData = { locationId: selectedLocation?.id, year: selectedYear };
       const response = await fetch(`/api/projections?locationId=${selectedLocation?.id}&year=${selectedYear}`);
       if (!response.ok) {
         throw new Error(`Failed to fetch projection data: ${response.statusText}`);
       }
       const data = await response.json();
       console.log("Projection data received:", data);
+      
+      // Store debug information
+      setDebugData({
+        request: requestData,
+        response: data
+      });
+      
       return data;
     },
     enabled: !!selectedLocation,
