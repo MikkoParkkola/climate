@@ -184,6 +184,9 @@ export default function ClimateTimeline({ selectedLocation, onYearSelect }: Clim
   }
 
   const timelineData = generateTimelineData();
+  
+  // Debug logging
+  console.log('Timeline data for', selectedLocation.name, ':', timelineData);
 
   return (
     <div className="space-y-6">
@@ -208,12 +211,21 @@ export default function ClimateTimeline({ selectedLocation, onYearSelect }: Clim
         </CardHeader>
         <CardContent>
           <div className="h-80">
-            <ResponsiveContainer width="100%" height="100%">
-              <>
-                {selectedMetric === 'habitability' && (
-                  <LineChart data={timelineData}>
+            {timelineData.length === 0 ? (
+              <div className="flex items-center justify-center h-full text-slate-500">
+                No timeline data available
+              </div>
+            ) : (
+              <ResponsiveContainer width="100%" height="100%">
+                {selectedMetric === 'habitability' ? (
+                  <LineChart data={timelineData} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
                     <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="year" />
+                    <XAxis 
+                      dataKey="year" 
+                      type="number"
+                      scale="linear"
+                      domain={['dataMin', 'dataMax']}
+                    />
                     <YAxis domain={[0, 100]} />
                     <Tooltip 
                       formatter={(value: number) => [`${value.toFixed(1)}`, "Habitability Score"]}
@@ -227,12 +239,15 @@ export default function ClimateTimeline({ selectedLocation, onYearSelect }: Clim
                       dot={{ fill: '#ef4444', strokeWidth: 2, r: 4 }}
                     />
                   </LineChart>
-                )}
-
-                {selectedMetric === 'temperature' && (
-                  <LineChart data={timelineData}>
+                ) : selectedMetric === 'temperature' ? (
+                  <LineChart data={timelineData} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
                     <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="year" />
+                    <XAxis 
+                      dataKey="year"
+                      type="number"
+                      scale="linear"
+                      domain={['dataMin', 'dataMax']}
+                    />
                     <YAxis />
                     <Tooltip 
                       formatter={(value: number, name: string) => [
@@ -256,12 +271,15 @@ export default function ClimateTimeline({ selectedLocation, onYearSelect }: Clim
                       name="Temperature Change"
                     />
                   </LineChart>
-                )}
-
-                {selectedMetric === 'risks' && (
-                  <AreaChart data={timelineData}>
+                ) : (
+                  <AreaChart data={timelineData} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
                     <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="year" />
+                    <XAxis 
+                      dataKey="year"
+                      type="number"
+                      scale="linear"
+                      domain={['dataMin', 'dataMax']}
+                    />
                     <YAxis domain={[0, 100]} />
                     <Tooltip 
                       formatter={(value: number, name: string) => [`${value.toFixed(1)}`, name]}
@@ -296,8 +314,8 @@ export default function ClimateTimeline({ selectedLocation, onYearSelect }: Clim
                     />
                   </AreaChart>
                 )}
-              </>
-            </ResponsiveContainer>
+              </ResponsiveContainer>
+            )}
           </div>
         </CardContent>
       </Card>

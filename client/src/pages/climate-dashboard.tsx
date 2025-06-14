@@ -15,6 +15,7 @@ import ComparableLocation from "@/components/comparable-location";
 import ApiErrorDisplay from "@/components/api-error-display";
 import ClimateTimeline from "@/components/climate-timeline";
 import ClimateImpactExplanation from "@/components/climate-impact-explanation";
+import HabitabilityRanking from "@/components/habitability-ranking";
 import type { ClimateLocation, ClimateProjection, MapMarker } from "@/types/climate";
 
 export default function ClimateDashboard() {
@@ -244,6 +245,14 @@ export default function ClimateDashboard() {
                 projectedData={projectionData}
                 selectedLocation={selectedLocation}
                 selectedYear={selectedYear}
+              />
+            </div>
+
+            {/* Habitability Rankings */}
+            <div className="mb-8">
+              <HabitabilityRanking
+                selectedYear={selectedYear}
+                onLocationSelect={handleLocationSelect}
               />
             </div>
 
