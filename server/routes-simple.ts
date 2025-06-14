@@ -77,10 +77,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
       
-      // Call Climate in a Bottle API
-      console.log('Making request to NVIDIA Climate in a Bottle API...');
+      // Call CBottle through NVIDIA NIM API (Earth2Studio implementation)
+      console.log('Making request to NVIDIA CBottle Earth2Studio API...');
       
-      const response = await fetch("https://integrate.api.nvidia.com/v1/chat/completions", {
+      const response = await fetch("https://api.nvcf.nvidia.com/v2/nvcf/pexec/functions/earth2studio-cbottle", {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${apiKey}`,
@@ -88,14 +88,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
           'Accept': 'application/json'
         },
         body: JSON.stringify({
-          model: "nvidia/climate-in-a-bottle",
-          messages: [{
-            role: "user",
-            content: `Generate climate projection for coordinates ${coordinates.lat}, ${coordinates.lng} at location ${location} for year ${year}. Return detailed climate data including temperature changes, precipitation patterns, extreme weather risks, and habitability metrics.`
-          }],
-          temperature: 0.1,
-          max_tokens: 1500,
-          stream: false
+          // Earth2Studio CBottle format from documentation
+          model: "CBottleSR",
+          data: {
+            coordinates: [coordinates.lat, coordinates.lng],
+            datetime: `${year}-01-01T00:00:00Z`,
+            variables: ["t2m", "tp", "msl", "u10", "v10"],
+            lead_time_hours: (year - 2024) * 365 * 24,
+            ensemble_members: 1
+          },
+          config: {
+            spatial_resolution: "0.25deg",
+            output_format: "netcdf"
+          }
         })
       });
       
