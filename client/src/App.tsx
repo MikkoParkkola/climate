@@ -3,13 +3,13 @@ import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import ClimateDashboard from "@/pages/climate-dashboard";
+import EnhancedClimateDashboard from "@/pages/enhanced-climate-dashboard";
 import NotFound from "@/pages/not-found";
 
 function Router() {
   return (
     <Switch>
-      <Route path="/" component={ClimateDashboard} />
+      <Route path="/" component={EnhancedClimateDashboard} />
       <Route component={NotFound} />
     </Switch>
   );
