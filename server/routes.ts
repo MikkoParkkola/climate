@@ -386,25 +386,24 @@ async function fetchClimateProjectionFromAPI(locationId: number, year: number) {
 
 async function callEarth2StudioAPI(location: any, year: number, apiKey: string) {
   try {
-    // NVIDIA Earth2Studio API - using the forecast endpoint
-    const response = await fetch("https://api.nvcf.nvidia.com/v2/nvcf/pexec/functions/nvidia/earth2studio", {
+    // NVIDIA Earth2Studio API - using the inference endpoint
+    const response = await fetch("https://integrate.api.nvidia.com/v1/climate/earth2studio/inference", {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${apiKey}`,
         'Content-Type': 'application/json',
-        'Accept': 'application/json',
-        'NVCF-INPUT-ASSET-REFERENCES': '',
-        'NVCF-FUNCTION-ASSET-IDS': ''
+        'Accept': 'application/json'
       },
       body: JSON.stringify({
-        model: "fcn",
-        inference_steps: 20,
-        channels: ["u10m", "v10m", "t2m", "sp", "msl", "tcwv", "tp"],
-        time: `${year}-01-01T00:00:00`,
-        latitude: location.latitude,
-        longitude: location.longitude,
-        ensemble_members: 1,
-        grid_resolution: 0.25
+        model: "nvidia/earth2studio-climate-forecast",
+        parameters: {
+          latitude: location.latitude,
+          longitude: location.longitude,
+          forecast_time: `${year}-01-01T00:00:00Z`,
+          variables: ["temperature_2m", "precipitation", "relative_humidity", "sea_level_pressure"],
+          time_steps: 365,
+          ensemble_size: 1
+        }
       })
     });
 
@@ -419,7 +418,11 @@ async function callEarth2StudioAPI(location: any, year: number, apiKey: string) 
     console.log("Earth-2 Studio response:", data);
     
     // Transform Earth2Studio forecast data
-    return transformEarth2StudioResponse(data, location, year);
+    if (data.predictions || data.forecast || data.data) {
+      return transformEarth2StudioResponse(data, location, year);
+    }
+    
+    return null;
   } catch (error) {
     console.log("Earth-2 Studio API unavailable:", error);
     return null;
@@ -480,30 +483,44 @@ function transformEarth2StudioResponse(data: any, location: any, year: number) {
   const yearsFromNow = year - currentYear;
   
   // Extract climate variables from Earth2Studio forecast response
-  // Earth2Studio returns arrays of weather data for specified channels
-  const t2m = data.t2m || data.outputs?.t2m; // 2-meter temperature
-  const tp = data.tp || data.outputs?.tp; // Total precipitation
-  const tcwv = data.tcwv || data.outputs?.tcwv; // Total column water vapor
-  const sp = data.sp || data.outputs?.sp; // Surface pressure
-  const msl = data.msl || data.outputs?.msl; // Mean sea level pressure
+  const forecast = data.predictions || data.forecast || data.data || data;
+  const temperature2m = forecast.temperature_2m || forecast.t2m;
+  const precipitation = forecast.precipitation || forecast.tp;
+  const relativeHumidity = forecast.relative_humidity || forecast.rh;
+  const seaLevelPressure = forecast.sea_level_pressure || forecast.msl;
   
+  // Calculate temperature from Earth2Studio data
+  const avgTemp = temperature2m ? 
+    (Array.isArray(temperature2m) ? temperature2m.reduce((a, b) => a + b, 0) / temperature2m.length : temperature2m) - 273.15 : 
+    (getBaseTemperature(location.latitude) + (yearsFromNow / 76) * 3.5);
+  
+  // Calculate precipitation from Earth2Studio data
+  const annualPrecip = precipitation ? 
+    (Array.isArray(precipitation) ? precipitation.reduce((a, b) => a + b, 0) * 365 : precipitation * 365) : 
+    (getBasePrecipitation(location.latitude, location.longitude) + getLatitudeBasedPrecipChange(location.latitude, yearsFromNow));
+  
+  // Calculate humidity from Earth2Studio data
+  const avgHumidity = relativeHumidity ? 
+    (Array.isArray(relativeHumidity) ? relativeHumidity.reduce((a, b) => a + b, 0) / relativeHumidity.length : relativeHumidity) : 
+    (65 + (yearsFromNow / 76) * 10);
+
   return {
     temperature: {
-      annual_average: temperature?.annual_mean || (getBaseTemperature(location.latitude) + (yearsFromNow / 76) * 3.5),
-      change_from_baseline: temperature?.anomaly || (yearsFromNow / 76) * 3.5,
-      extreme_heat_days: temperature?.extreme_heat_days || Math.min(100, (yearsFromNow / 76) * 3.5 * 15),
-      monthly: temperature?.monthly || generateMonthlyTemperatures(temperature?.annual_mean || getBaseTemperature(location.latitude), location.latitude)
+      annual_average: avgTemp,
+      change_from_baseline: avgTemp - getBaseTemperature(location.latitude),
+      extreme_heat_days: Math.min(100, (yearsFromNow / 76) * 3.5 * 15),
+      monthly: generateMonthlyTemperatures(avgTemp, location.latitude)
     },
     precipitation: {
-      annual_total: precipitation?.annual_total || getBasePrecipitation(location.latitude, location.longitude),
-      change_from_baseline: precipitation?.anomaly_percent || getLatitudeBasedPrecipChange(location.latitude, yearsFromNow),
-      drought_index: precipitation?.drought_risk || Math.max(0, 50 - (precipitation?.annual_total || 800) / 20),
-      monthly: precipitation?.monthly || generateMonthlyPrecipitation(precipitation?.annual_total || 800, location.latitude)
+      annual_total: annualPrecip,
+      change_from_baseline: annualPrecip - getBasePrecipitation(location.latitude, location.longitude),
+      drought_index: Math.max(0, 50 - annualPrecip / 20),
+      monthly: generateMonthlyPrecipitation(annualPrecip, location.latitude)
     },
     humidity: {
-      annual_average: humidity?.annual_mean || (65 + Math.random() * 20),
-      change_from_baseline: humidity?.anomaly || (yearsFromNow / 76) * 5,
-      monthly: humidity?.monthly || Array(12).fill(0).map(() => 65 + Math.random() * 20)
+      annual_average: avgHumidity,
+      change_from_baseline: avgHumidity - 65,
+      monthly: Array(12).fill(0).map(() => avgHumidity + Math.random() * 10 - 5)
     },
     sea_level: {
       value: (yearsFromNow / 76) * 0.8,
