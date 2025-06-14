@@ -467,25 +467,66 @@ export default function ClimateApp() {
                     </ul>
                   </div>
 
-                  {/* Monthly Temperature Chart */}
+                  {/* Monthly Temperature Line Chart */}
                   <div className="space-y-2">
                     <h4 className="font-medium">Monthly Temperature Distribution</h4>
-                    <div className="grid grid-cols-12 gap-1 text-xs">
-                      {climateData.temperature?.monthly?.map((temp: number, index: number) => {
-                        const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-                        const normalizedHeight = Math.max(10, Math.min(100, ((temp + 20) / 50) * 100));
-                        return (
-                          <div key={index} className="text-center">
-                            <div 
-                              className="bg-gradient-to-t from-red-500 to-blue-500 rounded-t mb-1"
-                              style={{ height: `${normalizedHeight}px`, width: '100%' }}
-                              title={`${months[index]}: ${temp.toFixed(1)}°C`}
-                            ></div>
-                            <div className="text-xs">{months[index]}</div>
-                            <div className="text-xs font-mono">{temp.toFixed(1)}</div>
-                          </div>
-                        );
-                      })}
+                    <div className="relative bg-gray-50 rounded-lg p-4 h-48">
+                      {/* Temperature scale and 0°C line */}
+                      <div className="absolute left-0 top-0 h-full w-8 flex flex-col justify-between text-xs text-gray-500">
+                        <span>40°C</span>
+                        <span>20°C</span>
+                        <span className="font-bold text-gray-700">0°C</span>
+                        <span>-20°C</span>
+                        <span>-40°C</span>
+                      </div>
+                      
+                      {/* 0°C reference line */}
+                      <div className="absolute left-8 right-0 top-1/2 h-0.5 bg-gray-400"></div>
+                      
+                      {/* Temperature line chart */}
+                      <svg className="absolute left-8 right-4 top-2 bottom-8 w-auto h-auto" viewBox="0 0 330 160">
+                        <polyline
+                          fill="none"
+                          stroke="#dc2626"
+                          strokeWidth="2"
+                          points={climateData.temperature?.monthly?.map((temp: number, index: number) => {
+                            const x = index * 30 + 15; // 30 units apart, centered
+                            const y = 80 - (temp * 2); // 0°C at y=80, scale by 2
+                            return `${x},${y}`;
+                          }).join(' ') || ''}
+                        />
+                        {/* Data points */}
+                        {climateData.temperature?.monthly?.map((temp: number, index: number) => {
+                          const x = index * 30 + 15;
+                          const y = 80 - (temp * 2);
+                          const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+                          return (
+                            <g key={index}>
+                              <circle 
+                                cx={x} 
+                                cy={y} 
+                                r="3" 
+                                fill={temp >= 0 ? "#dc2626" : "#2563eb"}
+                                className="hover:r-4 cursor-pointer"
+                              >
+                                <title>{`${months[index]}: ${temp.toFixed(1)}°C`}</title>
+                              </circle>
+                            </g>
+                          );
+                        })}
+                      </svg>
+                      
+                      {/* Month labels */}
+                      <div className="absolute bottom-0 left-8 right-4 flex justify-between text-xs text-gray-600">
+                        {['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'].map((month, index) => (
+                          <span key={index} className="text-center">{month}</span>
+                        ))}
+                      </div>
+                    </div>
+                    
+                    <div className="mt-2 p-2 bg-red-50 rounded text-xs">
+                      <p><strong>Temperature Range:</strong> {climateData.temperature?.min?.toFixed(1)}°C to {climateData.temperature?.max?.toFixed(1)}°C 
+                      (seasonal amplitude: {climateData.temperature?.seasonal_amplitude?.toFixed(1)}°C)</p>
                     </div>
                   </div>
                 </CardContent>
