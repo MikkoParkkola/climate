@@ -335,6 +335,9 @@ export default function ClimateApp() {
                     <p className="text-sm text-gray-600">
                       {climateData.location?.latitude?.toFixed(4)}°, {climateData.location?.longitude?.toFixed(4)}°
                     </p>
+                    <p className="text-xs text-blue-600 font-medium">
+                      {climateData.location?.climate_zone} Climate Zone
+                    </p>
                   </CardContent>
                 </Card>
                 
@@ -502,6 +505,12 @@ export default function ClimateApp() {
                           </div>
                         );
                       })}
+                    </div>
+                    
+                    <div className="mt-3 p-2 bg-blue-50 rounded text-xs">
+                      <p><strong>Seasonal Pattern:</strong> Wettest month is {climateData.precipitation?.wettest_month_name} 
+                      ({climateData.precipitation?.wettest_month?.toFixed(0)}mm), driest is {climateData.precipitation?.driest_month_name} 
+                      ({climateData.precipitation?.driest_month?.toFixed(0)}mm)</p>
                     </div>
                   </div>
                 </CardContent>
