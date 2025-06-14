@@ -36,14 +36,33 @@ export default function InteractiveMap({ selectedLocation, onLocationSelect, cla
       worldCopyJump: true,
     });
 
-    // Add tile layer
-    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+    // Create tile layers for different map views
+    const satelliteLayer = L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}", {
+      attribution: 'Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community',
+      maxZoom: 18,
+    });
+
+    const terrainLayer = L.tileLayer("https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png", {
+      attribution: 'Map data: &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors, <a href="http://viewfinderpanoramas.org">SRTM</a> | Map style: &copy; <a href="https://opentopomap.org">OpenTopoMap</a> (<a href="https://creativecommons.org/licenses/by-sa/3.0/">CC-BY-SA</a>)',
+      maxZoom: 17,
+    });
+
+    const streetLayer = L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
       attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
       noWrap: false,
-    }).addTo(map);
+    });
+
+    // Add default satellite layer
+    satelliteLayer.addTo(map);
+
+    // Store layer references for switching
+    (map as any)._satelliteLayer = satelliteLayer;
+    (map as any)._terrainLayer = terrainLayer;
+    (map as any)._streetLayer = streetLayer;
+    (map as any)._currentLayer = satelliteLayer;
 
     // Add click handler
-    map.on("click", (e) => {
+    map.on("click", (e: L.LeafletMouseEvent) => {
       const { lat, lng } = e.latlng;
       onLocationSelect(lat, lng);
     });
@@ -79,9 +98,77 @@ export default function InteractiveMap({ selectedLocation, onLocationSelect, cla
     }
   }, [selectedLocation, isMapReady]);
 
+  const switchLayer = (layerType: 'satellite' | 'terrain' | 'street') => {
+    if (!mapInstanceRef.current) return;
+    
+    const map = mapInstanceRef.current;
+    
+    // Remove current layer
+    if ((map as any)._currentLayer) {
+      map.removeLayer((map as any)._currentLayer);
+    }
+    
+    // Add new layer
+    let newLayer;
+    switch (layerType) {
+      case 'satellite':
+        newLayer = (map as any)._satelliteLayer;
+        break;
+      case 'terrain':
+        newLayer = (map as any)._terrainLayer;
+        break;
+      case 'street':
+        newLayer = (map as any)._streetLayer;
+        break;
+    }
+    
+    if (newLayer) {
+      newLayer.addTo(map);
+      (map as any)._currentLayer = newLayer;
+      setCurrentLayer(layerType);
+    }
+  };
+
   return (
     <div className={`relative ${className}`}>
       <div ref={mapRef} className="w-full h-full rounded-lg overflow-hidden border border-slate-200" />
+      
+      {/* Layer Controls */}
+      <div className="absolute top-4 left-4 bg-white rounded-lg shadow-sm border border-slate-200 p-2">
+        <div className="text-xs font-medium text-slate-700 mb-2">Map View</div>
+        <div className="flex flex-col space-y-1">
+          <button
+            onClick={() => switchLayer('satellite')}
+            className={`px-3 py-1 text-xs rounded transition-colors ${
+              currentLayer === 'satellite' 
+                ? 'bg-blue-600 text-white' 
+                : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+            }`}
+          >
+            Satellite
+          </button>
+          <button
+            onClick={() => switchLayer('terrain')}
+            className={`px-3 py-1 text-xs rounded transition-colors ${
+              currentLayer === 'terrain' 
+                ? 'bg-blue-600 text-white' 
+                : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+            }`}
+          >
+            Terrain
+          </button>
+          <button
+            onClick={() => switchLayer('street')}
+            className={`px-3 py-1 text-xs rounded transition-colors ${
+              currentLayer === 'street' 
+                ? 'bg-blue-600 text-white' 
+                : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+            }`}
+          >
+            Streets
+          </button>
+        </div>
+      </div>
       
       {/* Map Controls */}
       <div className="absolute top-4 right-4 flex flex-col space-y-2">

@@ -135,9 +135,44 @@ async function fetchClimateProjectionFromAPI(locationId: number, year: number) {
 
     // Generate authentic climate projection using established climate science
     console.log(`Generating climate projection for ${location.name} (${location.latitude}, ${location.longitude}) for year ${year}`);
-    const climateData = await generateRealisticClimateData(location, year);
+    const rawClimateData = await generateRealisticClimateData(location, year);
     
-    return climateData;
+    // Find comparable location based on projected climate
+    const comparableLocation = await findComparableLocation(rawClimateData);
+    
+    // Transform to database schema format
+    const climateProjection = {
+      locationId: locationId,
+      projectionYear: year,
+      averageTemperature: rawClimateData.temperature.annual_average,
+      temperatureChange: rawClimateData.temperature.change_from_baseline,
+      annualPrecipitation: rawClimateData.precipitation.annual_total,
+      precipitationChange: rawClimateData.precipitation.change_from_baseline,
+      humidity: rawClimateData.humidity.annual_average,
+      humidityChange: rawClimateData.humidity.change_from_baseline,
+      seaLevel: rawClimateData.sea_level.value,
+      seaLevelChange: rawClimateData.sea_level.change_from_baseline,
+      heatStressRisk: calculateRiskScore(rawClimateData.temperature.extreme_heat_days),
+      droughtRisk: calculateRiskScore(rawClimateData.precipitation.drought_index),
+      floodingRisk: calculateRiskScore(rawClimateData.sea_level.flood_risk),
+      monthlyTemperatures: JSON.stringify(rawClimateData.temperature.monthly),
+      monthlyPrecipitation: JSON.stringify(rawClimateData.precipitation.monthly),
+      habitabilityScore: calculateHabitabilityScore(rawClimateData),
+      elevationChange: rawClimateData.elevation.change_from_baseline,
+      coastalFloodingRisk: calculateRiskScore(rawClimateData.coastal.flood_risk),
+      extremeWeatherEvents: rawClimateData.extreme_weather.frequency,
+      biodiversityLoss: rawClimateData.biodiversity.loss_percentage,
+      agriculturalViability: calculateRiskScore(100 - rawClimateData.agriculture.stress_level),
+      waterStressLevel: calculateRiskScore(rawClimateData.water.stress_level),
+      airQualityIndex: rawClimateData.air_quality.index,
+      comparableLocationName: comparableLocation?.name,
+      comparableLocationLat: comparableLocation?.latitude,
+      comparableLocationLng: comparableLocation?.longitude,
+      comparableLocationCountry: comparableLocation?.country,
+      climateSimilarityScore: comparableLocation?.similarity_score
+    };
+    
+    return climateProjection;
   } catch (error) {
     console.error("Error fetching from NVIDIA API:", error);
     return null;
