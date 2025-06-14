@@ -170,7 +170,8 @@ def get_baseline_precipitation(latitude, longitude):
     """Get realistic baseline precipitation based on actual meteorological data"""
     abs_lat = abs(latitude)
     
-    # Desert climate detection (major arid regions) - Early return for desert regions
+    # Desert climate detection (major arid regions)
+    is_desert = False
     if 15 <= abs_lat <= 35:  # Desert belt latitudes
         # Arabian Peninsula/Middle East deserts (Dubai, Riyadh, etc.)
         if 20 <= longitude <= 60 and 15 <= abs_lat <= 35:
@@ -211,21 +212,22 @@ def get_baseline_precipitation(latitude, longitude):
         base = 2200
     elif abs_lat < 23.5:  # Tropical - monsoon regions
         base = 1400
-    elif abs_lat < 35:  # Subtropical - generally dry, Mediterranean climates
+    elif abs_lat < 35:  # Subtropical - generally dry climates
         # Desert regions get much less precipitation
         is_desert = ((20 <= longitude <= 55 and 15 <= abs_lat <= 35) or  # Arabian Peninsula/Middle East
                     (10 <= longitude <= 35 and 15 <= abs_lat <= 30) or   # Sahara
                     (-125 <= longitude <= -100 and 25 <= abs_lat <= 40))  # SW US/Mexico
-        # Mediterranean climates (like Madrid) are much drier than temperate
-        is_mediterranean = (35 <= abs_lat <= 45 and -10 <= longitude <= 45)
         if is_desert:
             base = 100  # Very low for deserts (Dubai ~96mm)
-        elif is_mediterranean:
+        else:
+            base = 600  # Other subtropical regions
+    elif abs_lat < 45:  # Temperate - includes Mediterranean
+        # Mediterranean climates are much drier than northern temperate
+        is_mediterranean = (35 <= abs_lat <= 45 and -10 <= longitude <= 45)
+        if is_mediterranean:
             base = 450  # Mediterranean climate (Madrid ~436mm)
         else:
-            base = 600
-    elif abs_lat < 45:  # Temperate - westerlies, moderate precipitation
-        base = 750
+            base = 750  # Regular temperate climate
     elif abs_lat < 55:  # Cool temperate - consistent westerly flow
         # Higher base for this latitude band which includes maritime Western Europe
         base = 750
@@ -237,8 +239,8 @@ def get_baseline_precipitation(latitude, longitude):
     # Apply reduced longitude-based adjustments (they were too strong)
     base *= (longitude_factor * 0.3 + 0.7)  # Reduce impact of longitude factor
     
-    # Adjust for continental/maritime effects
-    if is_coastal(latitude, longitude) and not is_desert:
+    # Adjust for continental/maritime effects (only for non-desert regions)
+    if is_coastal(latitude, longitude):
         # Strong maritime effect for Western European Atlantic coasts
         if 45 <= abs_lat <= 65 and -10 <= longitude <= 10:  # Western Europe Atlantic coast
             base *= 1.15  # Strong maritime increase for Atlantic-facing coasts
