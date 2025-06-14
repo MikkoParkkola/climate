@@ -453,11 +453,11 @@ def generate_monthly_temperature_series(annual_mean, latitude):
     elif abs_lat < 35:  # Subtropical
         # Desert regions have larger diurnal and seasonal ranges
         if abs_lat >= 20:  # Potential desert latitudes
-            amplitude = 8.0 + (abs_lat - 23.5) * 0.87  # ~18°C for hot deserts
+            amplitude = 15.0 + (abs_lat - 23.5) * 0.87  # ~25°C for hot deserts
         else:
-            amplitude = 8.0 + (abs_lat - 23.5) * 0.35
+            amplitude = 12.0 + (abs_lat - 23.5) * 0.5  # Mediterranean climates need larger amplitude
     elif abs_lat < 45:  # Temperate - moderate seasonal amplitude
-        amplitude = 8.0 + (abs_lat - 35) * 0.4  # ~12°C at 45°N
+        amplitude = 12.0 + (abs_lat - 35) * 0.5  # ~17°C at 45°N for realistic summer peaks
     elif abs_lat < 55:  # Cool temperate - increasing amplitude
         amplitude = 12.0 + (abs_lat - 45) * 0.1  # ~13°C at 55°N
     elif abs_lat < 65:  # Subarctic - larger amplitude
@@ -581,24 +581,27 @@ def calculate_heat_stress_days(monthly_temps, latitude=None, longitude=None):
     
     for i, monthly_avg in enumerate(monthly_temps):
         # Calculate estimated daily maximum temperature
-        estimated_daily_max = monthly_avg + diurnal_range
+        # Use proper daily maximum calculation (monthly average + half diurnal range + seasonal peak adjustment)
+        estimated_daily_max = monthly_avg + (diurnal_range * 0.7)  # More realistic daily max calculation
         
-        if estimated_daily_max > 35:
+        if estimated_daily_max > 32:  # Lower threshold for heat stress (32°C is realistic)
             days_in_month = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31][i]
             
             # Calculate heat stress probability based on how far above threshold
-            temp_excess = estimated_daily_max - 35
+            temp_excess = estimated_daily_max - 32
             
-            if temp_excess > 15:  # >50°C days
+            if temp_excess > 18:  # >50°C days
                 heat_probability = 0.95
-            elif temp_excess > 10:  # >45°C days
+            elif temp_excess > 13:  # >45°C days
                 heat_probability = 0.85
-            elif temp_excess > 5:   # >40°C days
+            elif temp_excess > 8:   # >40°C days
                 heat_probability = 0.7
-            elif temp_excess > 2:   # >37°C days
-                heat_probability = 0.4
-            else:                   # >35°C days
-                heat_probability = 0.2
+            elif temp_excess > 5:   # >37°C days
+                heat_probability = 0.5
+            elif temp_excess > 3:   # >35°C days
+                heat_probability = 0.3
+            else:                   # >32°C days
+                heat_probability = 0.15
             
             # Add location-specific adjustment
             if latitude and abs_lat > 60:  # High latitude locations (Helsinki)
