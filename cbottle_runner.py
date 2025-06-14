@@ -65,9 +65,7 @@ def generate_cbottle_projection(latitude, longitude, target_year, api_key):
             "year": target_year,
             "temperature": {
                 "annual_mean": float(np.mean(monthly_temps)),
-                "baseline_annual_mean": float(baseline_temp),
                 "monthly": [float(t) for t in monthly_temps],
-                "baseline_monthly": [float(t) for t in baseline_monthly_temps],
                 "monthly_labels": ["Jan", "Feb", "Mar", "Apr", "May", "Jun", 
                                  "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"],
                 "anomaly": float(temp_anomaly),
@@ -77,9 +75,7 @@ def generate_cbottle_projection(latitude, longitude, target_year, api_key):
             },
             "precipitation": {
                 "annual_total": float(np.sum(monthly_precip)),
-                "baseline_annual_total": float(baseline_precip),
                 "monthly": [float(p) for p in monthly_precip],
-                "baseline_monthly": [float(p) for p in baseline_monthly_precip],
                 "monthly_labels": ["Jan", "Feb", "Mar", "Apr", "May", "Jun", 
                                  "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"],
                 "anomaly_percent": float(precip_anomaly * 100),
@@ -497,6 +493,7 @@ def calculate_habitability_score(temps, precip, heat_days, drought_risk, flood_r
     final_score = base_score - heat_penalty - drought_penalty - flood_penalty - extreme_temp_penalty - extreme_dry_penalty
     
     # Apply Nordic bonus - cities like Helsinki, Stockholm, Oslo are actually highly livable
+    nordic_bonus = 0
     if 3 <= mean_temp < 10 and 500 <= annual_precip <= 1200:  # Nordic climate profile
         nordic_bonus = 15
         final_score += nordic_bonus
@@ -511,6 +508,7 @@ def calculate_habitability_score(temps, precip, heat_days, drought_risk, flood_r
         'flood_risk_penalty': flood_penalty,
         'extreme_temperature_penalty': extreme_temp_penalty,
         'extreme_aridity_penalty': extreme_dry_penalty,
+        'nordic_climate_bonus': nordic_bonus,
         'base_score': base_score,
         'final_score': max(10, min(100, final_score))
     }
