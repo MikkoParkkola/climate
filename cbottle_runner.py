@@ -430,18 +430,18 @@ def calculate_habitability_score(temps, precip, heat_days, drought_risk, flood_r
     mean_temp = np.mean(temps)
     annual_precip = np.sum(precip)
     
-    # Temperature assessment based on global livability standards
-    # Adjusted for Nordic cities like Helsinki which are highly livable despite cold winters
+    # Temperature assessment based on actual global livability standards
+    # Many highly livable cities like Helsinki, Stockholm, Montreal have cold winters but excellent quality of life
     if 15 <= mean_temp <= 25:  # Optimal range (temperate cities like Amsterdam, London)
-        temp_score = 100 - abs(mean_temp - 20) * 2
+        temp_score = 100 - abs(mean_temp - 20) * 1.5
     elif 10 <= mean_temp <= 30:  # Good range (most livable cities)
-        temp_score = 90 - abs(mean_temp - 17.5) * 1.5
+        temp_score = 95 - abs(mean_temp - 17.5) * 1.2
     elif 3 <= mean_temp <= 35:  # Acceptable range (includes Nordic cities like Helsinki ~6°C)
-        temp_score = 80 - abs(mean_temp - 12) * 0.8  # Less penalty for cold climates
-    elif -5 <= mean_temp <= 40:  # Livable with good infrastructure (Nordic/Arctic cities)
-        temp_score = 65 - abs(mean_temp - 8) * 0.6  # Even less penalty for very cold
-    else:  # Extreme climates
-        temp_score = max(25, 45 - abs(mean_temp - 10) * 1.0)
+        temp_score = 85 - abs(mean_temp - 12) * 0.5  # Minimal penalty for cold climates with good infrastructure
+    elif -10 <= mean_temp <= 40:  # Livable with excellent infrastructure (Nordic/Arctic cities)
+        temp_score = 75 - abs(mean_temp - 5) * 0.4  # Very minimal penalty for developed cold regions
+    else:  # Truly extreme climates
+        temp_score = max(40, 60 - abs(mean_temp - 0) * 0.8)
     
     temp_score = max(0, min(100, temp_score))
     
@@ -745,13 +745,17 @@ def generate_global_habitability_rankings(target_year):
             future_mean_temp = np.mean(future_monthly_temps)
             future_annual_precip = np.sum(future_monthly_precip)
             
-            # Temperature comfort score (optimal range 15-25°C)
+            # Temperature comfort score (realistic assessment for heat wave locations)
             if 15 <= future_mean_temp <= 25:
-                temp_comfort = 100 - abs(future_mean_temp - 20) * 2
+                temp_comfort = 100 - abs(future_mean_temp - 20) * 1.5
             elif 10 <= future_mean_temp <= 30:
-                temp_comfort = 90 - abs(future_mean_temp - 17.5) * 1.5
-            else:
-                temp_comfort = max(20, 75 - abs(future_mean_temp - 15) * 2)
+                temp_comfort = 85 - abs(future_mean_temp - 17.5) * 1.2
+            elif 5 <= future_mean_temp <= 35:
+                temp_comfort = 70 - abs(future_mean_temp - 15) * 1.0
+            elif future_mean_temp > 35:  # Extreme heat like Phoenix, Dubai
+                temp_comfort = max(10, 40 - (future_mean_temp - 35) * 3)
+            else:  # Very cold climates
+                temp_comfort = max(25, 60 - abs(future_mean_temp - 10) * 1.5)
             
             # Humidity score (based on precipitation and temperature)
             if 600 <= future_annual_precip <= 1200 and 15 <= future_mean_temp <= 25:

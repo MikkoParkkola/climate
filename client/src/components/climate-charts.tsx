@@ -57,13 +57,12 @@ export default function ClimateCharts({ currentData, projectedData, selectedYear
     const ctx = temperatureChartRef.current.getContext('2d');
     if (!ctx) return;
 
-    const currentTemps = currentData?.monthlyTemperatures ? 
-      parseMonthlyData(currentData.monthlyTemperatures) :
-      generateDefaultTemperatureData(currentData?.averageTemperature);
-
     const projectedTemps = projectedData?.monthlyTemperatures ?
       parseMonthlyData(projectedData.monthlyTemperatures) :
       generateDefaultTemperatureData(projectedData?.averageTemperature);
+
+    // Calculate annual temperature change
+    const tempChange = projectedData?.temperatureChange || 0;
 
     temperatureChartInstance.current = new Chart(ctx, {
       type: 'line',
@@ -71,22 +70,16 @@ export default function ClimateCharts({ currentData, projectedData, selectedYear
         labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
         datasets: [
           {
-            label: 'Historical (2000-2020)',
-            data: currentTemps,
-            borderColor: '#64748B',
-            backgroundColor: 'rgba(100, 116, 139, 0.1)',
-            borderWidth: 2,
-            tension: 0.3,
-            fill: false,
-          },
-          {
-            label: `Projected (${selectedYear})`,
+            label: `Temperature (${selectedYear})`,
             data: projectedTemps,
             borderColor: '#DC2626',
             backgroundColor: 'rgba(220, 38, 38, 0.1)',
-            borderWidth: 2,
+            borderWidth: 3,
             tension: 0.3,
             fill: false,
+            pointBackgroundColor: '#DC2626',
+            pointBorderColor: '#DC2626',
+            pointRadius: 4,
           }
         ]
       },
@@ -160,13 +153,12 @@ export default function ClimateCharts({ currentData, projectedData, selectedYear
     const ctx = precipitationChartRef.current.getContext('2d');
     if (!ctx) return;
 
-    const currentPrecip = currentData?.monthlyPrecipitation ?
-      parseMonthlyData(currentData.monthlyPrecipitation) :
-      generateDefaultPrecipitationData(currentData?.annualPrecipitation ? currentData.annualPrecipitation / 12 : undefined);
-
     const projectedPrecip = projectedData?.monthlyPrecipitation ?
       parseMonthlyData(projectedData.monthlyPrecipitation) :
       generateDefaultPrecipitationData(projectedData?.annualPrecipitation ? projectedData.annualPrecipitation / 12 : undefined);
+
+    // Calculate annual precipitation change
+    const precipChange = projectedData?.precipitationChange || 0;
 
     precipitationChartInstance.current = new Chart(ctx, {
       type: 'bar',
@@ -174,18 +166,11 @@ export default function ClimateCharts({ currentData, projectedData, selectedYear
         labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
         datasets: [
           {
-            label: 'Historical (2000-2020)',
-            data: currentPrecip,
-            backgroundColor: 'rgba(100, 116, 139, 0.6)',
-            borderColor: '#64748B',
-            borderWidth: 1,
-          },
-          {
-            label: `Projected (${selectedYear})`,
+            label: `Precipitation (${selectedYear})`,
             data: projectedPrecip,
-            backgroundColor: 'rgba(37, 99, 235, 0.6)',
+            backgroundColor: 'rgba(37, 99, 235, 0.7)',
             borderColor: '#2563EB',
-            borderWidth: 1,
+            borderWidth: 2,
           }
         ]
       },
@@ -281,11 +266,15 @@ export default function ClimateCharts({ currentData, projectedData, selectedYear
           <div className="mt-4 flex items-center justify-center space-x-6 text-sm">
             <div className="flex items-center">
               <div className="w-3 h-3 bg-red-600 rounded-full mr-2"></div>
-              <span className="text-slate-600">Projected</span>
+              <span className="text-slate-600">{selectedYear} Projection</span>
             </div>
-            <div className="flex items-center">
-              <div className="w-3 h-3 bg-slate-400 rounded-full mr-2"></div>
-              <span className="text-slate-600">Historical</span>
+            <div className="px-3 py-1 bg-red-50 rounded-md">
+              <span className="text-red-700 font-medium">
+                {projectedData?.temperatureChange ? 
+                  `${projectedData.temperatureChange > 0 ? '+' : ''}${projectedData.temperatureChange.toFixed(1)}°C` : 
+                  'No change data'
+                } vs baseline
+              </span>
             </div>
           </div>
         </CardContent>
@@ -322,11 +311,15 @@ export default function ClimateCharts({ currentData, projectedData, selectedYear
           <div className="mt-4 flex items-center justify-center space-x-6 text-sm">
             <div className="flex items-center">
               <div className="w-3 h-3 bg-blue-600 rounded-full mr-2"></div>
-              <span className="text-slate-600">Projected</span>
+              <span className="text-slate-600">{selectedYear} Projection</span>
             </div>
-            <div className="flex items-center">
-              <div className="w-3 h-3 bg-slate-400 rounded-full mr-2"></div>
-              <span className="text-slate-600">Historical</span>
+            <div className="px-3 py-1 bg-blue-50 rounded-md">
+              <span className="text-blue-700 font-medium">
+                {projectedData?.precipitationChange ? 
+                  `${projectedData.precipitationChange > 0 ? '+' : ''}${projectedData.precipitationChange.toFixed(1)}%` : 
+                  'No change data'
+                } vs baseline
+              </span>
             </div>
           </div>
         </CardContent>
