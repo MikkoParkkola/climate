@@ -110,19 +110,29 @@ export default function ClimateApp() {
       
       // Temperature data
       if (climateData.temperature) {
-        pdf.text(`Annual Mean Temperature: ${climateData.temperature.annual_mean?.toFixed(1)}°C`, margin, yPosition);
+        pdf.text(`Annual Mean Temperature: ${climateData.temperature.annual_mean?.toFixed(1) || 'N/A'}°C`, margin, yPosition);
         yPosition += 8;
-        pdf.text(`Temperature Change: ${climateData.temperature.change_from_baseline > 0 ? '+' : ''}${climateData.temperature.change_from_baseline?.toFixed(1)}°C`, margin, yPosition);
+        const tempChange = climateData.temperature.change_from_baseline;
+        if (tempChange !== undefined && tempChange !== null) {
+          pdf.text(`Temperature Change: ${tempChange > 0 ? '+' : ''}${tempChange.toFixed(1)}°C`, margin, yPosition);
+        } else {
+          pdf.text(`Temperature Change: Calculated from baseline`, margin, yPosition);
+        }
         yPosition += 8;
-        pdf.text(`Temperature Range: ${climateData.temperature.min?.toFixed(1)}°C to ${climateData.temperature.max?.toFixed(1)}°C`, margin, yPosition);
+        pdf.text(`Temperature Range: ${climateData.temperature.min?.toFixed(1) || 'N/A'}°C to ${climateData.temperature.max?.toFixed(1) || 'N/A'}°C`, margin, yPosition);
         yPosition += 12;
       }
       
       // Precipitation data
       if (climateData.precipitation) {
-        pdf.text(`Annual Precipitation: ${climateData.precipitation.annual_total?.toFixed(0)} mm`, margin, yPosition);
+        pdf.text(`Annual Precipitation: ${climateData.precipitation.annual_total?.toFixed(0) || 'N/A'} mm`, margin, yPosition);
         yPosition += 8;
-        pdf.text(`Precipitation Change: ${climateData.precipitation.change_from_baseline > 0 ? '+' : ''}${climateData.precipitation.change_from_baseline?.toFixed(1)}%`, margin, yPosition);
+        const precipChange = climateData.precipitation.change_from_baseline;
+        if (precipChange !== undefined && precipChange !== null) {
+          pdf.text(`Precipitation Change: ${precipChange > 0 ? '+' : ''}${precipChange.toFixed(1)}%`, margin, yPosition);
+        } else {
+          pdf.text(`Precipitation Change: Calculated from baseline`, margin, yPosition);
+        }
         yPosition += 12;
       }
       
@@ -175,104 +185,189 @@ export default function ClimateApp() {
         yPosition = margin;
       }
       
-      // Capture visual elements from the report
+      // Add detailed climate analysis sections
       pdf.addPage();
       yPosition = margin;
       
       pdf.setFontSize(16);
       pdf.setFont('helvetica', 'bold');
-      pdf.text('Visual Analysis & Charts', margin, yPosition);
+      pdf.text('Detailed Climate Analysis', margin, yPosition);
       yPosition += 20;
       
-      // Try to capture the main climate report section
-      try {
-        const reportElement = document.querySelector('[data-climate-report]') || 
-                             document.querySelector('.space-y-8') ||
-                             document.querySelector('main');
+      // Monthly Temperature Analysis
+      if (climateData.temperature?.monthly) {
+        pdf.setFontSize(14);
+        pdf.setFont('helvetica', 'bold');
+        pdf.text('Monthly Temperature Profile', margin, yPosition);
+        yPosition += 15;
         
-        if (reportElement) {
-          const canvas = await html2canvas(reportElement as HTMLElement, {
-            scale: 1,
-            useCORS: true,
-            allowTaint: true,
-            backgroundColor: '#ffffff',
-            width: 800,
-            height: Math.min(reportElement.scrollHeight, 3000)
-          });
-          
-          const imgData = canvas.toDataURL('image/png', 0.8);
-          const imgWidth = pageWidth - (margin * 2);
-          const imgHeight = (canvas.height * imgWidth) / canvas.width;
-          
-          // Split large images across multiple pages
-          let remainingHeight = imgHeight;
-          let sourceY = 0;
-          
-          while (remainingHeight > 0) {
-            const pageSpace = pageHeight - yPosition - margin;
-            const segmentHeight = Math.min(remainingHeight, pageSpace);
-            
-            if (segmentHeight < 20) {
-              pdf.addPage();
-              yPosition = margin;
-              continue;
-            }
-            
-            // Calculate source coordinates for this segment
-            const sourceHeight = (segmentHeight * canvas.width) / imgWidth;
-            
-            pdf.addImage(
-              imgData, 
-              'PNG', 
-              margin, 
-              yPosition, 
-              imgWidth, 
-              segmentHeight
-            );
-            
-            remainingHeight -= segmentHeight;
-            sourceY += sourceHeight;
-            
-            if (remainingHeight > 0) {
-              pdf.addPage();
-              yPosition = margin;
-            } else {
-              yPosition += segmentHeight + 10;
-            }
-          }
+        pdf.setFontSize(10);
+        pdf.setFont('helvetica', 'normal');
+        
+        const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+        const temps = climateData.temperature.monthly;
+        
+        for (let i = 0; i < months.length && i < temps.length; i++) {
+          pdf.text(`${months[i]}: ${temps[i]?.toFixed(1)}°C`, margin + (i % 4) * 45, yPosition);
+          if (i % 4 === 3) yPosition += 8;
         }
-      } catch (error) {
-        console.log('Could not capture main report:', error);
+        yPosition += 15;
+      }
+      
+      // Monthly Precipitation Analysis
+      if (climateData.precipitation?.monthly) {
+        pdf.setFontSize(14);
+        pdf.setFont('helvetica', 'bold');
+        pdf.text('Monthly Precipitation Profile', margin, yPosition);
+        yPosition += 15;
         
-        // Fallback: capture individual charts
-        const chartElements = document.querySelectorAll('canvas');
-        let chartIndex = 0;
+        pdf.setFontSize(10);
+        pdf.setFont('helvetica', 'normal');
         
-        for (let i = 0; i < chartElements.length; i++) {
-          const canvas = chartElements[i];
-          if (yPosition > pageHeight - 80) {
-            pdf.addPage();
-            yPosition = margin;
-          }
-          
-          try {
-            const chartDataUrl = canvas.toDataURL('image/png', 0.8);
-            
+        const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+        const precip = climateData.precipitation.monthly;
+        
+        for (let i = 0; i < months.length && i < precip.length; i++) {
+          pdf.text(`${months[i]}: ${precip[i]?.toFixed(0)}mm`, margin + (i % 4) * 45, yPosition);
+          if (i % 4 === 3) yPosition += 8;
+        }
+        yPosition += 15;
+      }
+      
+      // Habitability Breakdown
+      if (climateData.habitability?.breakdown) {
+        pdf.setFontSize(14);
+        pdf.setFont('helvetica', 'bold');
+        pdf.text('Habitability Score Breakdown', margin, yPosition);
+        yPosition += 15;
+        
+        pdf.setFontSize(10);
+        pdf.setFont('helvetica', 'normal');
+        
+        const breakdown = climateData.habitability.breakdown;
+        pdf.text(`Temperature Comfort: ${breakdown.temperature_comfort?.toFixed(1) || 'N/A'}`, margin, yPosition);
+        yPosition += 8;
+        pdf.text(`Precipitation Adequacy: ${breakdown.precipitation_adequacy?.toFixed(1) || 'N/A'}`, margin, yPosition);
+        yPosition += 8;
+        pdf.text(`Infrastructure Adaptation: ${breakdown.infrastructure_adaptation?.toFixed(1) || 'N/A'}`, margin, yPosition);
+        yPosition += 8;
+        pdf.text(`Heat Stress Penalty: -${breakdown.heat_stress_penalty?.toFixed(1) || 'N/A'}`, margin, yPosition);
+        yPosition += 8;
+        pdf.text(`Drought Risk Penalty: -${breakdown.drought_risk_penalty?.toFixed(1) || 'N/A'}`, margin, yPosition);
+        yPosition += 8;
+        pdf.text(`Flood Risk Penalty: -${breakdown.flood_risk_penalty?.toFixed(1) || 'N/A'}`, margin, yPosition);
+        yPosition += 15;
+      }
+      
+      // Time Series Analysis
+      if (climateData.time_series) {
+        pdf.setFontSize(14);
+        pdf.setFont('helvetica', 'bold');
+        pdf.text('Climate Trends (5-Year Intervals)', margin, yPosition);
+        yPosition += 15;
+        
+        pdf.setFontSize(10);
+        pdf.setFont('helvetica', 'normal');
+        
+        climateData.time_series.slice(0, 8).forEach((entry: any) => {
+          pdf.text(`${entry.year}: ${entry.temperature?.toFixed(1)}°C, ${entry.precipitation?.toFixed(0)}mm, Habitability: ${entry.habitability?.toFixed(1)}`, margin, yPosition);
+          yPosition += 8;
+        });
+        yPosition += 15;
+      }
+      
+      // Atmospheric Physics
+      if (climateData.atmospheric_physics) {
+        pdf.setFontSize(14);
+        pdf.setFont('helvetica', 'bold');
+        pdf.text('Atmospheric Physics & Climate Dynamics', margin, yPosition);
+        yPosition += 15;
+        
+        pdf.setFontSize(10);
+        pdf.setFont('helvetica', 'normal');
+        
+        pdf.text(`Climate Zone: ${climateData.atmospheric_physics.climate_zone || 'N/A'}`, margin, yPosition);
+        yPosition += 8;
+        pdf.text(`Circulation Pattern: ${climateData.atmospheric_physics.circulation_pattern || 'N/A'}`, margin, yPosition);
+        yPosition += 8;
+        pdf.text(`Climate Sensitivity: ${climateData.atmospheric_physics.climate_sensitivity || 'N/A'}x global average`, margin, yPosition);
+        yPosition += 8;
+        
+        if (climateData.atmospheric_physics.climate_feedbacks) {
+          pdf.text('Climate Feedbacks:', margin, yPosition);
+          yPosition += 8;
+          climateData.atmospheric_physics.climate_feedbacks.forEach((feedback: string) => {
+            pdf.text(`• ${feedback}`, margin + 10, yPosition);
+            yPosition += 6;
+          });
+        }
+        yPosition += 15;
+      }
+      
+      // Try to capture individual visual elements
+      pdf.addPage();
+      yPosition = margin;
+      
+      pdf.setFontSize(16);
+      pdf.setFont('helvetica', 'bold');
+      pdf.text('Visual Charts & Analysis', margin, yPosition);
+      yPosition += 20;
+      
+      // Capture specific chart sections
+      const chartSections = [
+        { selector: 'canvas', name: 'Temperature/Precipitation Charts' },
+        { selector: '[data-climate-report] .relative', name: 'Monthly Analysis Charts' }
+      ];
+      
+      for (const section of chartSections) {
+        try {
+          const elements = document.querySelectorAll(section.selector);
+          if (elements.length > 0) {
             pdf.setFontSize(14);
             pdf.setFont('helvetica', 'bold');
-            pdf.text(`Chart ${chartIndex + 1}`, margin, yPosition);
+            pdf.text(section.name, margin, yPosition);
             yPosition += 15;
             
-            const chartWidth = pageWidth - (margin * 2);
-            const chartHeight = 60;
-            
-            pdf.addImage(chartDataUrl, 'PNG', margin, yPosition, chartWidth, chartHeight);
-            yPosition += chartHeight + 15;
-            
-            chartIndex++;
-          } catch (error) {
-            console.log('Could not capture chart:', error);
+            for (let i = 0; i < Math.min(elements.length, 3); i++) {
+              const element = elements[i];
+              
+              if (yPosition > pageHeight - 100) {
+                pdf.addPage();
+                yPosition = margin;
+              }
+              
+              if (element.tagName === 'CANVAS') {
+                const canvas = element as HTMLCanvasElement;
+                const chartDataUrl = canvas.toDataURL('image/png', 0.9);
+                
+                const chartWidth = pageWidth - (margin * 2);
+                const aspectRatio = canvas.height / canvas.width;
+                const chartHeight = Math.min(chartWidth * aspectRatio, 80);
+                
+                pdf.addImage(chartDataUrl, 'PNG', margin, yPosition, chartWidth, chartHeight);
+                yPosition += chartHeight + 10;
+              } else {
+                // For other elements, try html2canvas
+                const canvas = await html2canvas(element as HTMLElement, {
+                  scale: 0.8,
+                  useCORS: true,
+                  backgroundColor: '#ffffff',
+                  width: 600,
+                  height: 400
+                });
+                
+                const imgData = canvas.toDataURL('image/png', 0.8);
+                const imgWidth = pageWidth - (margin * 2);
+                const imgHeight = Math.min((canvas.height * imgWidth) / canvas.width, 100);
+                
+                pdf.addImage(imgData, 'PNG', margin, yPosition, imgWidth, imgHeight);
+                yPosition += imgHeight + 10;
+              }
+            }
+            yPosition += 10;
           }
+        } catch (error) {
+          console.log(`Could not capture ${section.name}:`, error);
         }
       }
       
