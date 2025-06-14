@@ -1,0 +1,196 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --background: hsl(0, 0%, 100%);
+  --foreground: hsl(20, 14.3%, 4.1%);
+  --muted: hsl(210, 4.8%, 95.9%);
+  --muted-foreground: hsl(215, 5.3%, 44.7%);
+  --popover: hsl(0, 0%, 100%);
+  --popover-foreground: hsl(20, 14.3%, 4.1%);
+  --card: hsl(0, 0%, 100%);
+  --card-foreground: hsl(20, 14.3%, 4.1%);
+  --border: hsl(214, 5.9%, 90%);
+  --input: hsl(214, 5.9%, 90%);
+  --primary: hsl(207, 90%, 54%);
+  --primary-foreground: hsl(210, 100%, 98%);
+  --secondary: hsl(210, 4.8%, 95.9%);
+  --secondary-foreground: hsl(222, 9.8%, 10%);
+  --accent: hsl(210, 4.8%, 95.9%);
+  --accent-foreground: hsl(222, 9.8%, 10%);
+  --destructive: hsl(0, 84.2%, 60.2%);
+  --destructive-foreground: hsl(210, 9.1%, 97.8%);
+  --ring: hsl(20, 14.3%, 4.1%);
+  --radius: 0.5rem;
+  --chart-1: hsl(207, 90%, 54%);
+  --chart-2: hsl(142, 76%, 36%);
+  --chart-3: hsl(24, 70%, 56%);
+  --chart-4: hsl(280, 87%, 65%);
+  --chart-5: hsl(42, 87%, 55%);
+  
+  /* Climate-specific color variables */
+  --climate-blue: hsl(207, 90%, 54%);
+  --climate-green: hsl(142, 76%, 36%);
+  --climate-red: hsl(0, 84%, 60%);
+  --climate-orange: hsl(24, 70%, 56%);
+}
+
+.dark {
+  --background: hsl(240, 10%, 3.9%);
+  --foreground: hsl(0, 0%, 98%);
+  --muted: hsl(240, 3.7%, 15.9%);
+  --muted-foreground: hsl(240, 5%, 64.9%);
+  --popover: hsl(240, 10%, 3.9%);
+  --popover-foreground: hsl(0, 0%, 98%);
+  --card: hsl(240, 10%, 3.9%);
+  --card-foreground: hsl(0, 0%, 98%);
+  --border: hsl(240, 3.7%, 15.9%);
+  --input: hsl(240, 3.7%, 15.9%);
+  --primary: hsl(207, 90%, 54%);
+  --primary-foreground: hsl(210, 100%, 98%);
+  --secondary: hsl(240, 3.7%, 15.9%);
+  --secondary-foreground: hsl(0, 0%, 98%);
+  --accent: hsl(240, 3.7%, 15.9%);
+  --accent-foreground: hsl(0, 0%, 98%);
+  --destructive: hsl(0, 62.8%, 30.6%);
+  --destructive-foreground: hsl(0, 0%, 98%);
+  --ring: hsl(240, 4.9%, 83.9%);
+  --radius: 0.5rem;
+  --chart-1: hsl(207, 90%, 54%);
+  --chart-2: hsl(142, 76%, 36%);
+  --chart-3: hsl(24, 70%, 56%);
+  --chart-4: hsl(280, 87%, 65%);
+  --chart-5: hsl(42, 87%, 55%);
+  
+  /* Climate-specific color variables for dark mode */
+  --climate-blue: hsl(207, 90%, 54%);
+  --climate-green: hsl(142, 76%, 36%);
+  --climate-red: hsl(0, 84%, 60%);
+  --climate-orange: hsl(24, 70%, 56%);
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply font-sans antialiased bg-background text-foreground;
+    font-family: 'Inter', system-ui, sans-serif;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    font-weight: 600;
+    line-height: 1.2;
+  }
+}
+
+@layer components {
+  .climate-blue {
+    color: var(--climate-blue);
+  }
+  
+  .bg-climate-blue {
+    background-color: var(--climate-blue);
+  }
+  
+  .climate-green {
+    color: var(--climate-green);
+  }
+  
+  .bg-climate-green {
+    background-color: var(--climate-green);
+  }
+  
+  .climate-red {
+    color: var(--climate-red);
+  }
+  
+  .bg-climate-red {
+    background-color: var(--climate-red);
+  }
+  
+  .climate-orange {
+    color: var(--climate-orange);
+  }
+  
+  .bg-climate-orange {
+    background-color: var(--climate-orange);
+  }
+}
+
+@layer utilities {
+  .animate-pulse-slow {
+    animation: pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  }
+  
+  .animate-fade-in {
+    animation: fadeIn 0.5s ease-out;
+  }
+  
+  .animate-slide-up {
+    animation: slideUp 0.3s ease-out;
+  }
+}
+
+@keyframes fadeIn {
+  0% { opacity: 0; }
+  100% { opacity: 1; }
+}
+
+@keyframes slideUp {
+  0% { 
+    transform: translateY(10px); 
+    opacity: 0; 
+  }
+  100% { 
+    transform: translateY(0); 
+    opacity: 1; 
+  }
+}
+
+/* Leaflet map styling fixes */
+.leaflet-container {
+  font-family: 'Inter', system-ui, sans-serif;
+}
+
+.leaflet-popup-content-wrapper {
+  border-radius: 0.5rem;
+  font-size: 0.875rem;
+}
+
+.leaflet-popup-tip {
+  border-radius: 0.25rem;
+}
+
+/* Chart.js responsive canvas */
+canvas {
+  max-width: 100% !important;
+  height: auto !important;
+}
+
+/* Loading spinner for charts */
+.chart-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 16rem;
+  background-color: hsl(210, 4.8%, 95.9%);
+  border-radius: 0.5rem;
+}
+
+.chart-loading::after {
+  content: '';
+  width: 2rem;
+  height: 2rem;
+  border: 2px solid hsl(214, 5.9%, 90%);
+  border-top: 2px solid var(--climate-blue);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
