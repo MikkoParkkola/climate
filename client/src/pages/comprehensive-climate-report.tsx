@@ -46,7 +46,8 @@ export default function ComprehensiveClimateReport() {
         throw new Error(`Failed to fetch projection data: ${response.statusText}`);
       }
       const data = await response.json();
-      console.log("Projection data received:", data);
+      console.log("API Request:", requestData);
+      console.log("API Response:", data);
       
       // Store debug information
       setDebugData({

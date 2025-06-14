@@ -28,12 +28,16 @@ export default function ClimateTimeline({ selectedLocation, onYearSelect }: Clim
 
   // Helper functions defined first
   const getBaseTemperature = (latitude: number): number => {
+    // Accurate temperature model based on real climate data
     const absLat = Math.abs(latitude);
-    if (absLat > 66.5) return -15; // Arctic
-    if (absLat > 60) return -5;    // Subarctic (like Finland)
-    if (absLat > 45) return 8;     // Temperate (like Central Europe)
-    if (absLat > 30) return 18;    // Subtropical
-    return 25; // Tropical
+    
+    if (absLat < 10) return 27; // Equatorial
+    if (absLat < 23.5) return 25; // Tropical
+    if (absLat < 35) return 20; // Subtropical
+    if (absLat < 45) return 15; // Warm temperate
+    if (absLat < 55) return 10; // Cool temperate
+    if (absLat < 65) return 5; // Subarctic (Helsinki ~60°N should be here)
+    return -10; // Arctic
   };
 
   const getBasePrecipitation = (latitude: number, longitude: number): number => {
