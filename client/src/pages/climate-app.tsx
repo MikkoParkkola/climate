@@ -723,9 +723,10 @@ export default function ClimateApp() {
                         </div>
                         <div className="space-y-1">
                           {climateData.time_series.years?.map((year: number, index: number) => {
-                            const temp = climateData.time_series.temperature_trend[index];
-                            const diff = climateData.time_series.temperature_differences[index];
+                            const temp = climateData.time_series.temperature_trend?.[index];
+                            const diff = climateData.time_series.temperature_differences?.[index];
                             const isTarget = year === climateData.year;
+                            if (temp === undefined || diff === undefined) return null;
                             const diffText = diff >= 0 ? `+${diff.toFixed(1)}` : `${diff.toFixed(1)}`;
                             const diffColor = diff >= 0 ? 'text-red-600' : 'text-blue-600';
                             return (
@@ -749,9 +750,10 @@ export default function ClimateApp() {
                         </div>
                         <div className="space-y-1">
                           {climateData.time_series.years?.map((year: number, index: number) => {
-                            const precip = climateData.time_series.precipitation_trend[index];
-                            const diff = climateData.time_series.precipitation_differences[index];
+                            const precip = climateData.time_series.precipitation_trend?.[index];
+                            const diff = climateData.time_series.precipitation_differences?.[index];
                             const isTarget = year === climateData.year;
+                            if (precip === undefined || diff === undefined) return null;
                             const diffText = diff >= 0 ? `+${diff.toFixed(0)}` : `${diff.toFixed(0)}`;
                             const diffColor = diff >= 0 ? 'text-green-600' : 'text-orange-600';
                             return (
