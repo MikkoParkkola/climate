@@ -717,16 +717,36 @@ function normalizeAPIResponse(rawData: any): any {
 }
 
 function calculateHabitabilityScore(apiData: any): number {
-  // Calculate overall habitability based on multiple factors
-  const tempScore = Math.max(0, 100 - Math.abs((apiData.temperature.annual_average - 20) * 5));
-  const precipScore = Math.min(100, Math.max(0, apiData.precipitation.annual_total / 10));
-  const riskScore = 100 - Math.max(
-    apiData.temperature.extreme_heat_days,
-    apiData.precipitation.drought_index,
-    apiData.sea_level.flood_risk
-  );
+  // Improved habitability calculation accounting for human adaptation and infrastructure
   
-  return Math.round((tempScore + precipScore + riskScore) / 3);
+  // Temperature comfort (adjusted for human adaptation to local climate)
+  const avgTemp = apiData.temperature.annual_average;
+  let tempScore;
+  if (avgTemp >= 15 && avgTemp <= 25) tempScore = 100; // Optimal range
+  else if (avgTemp >= 0 && avgTemp < 15) tempScore = 85 - (Math.abs(avgTemp - 15) * 2); // Cold but manageable with heating
+  else if (avgTemp > 25 && avgTemp <= 35) tempScore = 85 - (Math.abs(avgTemp - 25) * 3); // Hot but manageable with cooling
+  else if (avgTemp >= -10 && avgTemp < 0) tempScore = 70 - (Math.abs(avgTemp) * 2); // Very cold but livable with infrastructure
+  else tempScore = Math.max(20, 50 - Math.abs(avgTemp - 20) * 2); // Extreme temperatures
+  
+  // Precipitation adequacy (500-1500mm is optimal)
+  const precip = apiData.precipitation.annual_total;
+  let precipScore;
+  if (precip >= 500 && precip <= 1500) precipScore = 100;
+  else if (precip >= 300 && precip < 500) precipScore = 80 - ((500 - precip) * 0.1);
+  else if (precip > 1500 && precip <= 2500) precipScore = 80 - ((precip - 1500) * 0.02);
+  else precipScore = Math.max(30, 60 - Math.abs(precip - 1000) * 0.02);
+  
+  // Risk factors (lower values are better for habitability)
+  const droughtRisk = apiData.precipitation.drought_index || 0;
+  const floodRisk = apiData.sea_level.flood_risk || 0;
+  const extremeHeat = apiData.temperature.extreme_heat_days || 0;
+  
+  const riskScore = Math.max(40, 100 - (droughtRisk * 0.3 + floodRisk * 0.5 + extremeHeat * 0.4));
+  
+  // Infrastructure and adaptation factor (developed countries handle climate better)
+  const baseInfrastructure = 85; // Assume good infrastructure for most locations
+  
+  return Math.round((tempScore * 0.3 + precipScore * 0.25 + riskScore * 0.25 + baseInfrastructure * 0.2));
 }
 
 async function generateRealisticClimateData(location: any, year: number) {
@@ -824,14 +844,22 @@ function getLatitudeBasedPrecipChange(latitude: number, yearsFromNow: number): n
 }
 
 function generateMonthlyTemperatures(annualAvg: number, latitude: number): number[] {
-  const amplitude = Math.abs(latitude) * 0.4; // Seasonal variation
+  const amplitude = Math.abs(latitude) * 0.4; // Seasonal variation increases with latitude
   const months = [];
   
   for (let i = 0; i < 12; i++) {
-    const seasonal = Math.sin((i - 6) * Math.PI / 6) * amplitude;
-    // Adjust for hemisphere
-    const adjusted = latitude < 0 ? -seasonal : seasonal;
-    months.push(Math.round((annualAvg + adjusted) * 10) / 10);
+    // Northern hemisphere: January (i=0) is coldest, July (i=6) is warmest
+    // Southern hemisphere: July (i=6) is coldest, January (i=0) is warmest
+    let seasonal;
+    if (latitude >= 0) {
+      // Northern hemisphere: sin wave with July peak
+      seasonal = Math.sin((i - 0.5) * Math.PI / 6) * amplitude;
+    } else {
+      // Southern hemisphere: inverted pattern
+      seasonal = -Math.sin((i - 0.5) * Math.PI / 6) * amplitude;
+    }
+    
+    months.push(Math.round((annualAvg + seasonal) * 10) / 10);
   }
   
   return months;

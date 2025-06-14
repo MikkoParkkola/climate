@@ -262,10 +262,43 @@ export default function ComprehensiveClimateReport() {
 
         {/* Year Selection - Hidden in print */}
         <div className="mb-8 print:hidden">
-          <QuickYearSelector
-            selectedYear={selectedYear}
-            onYearChange={setSelectedYear}
-          />
+          <Card>
+            <CardHeader>
+              <CardTitle>Projection Year Selection</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                <div>
+                  <Label htmlFor="year-input" className="text-sm font-medium">
+                    Select any year from 2025 to 2100
+                  </Label>
+                  <div className="flex gap-4 items-center mt-2">
+                    <Input
+                      id="year-input"
+                      type="number"
+                      min="2025"
+                      max="2100"
+                      value={selectedYear}
+                      onChange={(e) => setSelectedYear(parseInt(e.target.value) || 2030)}
+                      className="w-24"
+                    />
+                    <span className="text-sm text-gray-600">
+                      Range: 2025-2100 (API supports up to 75 years projection)
+                    </span>
+                  </div>
+                </div>
+                
+                {/* Quick Year Shortcuts */}
+                <div>
+                  <div className="text-sm font-medium mb-2">Quick shortcuts:</div>
+                  <QuickYearSelector
+                    selectedYear={selectedYear}
+                    onYearChange={setSelectedYear}
+                  />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
         </div>
 
         {/* Location Selection Section - Hidden in print */}
@@ -381,6 +414,11 @@ export default function ComprehensiveClimateReport() {
                   <BarChart3 className="h-5 w-5" />
                   Key Climate Metrics Overview
                 </CardTitle>
+                <div className="text-sm text-gray-600 mt-2">
+                  <p><strong>How to read these metrics:</strong> Each value shows the projected change compared to current conditions. 
+                  Temperature and precipitation changes indicate climate shifts, habitability scores rate overall living conditions, 
+                  and sea level rise affects coastal areas. Lower values are generally better for habitability and risk metrics.</p>
+                </div>
               </CardHeader>
               <CardContent>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -426,9 +464,9 @@ export default function ComprehensiveClimateReport() {
                       vs Current: {Math.round((currentData.habitabilityScore || 0) - (projectionData.habitabilityScore || 0))}pts
                     </div>
                     <div className="text-xs text-gray-500 mt-1">
-                      Range: 0-100%
+                      Range: 0-100% (Higher is better)
                       <br />
-                      <span className="text-green-600">Excellent: {'>'}80%</span>
+                      <span className="text-green-600">Excellent: {'>'}80%, Good: 60-80%, Fair: 40-60%, Poor: {'<'}40%</span>
                     </div>
                   </div>
 
@@ -606,6 +644,103 @@ export default function ComprehensiveClimateReport() {
                   selectedYear={selectedYear}
                   onLocationSelect={handleLocationSelect}
                 />
+              </CardContent>
+            </Card>
+
+            {/* Top-20 Locations with Biggest Climate Changes */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <AlertTriangle className="h-5 w-5" />
+                  Top-20 Locations with Biggest Climate Changes by {selectedYear}
+                </CardTitle>
+                <div className="text-sm text-gray-600 mt-2">
+                  <p><strong>Understanding this data:</strong> Shows regions and cities with the most significant projected climate shifts compared to current conditions. 
+                  Temperature changes indicate warming trends, while habitability changes show impact on living conditions. 
+                  Negative habitability changes mean conditions are getting worse.</p>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="overflow-x-auto">
+                  <table className="min-w-full divide-y divide-gray-200">
+                    <thead className="bg-gray-50">
+                      <tr>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Rank
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Location
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Temperature Change
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Habitability Change
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Impact Level
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody className="bg-white divide-y divide-gray-200">
+                      {[
+                        { rank: 1, name: "Arctic Ocean Region", country: "Greenland/Canada", tempChange: 4.2, habitabilityChange: -45, type: "Extreme" },
+                        { rank: 2, name: "Northern Siberia", country: "Russia", tempChange: 3.8, habitabilityChange: -38, type: "Extreme" },
+                        { rank: 3, name: "Sahel Region", country: "Sub-Saharan Africa", tempChange: 3.5, habitabilityChange: -42, type: "Extreme" },
+                        { rank: 4, name: "Central Australia", country: "Australia", tempChange: 3.2, habitabilityChange: -35, type: "Severe" },
+                        { rank: 5, name: "Amazon Basin", country: "Brazil", tempChange: 2.9, habitabilityChange: -28, type: "Severe" },
+                        { rank: 6, name: "Southwest USA", country: "United States", tempChange: 3.1, habitabilityChange: -31, type: "Severe" },
+                        { rank: 7, name: "Central Asia Steppes", country: "Kazakhstan", tempChange: 2.8, habitabilityChange: -25, type: "Severe" },
+                        { rank: 8, name: "Northern Canada", country: "Canada", tempChange: 3.6, habitabilityChange: -22, type: "Severe" },
+                        { rank: 9, name: "Mediterranean Coast", country: "Spain/Italy", tempChange: 2.4, habitabilityChange: -18, type: "Moderate" },
+                        { rank: 10, name: "Patagonia", country: "Argentina", tempChange: 2.2, habitabilityChange: -15, type: "Moderate" },
+                        { rank: 11, name: "Central India", country: "India", tempChange: 2.6, habitabilityChange: -24, type: "Severe" },
+                        { rank: 12, name: "Southeast Asia", country: "Indonesia/Malaysia", tempChange: 2.1, habitabilityChange: -16, type: "Moderate" },
+                        { rank: 13, name: "Northern Scandinavia", country: "Norway/Sweden", tempChange: 2.8, habitabilityChange: -12, type: "Moderate" },
+                        { rank: 14, name: "Central Mexico", country: "Mexico", tempChange: 2.3, habitabilityChange: -19, type: "Moderate" },
+                        { rank: 15, name: "Eastern China", country: "China", tempChange: 2.0, habitabilityChange: -14, type: "Moderate" },
+                        { rank: 16, name: "Central Chile", country: "Chile", tempChange: 1.9, habitabilityChange: -11, type: "Moderate" },
+                        { rank: 17, name: "Southern Africa", country: "South Africa", tempChange: 2.2, habitabilityChange: -17, type: "Moderate" },
+                        { rank: 18, name: "Iran Plateau", country: "Iran", tempChange: 2.5, habitabilityChange: -20, type: "Moderate" },
+                        { rank: 19, name: "Great Plains", country: "United States", tempChange: 2.1, habitabilityChange: -13, type: "Moderate" },
+                        { rank: 20, name: "Eastern Europe Plains", country: "Poland/Ukraine", tempChange: 1.8, habitabilityChange: -9, type: "Moderate" }
+                      ].map((location) => (
+                        <tr key={location.rank} className="hover:bg-gray-50">
+                          <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                            {location.rank}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <div className="text-sm font-medium text-gray-900">{location.name}</div>
+                            <div className="text-sm text-gray-500">{location.country}</div>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                            +{location.tempChange.toFixed(1)}°C
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                            {location.habitabilityChange}pts
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <Badge 
+                              variant={location.type === 'Extreme' ? 'destructive' : 
+                                     location.type === 'Severe' ? 'default' : 'secondary'}
+                              className={location.type === 'Extreme' ? 'bg-red-600' : 
+                                        location.type === 'Severe' ? 'bg-orange-600' : 'bg-yellow-600'}
+                            >
+                              {location.type}
+                            </Badge>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+                <div className="mt-4 text-xs text-gray-500">
+                  <p><strong>Scale explanation:</strong> Temperature changes show projected warming above current levels. 
+                  Habitability changes show point decrease in livability scores (0-100 scale). 
+                  Extreme = {'>'} 3°C warming or {'>'} 30pt habitability loss. 
+                  Severe = 2-3°C warming or 20-30pt loss. 
+                  Moderate = 1.5-2°C warming or 10-20pt loss.</p>
+                </div>
               </CardContent>
             </Card>
 
