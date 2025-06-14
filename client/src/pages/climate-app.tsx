@@ -323,6 +323,59 @@ export default function ClimateApp() {
             </CardHeader>
             <CardContent className="space-y-8">
               
+              {/* Satellite Map Section */}
+              <Card className="border-green-200">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-green-700">
+                    <MapPin className="w-5 h-5" />
+                    Location Overview
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <div className="aspect-video bg-gray-100 rounded-lg overflow-hidden border-2 border-gray-200">
+                        <iframe
+                          src={`https://maps.google.com/maps?q=${climateData.location?.latitude},${climateData.location?.longitude}&t=h&z=10&ie=UTF8&iwloc=&output=embed`}
+                          width="100%"
+                          height="100%"
+                          style={{ border: 0 }}
+                          allowFullScreen
+                          loading="lazy"
+                          referrerPolicy="no-referrer-when-downgrade"
+                          title="Satellite View"
+                        ></iframe>
+                      </div>
+                      <p className="text-xs text-gray-600 text-center">
+                        Satellite view of {climateData.location?.name}
+                      </p>
+                    </div>
+                    
+                    <div className="space-y-3">
+                      <div className="p-3 bg-green-50 rounded-lg">
+                        <h4 className="font-medium text-green-800 mb-2">Geographic Details</h4>
+                        <div className="space-y-1 text-sm">
+                          <p><strong>Location:</strong> {climateData.location?.name}</p>
+                          <p><strong>Coordinates:</strong> {climateData.location?.latitude?.toFixed(4)}°, {climateData.location?.longitude?.toFixed(4)}°</p>
+                          <p><strong>Climate Zone:</strong> {climateData.location?.climate_zone}</p>
+                          <p><strong>Projection Year:</strong> {climateData.year}</p>
+                        </div>
+                      </div>
+                      
+                      <div className="p-3 bg-blue-50 rounded-lg">
+                        <h4 className="font-medium text-blue-800 mb-2">Current Climate Classification</h4>
+                        <div className="text-sm text-blue-700">
+                          <p>{climateData.atmospheric_physics?.circulation_pattern}</p>
+                          <p className="mt-1 text-xs">
+                            Regional sensitivity: {climateData.atmospheric_physics?.climate_sensitivity}× global average
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+              
               {/* Location & Basic Info */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <Card className="border-blue-200">
@@ -665,14 +718,23 @@ export default function ClimateApp() {
                       {/* Temperature Trend */}
                       <div className="space-y-2">
                         <h4 className="font-medium text-red-700">Temperature Trend</h4>
+                        <div className="text-xs text-red-600 mb-2">
+                          Baseline: {climateData.time_series.temperature_baseline?.toFixed(1)}°C
+                        </div>
                         <div className="space-y-1">
                           {climateData.time_series.years?.map((year: number, index: number) => {
                             const temp = climateData.time_series.temperature_trend[index];
+                            const diff = climateData.time_series.temperature_differences[index];
                             const isTarget = year === climateData.year;
+                            const diffText = diff >= 0 ? `+${diff.toFixed(1)}` : `${diff.toFixed(1)}`;
+                            const diffColor = diff >= 0 ? 'text-red-600' : 'text-blue-600';
                             return (
                               <div key={year} className={`flex justify-between text-xs ${isTarget ? 'font-bold bg-red-50 px-2 py-1 rounded' : ''}`}>
                                 <span>{year}:</span>
-                                <span className="font-mono">{temp?.toFixed(1)}°C</span>
+                                <div className="flex gap-2">
+                                  <span className="font-mono">{temp?.toFixed(1)}°C</span>
+                                  <span className={`font-mono ${diffColor}`}>({diffText})</span>
+                                </div>
                               </div>
                             );
                           })}
@@ -682,14 +744,23 @@ export default function ClimateApp() {
                       {/* Precipitation Trend */}
                       <div className="space-y-2">
                         <h4 className="font-medium text-blue-700">Precipitation Trend</h4>
+                        <div className="text-xs text-blue-600 mb-2">
+                          Baseline: {climateData.time_series.precipitation_baseline?.toFixed(0)}mm
+                        </div>
                         <div className="space-y-1">
                           {climateData.time_series.years?.map((year: number, index: number) => {
                             const precip = climateData.time_series.precipitation_trend[index];
+                            const diff = climateData.time_series.precipitation_differences[index];
                             const isTarget = year === climateData.year;
+                            const diffText = diff >= 0 ? `+${diff.toFixed(0)}` : `${diff.toFixed(0)}`;
+                            const diffColor = diff >= 0 ? 'text-green-600' : 'text-orange-600';
                             return (
                               <div key={year} className={`flex justify-between text-xs ${isTarget ? 'font-bold bg-blue-50 px-2 py-1 rounded' : ''}`}>
                                 <span>{year}:</span>
-                                <span className="font-mono">{precip?.toFixed(0)}mm</span>
+                                <div className="flex gap-2">
+                                  <span className="font-mono">{precip?.toFixed(0)}mm</span>
+                                  <span className={`font-mono ${diffColor}`}>({diffText})</span>
+                                </div>
                               </div>
                             );
                           })}

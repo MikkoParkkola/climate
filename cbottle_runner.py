@@ -49,6 +49,12 @@ def generate_cbottle_projection(latitude, longitude, target_year, api_key):
         # Generate multi-year time series for trend analysis
         time_series = generate_climate_time_series(latitude, longitude, current_year, target_year)
         
+        # Calculate baseline (current) conditions for comparison
+        baseline_temp = get_baseline_temperature(latitude)
+        baseline_precip = get_baseline_precipitation(latitude, longitude)
+        baseline_monthly_temps = generate_monthly_temperature_series(baseline_temp, latitude)
+        baseline_monthly_precip = generate_monthly_precipitation_series(baseline_precip, latitude)
+        
         projection = {
             "location": {
                 "latitude": latitude,
@@ -59,7 +65,9 @@ def generate_cbottle_projection(latitude, longitude, target_year, api_key):
             "year": target_year,
             "temperature": {
                 "annual_mean": float(np.mean(monthly_temps)),
+                "baseline_annual_mean": float(baseline_temp),
                 "monthly": [float(t) for t in monthly_temps],
+                "baseline_monthly": [float(t) for t in baseline_monthly_temps],
                 "monthly_labels": ["Jan", "Feb", "Mar", "Apr", "May", "Jun", 
                                  "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"],
                 "anomaly": float(temp_anomaly),
@@ -69,7 +77,9 @@ def generate_cbottle_projection(latitude, longitude, target_year, api_key):
             },
             "precipitation": {
                 "annual_total": float(np.sum(monthly_precip)),
+                "baseline_annual_total": float(baseline_precip),
                 "monthly": [float(p) for p in monthly_precip],
+                "baseline_monthly": [float(p) for p in baseline_monthly_precip],
                 "monthly_labels": ["Jan", "Feb", "Mar", "Apr", "May", "Jun", 
                                  "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"],
                 "anomaly_percent": float(precip_anomaly * 100),
@@ -345,10 +355,19 @@ def get_habitability_category(score):
 def generate_climate_time_series(latitude, longitude, start_year, end_year):
     """Generate multi-year climate time series for trend analysis"""
     years = list(range(start_year, end_year + 1, 5))  # Every 5 years
+    
+    # Get baseline values for comparison
+    baseline_temp = get_baseline_temperature(latitude)
+    baseline_precip = get_baseline_precipitation(latitude, longitude)
+    
     time_series = {
         "years": years,
         "temperature_trend": [],
+        "temperature_baseline": baseline_temp,
+        "temperature_differences": [],
         "precipitation_trend": [],
+        "precipitation_baseline": baseline_precip,
+        "precipitation_differences": [],
         "habitability_trend": []
     }
     
@@ -357,17 +376,20 @@ def generate_climate_time_series(latitude, longitude, start_year, end_year):
         temp_anomaly = calculate_temperature_anomaly(latitude, longitude, years_ahead)
         precip_anomaly = calculate_precipitation_anomaly(latitude, longitude, years_ahead)
         
-        base_temp = get_baseline_temperature(latitude)
-        base_precip = get_baseline_precipitation(latitude, longitude)
+        annual_temp = baseline_temp + temp_anomaly
+        annual_precip = baseline_precip * (1 + precip_anomaly)
         
-        annual_temp = base_temp + temp_anomaly
-        annual_precip = base_precip * (1 + precip_anomaly)
+        # Calculate differences from baseline
+        temp_diff = annual_temp - baseline_temp
+        precip_diff = annual_precip - baseline_precip
         
         # Simple habitability estimate for trend
         habitability = max(0, min(100, 70 - abs(annual_temp - 20) * 2 - max(0, 800 - annual_precip) / 20))
         
         time_series["temperature_trend"].append(float(annual_temp))
+        time_series["temperature_differences"].append(float(temp_diff))
         time_series["precipitation_trend"].append(float(annual_precip))
+        time_series["precipitation_differences"].append(float(precip_diff))
         time_series["habitability_trend"].append(float(habitability))
     
     return time_series
