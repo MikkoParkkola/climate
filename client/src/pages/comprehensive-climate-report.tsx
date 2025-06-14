@@ -30,19 +30,45 @@ export default function ComprehensiveClimateReport() {
   const { toast } = useToast();
 
   // Query for climate projection data
-  const { data: projectionData, isLoading: isProjectionLoading } = useQuery<ClimateProjection>({
+  const { data: projectionData, isLoading: isProjectionLoading, error: projectionError } = useQuery<ClimateProjection>({
     queryKey: ['/api/projections', selectedLocation?.id, selectedYear],
-    queryFn: () => fetch(`/api/projections?locationId=${selectedLocation?.id}&year=${selectedYear}`).then(res => res.json()),
+    queryFn: async () => {
+      const response = await fetch(`/api/projections?locationId=${selectedLocation?.id}&year=${selectedYear}`);
+      if (!response.ok) {
+        throw new Error(`Failed to fetch projection data: ${response.statusText}`);
+      }
+      const data = await response.json();
+      console.log("Projection data received:", data);
+      return data;
+    },
     enabled: !!selectedLocation,
     retry: 2,
   });
 
   // Query for current climate data (2024)
-  const { data: currentData } = useQuery<ClimateProjection>({
+  const { data: currentData, error: currentError } = useQuery<ClimateProjection>({
     queryKey: ['/api/projections', selectedLocation?.id, 2024],
-    queryFn: () => fetch(`/api/projections?locationId=${selectedLocation?.id}&year=2024`).then(res => res.json()),
+    queryFn: async () => {
+      const response = await fetch(`/api/projections?locationId=${selectedLocation?.id}&year=2024`);
+      if (!response.ok) {
+        throw new Error(`Failed to fetch current data: ${response.statusText}`);
+      }
+      const data = await response.json();
+      console.log("Current data received:", data);
+      return data;
+    },
     enabled: !!selectedLocation,
     retry: 2,
+  });
+
+  console.log("Debug state:", {
+    selectedLocation: selectedLocation?.id,
+    selectedYear,
+    hasProjectionData: !!projectionData,
+    hasCurrentData: !!currentData,
+    projectionError: projectionError?.message,
+    currentError: currentError?.message,
+    isLoading: isProjectionLoading
   });
 
   const createLocationMutation = useMutation({
