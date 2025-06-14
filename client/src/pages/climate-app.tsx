@@ -613,20 +613,20 @@ export default function ClimateApp() {
                   {/* Monthly Precipitation Chart */}
                   <div className="space-y-2">
                     <h4 className="font-medium">Monthly Precipitation Distribution</h4>
-                    <div className="grid grid-cols-12 gap-1 text-xs">
+                    <div className="grid grid-cols-12 gap-1 text-xs h-24">
                       {climateData.precipitation?.monthly?.map((precip: number, index: number) => {
                         const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
                         const maxPrecip = Math.max(...climateData.precipitation.monthly);
-                        const normalizedHeight = Math.max(10, (precip / maxPrecip) * 80);
+                        const normalizedHeight = Math.max(8, (precip / maxPrecip) * 80);
                         return (
-                          <div key={index} className="text-center">
+                          <div key={index} className="text-center flex flex-col justify-end h-full">
                             <div 
-                              className="bg-gradient-to-t from-blue-600 to-blue-300 rounded-t mb-1"
-                              style={{ height: `${normalizedHeight}px`, width: '100%' }}
+                              className="bg-gradient-to-t from-blue-600 to-blue-300 rounded-t w-full mb-1"
+                              style={{ height: `${normalizedHeight}px` }}
                               title={`${months[index]}: ${precip.toFixed(1)}mm`}
                             ></div>
-                            <div className="text-xs">{months[index]}</div>
-                            <div className="text-xs font-mono">{precip.toFixed(0)}</div>
+                            <div className="text-xs text-gray-600">{months[index]}</div>
+                            <div className="text-xs font-mono text-blue-700">{precip.toFixed(0)}mm</div>
                           </div>
                         );
                       })}
