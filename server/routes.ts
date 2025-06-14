@@ -443,6 +443,18 @@ async function callCBottleAPI(location: any, year: number, apiKey: string) {
 
     const data = await response.json();
     console.log("CBottle response:", data);
+    
+    // Parse the response from the chat completion format
+    if (data.choices && data.choices[0] && data.choices[0].message) {
+      try {
+        const climateData = JSON.parse(data.choices[0].message.content);
+        return transformCBottleResponse(climateData, location, year);
+      } catch (parseError) {
+        console.log("Failed to parse CBottle JSON response:", parseError);
+        return null;
+      }
+    }
+    
     return transformCBottleResponse(data, location, year);
   } catch (error) {
     console.log("CBottle API unavailable:", error);
