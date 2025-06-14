@@ -8,12 +8,14 @@ interface LivabilityIndexBreakdownProps {
   currentData?: ClimateProjection;
   projectedData?: ClimateProjection;
   selectedYear: number;
+  globalPercentile?: number;
 }
 
 export default function LivabilityIndexBreakdown({ 
   currentData, 
   projectedData, 
-  selectedYear 
+  selectedYear,
+  globalPercentile 
 }: LivabilityIndexBreakdownProps) {
   const breakdown = projectedData?.habitabilityBreakdown;
   
@@ -124,9 +126,20 @@ export default function LivabilityIndexBreakdown({
               <p className={`text-2xl font-bold ${getScoreColor(breakdown.final_score)}`}>
                 {breakdown.final_score.toFixed(1)}
               </p>
-              <Badge variant="secondary">
-                {getScoreLevel(breakdown.final_score)}
-              </Badge>
+              <div className="flex flex-col gap-1">
+                <Badge variant="secondary">
+                  {getScoreLevel(breakdown.final_score)}
+                </Badge>
+                {globalPercentile !== undefined && (
+                  <Badge variant="outline" className="text-xs">
+                    {globalPercentile >= 90 ? 'Top 10%' :
+                     globalPercentile >= 75 ? 'Top 25%' :
+                     globalPercentile >= 50 ? 'Above Average' :
+                     globalPercentile >= 25 ? 'Below Average' :
+                     'Bottom 25%'} globally
+                  </Badge>
+                )}
+              </div>
             </div>
           </div>
           
@@ -225,47 +238,111 @@ export default function LivabilityIndexBreakdown({
         </CardContent>
       </Card>
 
-      {/* Stacked Bar Visualization */}
+      {/* Waterfall Chart Visualization */}
       <Card className="border-slate-200">
         <CardHeader>
           <CardTitle className="text-base font-semibold text-slate-900">
-            Component Contribution
+            Habitability Waterfall Analysis
           </CardTitle>
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            <div className="relative h-8 bg-slate-200 rounded-lg overflow-hidden">
-              {/* Positive components stacked from left */}
-              <div className="absolute top-0 left-0 h-full flex">
+            {/* Waterfall Chart */}
+            <div className="relative h-64 bg-gradient-to-r from-slate-50 to-slate-100 rounded-lg p-4">
+              <div className="flex items-end justify-between h-full space-x-2">
+                {/* Starting point */}
+                <div className="flex flex-col items-center">
+                  <div 
+                    className="bg-gray-400 rounded-t w-12 flex items-center justify-center text-white text-xs font-bold"
+                    style={{ height: '40px' }}
+                  >
+                    0
+                  </div>
+                  <div className="text-xs text-center mt-2 text-gray-600 font-medium">Start</div>
+                </div>
+
+                {/* Positive components */}
                 {components.map((component, index) => {
-                  const width = (component.value / breakdown.base_score) * 100;
+                  const height = Math.max(20, (component.value / 40) * 160);
+                  const cumulativeHeight = components.slice(0, index + 1).reduce((sum, c) => sum + c.value, 0);
+                  
                   return (
-                    <div
-                      key={index}
-                      className={`${component.color} h-full flex items-center justify-center text-xs text-white font-medium`}
-                      style={{ width: `${width}%` }}
-                      title={`${component.name}: +${component.value.toFixed(1)}`}
-                    >
-                      {width > 15 ? `+${component.value.toFixed(0)}` : ''}
+                    <div key={index} className="flex flex-col items-center">
+                      <div 
+                        className={`${component.color} rounded-t w-12 flex items-center justify-center text-white text-xs font-bold`}
+                        style={{ height: `${height}px` }}
+                      >
+                        +{component.value.toFixed(0)}
+                      </div>
+                      <div className="text-xs text-center mt-2 text-gray-600 font-medium max-w-16">
+                        {component.name.split(' ')[0]}
+                      </div>
                     </div>
                   );
                 })}
+
+                {/* Base score marker */}
+                <div className="flex flex-col items-center">
+                  <div 
+                    className="bg-green-600 rounded w-12 flex items-center justify-center text-white text-xs font-bold"
+                    style={{ height: `${Math.max(30, (breakdown.base_score / 100) * 160)}px` }}
+                  >
+                    {breakdown.base_score.toFixed(0)}
+                  </div>
+                  <div className="text-xs text-center mt-2 text-gray-600 font-medium">Base Score</div>
+                </div>
+
+                {/* Penalties */}
+                {penalties.map((penalty, index) => {
+                  const height = Math.max(15, (penalty.value / 20) * 80);
+                  
+                  return (
+                    <div key={index} className="flex flex-col items-center">
+                      <div 
+                        className={`${penalty.color} rounded-b w-12 flex items-center justify-center text-white text-xs font-bold`}
+                        style={{ height: `${height}px`, transform: 'scaleY(-1)' }}
+                      >
+                        <span style={{ transform: 'scaleY(-1)' }}>-{penalty.value.toFixed(0)}</span>
+                      </div>
+                      <div className="text-xs text-center mt-2 text-gray-600 font-medium max-w-16">
+                        {penalty.name.split(' ')[0]}
+                      </div>
+                    </div>
+                  );
+                })}
+
+                {/* Final score */}
+                <div className="flex flex-col items-center">
+                  <div 
+                    className={`rounded w-12 flex items-center justify-center text-white text-xs font-bold ${
+                      breakdown.final_score >= 80 ? 'bg-green-600' :
+                      breakdown.final_score >= 65 ? 'bg-blue-600' :
+                      breakdown.final_score >= 50 ? 'bg-yellow-600' :
+                      breakdown.final_score >= 30 ? 'bg-orange-600' : 'bg-red-600'
+                    }`}
+                    style={{ height: `${Math.max(30, (breakdown.final_score / 100) * 160)}px` }}
+                  >
+                    {breakdown.final_score.toFixed(0)}
+                  </div>
+                  <div className="text-xs text-center mt-2 text-gray-600 font-medium">Final Score</div>
+                </div>
               </div>
             </div>
             
-            <div className="flex flex-wrap gap-2 text-xs">
-              {components.map((component, index) => (
-                <div key={index} className="flex items-center space-x-1">
-                  <div className={`w-3 h-3 ${component.color} rounded`}></div>
-                  <span className="text-slate-600">{component.name}</span>
-                </div>
-              ))}
+            {/* Legend */}
+            <div className="flex flex-wrap gap-3 text-xs justify-center">
+              <div className="flex items-center space-x-1">
+                <div className="w-3 h-3 bg-green-600 rounded"></div>
+                <span className="text-slate-600">Positive Factors</span>
+              </div>
+              <div className="flex items-center space-x-1">
+                <div className="w-3 h-3 bg-red-500 rounded"></div>
+                <span className="text-slate-600">Risk Penalties</span>
+              </div>
             </div>
             
-            <div className="text-xs text-slate-500 mt-2">
-              Base Score: {breakdown.base_score.toFixed(1)} → 
-              Final Score: {breakdown.final_score.toFixed(1)} 
-              (after penalties: {(breakdown.base_score - breakdown.final_score).toFixed(1)})
+            <div className="text-xs text-slate-500 mt-2 text-center">
+              Waterfall shows how positive factors build up the base score, then penalties reduce it to the final habitability score
             </div>
           </div>
         </CardContent>
