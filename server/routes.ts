@@ -597,11 +597,48 @@ function transformCBottleResponse(data: any, location: any, year: number) {
   const currentYear = 2024;
   const yearsFromNow = year - currentYear;
   
-  // Extract climate variables from CBottle response
+  // Use the full CBottle response structure directly for comparison mode
+  if (data.temperature && data.precipitation && data.habitability) {
+    return {
+      location: {
+        name: location.name || `${location.latitude?.toFixed(2)}, ${location.longitude?.toFixed(2)}`,
+        lat: location.latitude,
+        lng: location.longitude,
+        country: location.country || 'Unknown'
+      },
+      temperature: {
+        annual_mean: data.temperature.annual_mean,
+        change_from_baseline: data.temperature.anomaly,
+        min: data.temperature.min,
+        max: data.temperature.max,
+        monthly: data.temperature.monthly
+      },
+      precipitation: {
+        annual_total: data.precipitation.annual_total,
+        change_from_baseline: data.precipitation.anomaly_percent,
+        monthly: data.precipitation.monthly
+      },
+      habitability: {
+        score: data.habitability.score,
+        breakdown: data.habitability.breakdown
+      },
+      extremes: {
+        heat_stress_days: data.extremes.heat_stress_days,
+        drought_risk: data.extremes.drought_risk,
+        flood_risk: data.extremes.flood_risk
+      },
+      atmospheric_physics: {
+        climate_zone: data.location.climate_zone,
+        circulation_pattern: data.atmospheric_physics?.circulation_pattern || 'Unknown',
+        climate_sensitivity: data.atmospheric_physics?.climate_sensitivity || 1.0
+      }
+    };
+  }
+  
+  // Fallback for older API format
   const temp2m = data.outputs?.["2m_temperature"] || data["2m_temperature"] || data.temperature;
   const precipitation = data.outputs?.total_precipitation || data.total_precipitation || data.precipitation;
   const humidity = data.outputs?.relative_humidity || data.relative_humidity || data.humidity;
-  const habitability = data.habitability || {};
   
   return {
     temperature: {
