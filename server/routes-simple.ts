@@ -18,7 +18,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
     try {
       // Use OpenStreetMap Nominatim API for location search
-      const response = await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=json&limit=10&addressdetails=1`);
+      const response = await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=json&limit=10&addressdetails=1`, {
+        headers: {
+          'User-Agent': 'ClimateProjectionApp/1.0'
+        }
+      });
+      
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+      
       const data = await response.json();
       
       const locations = data.map((item: any) => ({
