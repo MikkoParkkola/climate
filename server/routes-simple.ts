@@ -77,31 +77,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
       
-      // Call CBottle through NVIDIA NIM API (Earth2Studio implementation)
-      console.log('Making request to NVIDIA CBottle Earth2Studio API...');
+      // Attempt to call CBottle via multiple NVIDIA endpoints
+      console.log('Attempting CBottle API access through available NVIDIA endpoints...');
       
-      const response = await fetch("https://api.nvcf.nvidia.com/v2/nvcf/pexec/functions/earth2studio-cbottle", {
+      const cbottleRequest = {
+        model: "earth2studio.models.dx.CBottleSR",
+        inputs: {
+          latitude: coordinates.lat,
+          longitude: coordinates.lng,
+          time: `${year}-01-01T00:00:00`,
+          variables: ["temperature_2m", "total_precipitation", "mean_sea_level_pressure"],
+          ensemble_size: 1,
+          lead_time_hours: (year - 2024) * 365 * 24
+        },
+        parameters: {
+          spatial_resolution: 0.25,
+          output_format: "json"
+        }
+      };
+      
+      console.log('CBottle request payload:', JSON.stringify(cbottleRequest, null, 2));
+      
+      // Try NVIDIA Build platform endpoint
+      const response = await fetch("https://integrate.api.nvidia.com/v1/earth2studio/cbottle", {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${apiKey}`,
           'Content-Type': 'application/json',
           'Accept': 'application/json'
         },
-        body: JSON.stringify({
-          // Earth2Studio CBottle format from documentation
-          model: "CBottleSR",
-          data: {
-            coordinates: [coordinates.lat, coordinates.lng],
-            datetime: `${year}-01-01T00:00:00Z`,
-            variables: ["t2m", "tp", "msl", "u10", "v10"],
-            lead_time_hours: (year - 2024) * 365 * 24,
-            ensemble_members: 1
-          },
-          config: {
-            spatial_resolution: "0.25deg",
-            output_format: "netcdf"
-          }
-        })
+        body: JSON.stringify(cbottleRequest)
       });
       
       console.log('NVIDIA API response status:', response.status);
