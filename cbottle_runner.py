@@ -399,11 +399,11 @@ def calculate_flood_risk(monthly_precip, latitude):
     else:
         extreme_threshold = 250  # Lower threshold for other regions
     
-    extreme_factor = min(0.8, max_monthly / extreme_threshold) * infrastructure_factor
+    extreme_factor = min(0.8, float(max_monthly) / extreme_threshold) * infrastructure_factor
     
     # Risk from seasonal concentration
     precip_std = np.std(monthly_precip)
-    seasonal_factor = min(0.6, precip_std / 100) * infrastructure_factor
+    seasonal_factor = min(0.6, float(precip_std) / 100) * infrastructure_factor
     
     return min(1.0, (extreme_factor + seasonal_factor) / 2.0)
 
