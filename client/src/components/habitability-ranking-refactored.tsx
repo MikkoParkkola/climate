@@ -46,7 +46,8 @@ const RankingTable = ({
   scoreKey, 
   scoreLabel, 
   onLocationClick, 
-  icon: Icon 
+  icon: Icon,
+  citation 
 }: {
   title: string;
   locations: GlobalRankedLocation[];
@@ -54,6 +55,7 @@ const RankingTable = ({
   scoreLabel: string;
   onLocationClick: (location: GlobalRankedLocation) => void;
   icon: React.ComponentType<{ className?: string }>;
+  citation?: string;
 }) => {
   const getScoreColor = (score: number) => {
     if (score >= 80) return "text-green-600 dark:text-green-400";
@@ -67,7 +69,7 @@ const RankingTable = ({
       <CardHeader>
         <CardTitle className="flex items-center gap-2 text-lg">
           <Icon className="w-5 h-5" />
-          {title}
+          {title}{citation && <sup>{citation}</sup>}
         </CardTitle>
       </CardHeader>
       <CardContent>
@@ -186,6 +188,7 @@ export default function HabitabilityRanking({ selectedYear, onLocationSelect }: 
           scoreLabel="Habitability Score"
           onLocationClick={handleLocationClick}
           icon={Trophy}
+          citation="[20]"
         />
         
         <RankingTable
@@ -195,6 +198,7 @@ export default function HabitabilityRanking({ selectedYear, onLocationSelect }: 
           scoreLabel="Habitability Score"
           onLocationClick={handleLocationClick}
           icon={TrendingDown}
+          citation="[21]"
         />
         
         <RankingTable
@@ -204,6 +208,7 @@ export default function HabitabilityRanking({ selectedYear, onLocationSelect }: 
           scoreLabel="Change from Baseline"
           onLocationClick={handleLocationClick}
           icon={TrendingDown}
+          citation="[22]"
         />
       </div>
 
@@ -216,6 +221,7 @@ export default function HabitabilityRanking({ selectedYear, onLocationSelect }: 
           scoreLabel="Temperature Score"
           onLocationClick={handleLocationClick}
           icon={Thermometer}
+          citation="[23]"
         />
         
         <RankingTable
@@ -225,6 +231,7 @@ export default function HabitabilityRanking({ selectedYear, onLocationSelect }: 
           scoreLabel="Humidity Score"
           onLocationClick={handleLocationClick}
           icon={Droplets}
+          citation="[24]"
         />
       </div>
 

@@ -157,7 +157,7 @@ export default function GlobalRankingDisplay({
     <div className="mt-3 flex items-center justify-center">
       <div className="bg-blue-50 border border-blue-200 rounded-lg px-4 py-2">
         <p className="text-sm text-blue-700 font-medium">
-          Global Ranking for {targetYear}: <span className={`font-bold ${rankingColor}`}>
+          Global Ranking for {targetYear}<sup>[19]</sup>: <span className={`font-bold ${rankingColor}`}>
             {rankingText}
           </span>
         </p>
