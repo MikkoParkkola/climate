@@ -784,86 +784,105 @@ export default function ClimateApp() {
                       Climate Time Series & Trends
                     </CardTitle>
                   </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-                      
-                      {/* Temperature Trend */}
-                      <div className="space-y-2">
-                        <h4 className="font-medium text-red-700">Temperature Trend</h4>
-                        <div className="text-xs text-red-600 mb-2">
-                          Baseline: {climateData.time_series.temperature_baseline?.toFixed(1)}°C
-                        </div>
-                        <div className="space-y-1">
-                          {climateData.time_series.years?.map((year: number, index: number) => {
-                            const temp = climateData.time_series.temperature_trend?.[index];
-                            const diff = climateData.time_series.temperature_differences?.[index];
-                            const isTarget = year === climateData.year;
-                            if (temp === undefined || diff === undefined) return null;
-                            const diffText = diff >= 0 ? `+${diff.toFixed(1)}` : `${diff.toFixed(1)}`;
-                            const diffColor = diff >= 0 ? 'text-red-600' : 'text-blue-600';
-                            return (
-                              <div key={year} className={`flex justify-between text-xs ${isTarget ? 'font-bold bg-red-50 px-2 py-1 rounded' : ''}`}>
-                                <span>{year}:</span>
-                                <div className="flex gap-2">
-                                  <span className="font-mono">{temp?.toFixed(1)}°C</span>
-                                  <span className={`font-mono ${diffColor}`}>({diffText})</span>
-                                </div>
-                              </div>
-                            );
-                          })}
-                        </div>
+                  <CardContent className="space-y-6">
+                    {/* Monthly Temperature Table */}
+                    <div className="space-y-3">
+                      <h4 className="font-medium text-red-700">Monthly Temperature Projections (°C)</h4>
+                      <div className="text-xs text-red-600 mb-2">
+                        Baseline: {climateData.time_series.temperature_baseline?.toFixed(1)}°C
                       </div>
-
-                      {/* Precipitation Trend */}
-                      <div className="space-y-2">
-                        <h4 className="font-medium text-blue-700">Precipitation Trend</h4>
-                        <div className="text-xs text-blue-600 mb-2">
-                          Baseline: {climateData.time_series.precipitation_baseline?.toFixed(0)}mm
-                        </div>
-                        <div className="space-y-1">
-                          {climateData.time_series.years?.map((year: number, index: number) => {
-                            const precip = climateData.time_series.precipitation_trend?.[index];
-                            const diff = climateData.time_series.precipitation_differences?.[index];
-                            const isTarget = year === climateData.year;
-                            if (precip === undefined || diff === undefined) return null;
-                            const diffText = diff >= 0 ? `+${diff.toFixed(0)}` : `${diff.toFixed(0)}`;
-                            const diffColor = diff >= 0 ? 'text-green-600' : 'text-orange-600';
-                            return (
-                              <div key={year} className={`flex justify-between text-xs ${isTarget ? 'font-bold bg-blue-50 px-2 py-1 rounded' : ''}`}>
-                                <span>{year}:</span>
-                                <div className="flex gap-2">
-                                  <span className="font-mono">{precip?.toFixed(0)}mm</span>
-                                  <span className={`font-mono ${diffColor}`}>({diffText})</span>
-                                </div>
-                              </div>
-                            );
-                          })}
-                        </div>
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-xs border-collapse border border-red-200">
+                          <thead>
+                            <tr className="bg-red-50">
+                              <th className="border border-red-200 px-2 py-1 text-left font-medium">Year</th>
+                              {['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'].map((month) => (
+                                <th key={month} className="border border-red-200 px-1 py-1 text-center font-medium">{month}</th>
+                              ))}
+                              <th className="border border-red-200 px-2 py-1 text-center font-medium">Annual</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {climateData.time_series.years?.map((year: number, index: number) => {
+                              const monthlyTemps = climateData.time_series.monthly_temperature_series?.[index] || [];
+                              const annualTemp = climateData.time_series.temperature_trend?.[index];
+                              const isTarget = year === climateData.year;
+                              
+                              return (
+                                <tr key={year} className={`${isTarget ? 'bg-red-50 font-semibold' : 'hover:bg-gray-50'}`}>
+                                  <td className="border border-red-200 px-2 py-1 font-medium">{year}</td>
+                                  {monthlyTemps.map((temp: number, monthIndex: number) => (
+                                    <td key={monthIndex} className={`border border-red-200 px-1 py-1 text-center font-mono ${temp >= 0 ? 'text-red-600' : 'text-blue-600'}`}>
+                                      {temp?.toFixed(1)}
+                                    </td>
+                                  ))}
+                                  <td className="border border-red-200 px-2 py-1 text-center font-mono font-semibold">
+                                    {annualTemp?.toFixed(1)}
+                                  </td>
+                                </tr>
+                              );
+                            })}
+                          </tbody>
+                        </table>
                       </div>
+                    </div>
 
-                      {/* Habitability Trend */}
-                      <div className="space-y-2">
-                        <h4 className="font-medium text-green-700">Habitability Trend</h4>
-                        <div className="text-xs text-green-600 mb-2">
-                          Scale: 25-100 (adjusted for northern climates)
-                        </div>
-                        <div className="space-y-1">
-                          {climateData.time_series.years?.map((year: number, index: number) => {
-                            const habit = climateData.time_series.habitability_trend[index];
-                            const isTarget = year === climateData.year;
-                            const currentHabit = climateData.habitability?.score;
-                            const isCurrentYear = currentHabit && year === climateData.year;
-                            return (
-                              <div key={year} className={`flex justify-between text-xs ${isTarget ? 'font-bold bg-green-50 px-2 py-1 rounded' : ''}`}>
-                                <span>{year}:</span>
-                                <div className="flex gap-2">
-                                  <span className="font-mono">{habit?.toFixed(0)}/100</span>
-                                  {isCurrentYear && <span className="text-green-600">(Current: {currentHabit.toFixed(0)})</span>}
-                                </div>
-                              </div>
-                            );
-                          })}
-                        </div>
+                    {/* Monthly Precipitation Table */}
+                    <div className="space-y-3">
+                      <h4 className="font-medium text-blue-700">Monthly Precipitation Projections (mm)</h4>
+                      <div className="text-xs text-blue-600 mb-2">
+                        Baseline: {climateData.time_series.precipitation_baseline?.toFixed(0)}mm
+                      </div>
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-xs border-collapse border border-blue-200">
+                          <thead>
+                            <tr className="bg-blue-50">
+                              <th className="border border-blue-200 px-2 py-1 text-left font-medium">Year</th>
+                              {['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'].map((month) => (
+                                <th key={month} className="border border-blue-200 px-1 py-1 text-center font-medium">{month}</th>
+                              ))}
+                              <th className="border border-blue-200 px-2 py-1 text-center font-medium">Annual</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {climateData.time_series.years?.map((year: number, index: number) => {
+                              const monthlyPrecip = climateData.time_series.monthly_precipitation_series?.[index] || [];
+                              const annualPrecip = climateData.time_series.precipitation_trend?.[index];
+                              const isTarget = year === climateData.year;
+                              
+                              return (
+                                <tr key={year} className={`${isTarget ? 'bg-blue-50 font-semibold' : 'hover:bg-gray-50'}`}>
+                                  <td className="border border-blue-200 px-2 py-1 font-medium">{year}</td>
+                                  {monthlyPrecip.map((precip: number, monthIndex: number) => (
+                                    <td key={monthIndex} className="border border-blue-200 px-1 py-1 text-center font-mono text-blue-600">
+                                      {precip?.toFixed(0)}
+                                    </td>
+                                  ))}
+                                  <td className="border border-blue-200 px-2 py-1 text-center font-mono font-semibold">
+                                    {annualPrecip?.toFixed(0)}
+                                  </td>
+                                </tr>
+                              );
+                            })}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+
+                    {/* Habitability Trend - Compact */}
+                    <div className="space-y-2">
+                      <h4 className="font-medium text-green-700">Habitability Trend</h4>
+                      <div className="flex flex-wrap gap-2 text-xs">
+                        {climateData.time_series.years?.map((year: number, index: number) => {
+                          const habit = climateData.time_series.habitability_trend[index];
+                          const isTarget = year === climateData.year;
+                          return (
+                            <div key={year} className={`px-2 py-1 rounded border ${isTarget ? 'bg-green-100 border-green-300 font-bold' : 'bg-gray-50 border-gray-200'}`}>
+                              <span className="text-gray-600">{year}:</span>
+                              <span className="font-mono text-green-700 ml-1">{habit?.toFixed(0)}/100</span>
+                            </div>
+                          );
+                        })}
                       </div>
                     </div>
 

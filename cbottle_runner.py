@@ -473,7 +473,9 @@ def generate_climate_time_series(latitude, longitude, start_year, end_year):
         "precipitation_trend": [],
         "precipitation_baseline": baseline_precip,
         "precipitation_differences": [],
-        "habitability_trend": []
+        "habitability_trend": [],
+        "monthly_temperature_series": [],
+        "monthly_precipitation_series": []
     }
     
     for year in years:
@@ -483,6 +485,10 @@ def generate_climate_time_series(latitude, longitude, start_year, end_year):
         
         annual_temp = baseline_temp + temp_anomaly
         annual_precip = baseline_precip * (1 + precip_anomaly)
+        
+        # Generate monthly data for this year
+        monthly_temps = generate_monthly_temperature_series(annual_temp, latitude)
+        monthly_precip = generate_monthly_precipitation_series(annual_precip, latitude)
         
         # Calculate differences from baseline
         temp_diff = annual_temp - baseline_temp
@@ -499,6 +505,8 @@ def generate_climate_time_series(latitude, longitude, start_year, end_year):
         time_series["precipitation_trend"].append(float(annual_precip))
         time_series["precipitation_differences"].append(float(precip_diff))
         time_series["habitability_trend"].append(float(habitability))
+        time_series["monthly_temperature_series"].append([float(t) for t in monthly_temps])
+        time_series["monthly_precipitation_series"].append([float(p) for p in monthly_precip])
     
     return time_series
 
