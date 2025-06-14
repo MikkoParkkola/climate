@@ -9,7 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 export default function ClimateApp() {
   const [location, setLocation] = useState("");
   const [year, setYear] = useState(2030);
-  const [apiKey, setApiKey] = useState("");
+  const [apiKey, setApiKey] = useState(import.meta.env.VITE_NVIDIA_API_KEY || "");
   const [isLoading, setIsLoading] = useState(false);
   const [logs, setLogs] = useState<string[]>([]);
 
@@ -90,6 +90,11 @@ export default function ClimateApp() {
                 value={apiKey}
                 onChange={(e) => setApiKey(e.target.value)}
               />
+              {apiKey && (
+                <p className="text-xs text-gray-500">
+                  API key loaded from environment (development only)
+                </p>
+              )}
             </div>
 
             {/* Location Input */}
