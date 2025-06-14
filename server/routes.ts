@@ -47,6 +47,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Climate projection routes
+  app.get("/api/projections", async (req, res) => {
+    try {
+      const locationId = parseInt(req.query.locationId as string);
+      const year = parseInt(req.query.year as string);
+      
+      if (isNaN(locationId) || isNaN(year)) {
+        return res.status(400).json({ message: "Invalid location ID or year" });
+      }
+      
+      let projection = await storage.getClimateProjection(locationId, year);
+      
+      if (!projection) {
+        // Fetch from NVIDIA Earth-2 API
+        projection = await fetchClimateProjectionFromAPI(locationId, year);
+        if (projection) {
+          await storage.createClimateProjection(projection);
+        }
+      }
+      
+      if (!projection) {
+        return res.status(404).json({ message: "Climate projection not found" });
+      }
+      
+      res.json(projection);
+    } catch (error) {
+      console.error("Error fetching climate projection:", error);
+      res.status(500).json({ message: "Failed to fetch climate projection" });
+    }
+  });
+
   app.get("/api/projections/:locationId/:year", async (req, res) => {
     try {
       const locationId = parseInt(req.params.locationId);
