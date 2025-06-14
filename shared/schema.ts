@@ -58,6 +58,7 @@ export const climateProjections = pgTable("climate_projections", {
   monthlyPrecipitation: text("monthly_precipitation"), // JSON array
   // Enhanced habitability and environmental data
   habitabilityScore: integer("habitability_score"), // 0-100 scale
+  habitabilityBreakdown: text("habitability_breakdown"), // JSON object
   elevationChange: real("elevation_change"), // meters
   coastalFloodingRisk: integer("coastal_flooding_risk"), // 0-100 scale
   extremeWeatherEvents: integer("extreme_weather_events"), // frequency per year

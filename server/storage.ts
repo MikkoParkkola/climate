@@ -113,7 +113,18 @@ export class DatabaseStorage implements IStorage {
         eq(climateProjections.locationId, locationId),
         eq(climateProjections.projectionYear, year)
       ));
-    return projection || undefined;
+    
+    if (projection) {
+      // Parse JSON fields
+      return {
+        ...projection,
+        habitabilityBreakdown: projection.habitabilityBreakdown ? JSON.parse(projection.habitabilityBreakdown) : undefined,
+        monthlyTemperatures: projection.monthlyTemperatures ? JSON.parse(projection.monthlyTemperatures) : undefined,
+        monthlyPrecipitation: projection.monthlyPrecipitation ? JSON.parse(projection.monthlyPrecipitation) : undefined,
+      };
+    }
+    
+    return undefined;
   }
 
   async createClimateProjection(insertProjection: InsertClimateProjection): Promise<ClimateProjection> {

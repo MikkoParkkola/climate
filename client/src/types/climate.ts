@@ -27,6 +27,16 @@ export interface ClimateProjection {
   monthlyPrecipitation?: string;
   // Enhanced habitability and environmental data
   habitabilityScore?: number;
+  habitabilityBreakdown?: {
+    temperature_comfort: number;
+    precipitation_adequacy: number;
+    infrastructure_adaptation: number;
+    heat_stress_penalty: number;
+    drought_penalty: number;
+    flood_penalty: number;
+    base_score: number;
+    final_score: number;
+  };
   elevationChange?: number;
   coastalFloodingRisk?: number;
   extremeWeatherEvents?: number;
