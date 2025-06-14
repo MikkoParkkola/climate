@@ -869,17 +869,40 @@ export default function ClimateApp() {
                       </div>
                     </div>
 
-                    {/* Habitability Trend - Compact */}
-                    <div className="space-y-2">
+                    {/* Habitability Trend - Bar Chart */}
+                    <div className="space-y-3">
                       <h4 className="font-medium text-green-700">Habitability Trend</h4>
-                      <div className="flex flex-wrap gap-2 text-xs">
+                      <div className="space-y-2">
                         {climateData.time_series.years?.map((year: number, index: number) => {
                           const habit = climateData.time_series.habitability_trend[index];
                           const isTarget = year === climateData.year;
+                          const barWidth = (habit / 100) * 100; // Convert to percentage width
+                          
                           return (
-                            <div key={year} className={`px-2 py-1 rounded border ${isTarget ? 'bg-green-100 border-green-300 font-bold' : 'bg-gray-50 border-gray-200'}`}>
-                              <span className="text-gray-600">{year}:</span>
-                              <span className="font-mono text-green-700 ml-1">{habit?.toFixed(0)}/100</span>
+                            <div key={year} className={`flex items-center gap-3 p-2 rounded ${isTarget ? 'bg-green-50 border border-green-200' : 'bg-gray-50'}`}>
+                              <div className="w-12 text-xs font-medium text-gray-700">{year}</div>
+                              <div className="flex-1 relative h-6 bg-gray-200 rounded overflow-hidden">
+                                <div 
+                                  className={`h-full rounded transition-all duration-300 ${
+                                    habit >= 80 ? 'bg-green-500' :
+                                    habit >= 60 ? 'bg-blue-500' :
+                                    habit >= 40 ? 'bg-yellow-500' :
+                                    habit >= 20 ? 'bg-orange-500' : 'bg-red-500'
+                                  }`}
+                                  style={{ width: `${barWidth}%` }}
+                                ></div>
+                                <div className="absolute inset-0 flex items-center justify-center">
+                                  <span className={`text-xs font-bold ${barWidth > 50 ? 'text-white' : 'text-gray-800'}`}>
+                                    {habit?.toFixed(0)}/100
+                                  </span>
+                                </div>
+                              </div>
+                              <div className="w-16 text-xs text-gray-600">
+                                {habit >= 80 ? 'Excellent' :
+                                 habit >= 60 ? 'Good' :
+                                 habit >= 40 ? 'Fair' :
+                                 habit >= 20 ? 'Poor' : 'Severe'}
+                              </div>
                             </div>
                           );
                         })}

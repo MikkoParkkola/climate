@@ -329,20 +329,38 @@ def calculate_drought_risk(monthly_precip, latitude):
     """Calculate drought risk score (0-1)"""
     annual_precip = np.sum(monthly_precip)
     dry_months = np.sum(monthly_precip < 25)  # Months with <25mm
+    very_dry_months = np.sum(monthly_precip < 10)  # Severely dry months
     
-    # Baseline precipitation need varies by latitude
+    # Regional drought susceptibility based on climate zones
     abs_lat = abs(latitude)
-    if abs_lat < 23.5:
-        baseline_need = 1000
-    elif abs_lat < 60:
-        baseline_need = 500
-    else:
-        baseline_need = 200
+    if 30 <= abs_lat <= 45:  # Mediterranean/subtropical (Spain, California, etc.)
+        base_risk = 0.3  # Inherently drought-prone
+        seasonal_threshold = 6  # Summer drought expected
+    elif abs_lat < 23.5:  # Tropical
+        base_risk = 0.15
+        seasonal_threshold = 4
+    elif abs_lat > 60:  # High latitude
+        base_risk = 0.1
+        seasonal_threshold = 8
+    else:  # Temperate
+        base_risk = 0.2
+        seasonal_threshold = 5
     
-    deficit = max(0, (baseline_need - annual_precip) / baseline_need)
-    dry_season_factor = dry_months / 12.0
+    # Calculate seasonal drought stress
+    summer_months = monthly_precip[5:8]  # Jun, Jul, Aug
+    summer_drought = np.mean(summer_months) < 20  # Mediterranean summer drought
     
-    return min(1.0, deficit + dry_season_factor * 0.3)
+    # Drought factors
+    dry_season_stress = max(0, (dry_months - seasonal_threshold) / 6.0)
+    severe_drought_factor = very_dry_months / 12.0
+    summer_factor = 0.2 if summer_drought and 30 <= abs_lat <= 45 else 0
+    
+    # Climate change amplification for drought-prone regions
+    climate_amplification = 0.15 if 30 <= abs_lat <= 45 else 0.05
+    
+    total_risk = base_risk + dry_season_stress * 0.4 + severe_drought_factor * 0.3 + summer_factor + climate_amplification
+    
+    return min(1.0, total_risk)
 
 def calculate_flood_risk(monthly_precip, latitude):
     """Calculate flood risk score (0-1)"""
