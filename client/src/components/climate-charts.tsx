@@ -314,7 +314,7 @@ export default function ClimateCharts({ currentData, projectedData, selectedYear
           <div className="h-64 bg-slate-50 rounded-lg flex items-center justify-center">
             <canvas ref={precipitationChartRef} className="w-full h-full"></canvas>
           </div>
-          <div className="mt-4 flex items-center justify-center space-x-6 text-sm">
+          <div className="mt-2 flex items-center justify-center space-x-6 text-sm">
             <div className="flex items-center">
               <div className="w-3 h-3 bg-blue-600 rounded-full mr-2"></div>
               <span className="text-slate-600">{selectedYear} Projection</span>

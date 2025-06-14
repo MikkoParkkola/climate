@@ -162,7 +162,7 @@ export default function GlobalRankingDisplay({
           </span>
         </p>
         <p className="text-xs text-blue-600 mt-1">
-          Score: {currentScore.toFixed(1)}/100 (Best: {bestLocation?.name} {bestLocation?.future_habitability.toFixed(1)}, 
+          CBottle Score: {currentScore.toFixed(1)}/100 (Best: {bestLocation?.name} {bestLocation?.future_habitability.toFixed(1)}, 
           Worst: {worstLocation?.name} {worstLocation?.future_habitability.toFixed(1)})
         </p>
       </div>
