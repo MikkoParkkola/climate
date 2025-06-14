@@ -632,7 +632,7 @@ export default function ClimateApp() {
                       })}
                     </div>
                     
-                    <div className="mt-3 p-2 bg-blue-50 rounded text-xs">
+                    <div className="mt-6 p-2 bg-blue-50 rounded text-xs">
                       <p><strong>Seasonal Pattern:</strong> Wettest month is {climateData.precipitation?.wettest_month_name} 
                       ({climateData.precipitation?.wettest_month?.toFixed(0)}mm), driest is {climateData.precipitation?.driest_month_name} 
                       ({climateData.precipitation?.driest_month?.toFixed(0)}mm)</p>

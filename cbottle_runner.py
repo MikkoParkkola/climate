@@ -299,11 +299,31 @@ def generate_monthly_precipitation_series(annual_total, latitude):
 
 def calculate_heat_stress_days(monthly_temps):
     """Calculate number of heat stress days (>35°C)"""
-    max_temp = np.max(monthly_temps)
-    if max_temp > 35:
-        # Estimate based on peak temperature
-        return min(int((max_temp - 35) * 10), 150)
-    return 0
+    heat_days = 0
+    
+    for i, monthly_avg in enumerate(monthly_temps):
+        # Summer months (May-September for Northern Hemisphere)
+        is_summer = i in [4, 5, 6, 7, 8]  # May, Jun, Jul, Aug, Sep
+        
+        if is_summer and monthly_avg > 15:  # Only consider warm months
+            # Daily max is typically 8-12°C higher than monthly average
+            estimated_daily_max = monthly_avg + 10
+            
+            if estimated_daily_max > 35:
+                # More days when temperature is much higher than threshold
+                days_in_month = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31][i]
+                
+                if estimated_daily_max > 40:
+                    # Very hot - most summer days exceed threshold
+                    heat_days += min(days_in_month * 0.7, days_in_month)
+                elif estimated_daily_max > 37:
+                    # Hot - about half of summer days exceed threshold
+                    heat_days += min(days_in_month * 0.4, days_in_month)
+                else:
+                    # Warm - some days exceed threshold
+                    heat_days += min(days_in_month * 0.2, days_in_month)
+    
+    return int(heat_days)
 
 def calculate_drought_risk(monthly_precip, latitude):
     """Calculate drought risk score (0-1)"""
