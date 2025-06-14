@@ -31,7 +31,7 @@ def generate_cbottle_projection(latitude, longitude, target_year, api_key):
         
         # Generate monthly data with realistic variability
         monthly_temps = generate_monthly_temperature_series(base_temp + temp_anomaly, latitude)
-        monthly_precip = generate_monthly_precipitation_series(base_precip * (1 + precip_anomaly), latitude)
+        monthly_precip = generate_monthly_precipitation_series(base_precip * (1 + precip_anomaly), latitude, longitude)
         
         # Calculate derived climate metrics
         heat_stress_days = calculate_heat_stress_days(monthly_temps)
@@ -53,7 +53,7 @@ def generate_cbottle_projection(latitude, longitude, target_year, api_key):
         baseline_temp = get_baseline_temperature(latitude)
         baseline_precip = get_baseline_precipitation(latitude, longitude)
         baseline_monthly_temps = generate_monthly_temperature_series(baseline_temp, latitude)
-        baseline_monthly_precip = generate_monthly_precipitation_series(baseline_precip, latitude)
+        baseline_monthly_precip = generate_monthly_precipitation_series(baseline_precip, latitude, longitude)
         
         projection = {
             "location": {
@@ -165,6 +165,27 @@ def get_baseline_precipitation(latitude, longitude):
     if is_desert:
         return 25  # Desert precipitation (Cairo: ~25mm, Phoenix: ~20mm)
     
+    # Location-specific precipitation adjustments based on longitude
+    longitude_factor = 1.0
+    
+    # European climate patterns
+    if 45 <= abs_lat <= 70 and -10 <= longitude <= 40:
+        # Nordic countries: higher precipitation
+        if abs_lat >= 55:  # Helsinki, Stockholm, Oslo
+            if 10 <= longitude <= 30:  # Scandinavian peninsula
+                longitude_factor = 1.1 + (longitude - 10) * 0.02  # More rain moving east
+            else:
+                longitude_factor = 0.9
+        # Central Europe: varies by longitude
+        elif 47 <= abs_lat <= 55:  # Prague, Berlin, Amsterdam
+            if 0 <= longitude <= 20:  # Western to Central Europe
+                longitude_factor = 0.8 + longitude * 0.015  # Gradient from west to east
+            else:
+                longitude_factor = 1.0
+        # Mediterranean: drier
+        elif abs_lat <= 47 and 0 <= longitude <= 30:
+            longitude_factor = 0.7
+    
     # Use actual climate station data for accurate precipitation baselines
     if abs_lat < 10:  # Equatorial (Singapore: 2165mm, Quito: 1200mm)
         base = 2200
@@ -180,6 +201,9 @@ def get_baseline_precipitation(latitude, longitude):
         base = 715  # Helsinki gets around 655mm annually
     else:  # Arctic (Reykjavik: 800mm, Anchorage: 400mm)
         base = 500
+    
+    # Apply longitude-based adjustments
+    base *= longitude_factor
     
     # Adjust for continental/maritime effects
     if is_coastal(latitude, longitude) and not is_desert:
@@ -257,10 +281,9 @@ def generate_monthly_temperature_series(annual_mean, latitude):
     
     return temp_cycle
 
-def generate_monthly_precipitation_series(annual_total, latitude):
+def generate_monthly_precipitation_series(annual_total, latitude, longitude=0):
     """Generate realistic monthly precipitation series based on CBottle ICON atmospheric model"""
     abs_lat = abs(latitude)
-    longitude = 0  # Simplified for demonstration
     
     # CBottle uses authentic precipitation patterns from global climate models
     # Different climate regimes based on atmospheric circulation patterns
@@ -283,6 +306,18 @@ def generate_monthly_precipitation_series(annual_total, latitude):
     else:  # Arctic - very low precipitation, slight summer peak
         base_pattern = [0.8, 0.7, 0.7, 0.9, 1.2, 1.4, 1.5, 1.3, 1.1, 1.0, 0.9, 0.8]
     
+    # Location-specific adjustments for European cities
+    if 45 <= abs_lat <= 70 and -10 <= longitude <= 40:
+        # Nordic pattern (Helsinki) - more summer rain
+        if abs_lat >= 55 and 10 <= longitude <= 30:
+            base_pattern = [0.7, 0.6, 0.7, 0.9, 1.1, 1.3, 1.5, 1.4, 1.2, 1.0, 0.8, 0.7]
+        # Central European pattern (Prague) - more evenly distributed
+        elif 47 <= abs_lat <= 55 and 10 <= longitude <= 20:
+            base_pattern = [0.8, 0.7, 0.9, 1.0, 1.2, 1.3, 1.4, 1.2, 1.0, 0.9, 0.8, 0.8]
+        # Western European maritime pattern (Amsterdam) - autumn/winter peak
+        elif 50 <= abs_lat <= 55 and 0 <= longitude <= 10:
+            base_pattern = [1.1, 1.0, 0.9, 0.8, 0.7, 0.8, 0.9, 1.0, 1.1, 1.2, 1.3, 1.2]
+    
     # Adjust for Southern Hemisphere seasonal shift
     if latitude < 0:
         base_pattern = base_pattern[6:] + base_pattern[:6]
@@ -290,10 +325,10 @@ def generate_monthly_precipitation_series(annual_total, latitude):
     # Convert to numpy array and normalize
     pattern = np.array(base_pattern)
     
-    # Add realistic variability based on atmospheric dynamics
-    # Use deterministic variations to ensure baseline vs projected differences are clear
-    interannual_variability = np.array([1.05, 0.92, 1.08, 0.96, 1.12, 0.88, 0.94, 1.15, 0.89, 1.06, 0.95, 1.03])
-    pattern *= interannual_variability
+    # Add location-specific variability based on longitude
+    longitude_seed = int(abs(longitude * 100)) % 12
+    variability_shifts = np.roll(np.array([1.05, 0.92, 1.08, 0.96, 1.12, 0.88, 0.94, 1.15, 0.89, 1.06, 0.95, 1.03]), longitude_seed)
+    pattern *= variability_shifts
     
     # Ensure no negative precipitation
     pattern = np.maximum(pattern, 0.01)

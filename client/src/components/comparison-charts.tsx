@@ -54,35 +54,71 @@ export default function ComparisonCharts({ data, targetYear }: ComparisonChartsP
 
   // Temperature Comparison Bar Chart
   const TemperatureComparison = () => {
-    const maxTemp = Math.max(...data.map(d => d.temperature.annual_mean));
-    const minTemp = Math.min(...data.map(d => d.temperature.annual_mean));
+    const maxTemp = Math.max(...data.map(d => Math.max(d.temperature.max || 0, d.temperature.annual_mean || 0)));
+    const minTemp = Math.min(...data.map(d => Math.min(d.temperature.min || 0, d.temperature.annual_mean || 0)));
     const tempRange = maxTemp - minTemp || 1;
+    const zeroPosition = Math.abs(minTemp) / tempRange * 100; // Position of 0°C line
 
     return (
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Thermometer className="w-5 h-5 text-red-600" />
-            Annual Mean Temperature Comparison
+            Temperature Range Comparison ({targetYear})
           </CardTitle>
+          <div className="text-sm text-gray-500">
+            Shows annual mean with min/max range. Scale centered at 0°C.
+          </div>
         </CardHeader>
         <CardContent>
-          <div className="space-y-3">
+          <div className="space-y-4">
+            {/* Temperature scale indicator */}
+            <div className="relative h-4 bg-gradient-to-r from-blue-200 via-gray-200 to-red-200 rounded">
+              <div 
+                className="absolute top-0 w-0.5 h-4 bg-black"
+                style={{ left: `${zeroPosition}%` }}
+              />
+              <div className="absolute -bottom-5 left-0 text-xs text-gray-600">{minTemp.toFixed(0)}°C</div>
+              <div className="absolute -bottom-5 text-xs text-gray-600" style={{ left: `${zeroPosition}%` }}>0°C</div>
+              <div className="absolute -bottom-5 right-0 text-xs text-gray-600">{maxTemp.toFixed(0)}°C</div>
+            </div>
+            
             {data.map((item, index) => (
               <div key={index} className="space-y-2">
                 <div className="flex justify-between items-center">
                   <span className="text-sm font-medium">{getLocationName(item.location.name)}</span>
-                  <span className="text-sm font-bold" style={{ color: colors[index] }}>
-                    {item.temperature.annual_mean?.toFixed(1) || 'N/A'}°C
-                  </span>
+                  <div className="text-right">
+                    <div className="text-sm font-bold" style={{ color: colors[index] }}>
+                      {item.temperature.annual_mean?.toFixed(1) || 'N/A'}°C avg
+                    </div>
+                    <div className="text-xs text-gray-500">
+                      {item.temperature.min?.toFixed(1) || 'N/A'}°C to {item.temperature.max?.toFixed(1) || 'N/A'}°C
+                    </div>
+                  </div>
                 </div>
                 <div className="relative h-6 bg-gray-100 rounded">
+                  {/* Temperature range bar (min to max) */}
                   <div
-                    className="absolute left-0 top-0 h-full rounded transition-all duration-500"
+                    className="absolute top-0 h-full rounded opacity-30"
                     style={{
-                      width: `${((item.temperature.annual_mean || 0) - minTemp) / tempRange * 100}%`,
+                      left: `${((item.temperature.min || 0) - minTemp) / tempRange * 100}%`,
+                      width: `${((item.temperature.max || 0) - (item.temperature.min || 0)) / tempRange * 100}%`,
                       backgroundColor: colors[index]
                     }}
+                  />
+                  {/* Annual mean marker */}
+                  <div
+                    className="absolute top-0 h-full rounded"
+                    style={{
+                      left: `${((item.temperature.annual_mean || 0) - minTemp) / tempRange * 100}%`,
+                      width: '3px',
+                      backgroundColor: colors[index]
+                    }}
+                  />
+                  {/* Zero degree line */}
+                  <div 
+                    className="absolute top-0 w-0.5 h-full bg-black opacity-50"
+                    style={{ left: `${zeroPosition}%` }}
                   />
                   <div className="absolute right-2 top-1 text-xs text-gray-600">
                     {item.temperature.change_from_baseline && item.temperature.change_from_baseline > 0 ? '+' : ''}{item.temperature.change_from_baseline?.toFixed(1) || 'N/A'}°C change
@@ -107,20 +143,38 @@ export default function ComparisonCharts({ data, targetYear }: ComparisonChartsP
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Droplets className="w-5 h-5 text-blue-600" />
-            Annual Precipitation Comparison
+            Annual Precipitation Comparison ({targetYear})
           </CardTitle>
+          <div className="text-sm text-gray-500">
+            Shows annual total with seasonal range (driest to wettest month).
+          </div>
         </CardHeader>
         <CardContent>
-          <div className="space-y-3">
+          <div className="space-y-4">
+            {/* Precipitation scale indicator */}
+            <div className="relative h-4 bg-gradient-to-r from-yellow-200 via-blue-200 to-blue-600 rounded">
+              <div className="absolute -bottom-5 left-0 text-xs text-gray-600">{minPrecip.toFixed(0)}mm</div>
+              <div className="absolute -bottom-5 right-0 text-xs text-gray-600">{maxPrecip.toFixed(0)}mm</div>
+            </div>
+            
             {data.map((item, index) => (
               <div key={index} className="space-y-2">
                 <div className="flex justify-between items-center">
                   <span className="text-sm font-medium">{getLocationName(item.location.name)}</span>
-                  <span className="text-sm font-bold" style={{ color: colors[index] }}>
-                    {item.precipitation.annual_total?.toFixed(0) || 'N/A'}mm
-                  </span>
+                  <div className="text-right">
+                    <div className="text-sm font-bold" style={{ color: colors[index] }}>
+                      {item.precipitation.annual_total?.toFixed(0) || 'N/A'}mm/year
+                    </div>
+                    <div className="text-xs text-gray-500">
+                      {item.precipitation.monthly ? 
+                        `${Math.min(...item.precipitation.monthly).toFixed(0)}mm to ${Math.max(...item.precipitation.monthly).toFixed(0)}mm monthly range` :
+                        'Monthly data unavailable'
+                      }
+                    </div>
+                  </div>
                 </div>
                 <div className="relative h-6 bg-gray-100 rounded">
+                  {/* Full precipitation bar */}
                   <div
                     className="absolute left-0 top-0 h-full rounded transition-all duration-500"
                     style={{
