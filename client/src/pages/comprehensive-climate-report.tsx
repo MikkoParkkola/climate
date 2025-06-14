@@ -466,7 +466,9 @@ export default function ComprehensiveClimateReport() {
                     <div className="text-xs text-gray-500 mt-1">
                       Range: 0-100% (Higher is better)
                       <br />
-                      <span className="text-green-600">Excellent: {'>'}80%, Good: 60-80%, Fair: 40-60%, Poor: {'<'}40%</span>
+                      <span className="text-green-600">Excellent: {'>'}80%</span>, <span className="text-blue-600">Good: 60-80%</span>, <span className="text-yellow-600">Fair: 40-60%</span>, <span className="text-red-600">Poor: {'<'}40%</span>
+                      <br />
+                      <strong>What this measures:</strong> Overall living conditions considering temperature comfort, water availability, climate risks, and infrastructure adaptation capacity.
                     </div>
                   </div>
 
@@ -567,20 +569,23 @@ export default function ComprehensiveClimateReport() {
                   {/* Monthly Temperature Data */}
                   <div>
                     <h4 className="text-lg font-semibold mb-4">Monthly Temperature Breakdown</h4>
-                    {projectionData?.temperature?.monthly && (
+                    {projectionData?.monthlyTemperatures && (
                       <div className="space-y-3">
                         <div className="grid grid-cols-3 gap-2 text-sm">
-                          {['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'].map((month, index) => (
-                            <div key={month} className="bg-gray-50 p-2 rounded text-center">
-                              <div className="font-medium text-xs text-gray-600">{month}</div>
-                              <div className="text-sm font-semibold">
-                                {projectionData.temperature.monthly[index]?.toFixed(1)}°C
+                          {['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'].map((month, index) => {
+                            const monthlyData = JSON.parse(projectionData.monthlyTemperatures || '[]');
+                            return (
+                              <div key={month} className="bg-gray-50 p-2 rounded text-center">
+                                <div className="font-medium text-xs text-gray-600">{month}</div>
+                                <div className="text-sm font-semibold">
+                                  {monthlyData[index]?.toFixed(1)}°C
+                                </div>
                               </div>
-                            </div>
-                          ))}
+                            );
+                          })}
                         </div>
                         <div className="text-xs text-gray-500 mt-2">
-                          <p><strong>Seasonal patterns:</strong> Northern hemisphere locations show coldest temperatures in January-February and warmest in July-August. 
+                          <p><strong>Seasonal patterns:</strong> Northern hemisphere locations show coldest temperatures in January-February and warmest in June-August. 
                           Southern hemisphere shows opposite pattern. Temperature variations increase with distance from equator.</p>
                         </div>
                       </div>
@@ -611,12 +616,12 @@ export default function ComprehensiveClimateReport() {
                     <div className="h-64 bg-gradient-to-br from-blue-50 to-cyan-50 rounded-lg flex items-center justify-center">
                       <div className="text-center">
                         <div className="text-2xl font-bold text-blue-700">
-                          {projectionData?.precipitation?.annual_total?.toFixed(0)}mm
+                          {projectionData?.annualPrecipitation?.toFixed(0)}mm
                         </div>
                         <div className="text-sm text-blue-600">Annual Total</div>
                         <div className="text-xs text-blue-500 mt-2">
-                          Change: {projectionData?.precipitation?.change_from_baseline > 0 ? '+' : ''}
-                          {projectionData?.precipitation?.change_from_baseline?.toFixed(0)}mm
+                          Change: {projectionData?.precipitationChange > 0 ? '+' : ''}
+                          {projectionData?.precipitationChange?.toFixed(0)}mm
                         </div>
                       </div>
                     </div>
@@ -625,17 +630,20 @@ export default function ComprehensiveClimateReport() {
                   {/* Monthly Precipitation Data */}
                   <div>
                     <h4 className="text-lg font-semibold mb-4">Monthly Precipitation Breakdown</h4>
-                    {projectionData?.precipitation?.monthly && (
+                    {projectionData?.monthlyPrecipitation && (
                       <div className="space-y-3">
                         <div className="grid grid-cols-3 gap-2 text-sm">
-                          {['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'].map((month, index) => (
-                            <div key={month} className="bg-blue-50 p-2 rounded text-center">
-                              <div className="font-medium text-xs text-gray-600">{month}</div>
-                              <div className="text-sm font-semibold text-blue-700">
-                                {projectionData.precipitation.monthly[index]}mm
+                          {['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'].map((month, index) => {
+                            const monthlyData = JSON.parse(projectionData.monthlyPrecipitation || '[]');
+                            return (
+                              <div key={month} className="bg-blue-50 p-2 rounded text-center">
+                                <div className="font-medium text-xs text-gray-600">{month}</div>
+                                <div className="text-sm font-semibold text-blue-700">
+                                  {monthlyData[index]}mm
+                                </div>
                               </div>
-                            </div>
-                          ))}
+                            );
+                          })}
                         </div>
                         <div className="text-xs text-gray-500 mt-2">
                           <p><strong>Seasonal patterns:</strong> Tropical regions often have distinct wet/dry seasons. 

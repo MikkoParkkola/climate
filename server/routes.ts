@@ -802,7 +802,7 @@ async function generateRealisticClimateData(location: any, year: number) {
       stress_level: Math.min(100, Math.max(0, 20 + (tempIncrease * 12) - (precipChange * 30)))
     },
     air_quality: {
-      index: Math.round(Math.min(300, 80 + (tempIncrease * 25) + (yearsFromNow * 0.5)))
+      index: Math.round(Math.max(10, Math.min(150, 50 + (tempIncrease * 15) + (yearsFromNow * 0.3))))
     }
   };
 }
@@ -844,19 +844,20 @@ function getLatitudeBasedPrecipChange(latitude: number, yearsFromNow: number): n
 }
 
 function generateMonthlyTemperatures(annualAvg: number, latitude: number): number[] {
-  const amplitude = Math.abs(latitude) * 0.4; // Seasonal variation increases with latitude
+  const amplitude = Math.abs(latitude) * 0.6; // Seasonal variation increases with latitude
   const months = [];
   
   for (let i = 0; i < 12; i++) {
-    // Northern hemisphere: January (i=0) is coldest, July (i=6) is warmest
-    // Southern hemisphere: July (i=6) is coldest, January (i=0) is warmest
+    // Correct seasonal pattern: June (i=5), July (i=6), August (i=7) are warmest
+    // January (i=0), February (i=1), December (i=11) are coldest
     let seasonal;
     if (latitude >= 0) {
-      // Northern hemisphere: sin wave with July peak
-      seasonal = Math.sin((i - 0.5) * Math.PI / 6) * amplitude;
+      // Northern hemisphere: peak in July (month 6, index 6)
+      // Using cosine wave shifted so July = peak, January = trough
+      seasonal = Math.cos((i - 6) * Math.PI / 6) * amplitude;
     } else {
-      // Southern hemisphere: inverted pattern
-      seasonal = -Math.sin((i - 0.5) * Math.PI / 6) * amplitude;
+      // Southern hemisphere: peak in January, trough in July
+      seasonal = -Math.cos((i - 6) * Math.PI / 6) * amplitude;
     }
     
     months.push(Math.round((annualAvg + seasonal) * 10) / 10);
