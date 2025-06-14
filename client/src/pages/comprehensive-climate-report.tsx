@@ -391,7 +391,7 @@ export default function ComprehensiveClimateReport() {
                     </div>
                     <div className="text-sm text-red-600 font-medium">Average Temperature</div>
                     <div className="text-xs text-gray-600 mt-1">
-                      Change: {projectionData.temperatureChange > 0 ? '+' : ''}{projectionData.temperatureChange?.toFixed(1)}°C
+                      Change: {(projectionData.temperatureChange || 0) > 0 ? '+' : ''}{(projectionData.temperatureChange || 0).toFixed(1)}°C
                     </div>
                     <div className="text-xs text-gray-500 mt-1">
                       Range: -40°C to +50°C
@@ -407,7 +407,7 @@ export default function ComprehensiveClimateReport() {
                     </div>
                     <div className="text-sm text-blue-600 font-medium">Annual Precipitation</div>
                     <div className="text-xs text-gray-600 mt-1">
-                      Change: {projectionData.precipitationChange > 0 ? '+' : ''}{(projectionData.precipitationChange * 100)?.toFixed(1)}%
+                      Change: {(projectionData.precipitationChange || 0) > 0 ? '+' : ''}{((projectionData.precipitationChange || 0) * 100).toFixed(1)}%
                     </div>
                     <div className="text-xs text-gray-500 mt-1">
                       Range: 0mm to 12,000mm
@@ -444,7 +444,7 @@ export default function ComprehensiveClimateReport() {
                     <div className="text-xs text-gray-500 mt-1">
                       Range: 0m to +2m
                       <br />
-                      <span className="text-red-600">Critical: &gt;0.5m</span>
+                      <span className="text-red-600">Critical: {'>'}0.5m</span>
                     </div>
                   </div>
                 </div>
