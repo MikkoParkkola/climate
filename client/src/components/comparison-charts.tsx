@@ -250,7 +250,7 @@ export default function ComparisonCharts({ data, targetYear }: ComparisonChartsP
                     <div
                       className="absolute left-0 top-0 h-full rounded transition-all duration-500"
                       style={{
-                        width: `${Math.min(item.extremes.heat_stress_days / 100 * 100, 100)}%`,
+                        width: `${Math.min((item.extremes.heat_stress_days || 0) / 100 * 100, 100)}%`,
                         backgroundColor: colors[index]
                       }}
                     />
@@ -269,14 +269,14 @@ export default function ComparisonCharts({ data, targetYear }: ComparisonChartsP
                       {getLocationName(item.location.name)}
                     </span>
                     <span className="text-xs font-bold">
-                      {(item.extremes.drought_risk * 100).toFixed(1)}%
+                      {((item.extremes.drought_risk || 0) * 100).toFixed(1)}%
                     </span>
                   </div>
                   <div className="relative h-3 bg-gray-100 rounded">
                     <div
                       className="absolute left-0 top-0 h-full rounded transition-all duration-500"
                       style={{
-                        width: `${item.extremes.drought_risk * 100}%`,
+                        width: `${(item.extremes.drought_risk || 0) * 100}%`,
                         backgroundColor: colors[index]
                       }}
                     />
@@ -295,14 +295,14 @@ export default function ComparisonCharts({ data, targetYear }: ComparisonChartsP
                       {getLocationName(item.location.name)}
                     </span>
                     <span className="text-xs font-bold">
-                      {(item.extremes.flood_risk * 100).toFixed(1)}%
+                      {((item.extremes.flood_risk || 0) * 100).toFixed(1)}%
                     </span>
                   </div>
                   <div className="relative h-3 bg-gray-100 rounded">
                     <div
                       className="absolute left-0 top-0 h-full rounded transition-all duration-500"
                       style={{
-                        width: `${item.extremes.flood_risk * 100}%`,
+                        width: `${(item.extremes.flood_risk || 0) * 100}%`,
                         backgroundColor: colors[index]
                       }}
                     />
