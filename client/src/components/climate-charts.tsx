@@ -276,10 +276,10 @@ export default function ClimateCharts({ currentData, projectedData, selectedYear
             </div>
             <div className="px-3 py-1 bg-red-50 rounded-md">
               <span className="text-red-700 font-medium">
-                {projectedData?.temperatureChange ? 
+                Annual Change: {projectedData?.temperatureChange ? 
                   `${projectedData.temperatureChange > 0 ? '+' : ''}${projectedData.temperatureChange.toFixed(1)}°C` : 
-                  'No change data'
-                } vs baseline
+                  'No data'
+                }
               </span>
             </div>
           </div>
@@ -321,10 +321,10 @@ export default function ClimateCharts({ currentData, projectedData, selectedYear
             </div>
             <div className="px-3 py-1 bg-blue-50 rounded-md">
               <span className="text-blue-700 font-medium">
-                {projectedData?.precipitationChange ? 
+                Annual Change: {projectedData?.precipitationChange ? 
                   `${projectedData.precipitationChange > 0 ? '+' : ''}${projectedData.precipitationChange.toFixed(1)}%` : 
-                  'No change data'
-                } vs baseline
+                  'No data'
+                }
               </span>
             </div>
           </div>
