@@ -518,21 +518,21 @@ export default function ClimateApp() {
                               )}
                               
                               {/* Temperature line chart */}
-                              <svg className="w-full h-full" preserveAspectRatio="none" viewBox="0 0 100 100">
+                              <svg className="w-full h-full" viewBox="0 0 330 100" preserveAspectRatio="none">
                                 <polyline
                                   fill="none"
                                   stroke="#dc2626"
                                   strokeWidth="1.5"
                                   vectorEffect="non-scaling-stroke"
                                   points={monthlyTemps.map((temp: number, index: number) => {
-                                    const x = (index / 11) * 100;
+                                    const x = index * 30 + 15; // 0, 30, 60, ... 330 with 15px offset
                                     const y = 100 - ((temp - scaleMin) / scaleRange) * 100;
                                     return `${x},${y}`;
                                   }).join(' ')}
                                 />
-                                {/* Data points */}
+                                {/* Data points with proper circular shape */}
                                 {monthlyTemps.map((temp: number, index: number) => {
-                                  const x = (index / 11) * 100;
+                                  const x = index * 30 + 15; // Match the polyline positioning
                                   const y = 100 - ((temp - scaleMin) / scaleRange) * 100;
                                   const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
                                   return (
@@ -540,10 +540,9 @@ export default function ClimateApp() {
                                       key={index}
                                       cx={x} 
                                       cy={y} 
-                                      r="2" 
+                                      r="3" 
                                       fill={temp >= 0 ? "#dc2626" : "#2563eb"}
-                                      vectorEffect="non-scaling-stroke"
-                                      className="hover:r-3 cursor-pointer"
+                                      className="hover:r-4 cursor-pointer"
                                     >
                                       <title>{`${months[index]}: ${temp.toFixed(1)}°C`}</title>
                                     </circle>
@@ -552,11 +551,19 @@ export default function ClimateApp() {
                               </svg>
                             </div>
                             
-                            {/* Month labels */}
-                            <div className="absolute bottom-0 left-14 right-4 flex justify-between text-xs text-gray-600">
-                              {['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'].map((month, index) => (
-                                <span key={index} className="text-center w-6">{month}</span>
-                              ))}
+                            {/* Month labels - properly aligned */}
+                            <div className="absolute bottom-0 left-14 right-4 h-4">
+                              <div className="relative w-full h-full">
+                                {['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'].map((month, index) => (
+                                  <span 
+                                    key={index} 
+                                    className="absolute text-xs text-gray-600 transform -translate-x-1/2"
+                                    style={{ left: `${(index / 11) * 100}%` }}
+                                  >
+                                    {month}
+                                  </span>
+                                ))}
+                              </div>
                             </div>
                           </>
                         );
