@@ -77,18 +77,17 @@ export default function ComprehensiveClimateReport() {
     retry: 2,
   });
 
-  // Location search functionality
+  // Search for locations by text
   const searchLocationByText = useCallback(async (query: string) => {
-    if (!query.trim()) {
+    if (!query || query.length < 3) {
       setSearchResults([]);
       return;
     }
 
     setIsSearching(true);
     try {
-      // Use Nominatim geocoding API for location search
       const response = await fetch(
-        `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=json&limit=5&addressdetails=1`
+        `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=5&addressdetails=1`
       );
       
       if (response.ok) {
@@ -158,32 +157,42 @@ export default function ComprehensiveClimateReport() {
       setIsLoadingProjection(true);
       setApiError(null);
 
-      const locationName = await geocodingUtils.reverseGeocode(latitude, longitude);
+      // Get location name from coordinates
+      const locationName = await geocodingUtils.getLocationName(latitude, longitude);
       
       const locationData = {
         name: locationName,
         latitude,
         longitude,
-        country: locationName.split(', ').pop(),
-        region: locationName.split(', ').slice(-2, -1)[0]
       };
 
-      createLocationMutation.mutate(locationData);
-    } catch (error) {
-      console.error("Error selecting location:", error);
-      setApiError(error instanceof Error ? error.message : "Failed to select location");
+      await createLocationMutation.mutateAsync(locationData);
+    } catch (error: any) {
+      console.error("Location selection error:", error);
+      setApiError(error.message || "Failed to select location");
+      toast({
+        title: "Location Selection Failed",
+        description: error.message || "Unable to select this location. Please try again.",
+        variant: "destructive",
+      });
     } finally {
       setIsLoadingProjection(false);
     }
-  }, [createLocationMutation]);
+  }, [createLocationMutation, toast]);
 
-  const handleExportData = useCallback(async () => {
-    if (!selectedLocation) return;
-
+  const handleExportCSV = useCallback(async () => {
+    if (!selectedLocation || !projectionData) return;
+    
     try {
-      const blob = await climateApi.exportCSV(selectedLocation.id, selectedYear);
+      const response = await fetch(`/api/projections/${selectedLocation.id}/${selectedYear}/export`);
+      if (!response.ok) {
+        throw new Error('Export failed');
+      }
+      
+      const blob = await response.blob();
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
+      a.style.display = 'none';
       a.href = url;
       a.download = `climate-projection-${selectedLocation.name}-${selectedYear}.csv`;
       document.body.appendChild(a);
@@ -193,10 +202,9 @@ export default function ComprehensiveClimateReport() {
       
       toast({
         title: "Export Successful",
-        description: "Climate data exported to CSV",
+        description: "Climate data exported as CSV file.",
       });
     } catch (error) {
-      console.error("Export error:", error);
       toast({
         title: "Export Failed",
         description: "Unable to export data. Please try again.",
@@ -231,49 +239,34 @@ export default function ComprehensiveClimateReport() {
   const handleShare = useCallback(() => {
     if (!selectedLocation) return;
 
-    const shareUrl = `${window.location.origin}?location=${encodeURIComponent(selectedLocation.name)}&lat=${selectedLocation.latitude}&lng=${selectedLocation.longitude}&year=${selectedYear}`;
+    const shareUrl = `${window.location.origin}${window.location.pathname}?location=${encodeURIComponent(selectedLocation.name)}&year=${selectedYear}`;
     
     if (navigator.share) {
       navigator.share({
-        title: 'Climate Projection Report',
-        text: `Comprehensive climate analysis for ${selectedLocation.name} in ${selectedYear}`,
+        title: `Climate Report for ${selectedLocation.name}`,
+        text: `View climate projections for ${selectedLocation.name} in ${selectedYear}`,
         url: shareUrl,
       });
     } else {
       navigator.clipboard.writeText(shareUrl);
       toast({
         title: "Link Copied",
-        description: "Share link copied to clipboard",
+        description: "Report link copied to clipboard.",
       });
     }
   }, [selectedLocation, selectedYear, toast]);
 
-  const mapMarker: MapMarker | undefined = selectedLocation ? {
-    latitude: selectedLocation.latitude,
-    longitude: selectedLocation.longitude,
-    name: selectedLocation.name,
-  } : undefined;
-
   return (
-    <div className="min-h-screen bg-white print:bg-white">
-      {/* Header - Hidden in print */}
-      <header className="bg-white border-b border-slate-200 sticky top-0 z-50 print:hidden">
+    <div className="min-h-screen bg-slate-50 print:bg-white">
+      {/* Header */}
+      <header className="bg-white border-b border-slate-200 print:hidden">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
-            <div className="flex items-center space-x-3">
-              <Globe className="text-2xl text-blue-600 h-8 w-8" />
-              <h1 className="text-xl font-semibold text-slate-900">Climate Projections Report</h1>
+          <div className="flex items-center justify-between h-16">
+            <div className="flex items-center space-x-4">
+              <Globe className="h-8 w-8 text-blue-600" />
+              <h1 className="text-xl font-semibold text-slate-900">Climate Projection Report</h1>
             </div>
             <div className="flex items-center space-x-4">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handlePrintReport}
-                className="flex items-center space-x-1"
-              >
-                <Download className="h-4 w-4" />
-                <span>Print/PDF</span>
-              </Button>
               <Button
                 variant="outline"
                 size="sm"
@@ -303,70 +296,25 @@ export default function ComprehensiveClimateReport() {
           </div>
         </div>
 
-        {/* Year Selection - Hidden in print */}
-        <div className="mb-8 print:hidden">
-          <Card>
-            <CardHeader>
-              <CardTitle>Projection Year Selection</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                <div>
-                  <Label htmlFor="year-input" className="text-sm font-medium">
-                    Select any year from 2025 to 2100
-                  </Label>
-                  <div className="flex gap-4 items-center mt-2">
-                    <Input
-                      id="year-input"
-                      type="number"
-                      min="2025"
-                      max="2100"
-                      value={selectedYear}
-                      onChange={(e) => setSelectedYear(parseInt(e.target.value) || 2030)}
-                      className="w-24"
-                    />
-                    <span className="text-sm text-gray-600">
-                      Range: 2025-2100 (API supports up to 75 years projection)
-                    </span>
-                  </div>
-                </div>
-                
-                {/* Quick Year Shortcuts */}
-                <div>
-                  <div className="text-sm font-medium mb-2">Quick shortcuts:</div>
-                  <QuickYearSelector
-                    selectedYear={selectedYear}
-                    onYearChange={setSelectedYear}
-                  />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Location Selection Section - Hidden in print */}
+        {/* Year Selection and Controls */}
         <Card className="mb-8 print:hidden">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <MapPin className="h-5 w-5" />
-              Location Selection
-            </CardTitle>
+            <CardTitle>Climate Projection Configuration</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="space-y-6">
-              {/* Interactive Map First */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
               <div>
-                <h3 className="text-lg font-medium mb-2">Interactive Map</h3>
-                <InteractiveMap
-                  selectedLocation={selectedLocation}
-                  onLocationSelect={handleLocationSelect}
-                  className="h-80 w-full rounded-lg border"
-                />
-              </div>
-
-              {/* Search Below Map */}
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <h3 className="text-lg font-medium mb-4">Interactive Map & Location Search</h3>
                 <div className="space-y-4">
+                  <InteractiveMap
+                    selectedLocation={selectedLocation ? {
+                      latitude: selectedLocation.latitude,
+                      longitude: selectedLocation.longitude,
+                      name: selectedLocation.name
+                    } : undefined}
+                    onLocationSelect={handleLocationSelect}
+                  />
+                  
                   <div className="space-y-2">
                     <Label htmlFor="location-search" className="text-sm font-medium">
                       Search Location
@@ -412,36 +360,53 @@ export default function ComprehensiveClimateReport() {
                       </div>
                     )}
                   </div>
+                </div>
+                
                 {selectedLocation && (
-                  <div className="p-4 bg-slate-50 rounded-lg">
+                  <div className="mt-4 p-4 bg-slate-50 rounded-lg">
                     <h3 className="font-medium text-slate-900">{selectedLocation.name}</h3>
                     <p className="text-sm text-slate-600">
                       {selectedLocation.latitude.toFixed(4)}, {selectedLocation.longitude.toFixed(4)}
                     </p>
-                    <div className="flex space-x-2 mt-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={handleExportData}
-                        disabled={!projectionData}
-                      >
-                        <Download className="h-4 w-4 mr-1" />
-                        Export CSV
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={handleShare}
-                      >
-                        <Share2 className="h-4 w-4 mr-1" />
-                        Share
-                      </Button>
-                    </div>
+                    
+                    {selectedLocation && (
+                      <div className="flex gap-2 mt-4">
+                        <Button
+                          onClick={handleShare}
+                          variant="outline"
+                          size="sm"
+                          className="flex items-center space-x-1"
+                        >
+                          <Share2 className="h-4 w-4" />
+                          Share
+                        </Button>
+                      </div>
+                    )}
                   </div>
                 )}
-                </div>
                 
-                <div className="space-y-4">
+                <div className="mt-6 space-y-4">
+                  <div>
+                    <Label htmlFor="year-input" className="text-sm font-medium">
+                      Select any year from 2025 to 2100
+                    </Label>
+                    <div className="flex gap-4 items-center mt-2">
+                      <Input
+                        id="year-input"
+                        type="number"
+                        min="2025"
+                        max="2100"
+                        value={selectedYear}
+                        onChange={(e) => setSelectedYear(parseInt(e.target.value))}
+                        className="w-32"
+                      />
+                      <QuickYearSelector
+                        selectedYear={selectedYear}
+                        onYearChange={setSelectedYear}
+                      />
+                    </div>
+                  </div>
+                  
                   <Button
                     onClick={handleGetProjection}
                     disabled={!selectedLocation || isLoadingProjection}
@@ -487,7 +452,7 @@ export default function ComprehensiveClimateReport() {
 
         {/* Debug Information Panel */}
         {showDebugInfo && debugData && (
-          <Card className="p-6 bg-gray-50">
+          <Card className="p-6 bg-gray-50 mb-8">
             <h3 className="text-lg font-semibold mb-4">API Debug Information</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
@@ -551,523 +516,47 @@ export default function ComprehensiveClimateReport() {
 
             {showFullReport && (
               <>
-                {/* Key Metrics Overview with Ranges */}
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <BarChart3 className="h-5 w-5" />
-                      Key Climate Metrics Overview
-                    </CardTitle>
-                  </CardHeader>
-                </CardTitle>
-                <div className="text-sm text-gray-600 mt-2">
-                  <p><strong>How to read these metrics:</strong> Each value shows the projected change compared to current conditions. 
-                  Temperature and precipitation changes indicate climate shifts, habitability scores rate overall living conditions, 
-                  and sea level rise affects coastal areas. Lower values are generally better for habitability and risk metrics.</p>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                  {/* Temperature */}
-                  <div className="text-center p-4 bg-gradient-to-br from-red-50 to-orange-50 rounded-lg">
-                    <div className="text-2xl font-bold text-red-700">
-                      {projectionData.averageTemperature?.toFixed(1)}°C
-                    </div>
-                    <div className="text-sm text-red-600 font-medium">Average Temperature</div>
-                    <div className="text-xs text-gray-600 mt-1">
-                      Change: {(projectionData.temperatureChange || 0) > 0 ? '+' : ''}{(projectionData.temperatureChange || 0).toFixed(1)}°C
-                    </div>
-                    <div className="text-xs text-gray-500 mt-1">
-                      Range: -40°C to +50°C
-                      <br />
-                      <span className="text-green-600">Optimal: 15-25°C</span>
-                    </div>
-                  </div>
-
-                  {/* Precipitation */}
-                  <div className="text-center p-4 bg-gradient-to-br from-blue-50 to-cyan-50 rounded-lg">
-                    <div className="text-2xl font-bold text-blue-700">
-                      {Math.round(projectionData.annualPrecipitation || 0)}mm
-                    </div>
-                    <div className="text-sm text-blue-600 font-medium">Annual Precipitation</div>
-                    <div className="text-xs text-gray-600 mt-1">
-                      Change: {(projectionData.precipitationChange || 0) > 0 ? '+' : ''}{((projectionData.precipitationChange || 0) * 100).toFixed(1)}%
-                    </div>
-                    <div className="text-xs text-gray-500 mt-1">
-                      Range: 0mm to 12,000mm
-                      <br />
-                      <span className="text-green-600">Optimal: 500-1500mm</span>
-                    </div>
-                  </div>
-
-                  {/* Habitability Score */}
-                  <div className="text-center p-4 bg-gradient-to-br from-green-50 to-emerald-50 rounded-lg">
-                    <div className="text-2xl font-bold text-green-700">
-                      {Math.round(projectionData.habitabilityScore || 0)}%
-                    </div>
-                    <div className="text-sm text-green-600 font-medium">Habitability Score</div>
-                    <div className="text-xs text-gray-600 mt-1">
-                      vs Current: {Math.round((currentData.habitabilityScore || 0) - (projectionData.habitabilityScore || 0))}pts
-                    </div>
-                    <div className="text-xs text-gray-500 mt-1">
-                      Range: 0-100% (Higher is better)
-                      <br />
-                      <span className="text-green-600">Excellent: {'>'}80%</span>, <span className="text-blue-600">Good: 60-80%</span>, <span className="text-yellow-600">Fair: 40-60%</span>, <span className="text-red-600">Poor: {'<'}40%</span>
-                      <br />
-                      <strong>What this measures:</strong> Overall living conditions considering temperature comfort, water availability, climate risks, and infrastructure adaptation capacity.
-                    </div>
-                  </div>
-
-                  {/* Sea Level Change */}
-                  <div className="text-center p-4 bg-gradient-to-br from-purple-50 to-indigo-50 rounded-lg">
-                    <div className="text-2xl font-bold text-purple-700">
-                      +{projectionData.seaLevelChange?.toFixed(2)}m
-                    </div>
-                    <div className="text-sm text-purple-600 font-medium">Sea Level Rise</div>
-                    <div className="text-xs text-gray-600 mt-1">
-                      Risk: {Math.round(projectionData.coastalFloodingRisk || 0)}%
-                    </div>
-                    <div className="text-xs text-gray-500 mt-1">
-                      Range: 0m to +2m
-                      <br />
-                      <span className="text-red-600">Critical: {'>'}0.5m</span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Risk Assessment Bar */}
-                <div className="mt-6 p-4 bg-gray-50 rounded-lg">
-                  <h4 className="font-medium mb-3">Risk Assessment Summary</h4>
-                  <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                    <div>
-                      <div className="text-sm font-medium text-gray-700">Heat Stress</div>
-                      <Progress value={projectionData.heatStressRisk || 0} className="mt-1" />
-                      <div className="text-xs text-gray-500 mt-1">{Math.round(projectionData.heatStressRisk || 0)}% (0-100% range)</div>
-                    </div>
-                    <div>
-                      <div className="text-sm font-medium text-gray-700">Drought Risk</div>
-                      <Progress value={projectionData.droughtRisk || 0} className="mt-1" />
-                      <div className="text-xs text-gray-500 mt-1">{Math.round(projectionData.droughtRisk || 0)}% (0-100% range)</div>
-                    </div>
-                    <div>
-                      <div className="text-sm font-medium text-gray-700">Flooding Risk</div>
-                      <Progress value={projectionData.floodingRisk || 0} className="mt-1" />
-                      <div className="text-xs text-gray-500 mt-1">{Math.round(projectionData.floodingRisk || 0)}% (0-100% range)</div>
-                    </div>
-                    <div>
-                      <div className="text-sm font-medium text-gray-700">Water Stress</div>
-                      <Progress value={projectionData.waterStressLevel || 0} className="mt-1" />
-                      <div className="text-xs text-gray-500 mt-1">{Math.round(projectionData.waterStressLevel || 0)}% (0-100% range)</div>
-                    </div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Climate Summary */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <BarChart3 className="h-5 w-5" />
-                  Climate Summary Overview
-                </CardTitle>
-                <div className="text-sm text-gray-600 mt-2">
-                  <p><strong>Climate summary interpretation:</strong> This section provides a comprehensive overview of all climate metrics. 
-                  Values show projected conditions compared to current baseline. Temperature and precipitation changes indicate climate shifts, 
-                  while risk metrics show potential impacts on human activities and natural systems.</p>
-                </div>
-              </CardHeader>
-              <CardContent>
                 <ClimateSummary
                   currentData={currentData}
                   projectedData={projectionData}
                   selectedYear={selectedYear}
                 />
-              </CardContent>
-            </Card>
 
-            {/* Temperature Analysis */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <TrendingUp className="h-5 w-5" />
-                  Temperature Analysis
-                </CardTitle>
-                <div className="text-sm text-gray-600 mt-2">
-                  <p><strong>Reading temperature data:</strong> Annual average shows year-round temperature, monthly data reveals seasonal patterns. 
-                  Temperature changes indicate warming trends compared to current conditions. 
-                  Positive values mean warmer temperatures, negative values mean cooler temperatures.</p>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                  {/* Temperature Chart */}
-                  <div>
-                    <h4 className="text-lg font-semibold mb-4">Temperature Trends</h4>
-                    <ClimateCharts
-                      currentData={currentData}
-                      projectedData={projectionData}
-                      selectedYear={selectedYear}
-                      onExport={handleExportData}
-                    />
-                  </div>
-                  
-                  {/* Monthly Temperature Data */}
-                  <div>
-                    <h4 className="text-lg font-semibold mb-4">Monthly Temperature Breakdown</h4>
-                    {projectionData?.monthlyTemperatures && (
-                      <div className="space-y-3">
-                        <div className="grid grid-cols-3 gap-2 text-sm">
-                          {['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'].map((month, index) => {
-                            const monthlyData = JSON.parse(projectionData.monthlyTemperatures || '[]');
-                            return (
-                              <div key={month} className="bg-gray-50 p-2 rounded text-center">
-                                <div className="font-medium text-xs text-gray-600">{month}</div>
-                                <div className="text-sm font-semibold">
-                                  {monthlyData[index]?.toFixed(1)}°C
-                                </div>
-                              </div>
-                            );
-                          })}
-                        </div>
-                        <div className="text-xs text-gray-500 mt-2">
-                          <p><strong>Seasonal patterns:</strong> Northern hemisphere locations show coldest temperatures in January-February and warmest in June-August. 
-                          Southern hemisphere shows opposite pattern. Temperature variations increase with distance from equator.</p>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+                <ClimateCharts
+                  currentData={currentData}
+                  projectedData={projectionData}
+                  selectedYear={selectedYear}
+                />
 
-            {/* Precipitation Analysis */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <BarChart3 className="h-5 w-5" />
-                  Precipitation Analysis
-                </CardTitle>
-                <div className="text-sm text-gray-600 mt-2">
-                  <p><strong>Reading precipitation data:</strong> Annual total shows yearly rainfall/snowfall amount, monthly data reveals wet and dry seasons. 
-                  Precipitation changes indicate shifts in rainfall patterns. 
-                  Higher values generally mean more water availability, but extreme values can indicate flooding risks.</p>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                  {/* Precipitation Chart */}
-                  <div>
-                    <h4 className="text-lg font-semibold mb-4">Precipitation Trends</h4>
-                    <div className="h-64 bg-gradient-to-br from-blue-50 to-cyan-50 rounded-lg flex items-center justify-center">
-                      <div className="text-center">
-                        <div className="text-2xl font-bold text-blue-700">
-                          {projectionData?.annualPrecipitation?.toFixed(0)}mm
-                        </div>
-                        <div className="text-sm text-blue-600">Annual Total</div>
-                        <div className="text-xs text-blue-500 mt-2">
-                          Change: {(projectionData?.precipitationChange || 0) > 0 ? '+' : ''}
-                          {(projectionData?.precipitationChange || 0)?.toFixed(0)}mm
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                  
-                  {/* Monthly Precipitation Data */}
-                  <div>
-                    <h4 className="text-lg font-semibold mb-4">Monthly Precipitation Breakdown</h4>
-                    {projectionData?.monthlyPrecipitation && (
-                      <div className="space-y-3">
-                        <div className="grid grid-cols-3 gap-2 text-sm">
-                          {['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'].map((month, index) => {
-                            const monthlyData = JSON.parse(projectionData.monthlyPrecipitation || '[]');
-                            return (
-                              <div key={month} className="bg-blue-50 p-2 rounded text-center">
-                                <div className="font-medium text-xs text-gray-600">{month}</div>
-                                <div className="text-sm font-semibold text-blue-700">
-                                  {monthlyData[index]}mm
-                                </div>
-                              </div>
-                            );
-                          })}
-                        </div>
-                        <div className="text-xs text-gray-500 mt-2">
-                          <p><strong>Seasonal patterns:</strong> Tropical regions often have distinct wet/dry seasons. 
-                          Temperate regions typically receive more precipitation in winter. 
-                          Mediterranean climates show dry summers and wet winters.</p>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Habitability Assessment */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <TrendingUp className="h-5 w-5" />
-                  Habitability Assessment
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
                 <HabitabilityAssessment
                   currentData={currentData}
                   projectedData={projectionData}
                   selectedYear={selectedYear}
                 />
-              </CardContent>
-            </Card>
 
-            {/* Detailed Livability Index */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <BarChart3 className="h-5 w-5" />
-                  Livability Index Breakdown
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
                 <LivabilityIndexBreakdown
                   currentData={currentData}
                   projectedData={projectionData}
                   selectedYear={selectedYear}
                 />
-              </CardContent>
-            </Card>
 
-            {/* Climate Timeline */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Calendar className="h-5 w-5" />
-                  Climate Timeline Analysis (2025-2100)
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <ClimateTimeline
-                  selectedLocation={selectedLocation}
-                  onYearSelect={setSelectedYear}
-                />
-              </CardContent>
-            </Card>
-
-            {/* Impact Explanation */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <AlertTriangle className="h-5 w-5" />
-                  Climate Impact Analysis
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
                 <ClimateImpactExplanation
                   currentData={currentData}
                   projectedData={projectionData}
                   selectedLocation={selectedLocation}
                   selectedYear={selectedYear}
                 />
-              </CardContent>
-            </Card>
 
-            {/* Comparable Location */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Globe className="h-5 w-5" />
-                  Climate Analogue (Similar Climate Location)
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
                 <ComparableLocation
                   projectedData={projectionData}
                   selectedYear={selectedYear}
                   onViewLocation={handleLocationSelect}
                 />
-              </CardContent>
-            </Card>
 
-            {/* Global Habitability Rankings */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <BarChart3 className="h-5 w-5" />
-                  Global Habitability Rankings
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
                 <HabitabilityRanking
                   selectedYear={selectedYear}
                   onLocationSelect={handleLocationSelect}
                 />
-              </CardContent>
-            </Card>
-
-            {/* Top-20 Locations with Biggest Climate Changes */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <AlertTriangle className="h-5 w-5" />
-                  Top-20 Locations with Biggest Climate Changes by {selectedYear}
-                </CardTitle>
-                <div className="text-sm text-gray-600 mt-2">
-                  <p><strong>Understanding this data:</strong> Shows regions and cities with the most significant projected climate shifts compared to current conditions. 
-                  Temperature changes indicate warming trends, while habitability changes show impact on living conditions. 
-                  Negative habitability changes mean conditions are getting worse.</p>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="overflow-x-auto">
-                  <table className="min-w-full divide-y divide-gray-200">
-                    <thead className="bg-gray-50">
-                      <tr>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Rank
-                        </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Location
-                        </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Temperature Change
-                        </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Habitability Change
-                        </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Impact Level
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody className="bg-white divide-y divide-gray-200">
-                      {[
-                        { rank: 1, name: "Arctic Ocean Region", country: "Greenland/Canada", tempChange: 4.2, habitabilityChange: -45, type: "Extreme" },
-                        { rank: 2, name: "Northern Siberia", country: "Russia", tempChange: 3.8, habitabilityChange: -38, type: "Extreme" },
-                        { rank: 3, name: "Sahel Region", country: "Sub-Saharan Africa", tempChange: 3.5, habitabilityChange: -42, type: "Extreme" },
-                        { rank: 4, name: "Central Australia", country: "Australia", tempChange: 3.2, habitabilityChange: -35, type: "Severe" },
-                        { rank: 5, name: "Amazon Basin", country: "Brazil", tempChange: 2.9, habitabilityChange: -28, type: "Severe" },
-                        { rank: 6, name: "Southwest USA", country: "United States", tempChange: 3.1, habitabilityChange: -31, type: "Severe" },
-                        { rank: 7, name: "Central Asia Steppes", country: "Kazakhstan", tempChange: 2.8, habitabilityChange: -25, type: "Severe" },
-                        { rank: 8, name: "Northern Canada", country: "Canada", tempChange: 3.6, habitabilityChange: -22, type: "Severe" },
-                        { rank: 9, name: "Mediterranean Coast", country: "Spain/Italy", tempChange: 2.4, habitabilityChange: -18, type: "Moderate" },
-                        { rank: 10, name: "Patagonia", country: "Argentina", tempChange: 2.2, habitabilityChange: -15, type: "Moderate" },
-                        { rank: 11, name: "Central India", country: "India", tempChange: 2.6, habitabilityChange: -24, type: "Severe" },
-                        { rank: 12, name: "Southeast Asia", country: "Indonesia/Malaysia", tempChange: 2.1, habitabilityChange: -16, type: "Moderate" },
-                        { rank: 13, name: "Northern Scandinavia", country: "Norway/Sweden", tempChange: 2.8, habitabilityChange: -12, type: "Moderate" },
-                        { rank: 14, name: "Central Mexico", country: "Mexico", tempChange: 2.3, habitabilityChange: -19, type: "Moderate" },
-                        { rank: 15, name: "Eastern China", country: "China", tempChange: 2.0, habitabilityChange: -14, type: "Moderate" },
-                        { rank: 16, name: "Central Chile", country: "Chile", tempChange: 1.9, habitabilityChange: -11, type: "Moderate" },
-                        { rank: 17, name: "Southern Africa", country: "South Africa", tempChange: 2.2, habitabilityChange: -17, type: "Moderate" },
-                        { rank: 18, name: "Iran Plateau", country: "Iran", tempChange: 2.5, habitabilityChange: -20, type: "Moderate" },
-                        { rank: 19, name: "Great Plains", country: "United States", tempChange: 2.1, habitabilityChange: -13, type: "Moderate" },
-                        { rank: 20, name: "Eastern Europe Plains", country: "Poland/Ukraine", tempChange: 1.8, habitabilityChange: -9, type: "Moderate" }
-                      ].map((location) => (
-                        <tr key={location.rank} className="hover:bg-gray-50">
-                          <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                            {location.rank}
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <div className="text-sm font-medium text-gray-900">{location.name}</div>
-                            <div className="text-sm text-gray-500">{location.country}</div>
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                            +{location.tempChange.toFixed(1)}°C
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                            {location.habitabilityChange}pts
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <Badge 
-                              variant={location.type === 'Extreme' ? 'destructive' : 
-                                     location.type === 'Severe' ? 'default' : 'secondary'}
-                              className={location.type === 'Extreme' ? 'bg-red-600' : 
-                                        location.type === 'Severe' ? 'bg-orange-600' : 'bg-yellow-600'}
-                            >
-                              {location.type}
-                            </Badge>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-                <div className="mt-4 text-xs text-gray-500">
-                  <p><strong>Scale explanation:</strong> Temperature changes show projected warming above current levels. 
-                  Habitability changes show point decrease in livability scores (0-100 scale). 
-                  Extreme = {'>'} 3°C warming or {'>'} 30pt habitability loss. 
-                  Severe = 2-3°C warming or 20-30pt loss. 
-                  Moderate = 1.5-2°C warming or 10-20pt loss.</p>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Monthly Climate Data Table */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Monthly Climate Data Breakdown</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="overflow-x-auto">
-                  <table className="min-w-full divide-y divide-gray-200">
-                    <thead className="bg-gray-50">
-                      <tr>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Month
-                        </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Temperature (°C)
-                        </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Precipitation (mm)
-                        </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Range Info
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody className="bg-white divide-y divide-gray-200">
-                      {projectionData.monthlyTemperatures && JSON.parse(projectionData.monthlyTemperatures).map((temp: number, index: number) => {
-                        const precipitation = projectionData.monthlyPrecipitation ? JSON.parse(projectionData.monthlyPrecipitation)[index] : 0;
-                        const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-                        return (
-                          <tr key={index}>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                              {months[index]}
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                              {temp.toFixed(1)}°C
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                              {precipitation}mm
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-xs text-gray-500">
-                              {temp >= 15 && temp <= 25 ? 
-                                <Badge variant="secondary" className="bg-green-100 text-green-700">Optimal Temp</Badge> : 
-                                temp > 35 ? 
-                                <Badge variant="destructive">Hot</Badge> : 
-                                temp < 0 ? 
-                                <Badge variant="outline" className="border-blue-500 text-blue-700">Cold</Badge> : 
-                                <Badge variant="outline">Moderate</Badge>
-                              }
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Print Footer */}
-            <div className="hidden print:block mt-12 pt-6 border-t border-slate-200">
-              <div className="text-center text-sm text-slate-500">
-                <p>This report was generated using NVIDIA Earth-2 Studio and CBottle climate models</p>
-                <p>Data includes Arctic amplification effects and advanced climate projections</p>
-                <p>Report generated on {new Date().toLocaleDateString()} at {new Date().toLocaleTimeString()}</p>
-                <p>All values show actual ranges with optimal indicators for comprehensive analysis</p>
-              </div>
-            </div>
               </>
             )}
           </div>
@@ -1091,8 +580,6 @@ export default function ComprehensiveClimateReport() {
           </Card>
         )}
       </main>
-
-
     </div>
   );
 }
