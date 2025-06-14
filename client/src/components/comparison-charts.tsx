@@ -73,19 +73,19 @@ export default function ComparisonCharts({ data, targetYear }: ComparisonChartsP
                 <div className="flex justify-between items-center">
                   <span className="text-sm font-medium">{getLocationName(item.location.name)}</span>
                   <span className="text-sm font-bold" style={{ color: colors[index] }}>
-                    {item.temperature.annual_mean.toFixed(1)}°C
+                    {item.temperature.annual_mean?.toFixed(1) || 'N/A'}°C
                   </span>
                 </div>
                 <div className="relative h-6 bg-gray-100 rounded">
                   <div
                     className="absolute left-0 top-0 h-full rounded transition-all duration-500"
                     style={{
-                      width: `${((item.temperature.annual_mean - minTemp) / tempRange) * 100}%`,
+                      width: `${((item.temperature.annual_mean || 0) - minTemp) / tempRange * 100}%`,
                       backgroundColor: colors[index]
                     }}
                   />
                   <div className="absolute right-2 top-1 text-xs text-gray-600">
-                    {item.temperature.change_from_baseline > 0 ? '+' : ''}{item.temperature.change_from_baseline.toFixed(1)}°C change
+                    {item.temperature.change_from_baseline && item.temperature.change_from_baseline > 0 ? '+' : ''}{item.temperature.change_from_baseline?.toFixed(1) || 'N/A'}°C change
                   </div>
                 </div>
               </div>
@@ -117,19 +117,19 @@ export default function ComparisonCharts({ data, targetYear }: ComparisonChartsP
                 <div className="flex justify-between items-center">
                   <span className="text-sm font-medium">{getLocationName(item.location.name)}</span>
                   <span className="text-sm font-bold" style={{ color: colors[index] }}>
-                    {item.precipitation.annual_total.toFixed(0)}mm
+                    {item.precipitation.annual_total?.toFixed(0) || 'N/A'}mm
                   </span>
                 </div>
                 <div className="relative h-6 bg-gray-100 rounded">
                   <div
                     className="absolute left-0 top-0 h-full rounded transition-all duration-500"
                     style={{
-                      width: `${((item.precipitation.annual_total - minPrecip) / precipRange) * 100}%`,
+                      width: `${((item.precipitation.annual_total || 0) - minPrecip) / precipRange * 100}%`,
                       backgroundColor: colors[index]
                     }}
                   />
                   <div className="absolute right-2 top-1 text-xs text-gray-600">
-                    {item.precipitation.change_from_baseline > 0 ? '+' : ''}{item.precipitation.change_from_baseline.toFixed(1)}% change
+                    {item.precipitation.change_from_baseline && item.precipitation.change_from_baseline > 0 ? '+' : ''}{item.precipitation.change_from_baseline?.toFixed(1) || 'N/A'}% change
                   </div>
                 </div>
               </div>
@@ -162,14 +162,14 @@ export default function ComparisonCharts({ data, targetYear }: ComparisonChartsP
                   <div className="flex justify-between items-center">
                     <span className="text-sm font-medium">{getLocationName(item.location.name)}</span>
                     <span className="text-sm font-bold" style={{ color: colors[index] }}>
-                      {item.habitability.score.toFixed(1)}/100
+                      {item.habitability.score?.toFixed(1) || 'N/A'}/100
                     </span>
                   </div>
                   <div className="relative h-6 bg-gray-100 rounded">
                     <div
                       className="absolute left-0 top-0 h-full rounded transition-all duration-500"
                       style={{
-                        width: `${item.habitability.score}%`,
+                        width: `${item.habitability.score || 0}%`,
                         backgroundColor: colors[index]
                       }}
                     />
@@ -187,7 +187,7 @@ export default function ComparisonCharts({ data, targetYear }: ComparisonChartsP
                 {data.map((item, index) => (
                   <div key={index} className="flex items-center justify-between text-xs">
                     <span style={{ color: colors[index] }}>{getLocationName(item.location.name)}</span>
-                    <span className="font-medium">{item.habitability.breakdown.temperature_comfort.toFixed(1)}</span>
+                    <span className="font-medium">{item.habitability.breakdown?.temperature_comfort?.toFixed(1) || 'N/A'}</span>
                   </div>
                 ))}
               </div>
@@ -198,7 +198,7 @@ export default function ComparisonCharts({ data, targetYear }: ComparisonChartsP
                 {data.map((item, index) => (
                   <div key={index} className="flex items-center justify-between text-xs">
                     <span style={{ color: colors[index] }}>{getLocationName(item.location.name)}</span>
-                    <span className="font-medium">{item.habitability.breakdown.precipitation_adequacy.toFixed(1)}</span>
+                    <span className="font-medium">{item.habitability.breakdown?.precipitation_adequacy?.toFixed(1) || 'N/A'}</span>
                   </div>
                 ))}
               </div>
@@ -209,7 +209,7 @@ export default function ComparisonCharts({ data, targetYear }: ComparisonChartsP
                 {data.map((item, index) => (
                   <div key={index} className="flex items-center justify-between text-xs">
                     <span style={{ color: colors[index] }}>{getLocationName(item.location.name)}</span>
-                    <span className="font-medium">{item.habitability.breakdown.infrastructure_adaptation.toFixed(1)}</span>
+                    <span className="font-medium">{item.habitability.breakdown?.infrastructure_adaptation?.toFixed(1) || 'N/A'}</span>
                   </div>
                 ))}
               </div>
@@ -243,7 +243,7 @@ export default function ComparisonCharts({ data, targetYear }: ComparisonChartsP
                       {getLocationName(item.location.name)}
                     </span>
                     <span className="text-xs font-bold">
-                      {item.extremes.heat_stress_days} days
+                      {item.extremes.heat_stress_days || 0} days
                     </span>
                   </div>
                   <div className="relative h-3 bg-gray-100 rounded">
