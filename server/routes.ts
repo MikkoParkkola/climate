@@ -117,8 +117,151 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // API Key Management Routes
+  app.get("/api/user/keys", async (req, res) => {
+    try {
+      const userId = 1; // Demo user - in production would come from auth
+      const user = await storage.getUser(userId);
+      
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      res.json({
+        nvidiaApiKey: !!user.nvidiaApiKey,
+        cbottleApiKey: !!user.cbottleApiKey,
+      });
+    } catch (error) {
+      console.error("Error fetching user keys:", error);
+      res.status(500).json({ message: "Failed to fetch API keys" });
+    }
+  });
+
+  app.put("/api/user/keys", async (req, res) => {
+    try {
+      const { nvidiaApiKey, cbottleApiKey } = req.body;
+      const userId = 1; // Demo user
+      
+      const user = await storage.updateUserApiKeys(userId, nvidiaApiKey, cbottleApiKey);
+      
+      res.json({
+        message: "API keys updated successfully",
+        nvidiaApiKey: !!user.nvidiaApiKey,
+        cbottleApiKey: !!user.cbottleApiKey,
+      });
+    } catch (error) {
+      console.error("Error updating API keys:", error);
+      res.status(500).json({ message: "Failed to update API keys" });
+    }
+  });
+
+  // Multi-location comparison endpoint
+  app.get("/api/climate/multi-comparison", async (req, res) => {
+    try {
+      const locationIds = req.query.locationIds as string;
+      const year = parseInt(req.query.year as string);
+      
+      if (!locationIds || isNaN(year)) {
+        return res.status(400).json({ message: "Invalid parameters" });
+      }
+
+      const ids = locationIds.split(',').map(id => parseInt(id));
+      const comparisonData = [];
+
+      for (const locationId of ids) {
+        const location = await storage.getClimateLocation(locationId);
+        if (!location) continue;
+
+        let projection = await storage.getClimateProjection(locationId, year);
+        let currentProjection = await storage.getClimateProjection(locationId, 2024);
+
+        if (!projection) {
+          const projectionData = await fetchClimateProjectionFromAPI(locationId, year);
+          if (projectionData) {
+            projection = await storage.createClimateProjection(projectionData);
+          }
+        }
+
+        if (!currentProjection) {
+          const currentData = await fetchClimateProjectionFromAPI(locationId, 2024);
+          if (currentData) {
+            currentProjection = await storage.createClimateProjection(currentData);
+          }
+        }
+
+        if (projection && currentProjection) {
+          comparisonData.push({
+            location,
+            projection,
+            currentProjection,
+          });
+        }
+      }
+
+      res.json(comparisonData);
+    } catch (error) {
+      console.error("Error fetching multi-comparison data:", error);
+      res.status(500).json({ message: "Failed to fetch comparison data" });
+    }
+  });
+
+  // Save user comparison
+  app.post("/api/user/comparisons", async (req, res) => {
+    try {
+      const { name, locationIds, year } = req.body;
+      const userId = 1; // Demo user
+      
+      const comparison = await storage.createLocationComparison(userId, name, locationIds, year);
+      res.json(comparison);
+    } catch (error) {
+      console.error("Error saving comparison:", error);
+      res.status(500).json({ message: "Failed to save comparison" });
+    }
+  });
+
+  // Get user comparisons
+  app.get("/api/user/comparisons", async (req, res) => {
+    try {
+      const userId = 1; // Demo user
+      const comparisons = await storage.getUserComparisons(userId);
+      res.json(comparisons);
+    } catch (error) {
+      console.error("Error fetching comparisons:", error);
+      res.status(500).json({ message: "Failed to fetch comparisons" });
+    }
+  });
+
+  // PDF Export endpoint
+  app.post("/api/climate/export-comparison", async (req, res) => {
+    try {
+      const { locationIds, year, name } = req.body;
+      
+      const pdfData = await generateComparisonPDF(locationIds, year, name);
+      
+      res.json({ 
+        downloadUrl: `/tmp/${pdfData.filename}`,
+        message: "PDF generated successfully" 
+      });
+    } catch (error) {
+      console.error("Error generating PDF:", error);
+      res.status(500).json({ message: "Failed to generate PDF" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
+}
+
+async function generateComparisonPDF(locationIds: number[], year: number, name: string) {
+  // Simplified PDF generation - in production use libraries like PDFKit or Puppeteer
+  const filename = `climate-comparison-${year}-${Date.now()}.pdf`;
+  const content = `Climate Comparison Report\n\nName: ${name}\nYear: ${year}\nLocations: ${locationIds.join(', ')}\n\nGenerated on: ${new Date().toISOString()}`;
+  
+  return {
+    filename,
+    content,
+    path: `/tmp/${filename}`
+  };
 }
 
 async function fetchClimateProjectionFromAPI(locationId: number, year: number) {

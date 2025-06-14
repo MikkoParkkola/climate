@@ -1,6 +1,6 @@
 import { users, climateLocations, climateProjections, locationComparisons, type User, type InsertUser, type ClimateLocation, type InsertClimateLocation, type ClimateProjection, type InsertClimateProjection } from "@shared/schema";
 import { db } from "./db";
-import { eq } from "drizzle-orm";
+import { eq, and } from "drizzle-orm";
 
 export interface IStorage {
   getUser(id: number): Promise<User | undefined>;
@@ -25,93 +25,136 @@ export interface IStorage {
 }
 
 export class DatabaseStorage implements IStorage {
-  private users: Map<number, User>;
-  private climateLocations: Map<number, ClimateLocation>;
-  private climateProjections: Map<string, ClimateProjection>;
-  private currentUserId: number;
-  private currentLocationId: number;
-  private currentProjectionId: number;
-
-  constructor() {
-    this.users = new Map();
-    this.climateLocations = new Map();
-    this.climateProjections = new Map();
-    this.currentUserId = 1;
-    this.currentLocationId = 1;
-    this.currentProjectionId = 1;
-  }
-
   async getUser(id: number): Promise<User | undefined> {
-    return this.users.get(id);
+    const [user] = await db.select().from(users).where(eq(users.id, id));
+    return user || undefined;
   }
 
   async getUserByUsername(username: string): Promise<User | undefined> {
-    return Array.from(this.users.values()).find(
-      (user) => user.username === username,
-    );
+    const [user] = await db.select().from(users).where(eq(users.username, username));
+    return user || undefined;
   }
 
   async createUser(insertUser: InsertUser): Promise<User> {
-    const id = this.currentUserId++;
-    const user: User = { ...insertUser, id };
-    this.users.set(id, user);
+    const [user] = await db
+      .insert(users)
+      .values({
+        ...insertUser,
+        nvidiaApiKey: null,
+        cbottleApiKey: null,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      })
+      .returning();
+    return user;
+  }
+
+  async updateUserApiKeys(userId: number, nvidiaApiKey?: string, cbottleApiKey?: string): Promise<User> {
+    const [user] = await db
+      .update(users)
+      .set({
+        nvidiaApiKey,
+        cbottleApiKey,
+        updatedAt: new Date(),
+      })
+      .where(eq(users.id, userId))
+      .returning();
     return user;
   }
 
   async getClimateLocation(id: number): Promise<ClimateLocation | undefined> {
-    return this.climateLocations.get(id);
+    const [location] = await db.select().from(climateLocations).where(eq(climateLocations.id, id));
+    return location || undefined;
   }
 
   async getClimateLocationByCoordinates(latitude: number, longitude: number): Promise<ClimateLocation | undefined> {
-    return Array.from(this.climateLocations.values()).find(
-      (location) => 
-        Math.abs(location.latitude - latitude) < 0.001 && 
-        Math.abs(location.longitude - longitude) < 0.001
-    );
+    const tolerance = 0.01;
+    const locations = await db.select().from(climateLocations);
+    
+    for (const location of locations) {
+      if (Math.abs(location.latitude - latitude) < tolerance && Math.abs(location.longitude - longitude) < tolerance) {
+        return location;
+      }
+    }
+    return undefined;
   }
 
   async createClimateLocation(insertLocation: InsertClimateLocation): Promise<ClimateLocation> {
-    const id = this.currentLocationId++;
-    const location: ClimateLocation = { 
-      ...insertLocation, 
-      id,
-      createdAt: new Date()
-    };
-    this.climateLocations.set(id, location);
+    const [location] = await db
+      .insert(climateLocations)
+      .values({
+        ...insertLocation,
+        country: insertLocation.country || null,
+        region: insertLocation.region || null,
+        createdAt: new Date(),
+      })
+      .returning();
     return location;
   }
 
   async searchClimateLocations(query: string): Promise<ClimateLocation[]> {
+    const locations = await db.select().from(climateLocations);
     const searchTerm = query.toLowerCase();
-    return Array.from(this.climateLocations.values()).filter(
-      (location) => 
+    
+    return locations
+      .filter(location => 
         location.name.toLowerCase().includes(searchTerm) ||
-        location.country?.toLowerCase().includes(searchTerm) ||
-        location.region?.toLowerCase().includes(searchTerm)
-    );
+        (location.country && location.country.toLowerCase().includes(searchTerm)) ||
+        (location.region && location.region.toLowerCase().includes(searchTerm))
+      )
+      .slice(0, 10);
   }
 
   async getClimateProjection(locationId: number, year: number): Promise<ClimateProjection | undefined> {
-    const key = `${locationId}-${year}`;
-    return this.climateProjections.get(key);
+    const [projection] = await db
+      .select()
+      .from(climateProjections)
+      .where(and(
+        eq(climateProjections.locationId, locationId),
+        eq(climateProjections.projectionYear, year)
+      ));
+    return projection || undefined;
   }
 
   async createClimateProjection(insertProjection: InsertClimateProjection): Promise<ClimateProjection> {
-    const id = this.currentProjectionId++;
-    const projection: ClimateProjection = { 
-      ...insertProjection, 
-      id,
-      fetchedAt: new Date()
-    };
-    const key = `${projection.locationId}-${projection.projectionYear}`;
-    this.climateProjections.set(key, projection);
+    const [projection] = await db
+      .insert(climateProjections)
+      .values({
+        ...insertProjection,
+        fetchedAt: new Date(),
+      })
+      .returning();
     return projection;
   }
 
   async getClimateProjectionsByLocation(locationId: number): Promise<ClimateProjection[]> {
-    return Array.from(this.climateProjections.values()).filter(
-      (projection) => projection.locationId === locationId
-    );
+    const projections = await db
+      .select()
+      .from(climateProjections)
+      .where(eq(climateProjections.locationId, locationId));
+    
+    return projections.sort((a, b) => a.projectionYear - b.projectionYear);
+  }
+
+  async createLocationComparison(userId: number, name: string, locationIds: number[], year: number) {
+    const [comparison] = await db
+      .insert(locationComparisons)
+      .values({
+        userId,
+        name,
+        locationIds: JSON.stringify(locationIds),
+        year,
+        createdAt: new Date(),
+      })
+      .returning();
+    return comparison;
+  }
+
+  async getUserComparisons(userId: number) {
+    return await db
+      .select()
+      .from(locationComparisons)
+      .where(eq(locationComparisons.userId, userId));
   }
 }
 
