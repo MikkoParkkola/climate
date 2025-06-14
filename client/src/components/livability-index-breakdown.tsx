@@ -289,6 +289,28 @@ export default function LivabilityIndexBreakdown({
           </TabsList>
 
           <TabsContent value="overview" className="space-y-6">
+            {/* Habitability Breakdown Visualization */}
+            {(currentData.habitabilityBreakdown || projectedData.habitabilityBreakdown) && (
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                {currentData.habitabilityBreakdown && (
+                  <Card className="p-4">
+                    <HabitabilityStackedBar 
+                      breakdown={currentData.habitabilityBreakdown} 
+                      title="Current Habitability (2024)" 
+                    />
+                  </Card>
+                )}
+                {projectedData.habitabilityBreakdown && (
+                  <Card className="p-4">
+                    <HabitabilityStackedBar 
+                      breakdown={projectedData.habitabilityBreakdown} 
+                      title={`Projected Habitability (${selectedYear})`} 
+                    />
+                  </Card>
+                )}
+              </div>
+            )}
+
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <Card className="p-4">
                 <div className="text-center">
