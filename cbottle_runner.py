@@ -492,12 +492,6 @@ def calculate_habitability_score(temps, precip, heat_days, drought_risk, flood_r
     base_score = temp_component + precip_component + infrastructure_component
     final_score = base_score - heat_penalty - drought_penalty - flood_penalty - extreme_temp_penalty - extreme_dry_penalty
     
-    # Apply Nordic bonus - cities like Helsinki, Stockholm, Oslo are actually highly livable
-    nordic_bonus = 0
-    if 3 <= mean_temp < 10 and 500 <= annual_precip <= 1200:  # Nordic climate profile
-        nordic_bonus = 15
-        final_score += nordic_bonus
-    
     # Return both overall score and detailed breakdown
     breakdown = {
         'temperature_comfort': temp_component,
@@ -508,7 +502,6 @@ def calculate_habitability_score(temps, precip, heat_days, drought_risk, flood_r
         'flood_risk_penalty': flood_penalty,
         'extreme_temperature_penalty': extreme_temp_penalty,
         'extreme_aridity_penalty': extreme_dry_penalty,
-        'nordic_climate_bonus': nordic_bonus,
         'base_score': base_score,
         'final_score': max(10, min(100, final_score))
     }
