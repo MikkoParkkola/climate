@@ -22,6 +22,7 @@ export default function InteractiveMap({ selectedLocation, onLocationSelect, cla
   const mapInstanceRef = useRef<L.Map | null>(null);
   const markerRef = useRef<L.Marker | null>(null);
   const [isMapReady, setIsMapReady] = useState(false);
+  const [currentLayer, setCurrentLayer] = useState<'satellite' | 'terrain' | 'street'>('satellite');
 
   useEffect(() => {
     if (!mapRef.current || mapInstanceRef.current) return;

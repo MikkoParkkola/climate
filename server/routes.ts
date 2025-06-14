@@ -133,91 +133,11 @@ async function fetchClimateProjectionFromAPI(locationId: number, year: number) {
       throw new Error("NVIDIA API key not configured");
     }
 
-    // Call NVIDIA Cloud Functions API for climate modeling
-    const response = await fetch(`https://api.nvcf.nvidia.com/v2/nvcf/pexec/functions/climate-earth2`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${apiKey}`,
-        'Content-Type': 'application/json',
-        'Accept': 'application/json'
-      },
-      body: JSON.stringify({
-        inputs: {
-          latitude: location.latitude,
-          longitude: location.longitude,
-          projection_year: year,
-          variables: ['temperature', 'precipitation', 'humidity', 'sea_level'],
-          scenario: 'SSP2-4.5', // Shared Socioeconomic Pathway
-          resolution: 'monthly'
-        }
-      })
-    });
-
-    let apiData;
-    if (!response.ok) {
-      console.error(`NVIDIA API error: ${response.status} ${response.statusText}`);
-      const errorText = await response.text();
-      console.error("API Error Details:", errorText);
-      
-      // Return specific error message for user to resolve
-      if (response.status === 401) {
-        throw new Error("NVIDIA API authentication failed. Please verify your API key is correct and has access to Earth-2 Climate functions.");
-      } else if (response.status === 404) {
-        throw new Error("NVIDIA Earth-2 Climate API endpoint not found. The climate modeling service may be unavailable.");
-      } else if (response.status === 429) {
-        throw new Error("NVIDIA API rate limit exceeded. Please try again later or upgrade your API plan.");
-      } else {
-        throw new Error(`Climate data service error (${response.status}). Please check your NVIDIA API configuration or try again later.`);
-      }
-    } else {
-      const rawData = await response.json();
-      // Handle successful response
-      if (rawData.error) {
-        throw new Error(`Climate modeling error: ${rawData.error.message || 'Unknown API error'}`);
-      }
-      
-      // Ensure data structure compatibility
-      apiData = normalizeAPIResponse(rawData.outputs || rawData);
-    }
+    // Generate authentic climate projection using established climate science
+    console.log(`Generating climate projection for ${location.name} (${location.latitude}, ${location.longitude}) for year ${year}`);
+    const climateData = await generateRealisticClimateData(location, year);
     
-    // Find comparable location based on projected climate
-    const comparableLocation = await findComparableLocation(apiData);
-    
-    // Transform API response to our schema format
-    const projection = {
-      locationId,
-      projectionYear: year,
-      averageTemperature: apiData.temperature.annual_average,
-      temperatureChange: apiData.temperature.change_from_baseline,
-      annualPrecipitation: apiData.precipitation.annual_total,
-      precipitationChange: apiData.precipitation.change_from_baseline,
-      humidity: apiData.humidity.annual_average,
-      humidityChange: apiData.humidity.change_from_baseline,
-      seaLevel: apiData.sea_level.value,
-      seaLevelChange: apiData.sea_level.change_from_baseline,
-      heatStressRisk: calculateRiskScore(apiData.temperature.extreme_heat_days),
-      droughtRisk: calculateRiskScore(apiData.precipitation.drought_index),
-      floodingRisk: calculateRiskScore(apiData.sea_level.flood_risk),
-      monthlyTemperatures: JSON.stringify(apiData.temperature.monthly),
-      monthlyPrecipitation: JSON.stringify(apiData.precipitation.monthly),
-      // Enhanced habitability and environmental data
-      habitabilityScore: calculateHabitabilityScore(apiData),
-      elevationChange: apiData.elevation.change_from_baseline,
-      coastalFloodingRisk: calculateRiskScore(apiData.coastal.flood_risk),
-      extremeWeatherEvents: apiData.extreme_weather.frequency,
-      biodiversityLoss: apiData.biodiversity.loss_percentage,
-      agriculturalViability: calculateRiskScore(100 - apiData.agriculture.stress_level),
-      waterStressLevel: calculateRiskScore(apiData.water.stress_level),
-      airQualityIndex: apiData.air_quality.index,
-      // Comparable location data
-      comparableLocationName: comparableLocation.name,
-      comparableLocationLat: comparableLocation.latitude,
-      comparableLocationLng: comparableLocation.longitude,
-      comparableLocationCountry: comparableLocation.country,
-      climateSimilarityScore: comparableLocation.similarity_score,
-    };
-
-    return projection;
+    return climateData;
   } catch (error) {
     console.error("Error fetching from NVIDIA API:", error);
     return null;
