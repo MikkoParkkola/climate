@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Trophy, MapPin, TrendingDown, AlertTriangle, Globe } from "lucide-react";
+import { Trophy, MapPin, TrendingDown, AlertTriangle, Globe, Thermometer, Droplets, Building } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 
 interface HabitabilityRankingProps {
@@ -21,6 +21,11 @@ interface GlobalRankedLocation {
   habitability_change: number;
   temperature_change: number;
   precipitation_change: number;
+  temperature_comfort?: number;
+  humidity_score?: number;
+  infrastructure_score?: number;
+  mean_temperature?: number;
+  annual_precipitation?: number;
 }
 
 interface GlobalRankings {
@@ -77,12 +82,18 @@ export default function HabitabilityRanking({ selectedYear, onLocationSelect }: 
     locations, 
     title, 
     icon: Icon, 
-    description 
+    description,
+    scoreKey = 'future_habitability',
+    showTemperature = false,
+    showPrecipitation = false
   }: { 
     locations: GlobalRankedLocation[], 
     title: string, 
     icon: any, 
-    description: string 
+    description: string,
+    scoreKey?: string,
+    showTemperature?: boolean,
+    showPrecipitation?: boolean
   }) => (
     <Card>
       <CardHeader>
@@ -111,11 +122,21 @@ export default function HabitabilityRanking({ selectedYear, onLocationSelect }: 
                   <div className="text-sm text-muted-foreground">
                     {location.region}
                   </div>
+                  {showTemperature && location.mean_temperature && (
+                    <div className="text-xs text-muted-foreground">
+                      {location.mean_temperature.toFixed(1)}°C avg
+                    </div>
+                  )}
+                  {showPrecipitation && location.annual_precipitation && (
+                    <div className="text-xs text-muted-foreground">
+                      {location.annual_precipitation.toFixed(0)}mm/year
+                    </div>
+                  )}
                 </div>
               </div>
               <div className="text-right">
-                <div className={`font-semibold ${getScoreColor(location.future_habitability)}`}>
-                  {location.future_habitability.toFixed(0)}
+                <div className={`font-semibold ${getScoreColor(location[scoreKey as keyof GlobalRankedLocation] as number)}`}>
+                  {((location[scoreKey as keyof GlobalRankedLocation] as number) || 0).toFixed(0)}
                 </div>
                 <div className={`text-sm ${getChangeColor(location.habitability_change)}`}>
                   {formatChange(location.habitability_change)}
@@ -188,198 +209,98 @@ export default function HabitabilityRanking({ selectedYear, onLocationSelect }: 
         </p>
       </CardHeader>
       <CardContent>
-        <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
-          {/* Best Habitability Table */}
-          <Card className="border-green-200">
-            <CardHeader>
-              <CardTitle className="text-green-700 flex items-center gap-2">
-                <Trophy className="h-5 w-5" />
-                Most Habitable Regions
-              </CardTitle>
-              <p className="text-sm text-green-600">
-                Regions with highest projected habitability scores
-              </p>
-            </CardHeader>
-            <CardContent>
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="border-b border-green-200">
-                      <th className="text-left py-2 font-medium text-green-800">Rank</th>
-                      <th className="text-left py-2 font-medium text-green-800">Region/Area</th>
-                      <th className="text-right py-2 font-medium text-green-800">Score</th>
-                      <th className="text-right py-2 font-medium text-green-800">Change</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {globalRankings.best_habitability.map((location, index) => (
-                      <tr 
-                        key={index}
-                        className="border-b border-green-100 hover:bg-green-50 cursor-pointer transition-colors"
-                        onClick={() => handleLocationClick(location)}
-                      >
-                        <td className="py-2">
-                          <div className="flex items-center justify-center w-6 h-6 bg-green-600 text-white rounded-full text-xs font-bold">
-                            {index + 1}
-                          </div>
-                        </td>
-                        <td className="py-2">
-                          <div>
-                            <div className="font-medium text-gray-900">{location.name}</div>
-                            <div className="text-xs text-green-600">{location.region}</div>
-                          </div>
-                        </td>
-                        <td className="py-2 text-right">
-                          <div className="font-bold text-green-600">
-                            {location.future_habitability.toFixed(1)}
-                          </div>
-                        </td>
-                        <td className="py-2 text-right">
-                          <div className={`text-xs font-medium ${location.habitability_change >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                            {location.habitability_change >= 0 ? '+' : ''}{location.habitability_change.toFixed(1)}
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Most Challenging Table */}
-          <Card className="border-red-200">
-            <CardHeader>
-              <CardTitle className="text-red-700 flex items-center gap-2">
-                <AlertTriangle className="h-5 w-5" />
-                Most Challenging Regions
-              </CardTitle>
-              <p className="text-sm text-red-600">
-                Regions facing greatest habitability challenges
-              </p>
-            </CardHeader>
-            <CardContent>
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="border-b border-red-200">
-                      <th className="text-left py-2 font-medium text-red-800">Rank</th>
-                      <th className="text-left py-2 font-medium text-red-800">Region/Area</th>
-                      <th className="text-right py-2 font-medium text-red-800">Score</th>
-                      <th className="text-right py-2 font-medium text-red-800">Change</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {globalRankings.worst_habitability.map((location, index) => (
-                      <tr 
-                        key={index}
-                        className="border-b border-red-100 hover:bg-red-50 cursor-pointer transition-colors"
-                        onClick={() => handleLocationClick(location)}
-                      >
-                        <td className="py-2">
-                          <div className="flex items-center justify-center w-6 h-6 bg-red-600 text-white rounded-full text-xs font-bold">
-                            {index + 1}
-                          </div>
-                        </td>
-                        <td className="py-2">
-                          <div>
-                            <div className="font-medium text-gray-900">{location.name}</div>
-                            <div className="text-xs text-red-600">{location.region}</div>
-                          </div>
-                        </td>
-                        <td className="py-2 text-right">
-                          <div className="font-bold text-red-600">
-                            {location.future_habitability.toFixed(1)}
-                          </div>
-                        </td>
-                        <td className="py-2 text-right">
-                          <div className={`text-xs font-medium ${location.habitability_change >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                            {location.habitability_change >= 0 ? '+' : ''}{location.habitability_change.toFixed(1)}
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Biggest Decline Table */}
-          <Card className="border-orange-200">
-            <CardHeader>
-              <CardTitle className="text-orange-700 flex items-center gap-2">
-                <TrendingDown className="h-5 w-5" />
-                Biggest Decline
-              </CardTitle>
-              <p className="text-sm text-orange-600">
-                Regions with largest habitability drops
-              </p>
-            </CardHeader>
-            <CardContent>
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="border-b border-orange-200">
-                      <th className="text-left py-2 font-medium text-orange-800">Rank</th>
-                      <th className="text-left py-2 font-medium text-orange-800">Region/Area</th>
-                      <th className="text-right py-2 font-medium text-orange-800">Decline</th>
-                      <th className="text-right py-2 font-medium text-orange-800">Current</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {globalRankings.biggest_decline.map((location, index) => (
-                      <tr 
-                        key={index}
-                        className="border-b border-orange-100 hover:bg-orange-50 cursor-pointer transition-colors"
-                        onClick={() => handleLocationClick(location)}
-                      >
-                        <td className="py-2">
-                          <div className="flex items-center justify-center w-6 h-6 bg-orange-600 text-white rounded-full text-xs font-bold">
-                            {index + 1}
-                          </div>
-                        </td>
-                        <td className="py-2">
-                          <div>
-                            <div className="font-medium text-gray-900">{location.name}</div>
-                            <div className="text-xs text-orange-600">{location.region}</div>
-                          </div>
-                        </td>
-                        <td className="py-2 text-right">
-                          <div className="font-bold text-orange-600">
-                            {Math.abs(location.habitability_change).toFixed(1)}
-                          </div>
-                        </td>
-                        <td className="py-2 text-right">
-                          <div className="text-xs text-gray-600">
-                            {location.future_habitability.toFixed(1)}
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-        
-        <div className="mt-6 p-4 bg-muted/50 rounded-lg">
-          <div className="text-sm text-muted-foreground">
-            <div className="flex items-center gap-2 mb-2">
-              <MapPin className="h-4 w-4" />
-              Click any region to view its detailed climate projection
+        <Tabs defaultValue="overall" className="w-full">
+          <TabsList className="grid w-full grid-cols-4">
+            <TabsTrigger value="overall">Overall Rankings</TabsTrigger>
+            <TabsTrigger value="temperature">Temperature Comfort</TabsTrigger>
+            <TabsTrigger value="humidity">Humidity</TabsTrigger>
+            <TabsTrigger value="infrastructure">Infrastructure</TabsTrigger>
+          </TabsList>
+          
+          <TabsContent value="overall" className="space-y-6">
+            <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
+              <RankingCard
+                locations={globalRankings.best_habitability}
+                title="Most Habitable Regions"
+                icon={Trophy}
+                description="Regions with highest projected habitability scores"
+              />
+              <RankingCard
+                locations={globalRankings.worst_habitability}
+                title="Least Habitable Regions"
+                icon={AlertTriangle}
+                description="Regions facing significant climate challenges"
+              />
+              <RankingCard
+                locations={globalRankings.biggest_decline}
+                title="Biggest Habitability Decline"
+                icon={TrendingDown}
+                description="Regions experiencing the most severe climate deterioration"
+              />
             </div>
-            <div className="grid grid-cols-2 gap-4 text-xs">
-              <div>
-                <span className="font-medium">Score:</span> Projected habitability (0-100)
-              </div>
-              <div>
-                <span className="font-medium">Change:</span> Difference from current baseline
-              </div>
+          </TabsContent>
+          
+          <TabsContent value="temperature" className="space-y-6">
+            <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+              <RankingCard
+                locations={globalRankings.best_temperature_comfort}
+                title="Best Temperature Comfort"
+                icon={Thermometer}
+                description="Regions with optimal temperature ranges (15-25°C)"
+                scoreKey="temperature_comfort"
+                showTemperature={true}
+              />
+              <RankingCard
+                locations={globalRankings.worst_temperature_comfort}
+                title="Worst Temperature Comfort"
+                icon={AlertTriangle}
+                description="Regions with extreme temperature conditions"
+                scoreKey="temperature_comfort"
+                showTemperature={true}
+              />
             </div>
-          </div>
-        </div>
+          </TabsContent>
+          
+          <TabsContent value="humidity" className="space-y-6">
+            <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+              <RankingCard
+                locations={globalRankings.best_humidity}
+                title="Best Humidity Balance"
+                icon={Droplets}
+                description="Regions with optimal precipitation and humidity levels"
+                scoreKey="humidity_score"
+                showPrecipitation={true}
+              />
+              <RankingCard
+                locations={globalRankings.worst_humidity}
+                title="Worst Humidity Conditions"
+                icon={AlertTriangle}
+                description="Regions with extreme dry or humid conditions"
+                scoreKey="humidity_score"
+                showPrecipitation={true}
+              />
+            </div>
+          </TabsContent>
+          
+          <TabsContent value="infrastructure" className="space-y-6">
+            <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+              <RankingCard
+                locations={globalRankings.best_infrastructure}
+                title="Best Infrastructure Adaptation"
+                icon={Building}
+                description="Regions with excellent climate adaptation capabilities"
+                scoreKey="infrastructure_score"
+              />
+              <RankingCard
+                locations={globalRankings.worst_infrastructure}
+                title="Infrastructure Challenges"
+                icon={AlertTriangle}
+                description="Regions with limited adaptation infrastructure"
+                scoreKey="infrastructure_score"
+              />
+            </div>
+          </TabsContent>
+        </Tabs>
       </CardContent>
     </Card>
   );
