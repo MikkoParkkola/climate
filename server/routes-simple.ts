@@ -77,70 +77,57 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
       
-      // Attempt to call CBottle via multiple NVIDIA endpoints
-      console.log('Attempting CBottle API access through available NVIDIA endpoints...');
+      // Run local CBottle implementation
+      console.log('Running local CBottle climate model...');
       
-      const cbottleRequest = {
-        model: "earth2studio.models.dx.CBottleSR",
-        inputs: {
-          latitude: coordinates.lat,
-          longitude: coordinates.lng,
-          time: `${year}-01-01T00:00:00`,
-          variables: ["temperature_2m", "total_precipitation", "mean_sea_level_pressure"],
-          ensemble_size: 1,
-          lead_time_hours: (year - 2024) * 365 * 24
-        },
-        parameters: {
-          spatial_resolution: 0.25,
-          output_format: "json"
-        }
-      };
-      
-      console.log('CBottle request payload:', JSON.stringify(cbottleRequest, null, 2));
-      
-      // Try NVIDIA Build platform endpoint
-      const response = await fetch("https://integrate.api.nvidia.com/v1/earth2studio/cbottle", {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${apiKey}`,
-          'Content-Type': 'application/json',
-          'Accept': 'application/json'
-        },
-        body: JSON.stringify(cbottleRequest)
-      });
-      
-      console.log('NVIDIA API response status:', response.status);
-      console.log('NVIDIA API response headers:', Object.fromEntries(response.headers.entries()));
-      
-      const responseText = await response.text();
-      console.log('NVIDIA API raw response:', responseText);
-      
-      if (!response.ok) {
-        return res.status(response.status).json({
-          error: 'NVIDIA API error',
-          status: response.status,
-          statusText: response.statusText,
-          rawResponse: responseText
-        });
-      }
-      
-      let apiResponse;
+      const { exec } = require('child_process');
+      const { promisify } = require('util');
+      const execAsync = promisify(exec);
+
       try {
-        apiResponse = JSON.parse(responseText);
-      } catch (parseError) {
+        const command = `python cbottle_runner.py ${coordinates.lat} ${coordinates.lng} ${year} "${apiKey}"`;
+        console.log('Executing CBottle command:', command);
+        
+        const { stdout, stderr } = await execAsync(command);
+        
+        if (stderr) {
+          console.log('CBottle stderr:', stderr);
+        }
+        
+        console.log('CBottle stdout length:', stdout.length);
+        
+        const climateData = JSON.parse(stdout);
+        
+        if (climateData.error) {
+          console.error('CBottle error:', climateData.error);
+          return res.status(500).json({
+            error: 'CBottle processing error',
+            details: climateData.error,
+            traceback: climateData.traceback
+          });
+        }
+
+        console.log('CBottle climate projection generated successfully');
+        console.log('Temperature range:', climateData.temperature.min, 'to', climateData.temperature.max, '°C');
+        console.log('Annual precipitation:', climateData.precipitation.annual_total, 'mm');
+        console.log('Habitability score:', climateData.habitability.score);
+
+        res.json({
+          success: true,
+          input: { location, coordinates, year },
+          data: climateData,
+          timestamp: new Date().toISOString(),
+          model: 'CBottle Local Implementation'
+        });
+
+      } catch (execError) {
+        console.error('CBottle execution error:', execError);
         return res.status(500).json({
-          error: 'Invalid JSON response from NVIDIA API',
-          rawResponse: responseText,
-          parseError: parseError instanceof Error ? parseError.message : 'Unknown parse error'
+          error: 'CBottle execution failed',
+          message: execError instanceof Error ? execError.message : 'Unknown execution error',
+          details: 'Local CBottle runner encountered an error'
         });
       }
-      
-      res.json({
-        success: true,
-        input: { location, coordinates, year },
-        apiResponse: apiResponse,
-        timestamp: new Date().toISOString()
-      });
       
     } catch (error) {
       console.error('Climate projection error:', error);
