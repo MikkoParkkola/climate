@@ -471,9 +471,9 @@ def calculate_habitability_score(temps, precip, heat_days, drought_risk, flood_r
         'temperature_comfort': temp_component,
         'precipitation_adequacy': precip_component,
         'infrastructure_adaptation': infrastructure_component,
-        'heat_stress_penalty': -heat_penalty,
-        'drought_penalty': -drought_penalty,
-        'flood_penalty': -flood_penalty,
+        'heat_stress_penalty': heat_penalty,
+        'drought_risk_penalty': drought_penalty,
+        'flood_risk_penalty': flood_penalty,
         'base_score': base_score,
         'final_score': max(40, min(100, final_score))
     }
