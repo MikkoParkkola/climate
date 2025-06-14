@@ -6,6 +6,27 @@ export const users = pgTable("users", {
   id: serial("id").primaryKey(),
   username: text("username").notNull().unique(),
   password: text("password").notNull(),
+  nvidiaApiKey: text("nvidia_api_key"),
+  cbottleApiKey: text("cbottle_api_key"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Session storage table for authentication
+export const sessions = pgTable("sessions", {
+  sid: text("sid").primaryKey(),
+  sess: text("sess").notNull(),
+  expire: timestamp("expire").notNull(),
+});
+
+// Location comparisons table
+export const locationComparisons = pgTable("location_comparisons", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").references(() => users.id),
+  name: text("name").notNull(),
+  locationIds: text("location_ids").notNull(), // JSON array of location IDs
+  year: integer("year").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
 });
 
 export const climateLocations = pgTable("climate_locations", {

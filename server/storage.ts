@@ -1,9 +1,12 @@
-import { users, climateLocations, climateProjections, type User, type InsertUser, type ClimateLocation, type InsertClimateLocation, type ClimateProjection, type InsertClimateProjection } from "@shared/schema";
+import { users, climateLocations, climateProjections, locationComparisons, type User, type InsertUser, type ClimateLocation, type InsertClimateLocation, type ClimateProjection, type InsertClimateProjection } from "@shared/schema";
+import { db } from "./db";
+import { eq } from "drizzle-orm";
 
 export interface IStorage {
   getUser(id: number): Promise<User | undefined>;
   getUserByUsername(username: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
+  updateUserApiKeys(userId: number, nvidiaApiKey?: string, cbottleApiKey?: string): Promise<User>;
   
   // Climate location methods
   getClimateLocation(id: number): Promise<ClimateLocation | undefined>;
@@ -15,9 +18,13 @@ export interface IStorage {
   getClimateProjection(locationId: number, year: number): Promise<ClimateProjection | undefined>;
   createClimateProjection(projection: InsertClimateProjection): Promise<ClimateProjection>;
   getClimateProjectionsByLocation(locationId: number): Promise<ClimateProjection[]>;
+  
+  // Comparison methods
+  createLocationComparison(userId: number, name: string, locationIds: number[], year: number): Promise<any>;
+  getUserComparisons(userId: number): Promise<any[]>;
 }
 
-export class MemStorage implements IStorage {
+export class DatabaseStorage implements IStorage {
   private users: Map<number, User>;
   private climateLocations: Map<number, ClimateLocation>;
   private climateProjections: Map<string, ClimateProjection>;
@@ -108,4 +115,4 @@ export class MemStorage implements IStorage {
   }
 }
 
-export const storage = new MemStorage();
+export const storage = new DatabaseStorage();
