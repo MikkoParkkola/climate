@@ -518,21 +518,21 @@ export default function ClimateApp() {
                               )}
                               
                               {/* Temperature line chart */}
-                              <svg className="w-full h-full" viewBox="0 0 330 100" preserveAspectRatio="none">
+                              <svg className="w-full h-full" viewBox="0 0 100 100" preserveAspectRatio="none">
                                 <polyline
                                   fill="none"
                                   stroke="#dc2626"
                                   strokeWidth="1.5"
                                   vectorEffect="non-scaling-stroke"
                                   points={monthlyTemps.map((temp: number, index: number) => {
-                                    const x = index * 30 + 15; // 0, 30, 60, ... 330 with 15px offset
+                                    const x = (index / 11) * 100; // 0%, 9.09%, 18.18%, ... 100%
                                     const y = 100 - ((temp - scaleMin) / scaleRange) * 100;
                                     return `${x},${y}`;
                                   }).join(' ')}
                                 />
                                 {/* Data points with proper circular shape */}
                                 {monthlyTemps.map((temp: number, index: number) => {
-                                  const x = index * 30 + 15; // Match the polyline positioning
+                                  const x = (index / 11) * 100; // Match the polyline positioning exactly
                                   const y = 100 - ((temp - scaleMin) / scaleRange) * 100;
                                   const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
                                   return (
@@ -540,9 +540,9 @@ export default function ClimateApp() {
                                       key={index}
                                       cx={x} 
                                       cy={y} 
-                                      r="3" 
+                                      r="2" 
                                       fill={temp >= 0 ? "#dc2626" : "#2563eb"}
-                                      className="hover:r-4 cursor-pointer"
+                                      className="hover:r-3 cursor-pointer"
                                     >
                                       <title>{`${months[index]}: ${temp.toFixed(1)}°C`}</title>
                                     </circle>
@@ -551,7 +551,7 @@ export default function ClimateApp() {
                               </svg>
                             </div>
                             
-                            {/* Month labels - properly aligned */}
+                            {/* Month labels - perfectly aligned with data points */}
                             <div className="absolute bottom-0 left-14 right-4 h-4">
                               <div className="relative w-full h-full">
                                 {['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'].map((month, index) => (
