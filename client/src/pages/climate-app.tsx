@@ -772,14 +772,22 @@ export default function ClimateApp() {
                       {/* Habitability Trend */}
                       <div className="space-y-2">
                         <h4 className="font-medium text-green-700">Habitability Trend</h4>
+                        <div className="text-xs text-green-600 mb-2">
+                          Scale: 25-100 (adjusted for northern climates)
+                        </div>
                         <div className="space-y-1">
                           {climateData.time_series.years?.map((year: number, index: number) => {
                             const habit = climateData.time_series.habitability_trend[index];
                             const isTarget = year === climateData.year;
+                            const currentHabit = climateData.habitability?.score;
+                            const isCurrentYear = currentHabit && year === climateData.year;
                             return (
                               <div key={year} className={`flex justify-between text-xs ${isTarget ? 'font-bold bg-green-50 px-2 py-1 rounded' : ''}`}>
                                 <span>{year}:</span>
-                                <span className="font-mono">{habit?.toFixed(0)}/100</span>
+                                <div className="flex gap-2">
+                                  <span className="font-mono">{habit?.toFixed(0)}/100</span>
+                                  {isCurrentYear && <span className="text-green-600">(Current: {currentHabit.toFixed(0)})</span>}
+                                </div>
                               </div>
                             );
                           })}
@@ -790,10 +798,11 @@ export default function ClimateApp() {
                     <div className="mt-4 p-3 bg-indigo-50 rounded-lg text-sm">
                       <h4 className="font-medium text-indigo-800 mb-2">Time Series Interpretation:</h4>
                       <ul className="text-indigo-700 space-y-1 text-xs">
-                        <li>• <strong>Temperature Trend:</strong> Shows gradual warming over the projection period</li>
-                        <li>• <strong>Precipitation Trend:</strong> Indicates changing moisture patterns due to shifting circulation</li>
-                        <li>• <strong>Habitability Trend:</strong> Combined assessment of livability conditions over time</li>
-                        <li>• <strong>Target Year:</strong> Highlighted values represent conditions in {climateData.year}</li>
+                        <li>• <strong>Temperature Values:</strong> Absolute annual mean temperatures showing gradual warming from baseline</li>
+                        <li>• <strong>Precipitation Values:</strong> Absolute annual totals with slight increases over time</li>
+                        <li>• <strong>Difference Indicators:</strong> Show change from current baseline conditions (+ = increase, - = decrease)</li>
+                        <li>• <strong>Habitability Score:</strong> Realistic assessment adjusted for northern climate conditions (25-100 scale)</li>
+                        <li>• <strong>Target Year:</strong> Highlighted values represent projected conditions in {climateData.year}</li>
                       </ul>
                     </div>
                   </CardContent>

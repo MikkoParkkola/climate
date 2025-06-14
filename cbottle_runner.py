@@ -327,17 +327,35 @@ def is_coastal(latitude, longitude):
     return abs_lat < 70  # Most inhabited areas have some coastal influence
 
 def calculate_habitability_score(temps, precip, heat_days, drought_risk, flood_risk):
-    """Calculate overall habitability score (0-100)"""
-    temp_score = 100 - abs(np.mean(temps) - 20) * 2  # Optimal around 20°C
+    """Calculate overall habitability score (0-100) - adjusted for northern climates"""
+    # More realistic temperature assessment for northern cities
+    mean_temp = np.mean(temps)
+    
+    # Helsinki's optimal range is different from tropical cities
+    if mean_temp >= -5 and mean_temp <= 25:  # Reasonable range for northern cities
+        if mean_temp >= 5 and mean_temp <= 20:  # Ideal for Helsinki-type climate
+            temp_score = 100 - abs(mean_temp - 12.5) * 2  # Optimal around 12.5°C
+        else:
+            temp_score = 85 - abs(mean_temp - 12.5) * 1.5  # Less penalty for moderate temps
+    else:
+        temp_score = max(30, 100 - abs(mean_temp - 12.5) * 3)  # More penalty for extreme temps
+    
     temp_score = max(0, min(100, temp_score))
     
-    precip_score = 100 - abs(np.sum(precip) - 800) / 10  # Optimal around 800mm
+    # Precipitation assessment - Helsinki gets ~600-700mm annually
+    annual_precip = np.sum(precip)
+    if annual_precip >= 300 and annual_precip <= 1200:  # Reasonable range
+        precip_score = 100 - abs(annual_precip - 650) / 15  # Optimal around 650mm
+    else:
+        precip_score = max(20, 100 - abs(annual_precip - 650) / 10)
+    
     precip_score = max(0, min(100, precip_score))
     
-    extreme_penalty = heat_days * 0.5 + drought_risk * 30 + flood_risk * 20
+    # Reduced extreme weather penalties for northern cities
+    extreme_penalty = heat_days * 1.5 + drought_risk * 20 + flood_risk * 15
     
-    score = (temp_score + precip_score) / 2 - extreme_penalty
-    return max(0, min(100, score))
+    score = (temp_score * 0.6 + precip_score * 0.4) - extreme_penalty
+    return max(25, min(100, score))  # Minimum 25 for livable northern cities
 
 def get_habitability_category(score):
     """Convert habitability score to category"""
@@ -383,8 +401,11 @@ def generate_climate_time_series(latitude, longitude, start_year, end_year):
         temp_diff = annual_temp - baseline_temp
         precip_diff = annual_precip - baseline_precip
         
-        # Simple habitability estimate for trend
-        habitability = max(0, min(100, 70 - abs(annual_temp - 20) * 2 - max(0, 800 - annual_precip) / 20))
+        # Realistic habitability estimate for trend (adjusted for northern climates)
+        # Base score starts higher, less penalty for cold temperatures
+        temp_penalty = max(0, abs(annual_temp - 15) * 1.5)  # Optimal around 15°C for northern cities
+        precip_penalty = max(0, (600 - annual_precip) / 30) if annual_precip < 600 else 0  # Less penalty for adequate precipitation
+        habitability = max(20, min(100, 85 - temp_penalty - precip_penalty))  # More realistic range
         
         time_series["temperature_trend"].append(float(annual_temp))
         time_series["temperature_differences"].append(float(temp_diff))
