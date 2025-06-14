@@ -396,46 +396,53 @@ def calculate_habitability_score(temps, precip, heat_days, drought_risk, flood_r
     annual_precip = np.sum(precip)
     
     # Temperature assessment based on global livability standards
-    if 18 <= mean_temp <= 25:  # Optimal range (Singapore, Mediterranean cities)
-        temp_score = 100 - abs(mean_temp - 21.5) * 1.5
-    elif 10 <= mean_temp <= 30:  # Good range (most temperate cities)
-        temp_score = 90 - abs(mean_temp - 18) * 2
+    if 15 <= mean_temp <= 25:  # Optimal range (temperate cities like Amsterdam, London)
+        temp_score = 100 - abs(mean_temp - 20) * 2
+    elif 10 <= mean_temp <= 30:  # Good range (most livable cities)
+        temp_score = 90 - abs(mean_temp - 17.5) * 1.5
     elif 5 <= mean_temp <= 35:  # Acceptable range
-        temp_score = 75 - abs(mean_temp - 15) * 1.5
-    elif -5 <= mean_temp <= 40:  # Livable with adaptation
-        temp_score = 60 - abs(mean_temp - 12) * 1.2
+        temp_score = 75 - abs(mean_temp - 15) * 1.2
+    elif 0 <= mean_temp <= 40:  # Livable with adaptation
+        temp_score = 60 - abs(mean_temp - 12) * 1.0
     else:  # Extreme climates
-        temp_score = max(25, 50 - abs(mean_temp - 15) * 2)
+        temp_score = max(30, 50 - abs(mean_temp - 15) * 1.5)
     
     temp_score = max(0, min(100, temp_score))
     
     # Precipitation assessment - globally adaptive
-    if 400 <= annual_precip <= 1500:  # Optimal range for most cities
-        precip_score = 100 - abs(annual_precip - 800) / 20
+    if 600 <= annual_precip <= 1200:  # Optimal range for temperate cities
+        precip_score = 100 - abs(annual_precip - 900) / 25
+    elif 400 <= annual_precip <= 1800:  # Good range
+        precip_score = 90 - abs(annual_precip - 900) / 35
     elif 200 <= annual_precip <= 2500:  # Acceptable range
-        precip_score = 85 - abs(annual_precip - 800) / 30
-    elif annual_precip < 200:  # Arid climates (manageable with infrastructure)
-        precip_score = max(40, 70 - (200 - annual_precip) / 10)
+        precip_score = 75 - abs(annual_precip - 900) / 50
+    elif annual_precip < 200:  # Arid climates
+        precip_score = max(40, 60 - (200 - annual_precip) / 8)
     else:  # Very wet climates
-        precip_score = max(30, 70 - (annual_precip - 2500) / 50)
+        precip_score = max(40, 60 - (annual_precip - 2500) / 100)
     
     precip_score = max(0, min(100, precip_score))
     
-    # Infrastructure and adaptation bonus for major climate zones
-    if 25 <= mean_temp <= 30 and annual_precip >= 1500:  # Tropical cities
-        infrastructure_bonus = 20  # Singapore, Hong Kong adapt well
+    # Infrastructure and adaptation bonus
+    abs_lat = abs(mean_temp)  # Use mean_temp as proxy for latitude adaptation
+    if 10 <= mean_temp <= 15:  # Northern European cities (excellent infrastructure)
+        infrastructure_bonus = 20  # Amsterdam, Copenhagen, Stockholm
+    elif 20 <= mean_temp <= 30 and annual_precip >= 1500:  # Tropical cities
+        infrastructure_bonus = 15  # Singapore, Hong Kong
     elif mean_temp < 5:  # Cold cities
-        infrastructure_bonus = 15  # Nordic cities adapt well
+        infrastructure_bonus = 10  # Nordic adaptation
     else:
-        infrastructure_bonus = 10
+        infrastructure_bonus = 8
     
-    # Extreme weather penalties
-    extreme_penalty = heat_days * 2 + drought_risk * 25 + flood_risk * 20
+    # More realistic extreme weather penalties
+    heat_penalty = min(15, heat_days * 0.3)  # Reduced heat penalty
+    drought_penalty = min(10, drought_risk * 15)  # Reduced drought penalty
+    flood_penalty = min(8, flood_risk * 12)  # Reduced flood penalty
     
-    base_score = (temp_score * 0.5 + precip_score * 0.3) + infrastructure_bonus * 0.2
-    final_score = base_score - extreme_penalty
+    base_score = (temp_score * 0.4 + precip_score * 0.4 + infrastructure_bonus)
+    final_score = base_score - heat_penalty - drought_penalty - flood_penalty
     
-    return max(30, min(100, final_score))  # Minimum 30 for any inhabited area
+    return max(40, min(100, final_score))  # Minimum 40 for established cities
 
 def get_habitability_category(score):
     """Convert habitability score to category"""

@@ -611,9 +611,9 @@ export default function ClimateApp() {
                   </div>
 
                   {/* Monthly Precipitation Chart */}
-                  <div className="space-y-2">
+                  <div className="space-y-4">
                     <h4 className="font-medium">Monthly Precipitation Distribution</h4>
-                    <div className="grid grid-cols-12 gap-1 text-xs h-24">
+                    <div className="grid grid-cols-12 gap-1 text-xs h-24 mb-4">
                       {climateData.precipitation?.monthly?.map((precip: number, index: number) => {
                         const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
                         const maxPrecip = Math.max(...climateData.precipitation.monthly);
@@ -632,7 +632,7 @@ export default function ClimateApp() {
                       })}
                     </div>
                     
-                    <div className="mt-6 p-2 bg-blue-50 rounded text-xs">
+                    <div className="p-2 bg-blue-50 rounded text-xs">
                       <p><strong>Seasonal Pattern:</strong> Wettest month is {climateData.precipitation?.wettest_month_name} 
                       ({climateData.precipitation?.wettest_month?.toFixed(0)}mm), driest is {climateData.precipitation?.driest_month_name} 
                       ({climateData.precipitation?.driest_month?.toFixed(0)}mm)</p>
