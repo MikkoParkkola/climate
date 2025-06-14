@@ -155,8 +155,8 @@ def get_baseline_precipitation(latitude, longitude):
         # Southwestern US, Northern Mexico
         elif -125 <= longitude <= -100:
             is_desert = True
-        # Australian deserts
-        elif 110 <= longitude <= 155:
+        # Australian interior deserts (excluding coastal cities)
+        elif 115 <= longitude <= 145 and 20 <= abs_lat <= 30:
             is_desert = True
     
     if is_desert:
@@ -326,14 +326,29 @@ def calculate_flood_risk(monthly_precip, latitude):
     """Calculate flood risk score (0-1)"""
     max_monthly = np.max(monthly_precip)
     annual_total = np.sum(monthly_precip)
+    abs_lat = abs(latitude)
     
-    # Risk increases with extreme monthly precipitation
-    extreme_factor = min(1.0, max_monthly / 300.0)
+    # Infrastructure adaptation varies by climate zone
+    if abs_lat < 30:  # Tropical/subtropical cities have better flood management
+        infrastructure_factor = 0.5
+    elif abs_lat < 60:  # Temperate cities have moderate infrastructure
+        infrastructure_factor = 0.7
+    else:  # Northern cities face different challenges
+        infrastructure_factor = 0.8
     
-    # Risk increases with total annual precipitation
-    total_factor = min(1.0, annual_total / 2000.0)
+    # Risk from extreme monthly precipitation (adjusted for climate expectations)
+    if abs_lat < 30:  # Tropical regions expect high rainfall
+        extreme_threshold = 400  # Higher threshold for tropical cities
+    else:
+        extreme_threshold = 250  # Lower threshold for other regions
     
-    return (extreme_factor + total_factor) / 2.0
+    extreme_factor = min(0.8, max_monthly / extreme_threshold) * infrastructure_factor
+    
+    # Risk from seasonal concentration
+    precip_std = np.std(monthly_precip)
+    seasonal_factor = min(0.6, precip_std / 100) * infrastructure_factor
+    
+    return min(1.0, (extreme_factor + seasonal_factor) / 2.0)
 
 def calculate_sea_level_rise(years_ahead, coastal):
     """Calculate sea level rise in centimeters"""
@@ -467,7 +482,7 @@ def get_climate_zone(latitude):
         return "Tropical"
     elif abs_lat < 30:
         return "Subtropical"
-    elif abs_lat < 50:
+    elif abs_lat < 60:  # Extended temperate zone to include London (51.5°N)
         return "Temperate"
     elif abs_lat < 70:
         return "Subarctic"
