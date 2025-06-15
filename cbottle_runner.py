@@ -517,8 +517,17 @@ def generate_monthly_temperature_series(annual_mean, latitude):
     
     # European cities: observed winter lows and summer highs from national weather services
     if 50 <= abs_lat <= 55:  # Central/Northern Europe (Amsterdam, Prague, Berlin)
+        # Determine seasons based on hemisphere
+        if latitude < 0:  # Southern Hemisphere (rare at these latitudes)
+            winter_months = [5, 6, 7, 8]  # Jun, Jul, Aug, Sep (after phase shift)
+            summer_months = [11, 0, 1]  # Dec, Jan, Feb (after phase shift)
+            peak_summer = 0  # January (after phase shift)
+        else:  # Northern Hemisphere
+            winter_months = [0, 1, 2, 11]  # Dec, Jan, Feb, Nov
+            summer_months = [5, 6, 7]  # Jun, Jul, Aug
+            peak_summer = 6  # July
+        
         # Winter constraints: Amsterdam rarely below 0°C, Prague occasionally -5°C
-        winter_months = [0, 1, 2, 11]  # Dec, Jan, Feb, Nov
         for month in winter_months:
             if longitude is not None and 3 <= longitude <= 6:  # Netherlands coastal
                 temp_cycle[month] = max(temp_cycle[month], 1.5)  # Amsterdam winter minimum
@@ -526,38 +535,49 @@ def generate_monthly_temperature_series(annual_mean, latitude):
                 temp_cycle[month] = max(temp_cycle[month], -2.0)  # Prague/Berlin winter minimum
         
         # Summer peaks: European heat waves regularly reach 35°C+
-        peak_summer = 6  # July
         temp_cycle[peak_summer] = max(temp_cycle[peak_summer], 25.0)  # Ensure realistic summer peak
         
         # Heat wave adjustment for recent climate trends (2018, 2019, 2022 European heat waves)
-        summer_months = [5, 6, 7]  # Jun, Jul, Aug
         for month in summer_months:
             temp_cycle[month] += 5.5  # Strong heat wave boost reflecting 30°C+ observations
     
     # Nordic countries: Helsinki reaches 30°C+ during heat waves
     elif 58 <= abs_lat <= 65:  # Nordic region
-        peak_summer = 6  # July
-        temp_cycle[peak_summer] = max(temp_cycle[peak_summer], 22.0)  # Helsinki summer peak base
+        # Determine seasons based on hemisphere
+        if latitude < 0:  # Southern Hemisphere (rare at these latitudes)
+            summer_months = [11, 0, 1]  # Dec, Jan, Feb (after phase shift)
+            peak_summer = 0  # January (after phase shift)
+        else:  # Northern Hemisphere
+            summer_months = [5, 6, 7]  # Jun, Jul, Aug
+            peak_summer = 6  # July
+        
+        temp_cycle[peak_summer] = max(temp_cycle[peak_summer], 22.0)  # Nordic summer peak base
         
         # Summer heat wave adjustment (Helsinki 2018: 33.2°C, 2021: 31.7°C)
-        summer_months = [5, 6, 7]  # Jun, Jul, Aug
         for month in summer_months:
             temp_cycle[month] += 8.0  # Maximum Nordic heat wave boost to match observed 33.2°C
     
     # East Asian humid subtropical: Tokyo, Seoul, Shanghai
     elif 30 <= abs_lat <= 42 and longitude is not None and 120 <= longitude <= 145:
         # Japanese archipelago and East Asian coast
+        # Determine seasons based on hemisphere
+        if latitude < 0:  # Southern Hemisphere (rare in East Asia)
+            winter_months = [5, 6, 7, 8]  # Jun, Jul, Aug, Sep (after phase shift)
+            summer_months = [11, 0, 1, 2]  # Dec, Jan, Feb, Mar (after phase shift)
+            peak_summer = 0  # January (after phase shift)
+        else:  # Northern Hemisphere
+            winter_months = [0, 1, 2, 11]  # Dec, Jan, Feb, Nov
+            summer_months = [5, 6, 7, 8]  # Jun, Jul, Aug, Sep
+            peak_summer = 6  # July
+        
         # Winter constraints: Tokyo rarely below -2°C
-        winter_months = [0, 1, 2, 11]  # Dec, Jan, Feb, Nov
         for month in winter_months:
             temp_cycle[month] = max(temp_cycle[month], -1.0)  # Tokyo winter minimum
         
         # Humid subtropical summer: Tokyo regularly exceeds 35°C in July/August
-        peak_summer = 6  # July
         temp_cycle[peak_summer] = max(temp_cycle[peak_summer], 28.0)  # Base summer temperature
         
         # East Asian summer heat waves (Tokyo 2018: 41.1°C record)
-        summer_months = [5, 6, 7, 8]  # Jun, Jul, Aug, Sep
         for month in summer_months:
             temp_cycle[month] += 7.0  # Humid subtropical heat boost for 35°C+ observations
     
@@ -585,6 +605,12 @@ def generate_monthly_temperature_series(annual_mean, latitude):
             # Subtropical heat waves
             for month in summer_months:
                 temp_cycle[month] += 6.0  # Subtropical heat boost
+            
+            # Southern Australia winter constraints (Melbourne rarely below 5°C)
+            if latitude < 0 and longitude is not None and 140 <= longitude <= 150:  # Melbourne region
+                winter_months_sh = [5, 6, 7, 8]  # Jun, Jul, Aug, Sep (after phase shift)
+                for month in winter_months_sh:
+                    temp_cycle[month] = max(temp_cycle[month], 8.0)  # Melbourne winter minimum
     
     return temp_cycle
 
