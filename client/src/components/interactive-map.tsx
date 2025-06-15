@@ -27,43 +27,81 @@ export default function InteractiveMap({ selectedLocation, onLocationSelect, cla
   useEffect(() => {
     if (!mapRef.current || mapInstanceRef.current) return;
 
+    // Ensure Leaflet CSS is loaded
+    const leafletCSS = document.querySelector('link[href*="leaflet"]');
+    if (!leafletCSS) {
+      const link = document.createElement('link');
+      link.rel = 'stylesheet';
+      link.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
+      link.integrity = 'sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=';
+      link.crossOrigin = '';
+      document.head.appendChild(link);
+    }
+
     try {
-      // Initialize map
+      // Initialize map with error handling
       const map = L.map(mapRef.current, {
         center: [20, 0], // Center of the world
         zoom: 2,
         minZoom: 2,
         maxZoom: 18,
         worldCopyJump: true,
-        preferCanvas: true
+        preferCanvas: false, // Use SVG for better compatibility
+        zoomControl: false // We'll add custom controls
       });
 
-      // Create tile layers for different map views
-      const satelliteLayer = L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}", {
-        attribution: 'Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community',
-        maxZoom: 18,
-      });
+      // Add zoom control in bottom right
+      L.control.zoom({
+        position: 'bottomright'
+      }).addTo(map);
 
-      const terrainLayer = L.tileLayer("https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png", {
-        attribution: 'Map data: &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors, <a href="http://viewfinderpanoramas.org">SRTM</a> | Map style: &copy; <a href="https://opentopomap.org">OpenTopoMap</a> (<a href="https://creativecommons.org/licenses/by-sa/3.0/">CC-BY-SA</a>)',
-        maxZoom: 17,
-      });
-
+      // Use reliable and fast tile servers
       const streetLayer = L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
         attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
-        noWrap: false,
+        maxZoom: 19,
+        subdomains: ['a', 'b', 'c'],
+        crossOrigin: true
       });
 
-      // Add default satellite layer
-      satelliteLayer.addTo(map);
+      const satelliteLayer = L.tileLayer("https://mt{s}.google.com/vt/lyrs=s&x={x}&y={y}&z={z}", {
+        attribution: '© Google',
+        maxZoom: 20,
+        subdomains: ['0', '1', '2', '3'],
+        crossOrigin: true
+      });
+
+      const terrainLayer = L.tileLayer("https://mt{s}.google.com/vt/lyrs=p&x={x}&y={y}&z={z}", {
+        attribution: '© Google',
+        maxZoom: 16,
+        subdomains: ['0', '1', '2', '3'],
+        crossOrigin: true
+      });
+
+      // Always start with OpenStreetMap as it's the most reliable
+      osmLayer.addTo(map);
+      let currentActiveLayer = osmLayer;
+      setCurrentLayer('street');
 
       // Store layer references for switching
       (map as any).layerControl = {
         satellite: satelliteLayer,
         terrain: terrainLayer,
-        street: streetLayer,
-        current: satelliteLayer
+        street: osmLayer,
+        current: currentActiveLayer
       };
+
+      // Add error handlers for all layers
+      osmLayer.on('tileerror', (e) => {
+        console.warn('OSM tile error:', e);
+      });
+      
+      satelliteLayer.on('tileerror', (e) => {
+        console.warn('Satellite tile error:', e);
+      });
+      
+      terrainLayer.on('tileerror', (e) => {
+        console.warn('Terrain tile error:', e);
+      });
 
       // Add click handler
       map.on("click", (e: L.LeafletMouseEvent) => {
@@ -73,7 +111,13 @@ export default function InteractiveMap({ selectedLocation, onLocationSelect, cla
       });
 
       mapInstanceRef.current = map;
-      setIsMapReady(true);
+      
+      // Force map container size calculation
+      setTimeout(() => {
+        map.invalidateSize();
+        setIsMapReady(true);
+        console.log('Map initialized and ready');
+      }, 100);
 
       return () => {
         if (mapInstanceRef.current) {
@@ -83,6 +127,17 @@ export default function InteractiveMap({ selectedLocation, onLocationSelect, cla
       };
     } catch (error) {
       console.error('Error initializing map:', error);
+      // Fallback: show error message
+      if (mapRef.current) {
+        mapRef.current.innerHTML = `
+          <div style="display: flex; items-center: justify-center; height: 100%; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 0.5rem;">
+            <div style="text-align: center; color: #64748b;">
+              <p style="margin: 0; font-size: 14px;">Map loading...</p>
+              <p style="margin: 8px 0 0 0; font-size: 12px;">Please check your connection</p>
+            </div>
+          </div>
+        `;
+      }
     }
   }, [onLocationSelect]);
 
@@ -133,8 +188,12 @@ export default function InteractiveMap({ selectedLocation, onLocationSelect, cla
   };
 
   return (
-    <div className={`relative ${className}`}>
-      <div ref={mapRef} className="w-full h-full rounded-lg overflow-hidden border border-slate-200" />
+    <div className={`relative ${className}`} style={{ minHeight: '400px', height: '100%' }}>
+      <div 
+        ref={mapRef} 
+        className="w-full h-full rounded-lg overflow-hidden border border-slate-200" 
+        style={{ minHeight: '400px', zIndex: 1 }}
+      />
       
       {/* Layer Controls */}
       <div className="absolute top-4 left-4 z-[1000] bg-white rounded-lg shadow-lg border border-slate-200 p-3">
