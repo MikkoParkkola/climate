@@ -545,7 +545,7 @@ def generate_monthly_temperature_series(annual_mean, latitude):
             temp_cycle[month] += 8.0  # Maximum Nordic heat wave boost to match observed 33.2°C
     
     # East Asian humid subtropical: Tokyo, Seoul, Shanghai
-    elif 30 <= abs_lat <= 40 and longitude is not None and 120 <= longitude <= 145:
+    elif 30 <= abs_lat <= 42 and longitude is not None and 120 <= longitude <= 145:
         # Japanese archipelago and East Asian coast
         # Winter constraints: Tokyo rarely below -2°C
         winter_months = [0, 1, 2, 11]  # Dec, Jan, Feb, Nov
@@ -562,25 +562,29 @@ def generate_monthly_temperature_series(annual_mean, latitude):
             temp_cycle[month] += 7.0  # Humid subtropical heat boost for 35°C+ observations
     
     # Subtropical regions: Mediterranean, California, Southern Australia
-    elif 30 <= abs_lat <= 40:
+    elif 30 <= abs_lat <= 42:
+        # Determine summer months based on hemisphere
+        if latitude < 0:  # Southern Hemisphere
+            peak_summer = 0  # January (after phase shift)
+            summer_months = [11, 0, 1, 2]  # Dec, Jan, Feb, Mar (after phase shift)
+        else:  # Northern Hemisphere
+            peak_summer = 6  # July
+            summer_months = [5, 6, 7, 8]  # Jun, Jul, Aug, Sep
+        
         # Continental Mediterranean: Madrid experiences extreme heat (42-45°C records)
         if longitude is not None and -5 <= longitude <= 0:  # Iberian Peninsula interior
-            peak_summer = 6  # July
             temp_cycle[peak_summer] = max(temp_cycle[peak_summer], 32.0)  # Madrid continental base
             
             # Iberian continental heat waves (Madrid 2022: 42.7°C, 2021: 47°C)
-            summer_months = [5, 6, 7, 8]  # Jun, Jul, Aug, Sep
             for month in summer_months:
                 temp_cycle[month] += 8.5  # Extreme continental heat boost for 40°C+ observations
         else:
-            # Coastal Mediterranean and other subtropical regions
-            peak_summer = 6  # July
-            temp_cycle[peak_summer] = max(temp_cycle[peak_summer], 28.0)  # Coastal Mediterranean base
+            # Coastal Mediterranean and other subtropical regions (including Southern Australia)
+            temp_cycle[peak_summer] = max(temp_cycle[peak_summer], 28.0)  # Coastal subtropical base
             
-            # Mediterranean heat waves
-            summer_months = [5, 6, 7, 8]  # Jun, Jul, Aug, Sep
+            # Subtropical heat waves
             for month in summer_months:
-                temp_cycle[month] += 6.0  # Mediterranean heat boost
+                temp_cycle[month] += 6.0  # Subtropical heat boost
     
     return temp_cycle
 
