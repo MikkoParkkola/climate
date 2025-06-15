@@ -611,6 +611,14 @@ def generate_monthly_temperature_series(annual_mean, latitude):
                 winter_months_sh = [5, 6, 7, 8]  # Jun, Jul, Aug, Sep (after phase shift)
                 for month in winter_months_sh:
                     temp_cycle[month] = max(temp_cycle[month], 8.0)  # Melbourne winter minimum
+                    
+    # Final constraint enforcement for all Southern Hemisphere locations
+    if latitude < 0:
+        # Ensure no unrealistic sub-zero temperatures in subtropical regions
+        abs_lat = abs(latitude)
+        if abs_lat < 45:  # Subtropical Southern Hemisphere
+            for i in range(12):
+                temp_cycle[i] = max(temp_cycle[i], 5.0)  # Minimum subtropical temperature
     
     return temp_cycle
 
