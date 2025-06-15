@@ -78,21 +78,21 @@ export default function InteractiveMap({ selectedLocation, onLocationSelect, cla
       });
 
       // Always start with OpenStreetMap as it's the most reliable
-      osmLayer.addTo(map);
-      let currentActiveLayer = osmLayer;
+      streetLayer.addTo(map);
+      let currentActiveLayer = streetLayer;
       setCurrentLayer('street');
 
       // Store layer references for switching
       (map as any).layerControl = {
         satellite: satelliteLayer,
         terrain: terrainLayer,
-        street: osmLayer,
+        street: streetLayer,
         current: currentActiveLayer
       };
 
       // Add error handlers for all layers
-      osmLayer.on('tileerror', (e) => {
-        console.warn('OSM tile error:', e);
+      streetLayer.on('tileerror', (e) => {
+        console.warn('Street layer tile error:', e);
       });
       
       satelliteLayer.on('tileerror', (e) => {
