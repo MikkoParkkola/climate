@@ -615,26 +615,28 @@ def generate_monthly_temperature_series(annual_mean, latitude):
     # CBottle uses authentic seasonal patterns from ICON atmospheric model
     abs_lat = abs(latitude)
     
-    # Generic seasonal amplitude model based on latitude and continental/maritime effects
-    # Temperature amplitude increases with latitude due to changing solar angle
+    # Realistic seasonal amplitude based on climate observations
+    # Use moderate amplitudes that reflect actual climate data
     if abs_lat < 10:  # Equatorial - minimal seasonal variation
-        amplitude = 3.0
-    elif abs_lat < 23.5:  # Tropical - small seasonal variation
-        amplitude = 3.0 + (abs_lat - 10) * 0.37  # ~8°C at Tropic
+        amplitude = 2.5
+    elif abs_lat < 23.5:  # Tropical
+        amplitude = 4.0
     elif abs_lat < 35:  # Subtropical
-        # Desert regions have larger diurnal and seasonal ranges
-        if abs_lat >= 20:  # Potential desert latitudes
-            amplitude = 15.0 + (abs_lat - 23.5) * 0.87  # ~25°C for hot deserts
+        if is_arid_region(latitude, longitude):
+            amplitude = 12.0  # Desert regions
         else:
-            amplitude = 12.0 + (abs_lat - 23.5) * 0.5  # Mediterranean climates need larger amplitude
-    elif abs_lat < 45:  # Temperate - moderate seasonal amplitude
-        amplitude = 12.0 + (abs_lat - 35) * 0.5  # ~17°C at 45°N for realistic summer peaks
-    elif abs_lat < 55:  # Cool temperate - increasing amplitude
-        amplitude = 12.0 + (abs_lat - 45) * 0.1  # ~13°C at 55°N
-    elif abs_lat < 65:  # Subarctic - larger amplitude
-        amplitude = 13.0 + (abs_lat - 55) * 0.2  # ~15°C at 65°N
-    else:  # Arctic - maximum amplitude
-        amplitude = 15.0 + (abs_lat - 65) * 0.4  # Up to ~25°C at poles
+            amplitude = 8.0   # Mediterranean/coastal subtropical
+    elif abs_lat < 45:  # Temperate
+        if is_coastal(latitude, longitude):
+            amplitude = 10.0  # Maritime temperate (Paris, London)
+        else:
+            amplitude = 14.0  # Continental temperate
+    elif abs_lat < 55:  # Cool temperate
+        amplitude = 12.0  # Northern Europe
+    elif abs_lat < 65:  # Subarctic
+        amplitude = 16.0  # Nordic regions
+    else:  # Arctic
+        amplitude = 20.0  # Polar regions
     
     # Month indices (0=Jan, 11=Dec)
     months = np.arange(12)
@@ -655,21 +657,46 @@ def generate_monthly_temperature_series(annual_mean, latitude):
     # Apply realistic temperature constraints based on official European weather service records
     abs_lat = abs(latitude)
     
-    # Apply realistic constraints but avoid excessive modifications to the base temperature cycle
-    # The base annual_mean should already be accurate from the validated physics model
+    # Apply realistic constraints based on observed climate data for major cities
+    # Ensure temperatures align with actual meteorological records
     
-    # Only apply minimal constraints to prevent extreme outliers
+    # Define realistic temperature ranges for different climate zones
     for i in range(12):
-        # Prevent unrealistic sub-zero temperatures in temperate zones
-        if 30 <= abs_lat <= 60:  # Temperate zones
-            if is_coastal(latitude, longitude) and abs_lat > 45:  # Northern coastal areas
-                temp_cycle[i] = max(temp_cycle[i], annual_mean - 15)  # Reasonable winter minimum
-            elif abs_lat > 50:  # Northern continental areas
-                temp_cycle[i] = max(temp_cycle[i], annual_mean - 18)  # Continental winter minimum
+        # Temperate oceanic climate (Western Europe coastal)
+        if 45 <= abs_lat <= 55 and is_coastal(latitude, longitude):
+            # Winter minimums: London ~2°C, Paris ~4°C, Amsterdam ~3°C
+            if i in [0, 1, 11]:  # Winter months (Dec, Jan, Feb)
+                temp_cycle[i] = max(temp_cycle[i], annual_mean - 8)
+            # Summer maximums: avoid unrealistic peaks above 30°C average
+            elif i in [5, 6, 7]:  # Summer months (Jun, Jul, Aug)
+                temp_cycle[i] = min(temp_cycle[i], annual_mean + 10)
         
-        # Prevent excessive summer temperatures that create unrealistic heat stress
-        if 30 <= abs_lat <= 60:  # Temperate zones
-            temp_cycle[i] = min(temp_cycle[i], annual_mean + 15)  # Reasonable summer maximum
+        # Continental temperate climate (Central/Eastern Europe)
+        elif 45 <= abs_lat <= 55 and not is_coastal(latitude, longitude):
+            # Winter minimums: Prague ~-2°C, Berlin ~0°C
+            if i in [0, 1, 11]:  # Winter months
+                temp_cycle[i] = max(temp_cycle[i], annual_mean - 12)
+            # Summer maximums: avoid excessive continental heat
+            elif i in [5, 6, 7]:  # Summer months
+                temp_cycle[i] = min(temp_cycle[i], annual_mean + 12)
+        
+        # Mediterranean climate
+        elif 35 <= abs_lat <= 45:
+            # Winter minimums: Rome ~8°C, Madrid ~6°C
+            if i in [0, 1, 11]:  # Winter months
+                temp_cycle[i] = max(temp_cycle[i], annual_mean - 10)
+            # Summer maximums: realistic Mediterranean peaks
+            elif i in [5, 6, 7]:  # Summer months
+                temp_cycle[i] = min(temp_cycle[i], annual_mean + 12)
+        
+        # Nordic climate
+        elif 55 <= abs_lat <= 70:
+            # Winter minimums: Oslo ~-5°C, Helsinki ~-5°C
+            if i in [0, 1, 11]:  # Winter months
+                temp_cycle[i] = max(temp_cycle[i], annual_mean - 15)
+            # Summer maximums: avoid unrealistic Nordic heat
+            elif i in [5, 6, 7]:  # Summer months
+                temp_cycle[i] = min(temp_cycle[i], annual_mean + 15)
     
     # Final constraint enforcement for realistic temperatures
     if latitude < 0:
