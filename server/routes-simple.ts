@@ -6,8 +6,9 @@ import { promisify } from "util";
 export async function registerRoutes(app: Express): Promise<Server> {
   // Get API key for testing
   app.get('/api/config', (req, res) => {
+    const apiKey = process.env.NVIDIA_API_KEY || '';
     res.json({
-      nvidiaApiKey: process.env.NVIDIA_API_KEY || ''
+      nvidiaApiKey: apiKey ? `${apiKey.substring(0, 8)}...${apiKey.substring(apiKey.length - 4)}` : ''
     });
   });
 
