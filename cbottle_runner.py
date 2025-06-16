@@ -1729,9 +1729,10 @@ def get_habitability_category(score):
 def generate_climate_time_series(latitude, longitude, start_year, end_year):
     """Generate multi-year climate time series for trend analysis"""
     years = list(range(start_year, end_year + 1, 5))  # Every 5 years
+    current_year = datetime.now().year
     
-    # Get baseline values for comparison
-    baseline_temp = get_baseline_temperature(latitude)
+    # Get baseline values for comparison - must match main calculation
+    baseline_temp = get_baseline_temperature(latitude, longitude)
     baseline_precip = get_baseline_precipitation(latitude, longitude)
     
     time_series = {
@@ -1749,18 +1750,19 @@ def generate_climate_time_series(latitude, longitude, start_year, end_year):
     }
     
     for year in years:
-        years_ahead = year - start_year
+        # Use same calculation logic as main projection
+        years_ahead = year - current_year
         temp_anomaly = calculate_temperature_anomaly(latitude, longitude, years_ahead)
         precip_anomaly = calculate_precipitation_anomaly(latitude, longitude, years_ahead)
         
         annual_temp = baseline_temp + temp_anomaly
         annual_precip = baseline_precip * (1 + precip_anomaly)
         
-        # Generate monthly data for this year
+        # Generate monthly data using same methods as main projection
         monthly_temps = generate_monthly_temperature_series(annual_temp, latitude)
-        monthly_precip = generate_monthly_precipitation_series(annual_precip, latitude)
+        monthly_precip = generate_monthly_precipitation_series(annual_precip, latitude, longitude)
         
-        # Calculate detailed habitability with breakdown
+        # Calculate habitability using identical methods
         heat_stress_days = calculate_heat_stress_days(monthly_temps, latitude, longitude)
         drought_risk = calculate_drought_risk(monthly_precip, latitude, longitude)
         flood_risk = calculate_flood_risk(monthly_precip, latitude, longitude)
