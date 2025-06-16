@@ -837,6 +837,11 @@ def calculate_heat_stress_days(monthly_temps, latitude=None, longitude=None):
             # Regional heat wave amplification factors based on climate observations
             regional_amplification = get_regional_heat_amplification(latitude, longitude)
             heat_probability *= regional_amplification
+            
+            # Reduce heat stress in Mediterranean regions that are adapted to high temperatures
+            abs_lat = abs(latitude) if latitude else 40
+            if 30 <= abs_lat <= 45:  # Mediterranean/subtropical regions
+                heat_probability *= 0.6  # People are more adapted to heat in these regions
                 
             heat_days += min(days_in_month * heat_probability, days_in_month)
     
