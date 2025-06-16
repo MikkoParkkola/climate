@@ -156,8 +156,8 @@ export default function InteractiveMap({ selectedLocation, onLocationSelect, cla
 
       markerRef.current = marker;
 
-      // Center map on selected location with regional view
-      mapInstanceRef.current.setView([selectedLocation.latitude, selectedLocation.longitude], 6);
+      // Center map on selected location with country/continental view
+      mapInstanceRef.current.setView([selectedLocation.latitude, selectedLocation.longitude], 4);
     }
   }, [selectedLocation, isMapReady]);
 
