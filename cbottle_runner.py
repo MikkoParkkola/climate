@@ -35,7 +35,7 @@ def generate_cbottle_projection(latitude, longitude, target_year, api_key):
         
         # Calculate derived climate metrics
         heat_stress_days = calculate_heat_stress_days(monthly_temps, latitude, longitude)
-        drought_risk = calculate_drought_risk(monthly_precip, latitude)
+        drought_risk = calculate_drought_risk(monthly_precip, latitude, longitude)
         flood_risk = calculate_flood_risk(monthly_precip, latitude, longitude)
         
         # Sea level rise projection (coastal areas)
@@ -774,35 +774,28 @@ def calculate_heat_stress_days(monthly_temps, latitude=None, longitude=None):
     
     return max(0, int(heat_days))
 
-def calculate_drought_risk(monthly_precip, latitude):
-    """Calculate drought risk score (0-1)"""
+def calculate_drought_risk(monthly_precip, latitude, longitude=None):
+    """Calculate drought risk score (0-1) including upstream watershed effects"""
     annual_precip = np.sum(monthly_precip)
     dry_months = np.sum(monthly_precip < 25)  # Months with <25mm
     very_dry_months = np.sum(monthly_precip < 10)  # Severely dry months
     
-    # Regional drought susceptibility based on climate zones
-    abs_lat = abs(latitude)
-    if 15 <= abs_lat <= 35:  # Hot desert belt (Dubai, Riyadh, Phoenix, Cairo)
-        base_risk = 0.7  # Desert regions are inherently drought-prone
-        seasonal_threshold = 9  # Most months are dry
-    elif 30 <= abs_lat <= 45:  # Mediterranean/subtropical (Spain, California, etc.)
-        base_risk = 0.3  # Inherently drought-prone
-        seasonal_threshold = 6  # Summer drought expected
-    elif abs_lat < 23.5:  # Tropical
-        base_risk = 0.15
-        seasonal_threshold = 4
-    elif abs_lat > 60:  # High latitude
-        base_risk = 0.1
-        seasonal_threshold = 8
-    else:  # Temperate
-        base_risk = 0.2
-        seasonal_threshold = 5
+    # Regional drought susceptibility and water resource availability
+    base_risk, water_security, upstream_dependency = get_regional_drought_characteristics(latitude, longitude)
     
     # Calculate seasonal drought stress
     summer_months = monthly_precip[5:8]  # Jun, Jul, Aug
     summer_drought = np.mean(summer_months) < 20  # Mediterranean summer drought
     
+    # Assess upstream water resource impacts
+    upstream_drought_factor = assess_upstream_drought_impact(latitude, longitude, monthly_precip)
+    
+    # Regional water infrastructure and management capacity
+    infrastructure_resilience = get_water_infrastructure_resilience(latitude, longitude)
+    
     # Drought factors
+    abs_lat = abs(latitude)
+    seasonal_threshold = get_regional_dry_season_threshold(abs_lat)
     dry_season_stress = max(0, (dry_months - seasonal_threshold) / 6.0)
     severe_drought_factor = very_dry_months / 12.0
     summer_factor = 0.2 if summer_drought and 30 <= abs_lat <= 45 else 0
@@ -813,9 +806,184 @@ def calculate_drought_risk(monthly_precip, latitude):
     # Climate change amplification for drought-prone regions
     climate_amplification = 0.25 if 15 <= abs_lat <= 35 else 0.15 if 30 <= abs_lat <= 45 else 0.05
     
-    total_risk = base_risk + dry_season_stress * 0.4 + severe_drought_factor * 0.3 + summer_factor + desert_factor + climate_amplification
+    # Combine all drought risk factors
+    total_risk = (
+        base_risk + 
+        (dry_season_stress * 0.3) + 
+        (severe_drought_factor * 0.25) + 
+        summer_factor + 
+        desert_factor + 
+        climate_amplification +
+        (upstream_drought_factor * upstream_dependency * 0.3) -
+        (infrastructure_resilience * 0.2)  # Good infrastructure reduces risk
+    )
     
-    return min(1.0, total_risk)
+    return min(1.0, max(0.0, total_risk))
+
+def get_regional_drought_characteristics(latitude, longitude):
+    """Determine regional drought susceptibility, water security, and upstream dependency"""
+    abs_lat = abs(latitude)
+    
+    if longitude is not None:
+        # Arid and semi-arid regions with limited water resources
+        # Middle East and North Africa
+        if 15 <= latitude <= 40 and -20 <= longitude <= 60:
+            # Arabian Peninsula (extreme drought risk)
+            if 15 <= latitude <= 30 and 35 <= longitude <= 55:
+                return 0.9, 0.2, 0.8  # High base risk, low water security, high upstream dependency
+            # Sahara/Sahel region
+            elif 10 <= latitude <= 30 and -20 <= longitude <= 35:
+                return 0.8, 0.3, 0.7
+            # Mediterranean basin
+            elif 30 <= latitude <= 45 and -10 <= longitude <= 40:
+                return 0.4, 0.6, 0.5
+        
+        # Australian arid zones
+        elif -35 <= latitude <= -10 and 110 <= longitude <= 155:
+            return 0.7, 0.4, 0.3  # High drought risk but better water management
+        
+        # North American arid west
+        elif 25 <= latitude <= 50 and -125 <= longitude <= -100:
+            # Colorado River basin (high upstream dependency)
+            if 31 <= latitude <= 42 and -115 <= longitude <= -105:
+                return 0.6, 0.5, 0.9  # Moderate base risk but extreme upstream dependency
+            # Great Plains (periodic drought)
+            elif 35 <= latitude <= 45 and -105 <= longitude <= -95:
+                return 0.5, 0.6, 0.4
+            # Southwest deserts
+            else:
+                return 0.8, 0.4, 0.6
+        
+        # South American arid regions
+        elif -35 <= latitude <= 5 and -75 <= longitude <= -35:
+            # Northeast Brazil (severe droughts)
+            if -15 <= latitude <= -5 and -45 <= longitude <= -35:
+                return 0.8, 0.3, 0.5
+            # Patagonian steppe
+            elif -50 <= latitude <= -35 and -75 <= longitude <= -65:
+                return 0.6, 0.5, 0.3
+        
+        # African drought-prone regions
+        elif -35 <= latitude <= 20 and -20 <= longitude <= 55:
+            # East African drought corridor
+            if -5 <= latitude <= 15 and 35 <= longitude <= 50:
+                return 0.9, 0.2, 0.6
+            # Southern African drought regions
+            elif -30 <= latitude <= -15 and 15 <= longitude <= 35:
+                return 0.7, 0.4, 0.4
+        
+        # Asian drought-prone regions
+        elif 10 <= latitude <= 50 and 60 <= longitude <= 140:
+            # Central Asian steppes
+            if 35 <= latitude <= 50 and 60 <= longitude <= 85:
+                return 0.8, 0.3, 0.7
+            # Northern China drought belt
+            elif 35 <= latitude <= 45 and 105 <= longitude <= 125:
+                return 0.6, 0.5, 0.6
+            # Indian subcontinent (monsoon dependent)
+            elif 10 <= latitude <= 30 and 70 <= longitude <= 90:
+                return 0.5, 0.4, 0.8  # Moderate base risk but high monsoon dependency
+    
+    # Default regional patterns by latitude
+    if abs_lat < 10:  # Equatorial regions
+        return 0.2, 0.7, 0.3
+    elif 15 <= abs_lat <= 35:  # Hot desert belt
+        return 0.7, 0.3, 0.6
+    elif 30 <= abs_lat <= 45:  # Mediterranean/subtropical
+        return 0.4, 0.6, 0.4
+    elif abs_lat > 60:  # High latitude
+        return 0.1, 0.8, 0.2
+    else:  # Temperate
+        return 0.3, 0.7, 0.3
+
+def get_regional_dry_season_threshold(abs_lat):
+    """Get expected number of dry months for different climate zones"""
+    if 15 <= abs_lat <= 35:  # Hot desert belt
+        return 9  # Most months are dry
+    elif 30 <= abs_lat <= 45:  # Mediterranean/subtropical
+        return 6  # Summer drought expected
+    elif abs_lat < 23.5:  # Tropical
+        return 4
+    elif abs_lat > 60:  # High latitude
+        return 8
+    else:  # Temperate
+        return 5
+
+def assess_upstream_drought_impact(latitude, longitude, monthly_precip):
+    """Assess how upstream drought conditions affect water availability"""
+    if longitude is None:
+        return 0.0
+    
+    # Calculate upstream precipitation deficit
+    annual_precip = np.sum(monthly_precip)
+    dry_months = np.sum(monthly_precip < 25)
+    
+    # Major river systems where upstream conditions critically affect downstream water supply
+    high_dependency_basins = [
+        # Colorado River system (extreme upstream dependency)
+        ((31, 42), (-115, -105), 0.9),
+        # Nile River system
+        ((20, 32), (25, 35), 0.8),
+        # Murray-Darling system
+        ((-37, -28), (140, 150), 0.7),
+        # Indus River system
+        ((24, 35), (65, 80), 0.8),
+        # Yellow River system
+        ((32, 42), (105, 120), 0.7),
+        # Tigris-Euphrates system
+        ((30, 37), (38, 48), 0.9),
+        # São Francisco River system
+        ((-20, -8), (-48, -38), 0.6),
+    ]
+    
+    upstream_impact = 0.0
+    for (lat_range, lon_range, dependency) in high_dependency_basins:
+        if lat_range[0] <= latitude <= lat_range[1] and lon_range[0] <= longitude <= lon_range[1]:
+            # Calculate upstream drought severity
+            drought_severity = min(1.0, dry_months / 6.0)
+            upstream_impact = max(upstream_impact, drought_severity * dependency)
+    
+    return upstream_impact
+
+def get_water_infrastructure_resilience(latitude, longitude):
+    """Assess regional water infrastructure and drought management capacity"""
+    if longitude is None:
+        return 0.5  # Default moderate resilience
+    
+    # Regions with excellent water infrastructure and drought management
+    high_resilience_regions = [
+        # Australia (excellent drought management despite arid climate)
+        ((-35, -10), (110, 155), 0.8),
+        # Israel/Mediterranean (advanced water technology)
+        ((31, 34), (34, 36), 0.9),
+        # Singapore region (water security focus)
+        ((1, 2), (103, 104), 0.9),
+        # Netherlands (water management expertise)
+        ((51, 54), (3, 7), 0.8),
+        # California (despite drought challenges, good infrastructure)
+        ((32, 42), (-125, -115), 0.7),
+        # Nordic countries (good water resources management)
+        ((55, 70), (5, 35), 0.8),
+    ]
+    
+    for (lat_range, lon_range, resilience) in high_resilience_regions:
+        if lat_range[0] <= latitude <= lat_range[1] and lon_range[0] <= longitude <= lon_range[1]:
+            return resilience
+    
+    # Regional defaults based on development level and geography
+    abs_lat = abs(latitude)
+    
+    # Developed temperate regions
+    if 40 <= abs_lat <= 60:
+        return 0.7
+    # Tropical regions with variable infrastructure
+    elif abs_lat < 30:
+        return 0.4
+    # Arid regions (generally challenged infrastructure)
+    elif 15 <= abs_lat <= 35:
+        return 0.3
+    else:
+        return 0.5
 
 def calculate_flood_risk(monthly_precip, latitude, longitude=None):
     """Calculate flood risk score (0-1) based on watershed hydrology and regional patterns"""
@@ -1242,8 +1410,8 @@ def generate_climate_time_series(latitude, longitude, start_year, end_year):
         monthly_precip = generate_monthly_precipitation_series(annual_precip, latitude)
         
         # Calculate detailed habitability with breakdown
-        heat_stress_days = calculate_heat_stress_days(monthly_temps, latitude)
-        drought_risk = calculate_drought_risk(monthly_precip, latitude)
+        heat_stress_days = calculate_heat_stress_days(monthly_temps, latitude, longitude)
+        drought_risk = calculate_drought_risk(monthly_precip, latitude, longitude)
         flood_risk = calculate_flood_risk(monthly_precip, latitude, longitude)
         
         habitability_score, habitability_breakdown = calculate_habitability_score(
@@ -1398,7 +1566,7 @@ def generate_global_habitability_rankings(target_year):
             baseline_monthly_precip = generate_monthly_precipitation_series(baseline_precip, location["lat"])
             
             baseline_heat_stress = calculate_heat_stress_days(baseline_monthly_temps, location["lat"], location["lng"])
-            baseline_drought = calculate_drought_risk(baseline_monthly_precip, location["lat"])
+            baseline_drought = calculate_drought_risk(baseline_monthly_precip, location["lat"], location["lng"])
             baseline_flood = calculate_flood_risk(baseline_monthly_precip, location["lat"], location["lng"])
             
             baseline_habitability, _ = calculate_habitability_score(
@@ -1417,7 +1585,7 @@ def generate_global_habitability_rankings(target_year):
             future_monthly_precip = generate_monthly_precipitation_series(future_precip, location["lat"])
             
             future_heat_stress = calculate_heat_stress_days(future_monthly_temps, location["lat"], location["lng"])
-            future_drought = calculate_drought_risk(future_monthly_precip, location["lat"])
+            future_drought = calculate_drought_risk(future_monthly_precip, location["lat"], location["lng"])
             future_flood = calculate_flood_risk(future_monthly_precip, location["lat"], location["lng"])
             
             future_habitability, breakdown = calculate_habitability_score(
