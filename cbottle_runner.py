@@ -501,23 +501,100 @@ def get_simple_physics_precipitation(latitude, longitude):
 
 def calculate_temperature_anomaly(latitude, longitude, years_ahead):
     """Calculate temperature anomaly based on climate change projections"""
-    # Global warming rate varies by region
     abs_lat = abs(latitude)
     
-    # Realistic warming rates based on IPCC AR6 projections (°C per decade)
-    # Conservative RCP4.5 scenario warming rates
-    if abs_lat > 60:  # Arctic amplification
-        warming_rate = 0.25  # Reduced from 0.4
-    elif abs_lat < 23.5:  # Tropics
-        warming_rate = 0.12  # Reduced from 0.15
-    else:  # Mid-latitudes
-        warming_rate = 0.15  # Reduced from 0.2
+    # Enhanced warming rates reflecting current climate trajectory (°C per decade)
+    # Based on RCP4.5-8.5 intermediate scenario reflecting current emissions
+    base_warming_rate = get_regional_warming_rate(latitude, longitude)
     
-    # Continental areas warm faster (but more modestly)
+    # Add acceleration factor for non-linear climate feedbacks
+    acceleration_factor = 1 + (years_ahead / 50.0) * 0.3  # 30% acceleration over 50 years
+    
+    # Continental areas warm faster due to reduced thermal inertia
     if not is_coastal(latitude, longitude):
-        warming_rate *= 1.2  # Reduced from 1.3
+        base_warming_rate *= 1.3
     
-    return warming_rate * (years_ahead / 10.0)
+    return base_warming_rate * acceleration_factor * (years_ahead / 10.0)
+
+def get_regional_warming_rate(latitude, longitude):
+    """Get region-specific warming rates based on IPCC AR6 and recent observations"""
+    abs_lat = abs(latitude)
+    
+    if longitude is None:
+        # Default latitude-based warming rates
+        if abs_lat > 60:  # Arctic amplification
+            return 0.4
+        elif abs_lat < 23.5:  # Tropics
+            return 0.18
+        else:  # Mid-latitudes
+            return 0.25
+    
+    # Regional warming patterns based on climate model projections and observations
+    
+    # Europe - amplified warming due to changing atmospheric circulation
+    if 35 <= latitude <= 70 and -10 <= longitude <= 40:
+        # Mediterranean region - hotspot of climate change
+        if 35 <= latitude <= 45:
+            return 0.35  # Strong Mediterranean warming
+        # Central and Western Europe - continental amplification
+        elif 45 <= latitude <= 55:
+            return 0.28  # Moderate-high European warming
+        # Northern Europe - Arctic influence
+        else:
+            return 0.32  # Nordic amplification
+    
+    # North America - continental and Arctic amplification
+    elif 25 <= latitude <= 60 and -170 <= longitude <= -50:
+        # Arctic Canada - extreme amplification
+        if latitude > 55:
+            return 0.45
+        # Continental US - enhanced warming
+        elif 30 <= latitude <= 50:
+            return 0.27
+        # Southern US - moderate amplification
+        else:
+            return 0.22
+    
+    # Asia - monsoon disruption and continental effects
+    elif 10 <= latitude <= 60 and 60 <= longitude <= 150:
+        # Siberia and Central Asia - Arctic amplification
+        if latitude > 50:
+            return 0.42
+        # East Asia - continental warming
+        elif 25 <= latitude <= 45:
+            return 0.26
+        # South and Southeast Asia - tropical amplification
+        else:
+            return 0.20
+    
+    # Australia - heat extremes intensification
+    elif -45 <= latitude <= -10 and 110 <= longitude <= 155:
+        return 0.24  # Australian warming amplification
+    
+    # Middle East and North Africa - extreme heat amplification
+    elif 15 <= latitude <= 40 and -20 <= longitude <= 60:
+        return 0.30  # MENA region enhanced warming
+    
+    # South America - Amazon feedback effects
+    elif -45 <= latitude <= 15 and -85 <= longitude <= -30:
+        # Amazon region - feedback amplification
+        if -10 <= latitude <= 5:
+            return 0.23
+        # Southern South America
+        else:
+            return 0.25
+    
+    # Africa - Sahel and continental warming
+    elif -35 <= latitude <= 35 and -20 <= longitude <= 55:
+        return 0.26  # African continental warming
+    
+    # Default patterns by latitude for uncovered regions
+    if abs_lat > 60:  # Arctic amplification
+        return 0.4
+    elif abs_lat < 23.5:  # Tropics
+        return 0.18
+    else:  # Mid-latitudes
+        return 0.25
 
 def calculate_precipitation_anomaly(latitude, longitude, years_ahead):
     """Calculate precipitation anomaly percentage"""
@@ -782,15 +859,21 @@ def calculate_heat_stress_days(monthly_temps, latitude=None, longitude=None):
             diurnal_range = 11  # Lower latitude default
     
     for i, monthly_avg in enumerate(monthly_temps):
-        # Calculate estimated daily maximum temperature
-        # Use proper daily maximum calculation (monthly average + half diurnal range + seasonal peak adjustment)
-        estimated_daily_max = monthly_avg + (diurnal_range * 0.7)  # More realistic daily max calculation
+        # Enhanced daily maximum temperature calculation accounting for heat waves
+        base_daily_max = monthly_avg + (diurnal_range * 0.8)  # Base daily maximum
         
-        if estimated_daily_max > 32:  # Lower threshold for heat stress (32°C is realistic)
+        # Add heat wave amplification for summer months (May-September)
+        if 4 <= i <= 8:  # May through September
+            heat_wave_amplification = get_heat_wave_amplification(latitude, longitude, i)
+            estimated_daily_max = base_daily_max + heat_wave_amplification
+        else:
+            estimated_daily_max = base_daily_max
+        
+        if estimated_daily_max > 30:  # Realistic threshold for moderate heat stress
             days_in_month = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31][i]
             
             # Calculate heat stress probability based on how far above threshold
-            temp_excess = estimated_daily_max - 32
+            temp_excess = estimated_daily_max - 30
             
             if temp_excess > 18:  # >50°C days
                 heat_probability = 0.95
@@ -812,6 +895,284 @@ def calculate_heat_stress_days(monthly_temps, latitude=None, longitude=None):
             heat_days += min(days_in_month * heat_probability, days_in_month)
     
     return max(0, int(heat_days))
+
+def get_heat_wave_amplification(latitude, longitude, month_index):
+    """Calculate additional temperature increase during heat wave conditions"""
+    if longitude is None:
+        return 2.0  # Default summer heat wave amplification
+    
+    abs_lat = abs(latitude)
+    
+    # Peak summer months get maximum amplification
+    peak_summer_factor = 1.0
+    if month_index == 6:  # July - typically hottest month
+        peak_summer_factor = 1.5
+    elif month_index in [5, 7]:  # June, August
+        peak_summer_factor = 1.3
+    elif month_index in [4, 8]:  # May, September
+        peak_summer_factor = 0.8
+    
+    # Regional heat wave amplification patterns
+    base_amplification = 0
+    
+    # Europe - increasing heat dome frequency
+    if 35 <= latitude <= 70 and -10 <= longitude <= 40:
+        # Western Europe (France, UK, Benelux) - unprecedented heat events
+        if 45 <= latitude <= 55 and -5 <= longitude <= 10:
+            base_amplification = 8.0  # Recent 40°C+ events in UK/France
+        # Central Europe - continental heat waves
+        elif 45 <= latitude <= 55 and 8 <= longitude <= 25:
+            base_amplification = 7.0  # Continental European heat intensification
+        # Southern Europe - Mediterranean heat extremes
+        elif 35 <= latitude <= 45:
+            base_amplification = 10.0  # Mediterranean heat hotspot
+        # Northern Europe - Arctic amplification effects
+        else:
+            base_amplification = 4.0  # Nordic heat wave amplification
+    
+    # North America - heat dome patterns
+    elif 25 <= latitude <= 60 and -170 <= longitude <= -50:
+        # Pacific Northwest - extreme heat dome events
+        if 45 <= latitude <= 50 and -125 <= longitude <= -115:
+            base_amplification = 12.0  # Unprecedented heat dome amplification
+        # Southwest US - desert heat intensification
+        elif 25 <= latitude <= 40 and -120 <= longitude <= -100:
+            base_amplification = 8.0  # Desert heat amplification
+        # Great Plains and Eastern US
+        elif 30 <= latitude <= 50 and -105 <= longitude <= -70:
+            base_amplification = 6.0  # Continental heat wave amplification
+        # Southern US - persistent heat
+        elif 25 <= latitude <= 35:
+            base_amplification = 7.0  # Southern heat intensification
+        # Canada - rapid warming
+        else:
+            base_amplification = 5.0  # Canadian heat amplification
+    
+    # Asia - monsoon disruption and continental extremes
+    elif 10 <= latitude <= 60 and 60 <= longitude <= 150:
+        # Indian subcontinent - extreme pre-monsoon heat
+        if 10 <= latitude <= 35 and 68 <= longitude <= 95:
+            base_amplification = 10.0  # South Asian extreme heat
+        # East Asia - heat wave intensification
+        elif 25 <= latitude <= 45 and 100 <= longitude <= 145:
+            base_amplification = 7.0  # East Asian heat amplification
+        # Central Asia - continental extremes
+        elif 35 <= latitude <= 50 and 60 <= longitude <= 85:
+            base_amplification = 8.0  # Central Asian heat amplification
+        # Southeast Asia - tropical heat stress
+        elif 10 <= latitude <= 25 and 95 <= longitude <= 140:
+            base_amplification = 5.0  # Southeast Asian heat amplification
+        # Siberia - Arctic warming
+        else:
+            base_amplification = 6.0  # Siberian heat amplification
+    
+    # Australia - extreme heat events
+    elif -45 <= latitude <= -10 and 110 <= longitude <= 155:
+        base_amplification = 8.0  # Australian heat wave amplification
+    
+    # Middle East and North Africa - extreme heat regions
+    elif 15 <= latitude <= 40 and -20 <= longitude <= 60:
+        base_amplification = 12.0  # MENA extreme heat amplification
+    
+    # South America - continental and tropical heat
+    elif -45 <= latitude <= 15 and -85 <= longitude <= -30:
+        base_amplification = 6.0  # South American heat amplification
+    
+    # Africa - continental heat intensification
+    elif -35 <= latitude <= 35 and -20 <= longitude <= 55:
+        base_amplification = 7.0  # African heat amplification
+    
+    # Default amplification by latitude
+    else:
+        if abs_lat < 15:  # Tropical
+            base_amplification = 4.0
+        elif abs_lat < 30:  # Subtropical
+            base_amplification = 6.0
+        elif abs_lat < 45:  # Temperate
+            base_amplification = 5.0
+        else:  # Higher latitudes
+            base_amplification = 3.0
+    
+    return base_amplification * peak_summer_factor
+
+def get_regional_heat_amplification(latitude, longitude):
+    """Calculate regional heat wave amplification factors based on climate observations and geography"""
+    abs_lat = abs(latitude)
+    
+    if longitude is None:
+        # Default latitude-based patterns when longitude not available
+        if abs_lat > 60:  # High latitude regions
+            return 0.7  # Increasing heat waves but still relatively rare
+        elif abs_lat > 45:  # Mid-latitude regions
+            return 1.1  # Significant heat wave intensification
+        elif abs_lat > 30:  # Subtropical regions
+            return 1.3  # Strong heat intensification
+        elif abs_lat < 15:  # Tropical regions
+            return 1.4  # Very high heat stress
+        else:  # 15-30° latitude
+            return 1.2  # High heat amplification
+    
+    # Regional heat wave patterns based on observed climate trends
+    
+    # Europe - unprecedented heat events in recent years
+    if 35 <= latitude <= 70 and -10 <= longitude <= 40:
+        # Western Europe (Atlantic influence but increasing heat domes)
+        if 45 <= latitude <= 55 and -5 <= longitude <= 10:
+            # France: 2019 reached 46°C, 2022 widespread 40°C+ events
+            if 46 <= latitude <= 51 and 1 <= longitude <= 8:
+                return 1.4  # France experiencing extreme heat amplification
+            # UK: 2022 first-ever 40°C+ record
+            elif 50 <= latitude <= 56 and -5 <= longitude <= 2:
+                return 1.3  # UK heat waves intensifying rapidly
+            # Benelux: Heat domes causing unprecedented temperatures
+            elif 50 <= latitude <= 54 and 3 <= longitude <= 7:
+                return 1.2  # Netherlands/Belgium heat intensification
+            else:
+                return 1.2  # General Western European amplification
+        
+        # Central Europe (continental heat amplification)
+        elif 45 <= latitude <= 55 and 8 <= longitude <= 25:
+            # Germany: More frequent 35°C+ days
+            if 47 <= latitude <= 55 and 8 <= longitude <= 15:
+                return 1.3  # German heat wave intensification
+            # Czech Republic, Slovakia, Poland: Continental heat extremes
+            elif 48 <= latitude <= 55 and 12 <= longitude <= 25:
+                return 1.4  # Central European heat amplification
+            else:
+                return 1.2  # Regional amplification
+        
+        # Southern Europe (Mediterranean heat extremes)
+        elif 35 <= latitude <= 45 and -10 <= longitude <= 40:
+            # Iberian Peninsula: Extreme heat events
+            if 35 <= latitude <= 44 and -10 <= longitude <= 4:
+                return 1.5  # Spain/Portugal extreme heat amplification
+            # Italy: Po Valley and southern heat extremes
+            elif 35 <= latitude <= 47 and 6 <= longitude <= 19:
+                return 1.4  # Italian heat intensification
+            # Balkans: Continental Mediterranean heat
+            elif 40 <= latitude <= 47 and 13 <= longitude <= 30:
+                return 1.4  # Balkan heat amplification
+            else:
+                return 1.3  # Mediterranean amplification
+        
+        # Nordic countries: Rapid warming but lower absolute temperatures
+        elif 55 <= latitude <= 70 and 5 <= longitude <= 35:
+            return 0.8  # Nordic heat waves becoming more common but still moderate
+    
+    # North America - Heat dome patterns
+    elif 25 <= latitude <= 60 and -170 <= longitude <= -50:
+        # Pacific Northwest: Unprecedented 2021 heat dome
+        if 45 <= latitude <= 50 and -125 <= longitude <= -115:
+            return 1.6  # Extreme heat dome amplification
+        # California: Frequent extreme heat events
+        elif 32 <= latitude <= 42 and -125 <= longitude <= -115:
+            return 1.5  # California heat amplification
+        # Southwest US: Desert heat intensification
+        elif 25 <= latitude <= 40 and -120 <= longitude <= -100:
+            return 1.4  # Southwest heat amplification
+        # Great Plains: Continental heat waves
+        elif 35 <= latitude <= 50 and -105 <= longitude <= -90:
+            return 1.3  # Great Plains heat intensification
+        # Eastern US: Humid heat waves
+        elif 30 <= latitude <= 45 and -90 <= longitude <= -70:
+            return 1.2  # Eastern US heat amplification
+        # Southern US: Persistent high temperatures
+        elif 25 <= latitude <= 35 and -100 <= longitude <= -75:
+            return 1.4  # Southern US heat intensification
+        # Canada: Rapid warming
+        elif 45 <= latitude <= 60 and -140 <= longitude <= -60:
+            return 1.1  # Canadian heat amplification
+    
+    # Asia - Monsoon and continental extremes
+    elif 10 <= latitude <= 60 and 60 <= longitude <= 150:
+        # Indian subcontinent: Extreme pre-monsoon heat
+        if 10 <= latitude <= 35 and 68 <= longitude <= 95:
+            return 1.6  # South Asian extreme heat
+        # East Asian monsoon region
+        elif 20 <= latitude <= 45 and 100 <= longitude <= 145:
+            # China heat waves
+            if 25 <= latitude <= 45 and 105 <= longitude <= 125:
+                return 1.4  # Chinese heat amplification
+            # Japan, Korea: Humid heat intensification
+            elif 30 <= latitude <= 45 and 125 <= longitude <= 145:
+                return 1.3  # East Asian heat amplification
+        # Central Asia: Continental heat extremes
+        elif 35 <= latitude <= 50 and 60 <= longitude <= 85:
+            return 1.5  # Central Asian heat amplification
+        # Southeast Asia: Tropical heat stress
+        elif 10 <= latitude <= 25 and 95 <= longitude <= 140:
+            return 1.4  # Southeast Asian heat amplification
+        # Siberia: Rapid Arctic warming
+        elif 50 <= latitude <= 70 and 60 <= longitude <= 150:
+            return 1.0  # Siberian heat amplification (warming but lower absolute temps)
+    
+    # Australia - Heat wave intensification
+    elif -45 <= latitude <= -10 and 110 <= longitude <= 155:
+        # Southeast Australia: Frequent extreme heat
+        if -40 <= latitude <= -30 and 140 <= longitude <= 155:
+            return 1.5  # Southeast Australian heat amplification
+        # Interior Australia: Extreme desert heat
+        elif -30 <= latitude <= -20 and 120 <= longitude <= 145:
+            return 1.6  # Australian interior heat amplification
+        # Northern Australia: Tropical heat stress
+        elif -20 <= latitude <= -10 and 125 <= longitude <= 145:
+            return 1.4  # Northern Australian heat amplification
+        else:
+            return 1.3  # General Australian heat amplification
+    
+    # Middle East and North Africa - Extreme heat regions
+    elif 15 <= latitude <= 40 and -20 <= longitude <= 60:
+        # Arabian Peninsula: Extreme heat and humidity
+        if 15 <= latitude <= 30 and 35 <= longitude <= 55:
+            return 1.7  # Arabian Peninsula extreme heat
+        # Levant and Turkey: Mediterranean heat extremes
+        elif 30 <= latitude <= 42 and 25 <= longitude <= 45:
+            return 1.4  # Levant/Turkey heat amplification
+        # North Africa: Saharan heat intensification
+        elif 15 <= latitude <= 35 and -20 <= longitude <= 35:
+            return 1.5  # North African heat amplification
+        # Iran/Iraq: Continental heat extremes
+        elif 25 <= latitude <= 40 and 45 <= longitude <= 60:
+            return 1.5  # Persian Gulf region heat amplification
+    
+    # South America - Tropical and subtropical heat
+    elif -45 <= latitude <= 15 and -85 <= longitude <= -30:
+        # Amazon Basin: Tropical heat stress
+        if -10 <= latitude <= 5 and -75 <= longitude <= -45:
+            return 1.3  # Amazon heat amplification
+        # Brazilian highlands and cities: Urban heat islands
+        elif -25 <= latitude <= -10 and -55 <= longitude <= -35:
+            return 1.4  # Brazilian urban heat amplification
+        # Argentina plains: Continental heat waves
+        elif -40 <= latitude <= -25 and -70 <= longitude <= -55:
+            return 1.3  # Argentine heat amplification
+        # Northern South America: Tropical intensification
+        elif 0 <= latitude <= 15 and -75 <= longitude <= -55:
+            return 1.4  # Northern South American heat amplification
+    
+    # Africa - Continental tropical heat
+    elif -35 <= latitude <= 35 and -20 <= longitude <= 55:
+        # Sub-Saharan Africa: Increasing heat stress
+        if -30 <= latitude <= 15 and 10 <= longitude <= 50:
+            return 1.4  # Sub-Saharan heat amplification
+        # East African highlands: Moderate amplification
+        elif -10 <= latitude <= 10 and 30 <= longitude <= 45:
+            return 1.2  # East African heat amplification
+        # Southern Africa: Heat wave intensification
+        elif -35 <= latitude <= -15 and 15 <= longitude <= 35:
+            return 1.3  # Southern African heat amplification
+    
+    # Default patterns by latitude for uncovered regions
+    if abs_lat < 15:  # Tropical regions
+        return 1.4  # High tropical heat amplification
+    elif abs_lat < 30:  # Subtropical regions
+        return 1.3  # Subtropical heat intensification
+    elif abs_lat < 45:  # Temperate regions
+        return 1.2  # Temperate heat amplification
+    elif abs_lat < 60:  # Subpolar regions
+        return 1.0  # Moderate high-latitude warming
+    else:  # Polar regions
+        return 0.8  # Polar amplification but lower absolute temperatures
 
 def calculate_drought_risk(monthly_precip, latitude, longitude=None):
     """Calculate drought risk score (0-1) including upstream watershed effects"""
