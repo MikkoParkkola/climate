@@ -818,76 +818,276 @@ def calculate_drought_risk(monthly_precip, latitude):
     return min(1.0, total_risk)
 
 def calculate_flood_risk(monthly_precip, latitude, longitude=None):
-    """Calculate flood risk score (0-1) based on real-world flood patterns"""
+    """Calculate flood risk score (0-1) based on watershed hydrology and regional patterns"""
     max_monthly = np.max(monthly_precip)
     annual_total = np.sum(monthly_precip)
-    abs_lat = abs(latitude)
     
-    # Location-specific flood risk patterns based on historical flood events
-    base_flood_risk = 0.3  # Default baseline
+    # Determine regional flood risk characteristics
+    base_flood_risk, infrastructure_factor, extreme_threshold = get_regional_flood_characteristics(latitude, longitude)
     
-    # Amsterdam: Below sea level, dependent on water management infrastructure
-    if longitude is not None and 4.0 <= longitude <= 5.5 and 52.0 <= latitude <= 53.0:
-        base_flood_risk = 0.6  # High baseline due to being below sea level
-        # Amsterdam has excellent flood defenses but remains vulnerable
-        infrastructure_factor = 0.7  # Good but not perfect protection
-        extreme_threshold = 100  # Lower threshold due to geography
+    # Calculate upstream watershed effects
+    watershed_factor = calculate_watershed_impact(latitude, longitude, monthly_precip)
     
-    # Prague: Elbe River flooding, experienced major floods in 1997, 2002, 2013
-    elif longitude is not None and 14.0 <= longitude <= 15.0 and 49.5 <= latitude <= 50.5:
-        base_flood_risk = 0.8  # Very high baseline - historic flooding events
-        # Prague improved flood defenses after 2002 but remains vulnerable
-        infrastructure_factor = 0.8  # Recent improvements but still exposed
-        extreme_threshold = 80   # Low threshold due to river basin geography
+    # River proximity and basin characteristics
+    river_proximity_factor = assess_river_basin_risk(latitude, longitude)
     
-    # Helsinki: Very low flood risk, only coastal storm surge/sea level rise
-    elif longitude is not None and 24.0 <= longitude <= 25.5 and 60.0 <= latitude <= 61.0:
-        base_flood_risk = 0.05  # Very low baseline - minimal historical flooding
-        # Helsinki has excellent drainage and is not in a flood-prone river basin
-        infrastructure_factor = 0.3  # Excellent Nordic infrastructure
-        extreme_threshold = 300  # High threshold - rarely experiences problematic rainfall
-    
-    # London: Thames flooding risk, but excellent flood barriers
-    elif longitude is not None and -1.0 <= longitude <= 1.0 and 51.0 <= latitude <= 52.0:
-        base_flood_risk = 0.4  # Moderate baseline due to Thames
-        infrastructure_factor = 0.5  # Thames Barrier provides good protection
-        extreme_threshold = 120  # Moderate threshold
-    
-    # Berlin: Moderate flood risk from Spree River
-    elif longitude is not None and 13.0 <= longitude <= 14.0 and 52.0 <= latitude <= 53.0:
-        base_flood_risk = 0.3  # Moderate baseline
-        infrastructure_factor = 0.6  # Good German infrastructure
-        extreme_threshold = 110  # Moderate threshold
-    
-    # Bangkok: Very high flood risk - massive 2011 floods
-    elif longitude is not None and 100.0 <= longitude <= 101.0 and 13.0 <= latitude <= 14.5:
-        base_flood_risk = 0.9  # Extreme baseline - frequent severe flooding
-        infrastructure_factor = 1.2  # Infrastructure struggles with extreme events
-        extreme_threshold = 200  # Monsoon region but poor drainage
-    
-    # Default for other regions
-    else:
-        if abs_lat < 30:  # Tropical regions
-            infrastructure_factor = 0.7
-            extreme_threshold = 300
-        elif abs_lat < 60:  # Temperate regions
-            infrastructure_factor = 0.6
-            extreme_threshold = 150
-        else:  # Northern regions (generally lower flood risk)
-            infrastructure_factor = 0.4
-            extreme_threshold = 200
+    # Topographical factors (elevation, slope, drainage)
+    topographic_factor = assess_topographic_flood_risk(latitude, longitude)
     
     # Calculate precipitation-based risk factors
     extreme_factor = min(0.8, float(max_monthly) / extreme_threshold) * infrastructure_factor
     
-    # Risk from seasonal precipitation concentration
+    # Risk from seasonal precipitation concentration (flash flood potential)
     precip_std = np.std(monthly_precip)
     seasonal_factor = min(0.6, float(precip_std) / 100) * infrastructure_factor
     
-    # Combine base risk with precipitation factors
-    total_risk = base_flood_risk + (extreme_factor + seasonal_factor) * 0.4
+    # Drought-flood cycle risk (dry soil reduces infiltration)
+    drought_flood_factor = calculate_drought_flood_interaction(monthly_precip)
     
-    return min(1.0, total_risk)
+    # Combine all risk factors
+    total_risk = (
+        base_flood_risk + 
+        (extreme_factor * 0.25) + 
+        (seasonal_factor * 0.15) + 
+        (watershed_factor * 0.3) + 
+        (river_proximity_factor * 0.2) + 
+        (topographic_factor * 0.15) +
+        (drought_flood_factor * 0.1)
+    )
+    
+    return min(1.0, max(0.0, total_risk))
+
+def get_regional_flood_characteristics(latitude, longitude):
+    """Determine regional flood risk baseline, infrastructure quality, and extreme thresholds"""
+    abs_lat = abs(latitude)
+    
+    # Major river basin and coastal flood zones
+    if longitude is not None:
+        # European river basins
+        if 45 <= latitude <= 70 and -10 <= longitude <= 40:
+            # Rhine basin (high flood risk, good infrastructure)
+            if 47 <= latitude <= 52 and 6 <= longitude <= 9:
+                return 0.7, 0.6, 90  # Rhine floods affect multiple countries
+            # Danube basin (moderate-high flood risk)
+            elif 46 <= latitude <= 50 and 8 <= longitude <= 30:
+                return 0.6, 0.7, 100
+            # Elbe basin (high flood risk, recent major floods)
+            elif 49 <= latitude <= 55 and 10 <= longitude <= 15:
+                return 0.8, 0.8, 80
+            # Po Valley (very high flood risk)
+            elif 44 <= latitude <= 46 and 9 <= longitude <= 13:
+                return 0.9, 0.7, 70
+            # Thames basin
+            elif 51 <= latitude <= 52 and -2 <= longitude <= 1:
+                return 0.4, 0.5, 120
+            # Seine basin
+            elif 48 <= latitude <= 50 and 1 <= longitude <= 5:
+                return 0.5, 0.6, 110
+        
+        # Asian monsoon regions
+        elif 10 <= latitude <= 40 and 70 <= longitude <= 140:
+            # Ganges-Brahmaputra (extreme flood risk)
+            if 20 <= latitude <= 30 and 80 <= longitude <= 95:
+                return 0.95, 1.3, 250
+            # Yangtze River basin
+            elif 28 <= latitude <= 35 and 110 <= longitude <= 122:
+                return 0.8, 0.9, 200
+            # Mekong basin
+            elif 10 <= latitude <= 25 and 95 <= longitude <= 110:
+                return 0.9, 1.1, 300
+            # Yellow River basin
+            elif 32 <= latitude <= 42 and 105 <= longitude <= 120:
+                return 0.7, 0.8, 150
+        
+        # North American river systems
+        elif 25 <= latitude <= 60 and -170 <= longitude <= -50:
+            # Mississippi basin
+            if 30 <= latitude <= 50 and -95 <= longitude <= -85:
+                return 0.7, 0.7, 120
+            # Great Lakes region
+            elif 41 <= latitude <= 49 and -93 <= longitude <= -75:
+                return 0.4, 0.5, 100
+            # Colorado River basin (flash flood risk despite aridity)
+            elif 31 <= latitude <= 42 and -115 <= longitude <= -105:
+                return 0.6, 0.8, 50  # Low threshold due to flash flood potential
+        
+        # South American systems
+        elif -60 <= latitude <= 15 and -85 <= longitude <= -30:
+            # Amazon basin
+            if -10 <= latitude <= 5 and -75 <= longitude <= -45:
+                return 0.8, 1.2, 400  # High capacity but poor infrastructure
+            # La Plata basin
+            elif -35 <= latitude <= -15 and -65 <= longitude <= -45:
+                return 0.7, 0.9, 180
+        
+        # African river systems
+        elif -35 <= latitude <= 40 and -20 <= longitude <= 55:
+            # Nile basin
+            if 20 <= latitude <= 32 and 25 <= longitude <= 35:
+                return 0.5, 0.9, 80  # Controlled by dams but infrastructure challenges
+            # Congo basin
+            elif -10 <= latitude <= 10 and 10 <= longitude <= 30:
+                return 0.8, 1.3, 350
+            # Niger basin
+            elif 5 <= latitude <= 20 and -5 <= longitude <= 15:
+                return 0.7, 1.1, 200
+    
+    # Default regional patterns by latitude
+    if abs_lat < 10:  # Equatorial regions
+        return 0.6, 0.9, 300
+    elif abs_lat < 30:  # Tropical/subtropical
+        return 0.5, 0.8, 250
+    elif abs_lat < 60:  # Temperate
+        return 0.4, 0.6, 150
+    else:  # Polar/subpolar
+        return 0.2, 0.4, 200
+
+def calculate_watershed_impact(latitude, longitude, monthly_precip):
+    """Calculate upstream watershed effects on flood risk"""
+    if longitude is None:
+        return 0.0
+    
+    # Estimate upstream precipitation effects
+    max_monthly = np.max(monthly_precip)
+    annual_total = np.sum(monthly_precip)
+    
+    # Upstream amplification factor based on river basin size
+    basin_amplification = get_basin_amplification_factor(latitude, longitude)
+    
+    # Seasonal concentration risk (upstream snow melt + rainfall)
+    spring_summer_precip = monthly_precip[2:8]  # Mar-Aug
+    seasonal_concentration = np.std(spring_summer_precip) / np.mean(spring_summer_precip) if np.mean(spring_summer_precip) > 0 else 0
+    
+    # Drought-to-flood risk (upstream drought reduces soil infiltration)
+    dry_months = sum(1 for p in monthly_precip if p < annual_total / 24)  # Below half monthly average
+    drought_amplification = min(0.3, dry_months / 12) if dry_months > 3 else 0
+    
+    watershed_impact = (
+        basin_amplification * 0.5 +
+        seasonal_concentration * 0.3 +
+        drought_amplification * 0.2
+    )
+    
+    return min(0.8, watershed_impact)
+
+def get_basin_amplification_factor(latitude, longitude):
+    """Estimate watershed size and upstream precipitation accumulation effects"""
+    # Major river systems with significant upstream areas
+    if longitude is not None:
+        # Large basin systems (high amplification)
+        # Amazon
+        if -10 <= latitude <= 5 and -75 <= longitude <= -45:
+            return 0.9
+        # Mississippi
+        elif 30 <= latitude <= 50 and -95 <= longitude <= -85:
+            return 0.8
+        # Ganges-Brahmaputra
+        elif 20 <= latitude <= 30 and 80 <= longitude <= 95:
+            return 0.95
+        # Yangtze
+        elif 28 <= latitude <= 35 and 110 <= longitude <= 122:
+            return 0.8
+        # Danube
+        elif 46 <= latitude <= 50 and 8 <= longitude <= 30:
+            return 0.7
+        # Rhine
+        elif 47 <= latitude <= 52 and 6 <= longitude <= 9:
+            return 0.7
+        # Nile
+        elif 20 <= latitude <= 32 and 25 <= longitude <= 35:
+            return 0.6
+        # Small basins or coastal areas
+        else:
+            return 0.3
+    
+    return 0.2  # Default for unknown locations
+
+def assess_river_basin_risk(latitude, longitude):
+    """Assess flood risk based on proximity to major rivers and basin characteristics"""
+    if longitude is None:
+        return 0.0
+    
+    # Major flood-prone rivers
+    flood_prone_rivers = [
+        # Europe
+        ((47, 52), (6, 9), 0.7),    # Rhine
+        ((46, 50), (8, 30), 0.6),   # Danube
+        ((49, 55), (10, 15), 0.8),  # Elbe
+        ((44, 46), (9, 13), 0.9),   # Po
+        # Asia
+        ((20, 30), (80, 95), 0.95), # Ganges-Brahmaputra
+        ((28, 35), (110, 122), 0.8), # Yangtze
+        ((10, 25), (95, 110), 0.9),  # Mekong
+        # Americas
+        ((30, 50), (-95, -85), 0.7), # Mississippi
+        ((-10, 5), (-75, -45), 0.8), # Amazon
+        # Africa
+        ((20, 32), (25, 35), 0.5),   # Nile
+        ((-10, 10), (10, 30), 0.8),  # Congo
+    ]
+    
+    river_risk = 0.0
+    for (lat_range, lon_range, risk) in flood_prone_rivers:
+        if lat_range[0] <= latitude <= lat_range[1] and lon_range[0] <= longitude <= lon_range[1]:
+            river_risk = max(river_risk, risk)
+    
+    return river_risk * 0.5  # Scale down as this is one component
+
+def assess_topographic_flood_risk(latitude, longitude):
+    """Assess flood risk based on topographical characteristics"""
+    if longitude is None:
+        return 0.0
+    
+    # Known flood-prone topographical areas
+    # River deltas and low-lying areas
+    high_risk_areas = [
+        # Netherlands (below sea level)
+        ((51, 54), (3, 7), 0.8),
+        # Bangladesh (Ganges delta)
+        ((20, 27), (88, 93), 0.95),
+        # Louisiana Mississippi delta
+        ((29, 31), (-92, -89), 0.9),
+        # Nile delta
+        ((30, 32), (30, 33), 0.7),
+        # Po Valley
+        ((44, 46), (9, 13), 0.8),
+        # Venice lagoon area
+        ((45, 46), (11, 13), 0.9),
+    ]
+    
+    for (lat_range, lon_range, risk) in high_risk_areas:
+        if lat_range[0] <= latitude <= lat_range[1] and lon_range[0] <= longitude <= lon_range[1]:
+            return risk * 0.4  # Scale as topographic component
+    
+    # General patterns
+    abs_lat = abs(latitude)
+    
+    # Equatorial lowlands
+    if abs_lat < 10:
+        return 0.3
+    # Temperate river valleys
+    elif abs_lat < 50:
+        return 0.2
+    # Northern regions (generally better drainage)
+    else:
+        return 0.1
+
+def calculate_drought_flood_interaction(monthly_precip):
+    """Calculate how drought conditions affect flood risk through reduced soil infiltration"""
+    annual_mean = np.mean(monthly_precip)
+    
+    # Identify dry periods
+    dry_threshold = annual_mean * 0.5
+    dry_months = [p < dry_threshold for p in monthly_precip]
+    
+    # Identify wet periods following dry periods
+    drought_flood_risk = 0.0
+    for i in range(1, len(monthly_precip)):
+        if dry_months[i-1] and monthly_precip[i] > annual_mean * 1.5:
+            # Wet period following dry period increases flood risk
+            drought_flood_risk += 0.1
+    
+    return min(0.3, drought_flood_risk)
 
 def calculate_sea_level_rise(years_ahead, coastal):
     """Calculate sea level rise in centimeters"""
