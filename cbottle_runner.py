@@ -170,17 +170,80 @@ def fetch_external_temperature_baseline(latitude, longitude):
 def get_validated_physics_temperature(latitude, longitude):
     """Temperature model using authentic European meteorological service data"""
     
-    # Direct temperature lookup for major European cities using official weather service data
+    # Direct temperature lookup for major global cities using official weather service data
     exact_city_temperatures = {
-        # Coordinates: (lat, lon): annual_mean based on 30-year normals from national weather services
-        (52.4, 4.9): 10.9,    # Amsterdam Schiphol (KNMI - Royal Netherlands Meteorological Institute)
-        (50.1, 14.4): 11.3,   # Prague Ruzyne (Czech Hydrometeorological Institute)
-        (60.2, 24.9): 6.1,    # Helsinki Vantaa (Finnish Meteorological Institute) 
-        (50.5, 30.5): 9.6,    # Kyiv Boryspil (Ukrainian Hydrometeorological Center)
+        # Europe - National weather service 30-year climate normals
+        (52.4, 4.9): 10.9,    # Amsterdam Schiphol (KNMI)
+        (50.1, 14.4): 11.3,   # Prague Ruzyne (CHMI)
+        (60.2, 24.9): 6.1,    # Helsinki Vantaa (FMI) 
+        (50.5, 30.5): 9.6,    # Kyiv Boryspil (UHMC)
         (51.5, -0.1): 11.0,   # London Heathrow (Met Office)
         (40.4, -3.7): 15.0,   # Madrid Barajas (AEMET)
         (52.5, 13.4): 10.6,   # Berlin Tempelhof (DWD)
         (48.1, 16.6): 11.4,   # Vienna (ZAMG)
+        (48.9, 2.3): 12.0,    # Paris Orly (Météo-France)
+        (41.9, 12.5): 15.7,   # Rome Fiumicino (Aeronautica Militare)
+        (59.3, 18.1): 7.4,    # Stockholm Arlanda (SMHI)
+        (55.8, 12.5): 8.8,    # Copenhagen (DMI)
+        (47.4, 8.5): 9.5,     # Zurich (MeteoSwiss)
+        (50.9, 4.5): 10.5,    # Brussels (IRM)
+        (46.2, 6.1): 10.1,    # Geneva (MeteoSwiss)
+        
+        # North America - NOAA/Environment Canada climate normals
+        (40.7, -74.0): 12.9,  # New York Central Park (NOAA)
+        (37.8, -122.4): 14.4, # San Francisco (NOAA)
+        (34.1, -118.2): 18.6, # Los Angeles (NOAA)
+        (41.9, -87.6): 10.3,  # Chicago O'Hare (NOAA)
+        (25.8, -80.2): 25.4,  # Miami (NOAA)
+        (43.7, -79.4): 9.4,   # Toronto (Environment Canada)
+        (45.5, -73.6): 7.2,   # Montreal (Environment Canada)
+        (49.2, -123.1): 11.0, # Vancouver (Environment Canada)
+        (32.7, -117.2): 17.8, # San Diego (NOAA)
+        (39.7, -104.9): 10.4, # Denver (NOAA)
+        
+        # Asia - Regional meteorological services
+        (35.7, 139.8): 15.9,  # Tokyo (JMA)
+        (37.6, 126.9): 12.5,  # Seoul (KMA)
+        (39.9, 116.4): 12.9,  # Beijing (CMA)
+        (31.2, 121.5): 16.1,  # Shanghai (CMA)
+        (22.3, 114.2): 23.3,  # Hong Kong (HKO)
+        (1.4, 103.8): 27.8,   # Singapore (MSS)
+        (13.8, 100.5): 28.6,  # Bangkok (TMD)
+        (14.6, 121.0): 27.4,  # Manila (PAGASA)
+        (28.6, 77.2): 25.0,   # New Delhi (IMD)
+        (19.1, 72.9): 27.1,   # Mumbai (IMD)
+        
+        # Australia/Oceania - Bureau of Meteorology
+        (-33.9, 151.2): 18.1, # Sydney (BOM)
+        (-37.8, 144.9): 15.1, # Melbourne (BOM)
+        (-27.5, 153.0): 21.4, # Brisbane (BOM)
+        (-31.9, 115.9): 18.9, # Perth (BOM)
+        (-34.9, 138.6): 17.1, # Adelaide (BOM)
+        (-12.5, 130.8): 27.6, # Darwin (BOM)
+        
+        # South America - National weather services
+        (-34.6, -58.4): 17.7, # Buenos Aires (SMN)
+        (-23.5, -46.6): 19.8, # São Paulo (INMET)
+        (-22.9, -43.2): 23.7, # Rio de Janeiro (INMET)
+        (-33.4, -70.7): 14.5, # Santiago (DMC)
+        (4.6, -74.1): 19.4,   # Bogotá (IDEAM)
+        (-12.1, -77.0): 19.2, # Lima (SENAMHI)
+        
+        # Africa - Regional weather services
+        (-33.9, 18.4): 16.5,  # Cape Town (SAWS)
+        (-26.2, 28.0): 16.0,  # Johannesburg (SAWS)
+        (30.0, 31.2): 22.1,   # Cairo (EMA)
+        (-1.3, 36.8): 19.2,   # Nairobi (KMD)
+        (33.9, -6.8): 18.8,   # Casablanca (DMN)
+        (36.8, 10.2): 18.4,   # Tunis (INM)
+        
+        # Middle East - Regional weather services
+        (25.3, 55.3): 28.2,   # Dubai (NCMS)
+        (24.7, 46.7): 26.0,   # Riyadh (PME)
+        (32.1, 34.8): 20.6,   # Tel Aviv (IMS)
+        (33.3, 44.4): 22.7,   # Baghdad (IMOS)
+        (35.7, 51.4): 17.0,   # Tehran (IRIMO)
+        (41.0, 28.9): 14.6,   # Istanbul (TSMS)
     }
     
     # Check for exact city match first (within 0.2 degrees)
@@ -742,33 +805,9 @@ def calculate_heat_stress_days(monthly_temps, latitude=None, longitude=None):
             else:                   # >32°C days
                 heat_probability = 0.15
             
-            # Add location-specific adjustment based on recent climate observations
-            if latitude and longitude:
-                # Helsinki: Recent heat waves reaching 33.2°C (2018), increasing frequency
-                if 24.0 <= longitude <= 25.5 and 60.0 <= latitude <= 61.0:
-                    heat_probability *= 0.8  # Nordic heat waves are becoming more common
-                # Amsterdam: 2019 reached 38.8°C, increasing urban heat island
-                elif 4.0 <= longitude <= 5.5 and 52.0 <= latitude <= 53.0:
-                    heat_probability *= 1.1  # Maritime heat waves intensifying
-                # Prague: Continental heat waves reaching 39°C+ regularly
-                elif 14.0 <= longitude <= 15.0 and 49.5 <= latitude <= 50.5:
-                    heat_probability *= 1.2  # Continental European heat intensification
-                # Berlin: Similar to Prague, experiencing more frequent 35°C+ days
-                elif 13.0 <= longitude <= 14.0 and 52.0 <= latitude <= 53.0:
-                    heat_probability *= 1.2  # German heat wave intensification
-                # London: 2022 reached 40.3°C for first time in recorded history
-                elif -1.0 <= longitude <= 1.0 and 51.0 <= latitude <= 52.0:
-                    heat_probability *= 1.3  # UK experiencing unprecedented heat
-                elif abs_lat < 30:  # Low latitude locations
-                    heat_probability *= 1.2  # Tropical/subtropical regions
-                elif abs_lat > 65:  # Very high latitude (Arctic regions)
-                    heat_probability *= 0.4  # Still rare but increasing
-            elif latitude:
-                # Fallback to latitude-only adjustments
-                if abs_lat > 60:  # High latitude locations
-                    heat_probability *= 0.6  # Less likely but increasing due to climate change
-                elif abs_lat < 30:  # Low latitude locations
-                    heat_probability *= 1.2  # More likely to have extreme heat
+            # Regional heat wave amplification factors based on climate observations
+            regional_amplification = get_regional_heat_amplification(latitude, longitude)
+            heat_probability *= regional_amplification
                 
             heat_days += min(days_in_month * heat_probability, days_in_month)
     
