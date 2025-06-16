@@ -1631,18 +1631,30 @@ def calculate_habitability_score(temps, precip, heat_days, drought_risk, flood_r
     mean_temp = np.mean(temps)
     annual_precip = np.sum(precip)
     
-    # Temperature assessment based on actual global livability standards
-    # Many highly livable cities like Helsinki, Stockholm, Montreal have cold winters but excellent quality of life
-    if 15 <= mean_temp <= 25:  # Optimal range (temperate cities like Amsterdam, London)
+    # Temperature comfort assessment - balanced approach that penalizes both extreme cold and heat
+    # Optimal range for human comfort: 15-25°C (most livable cities globally)
+    if 15 <= mean_temp <= 25:  # Optimal range (temperate cities like Amsterdam, London, Vancouver)
         temp_score = 100 - abs(mean_temp - 20) * 1.5
-    elif 10 <= mean_temp <= 30:  # Good range (most livable cities)
-        temp_score = 95 - abs(mean_temp - 17.5) * 1.2
-    elif 3 <= mean_temp <= 35:  # Acceptable range (includes Nordic cities like Helsinki ~6°C)
-        temp_score = 85 - abs(mean_temp - 12) * 0.5  # Minimal penalty for cold climates with good infrastructure
-    elif -10 <= mean_temp <= 40:  # Livable with excellent infrastructure (Nordic/Arctic cities)
-        temp_score = 75 - abs(mean_temp - 5) * 0.4  # Very minimal penalty for developed cold regions
-    else:  # Truly extreme climates
-        temp_score = max(40, 60 - abs(mean_temp - 0) * 0.8)
+    elif 10 <= mean_temp <= 30:  # Good range (most developed cities)
+        if mean_temp <= 25:  # Cooler side - minimal penalty
+            temp_score = 95 - abs(mean_temp - 17.5) * 1.0
+        else:  # Warmer side - increased penalty for heat
+            temp_score = 95 - (mean_temp - 25) * 3.0  # Steeper penalty for heat
+    elif 5 <= mean_temp <= 35:  # Acceptable range
+        if mean_temp <= 25:  # Cold side - moderate penalty
+            temp_score = 85 - abs(mean_temp - 15) * 1.5
+        else:  # Hot side - steep penalty for excessive heat
+            temp_score = 85 - (mean_temp - 25) * 4.0  # Strong penalty for heat above 25°C
+    elif 0 <= mean_temp <= 40:  # Challenging range
+        if mean_temp <= 25:  # Very cold
+            temp_score = 70 - abs(mean_temp - 12) * 2.0
+        else:  # Very hot - severe penalty
+            temp_score = 70 - (mean_temp - 25) * 5.0  # Very steep penalty for extreme heat
+    else:  # Extreme climates
+        if mean_temp < 0:  # Extreme cold
+            temp_score = max(20, 50 - abs(mean_temp) * 3.0)
+        else:  # Extreme heat (>40°C)
+            temp_score = max(10, 50 - (mean_temp - 40) * 8.0)  # Massive penalty for desert heat
     
     temp_score = max(0, min(100, temp_score))
     
