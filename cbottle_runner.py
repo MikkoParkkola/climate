@@ -1216,9 +1216,9 @@ def generate_global_habitability_rankings(target_year):
             future_monthly_temps = generate_monthly_temperature_series(future_temp, location["lat"])
             future_monthly_precip = generate_monthly_precipitation_series(future_precip, location["lat"])
             
-            future_heat_stress = calculate_heat_stress_days(future_monthly_temps)
+            future_heat_stress = calculate_heat_stress_days(future_monthly_temps, location["lat"], location["lng"])
             future_drought = calculate_drought_risk(future_monthly_precip, location["lat"])
-            future_flood = calculate_flood_risk(future_monthly_precip, location["lat"])
+            future_flood = calculate_flood_risk(future_monthly_precip, location["lat"], location["lng"])
             
             future_habitability, breakdown = calculate_habitability_score(
                 future_monthly_temps, future_monthly_precip, future_heat_stress, future_drought, future_flood
