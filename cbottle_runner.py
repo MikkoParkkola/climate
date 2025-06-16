@@ -679,7 +679,7 @@ def generate_monthly_temperature_series(annual_mean, latitude):
         
         # Heat wave adjustment for recent climate trends (2018, 2019, 2022 European heat waves)
         for month in summer_months:
-            temp_cycle[month] += 5.5  # Strong heat wave boost reflecting 30°C+ observations
+            temp_cycle[month] += 2.0  # Moderate heat increase reflecting occasional 30°C+ days
     
     # Nordic countries: Helsinki reaches 30°C+ during heat waves
     elif 58 <= abs_lat <= 65:  # Nordic region
@@ -869,24 +869,24 @@ def calculate_heat_stress_days(monthly_temps, latitude=None, longitude=None):
         else:
             estimated_daily_max = base_daily_max
         
-        if estimated_daily_max > 30:  # Realistic threshold for moderate heat stress
+        if estimated_daily_max > 35:  # WHO heat stress threshold (35°C)
             days_in_month = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31][i]
             
-            # Calculate heat stress probability based on how far above threshold
-            temp_excess = estimated_daily_max - 30
+            # Calculate heat stress probability based on how far above 35°C threshold
+            temp_excess = estimated_daily_max - 35
             
-            if temp_excess > 18:  # >50°C days
-                heat_probability = 0.95
-            elif temp_excess > 13:  # >45°C days
-                heat_probability = 0.85
-            elif temp_excess > 8:   # >40°C days
+            if temp_excess > 15:  # >50°C days
+                heat_probability = 0.9
+            elif temp_excess > 10:  # >45°C days
                 heat_probability = 0.7
-            elif temp_excess > 5:   # >37°C days
+            elif temp_excess > 5:   # >40°C days
                 heat_probability = 0.5
-            elif temp_excess > 3:   # >35°C days
+            elif temp_excess > 2:   # >37°C days
                 heat_probability = 0.3
-            else:                   # >32°C days
+            elif temp_excess > 0:   # >35°C days
                 heat_probability = 0.15
+            else:                   
+                heat_probability = 0
             
             # Regional heat wave amplification factors based on climate observations
             regional_amplification = get_regional_heat_amplification(latitude, longitude)
@@ -1024,9 +1024,9 @@ def get_regional_heat_amplification(latitude, longitude):
             # UK: 2022 first-ever 40°C+ record
             elif 50 <= latitude <= 56 and -5 <= longitude <= 2:
                 return 1.3  # UK heat waves intensifying rapidly
-            # Benelux: Heat domes causing unprecedented temperatures
+            # Benelux: Moderate heat increase but still temperate maritime climate
             elif 50 <= latitude <= 54 and 3 <= longitude <= 7:
-                return 1.2  # Netherlands/Belgium heat intensification
+                return 0.9  # Netherlands/Belgium moderate heat increase
             else:
                 return 1.2  # General Western European amplification
         
