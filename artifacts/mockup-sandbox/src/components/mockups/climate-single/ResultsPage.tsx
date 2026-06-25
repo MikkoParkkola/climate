@@ -647,24 +647,43 @@ export function ResultsPage() {
               <div style={{ fontSize: 8, color: MUTED }}>2025 → 2100 trajectory</div>
             </div>
             <div style={{ flex: 1 }}>
-              {[
-                { label: "Temperature Comfort", val: d.tempComfort,  max: 30, type: "pos" },
-                { label: "Precipitation",       val: d.precipScore,  max: 25, type: "pos" },
-                { label: "Infrastructure",      val: 30,             max: 35, type: "pos" },
-                { label: "Heat Penalty",        val: d.heatPenalty,  max: -15, type: "neg" },
-                { label: "Drought Penalty",     val: d.droughtPen,   max: -12, type: "neg" },
-                { label: "Flood Penalty",       val: d.floodPen,     max: -8,  type: "neg" },
-              ].map(item => (
-                <div key={item.label} style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 7 }}>
-                  <div style={{ fontSize: 11, width: 155, color: MUTED, flexShrink: 0 }}>{item.label}</div>
-                  <div style={{ flex: 1, height: 6, background: "rgba(255,255,255,0.05)", borderRadius: 3, overflow: "hidden" }}>
-                    <div style={{ height: "100%", borderRadius: 3, width: `${(Math.abs(item.val) / Math.abs(item.max)) * 100}%`, background: item.type === "pos" ? "rgba(255,255,255,0.28)" : RED, transition: "width 0.25s ease" }} />
-                  </div>
-                  <div style={{ fontSize: 11, fontFamily: "monospace", color: item.type === "pos" ? "white" : RED, width: 34, textAlign: "right" }}>
-                    {item.val > 0 ? "+" : ""}{item.val}
-                  </div>
+              {/* Diverging axis legend: penalties grow left, contributions grow right */}
+              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
+                <div style={{ width: 155, flexShrink: 0 }} />
+                <div style={{ flex: 1, position: "relative", height: 11 }}>
+                  <span style={{ position: "absolute", left: 0, fontSize: 9, color: MUTED }}>− penalty</span>
+                  <span style={{ position: "absolute", left: "50%", transform: "translateX(-50%)", fontSize: 9, color: MUTED }}>0</span>
+                  <span style={{ position: "absolute", right: 0, fontSize: 9, color: MUTED }}>+ contribution</span>
                 </div>
-              ))}
+                <div style={{ width: 34, flexShrink: 0 }} />
+              </div>
+              {(() => {
+                const items = [
+                  { label: "Temperature Comfort", val: d.tempComfort, type: "pos" },
+                  { label: "Precipitation",       val: d.precipScore, type: "pos" },
+                  { label: "Infrastructure",      val: 30,            type: "pos" },
+                  { label: "Heat Penalty",        val: d.heatPenalty, type: "neg" },
+                  { label: "Drought Penalty",     val: d.droughtPen,  type: "neg" },
+                  { label: "Flood Penalty",       val: d.floodPen,    type: "neg" },
+                ];
+                const sbMax = Math.max(...items.map(i => Math.abs(i.val)), 1);
+                return items.map(item => {
+                  const neg = item.type === "neg";
+                  const half = Math.min((Math.abs(item.val) / sbMax) * 50, 50);
+                  return (
+                    <div key={item.label} style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 7 }}>
+                      <div style={{ fontSize: 11, width: 155, color: MUTED, flexShrink: 0 }}>{item.label}</div>
+                      <div style={{ flex: 1, position: "relative", height: 10, background: "rgba(255,255,255,0.04)", borderRadius: 3 }}>
+                        <div style={{ position: "absolute", left: "50%", top: -2, bottom: -2, width: 1, background: "rgba(255,255,255,0.22)" }} />
+                        <div style={{ position: "absolute", top: 0, bottom: 0, width: `${half}%`, left: neg ? undefined : "50%", right: neg ? "50%" : undefined, background: neg ? RED : GREEN, borderRadius: neg ? "3px 0 0 3px" : "0 3px 3px 0", transition: "width 0.25s ease, left 0.25s ease, right 0.25s ease" }} />
+                      </div>
+                      <div style={{ fontSize: 11, fontFamily: "monospace", color: neg ? RED : GREEN, width: 34, textAlign: "right" }}>
+                        {item.val > 0 ? "+" : ""}{item.val}
+                      </div>
+                    </div>
+                  );
+                });
+              })()}
               <div style={{ display: "flex", justifyContent: "flex-end", paddingTop: 8, borderTop: "1px solid rgba(255,255,255,0.08)", fontSize: 13, fontWeight: 700, color: sc }}>
                 Total: {d.score}
               </div>

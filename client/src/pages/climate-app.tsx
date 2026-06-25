@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useRef } from "react";
-import { GitCompare, Loader2, Download, Search, MapPin, ArrowLeft } from "lucide-react";
+import { GitCompare, Loader2, Download, Search, MapPin, ArrowLeft, Play, Pause } from "lucide-react";
 import {
   agriculturalViability, biodiversityLoss, waterStress, projectedAqi, climateTwin,
   FALLBACK_BASELINE_AQI, type EstimateInputs,
@@ -273,6 +273,7 @@ export default function ClimateApp() {
   const [loadingStep, setLoadingStep] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [exporting, setExporting] = useState(false);
+  const [playing, setPlaying] = useState(false);
   // Present-day measured AQI baseline (Open-Meteo, free, no key) for the AQI estimate.
   const [baselineAqi, setBaselineAqi] = useState<number | null>(null);
   const [aqiMeasured, setAqiMeasured] = useState(false);
@@ -343,6 +344,35 @@ export default function ClimateApp() {
     return () => clearInterval(id);
   }, [isLoading]);
 
+  // Auto-glide the year slider 2025 → 2100 so users can watch the climate evolve.
+  useEffect(() => {
+    if (!playing) return;
+    let raf = 0;
+    let last = performance.now();
+    const SPEED = (2100 - 2025) / 11000; // years per ms → full sweep ≈ 11s
+    const tick = (now: number) => {
+      const dt = Math.min(now - last, 100); // clamp big gaps (tab refocus)
+      last = now;
+      setYear((y) => Math.min(2100, y + dt * SPEED));
+      raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, [playing]);
+
+  // Stop playback once the timeline reaches the end.
+  useEffect(() => {
+    if (playing && year >= 2100) setPlaying(false);
+  }, [playing, year]);
+
+  const togglePlay = () => {
+    if (playing) { setPlaying(false); return; }
+    if (year >= 2099.5) setYear(2025); // replay from the start
+    setPlaying(true);
+  };
+
+  const setYearManual = (y: number) => { setPlaying(false); setYear(y); };
+
   const selectLocation = (opt: LocationOption) => {
     setSelectedLocation(opt);
     setLocationText(opt.name);
@@ -380,6 +410,7 @@ export default function ClimateApp() {
   };
 
   const newSearch = () => {
+    setPlaying(false);
     setTrajectory(null);
     setError(null);
   };
@@ -601,6 +632,12 @@ export default function ClimateApp() {
   }
 
   // ── Results ──────────────────────────────────────────────────────────────
+  // Plain-language outlook, derived live from the real modeled values.
+  const placeName = selectedLocation?.name?.split(",")[0] ?? "This location";
+  const heatDelta = d!.heatDays - d!.baseHeatDays;
+  const nextTip = tipping.find((t) => t.year != null && (t.year as number) > displayYear);
+  const crossedTips = tipping.filter((t) => t.year != null && (t.year as number) <= displayYear).length;
+
   return (
     <div style={{ backgroundColor: BG, color: "white", minHeight: "100vh", fontFamily: "Inter, system-ui, sans-serif" }}>
       {/* Sticky Header */}
@@ -632,9 +669,13 @@ export default function ClimateApp() {
       <div style={{ position: "sticky", top: 48, zIndex: 45, background: "rgba(8,11,18,0.97)", borderBottom: `1px solid ${BORDER}`, backdropFilter: "blur(20px)" }}>
         <div style={{ maxWidth: 1200, margin: "0 auto", padding: "10px 20px 18px" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+            <button onClick={togglePlay} title={playing ? "Pause" : "Play 2025 → 2100"} aria-label={playing ? "Pause timeline" : "Play timeline"}
+              style={{ display: "flex", alignItems: "center", justifyContent: "center", width: 34, height: 34, borderRadius: "50%", flexShrink: 0, cursor: "pointer", color: playing ? ACCENT : "white", border: `1px solid ${playing ? ACCENT : "rgba(255,255,255,0.18)"}`, background: playing ? `${ACCENT}22` : CARD, transition: "all 0.2s ease" }}>
+              {playing ? <Pause style={{ width: 15, height: 15 }} /> : <Play style={{ width: 15, height: 15, marginLeft: 1 }} />}
+            </button>
             <div style={{ display: "flex", gap: 4 }}>
               {[2025, 2030, 2050, 2075, 2100].map((y) => (
-                <button key={y} onClick={() => setYear(y)}
+                <button key={y} onClick={() => setYearManual(y)}
                   style={{ padding: "3px 8px", borderRadius: 5, border: `1px solid ${displayYear === y ? ACCENT : "rgba(255,255,255,0.12)"}`, background: displayYear === y ? `${ACCENT}18` : "transparent", color: displayYear === y ? ACCENT : MUTED, fontSize: 11, fontWeight: displayYear === y ? 700 : 400, cursor: "pointer" }}>
                   {y}
                 </button>
@@ -644,7 +685,7 @@ export default function ClimateApp() {
               <div style={{ position: "relative" }}>
                 <div style={{ position: "absolute", top: 8, left: 0, right: 0, height: 4, borderRadius: 2, pointerEvents: "none", background: `linear-gradient(to right, ${GREEN} 0%, ${AMBER} 40%, ${ORANGE} 65%, ${RED} 100%)`, opacity: 0.3 }} />
                 <input type="range" min={2025} max={2100} step={0.1} value={year}
-                  onChange={(e) => setYear(Number(e.target.value))}
+                  onChange={(e) => setYearManual(Number(e.target.value))}
                   style={{ width: "100%", cursor: "pointer", accentColor: ACCENT, position: "relative", zIndex: 1, margin: 0, display: "block" }} />
               </div>
               <div style={{ display: "flex", justifyContent: "space-between", padding: "0 8px", marginTop: 1 }}>
@@ -701,6 +742,27 @@ export default function ClimateApp() {
               <div style={{ fontSize: 11, color: MUTED }}>vs baseline</div>
             </div>
           </div>
+        </div>
+
+        {/* Climate Outlook — plain-language summary (updates live with the slider) */}
+        <div style={{ ...card, padding: 18, marginBottom: 14, borderLeft: `3px solid ${ACCENT}` }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 9 }}>
+            <span style={{ fontSize: 15 }}>📋</span>
+            <h2 style={{ fontSize: 12, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.07em", color: MUTED }}>Climate Outlook · {displayYear}</h2>
+          </div>
+          <p style={{ fontSize: 14.5, lineHeight: 1.75, color: "rgba(255,255,255,0.9)", margin: 0 }}>
+            By <strong style={{ color: "white" }}>{displayYear}</strong>, {placeName} is projected to be{" "}
+            <strong style={{ color: RED }}>+{d!.tempChange.toFixed(1)}°C warmer</strong> than its baseline — close to today's climate in{" "}
+            <strong style={{ color: ACCENT }}>{d!.twin}</strong>. Heat-stress days{" "}
+            <strong style={{ color: ORANGE }}>{heatDelta >= 0 ? "rise" : "fall"} from {d!.baseHeatDays} to {d!.heatDays}/yr</strong>, annual rainfall shifts{" "}
+            <strong style={{ color: BLUE }}>{d!.precipChange >= 0 ? "+" : ""}{d!.precipChange.toFixed(1)}%</strong>, and overall habitability sits at{" "}
+            <strong style={{ color: sc }}>{d!.score}/100 ({d!.category})</strong>.
+            {nextTip
+              ? <> The next threshold ahead — <strong style={{ color: AMBER }}>{nextTip.label.toLowerCase()}</strong> — is crossed around <strong style={{ color: AMBER }}>{nextTip.year}</strong>.</>
+              : crossedTips > 0
+                ? <> All <strong style={{ color: RED }}>{crossedTips}</strong> modeled tipping points have already been crossed by this point.</>
+                : <> No modeled tipping points are crossed at this horizon.</>}
+          </p>
         </div>
 
         {/* KPI Strip */}
@@ -1017,17 +1079,31 @@ export default function ClimateApp() {
             </div>
             {d!.breakdown.length > 0 && (
               <div style={{ flex: 1, minWidth: 280 }}>
-                {d!.breakdown.map((item) => (
-                  <div key={item.key} style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 7 }}>
-                    <div style={{ fontSize: 11, width: 175, color: MUTED, flexShrink: 0 }}>{item.label}</div>
-                    <div style={{ flex: 1, height: 6, background: "rgba(255,255,255,0.05)", borderRadius: 3, overflow: "hidden" }}>
-                      <div style={{ height: "100%", borderRadius: 3, width: `${(Math.abs(item.val) / maxBreakdown) * 100}%`, background: item.neg ? RED : "rgba(255,255,255,0.28)", transition: "width 0.25s ease" }} />
-                    </div>
-                    <div style={{ fontSize: 11, fontFamily: "monospace", color: item.neg ? RED : "white", width: 40, textAlign: "right" }}>
-                      {item.neg ? "−" : "+"}{Math.abs(item.val).toFixed(1)}
-                    </div>
+                {/* Diverging axis legend: penalties grow left, contributions grow right */}
+                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
+                  <div style={{ width: 175, flexShrink: 0 }} />
+                  <div style={{ flex: 1, position: "relative", height: 11 }}>
+                    <span style={{ position: "absolute", left: 0, fontSize: 9, color: MUTED }}>− penalty</span>
+                    <span style={{ position: "absolute", left: "50%", transform: "translateX(-50%)", fontSize: 9, color: MUTED }}>0</span>
+                    <span style={{ position: "absolute", right: 0, fontSize: 9, color: MUTED }}>+ contribution</span>
                   </div>
-                ))}
+                  <div style={{ width: 40, flexShrink: 0 }} />
+                </div>
+                {d!.breakdown.map((item) => {
+                  const half = Math.min((Math.abs(item.val) / maxBreakdown) * 50, 50);
+                  return (
+                    <div key={item.key} style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 7 }}>
+                      <div style={{ fontSize: 11, width: 175, color: MUTED, flexShrink: 0 }}>{item.label}</div>
+                      <div style={{ flex: 1, position: "relative", height: 10, background: "rgba(255,255,255,0.04)", borderRadius: 3 }}>
+                        <div style={{ position: "absolute", left: "50%", top: -2, bottom: -2, width: 1, background: "rgba(255,255,255,0.22)" }} />
+                        <div style={{ position: "absolute", top: 0, bottom: 0, width: `${half}%`, left: item.neg ? undefined : "50%", right: item.neg ? "50%" : undefined, background: item.neg ? RED : GREEN, borderRadius: item.neg ? "3px 0 0 3px" : "0 3px 3px 0", transition: "width 0.25s ease, left 0.25s ease, right 0.25s ease" }} />
+                      </div>
+                      <div style={{ fontSize: 11, fontFamily: "monospace", color: item.neg ? RED : GREEN, width: 40, textAlign: "right" }}>
+                        {item.neg ? "−" : "+"}{Math.abs(item.val).toFixed(1)}
+                      </div>
+                    </div>
+                  );
+                })}
                 <div style={{ display: "flex", justifyContent: "flex-end", paddingTop: 8, borderTop: "1px solid rgba(255,255,255,0.08)", fontSize: 13, fontWeight: 700, color: sc }}>
                   Total: {d!.score}
                 </div>
