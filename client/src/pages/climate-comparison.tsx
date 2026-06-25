@@ -225,7 +225,7 @@ export default function ClimateComparison({ onBack }: ClimateComparisonProps) {
   };
 
   return (
-    <div className="min-h-screen p-4" style={{ background: "hsl(222, 47%, 8%)" }}>
+    <main className="min-h-screen p-4" style={{ background: "hsl(222, 47%, 8%)" }}>
       <div className="max-w-7xl mx-auto space-y-6">
         
         {/* Header */}
@@ -238,7 +238,7 @@ export default function ClimateComparison({ onBack }: ClimateComparisonProps) {
                   Back to Single Location
                 </Button>
                 <div>
-                  <CardTitle className="flex items-center gap-2">
+                  <CardTitle as="h1" className="flex items-center gap-2">
                     <BarChart3 className="w-6 h-6 text-blue-600" />
                     Climate Location Comparison
                   </CardTitle>
@@ -260,7 +260,7 @@ export default function ClimateComparison({ onBack }: ClimateComparisonProps) {
           {/* Search and Add Locations */}
           <Card>
             <CardHeader>
-              <CardTitle className="flex items-center gap-2">
+              <CardTitle as="h2" className="flex items-center gap-2">
                 <Plus className="w-5 h-5" />
                 Add Locations to Compare
               </CardTitle>
@@ -329,7 +329,7 @@ export default function ClimateComparison({ onBack }: ClimateComparisonProps) {
           {/* Selected Locations */}
           <Card>
             <CardHeader>
-              <CardTitle className="flex items-center gap-2">
+              <CardTitle as="h2" className="flex items-center gap-2">
                 <Globe className="w-5 h-5" />
                 Selected Locations
               </CardTitle>
@@ -388,7 +388,7 @@ export default function ClimateComparison({ onBack }: ClimateComparisonProps) {
         {logs.length > 0 && (
           <Card>
             <CardHeader>
-              <CardTitle className="text-sm">Activity Log</CardTitle>
+              <CardTitle as="h2" className="text-sm">Activity Log</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="max-h-32 overflow-y-auto space-y-1">
@@ -408,7 +408,7 @@ export default function ClimateComparison({ onBack }: ClimateComparisonProps) {
             {/* Overview Map */}
             <Card>
               <CardHeader>
-                <CardTitle className="flex items-center gap-2">
+                <CardTitle as="h2" className="flex items-center gap-2">
                   <Globe className="w-5 h-5" />
                   Comparison Overview Map - {targetYear}
                 </CardTitle>
@@ -470,7 +470,7 @@ export default function ClimateComparison({ onBack }: ClimateComparisonProps) {
             {/* Comparison Table */}
             <Card>
               <CardHeader>
-                <CardTitle className="flex items-center gap-2">
+                <CardTitle as="h2" className="flex items-center gap-2">
                   <BarChart3 className="w-5 h-5" />
                   Climate Data Comparison - {targetYear}
                 </CardTitle>
@@ -541,7 +541,7 @@ export default function ClimateComparison({ onBack }: ClimateComparisonProps) {
             {/* Graphical Comparative Analysis */}
             <Card>
               <CardHeader>
-                <CardTitle className="flex items-center gap-2">
+                <CardTitle as="h2" className="flex items-center gap-2">
                   <BarChart3 className="w-5 h-5" />
                   Graphical Comparative Analysis - {targetYear}
                 </CardTitle>
@@ -562,6 +562,6 @@ export default function ClimateComparison({ onBack }: ClimateComparisonProps) {
         <p>© {new Date().getFullYear()} <a href="https://github.com/MikkoParkkola" target="_blank" rel="noopener noreferrer" className="hover:text-slate-400 underline underline-offset-2 transition-colors">Mikko Parkkola</a> · ClimateVision</p>
         <p className="mt-1">Powered by CBottle/ICON Atmospheric Physics · For research and planning purposes only</p>
       </footer>
-    </div>
+    </main>
   );
 }
