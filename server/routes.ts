@@ -304,6 +304,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
     const parsed = bodySchema.safeParse(req.body);
     if (!parsed.success) {
+      console.warn("climate-projection 400 — field errors:", JSON.stringify(parsed.error.issues));
       return res.status(400).json({ message: "Invalid request parameters" });
     }
 
