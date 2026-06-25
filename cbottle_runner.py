@@ -6,6 +6,7 @@ Implements local Earth2Studio CBottle functionality for climate projections
 
 import sys
 import json
+import os
 import numpy as np
 import xarray as xr
 from datetime import datetime, timedelta

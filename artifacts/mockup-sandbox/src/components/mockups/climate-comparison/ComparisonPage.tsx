@@ -102,11 +102,14 @@ function ScoreRing({ score, color }: { score: number; color: string }) {
   );
 }
 
-function Sparkline({ data, color, yearIdx, w = 80, h = 22 }: { data: number[]; color: string; yearIdx: number; w?: number; h?: number }) {
+function Sparkline({ data, color, year, w = 80, h = 22 }: { data: number[]; color: string; year: number; w?: number; h?: number }) {
   const mn = Math.min(...data), mx = Math.max(...data), rng = mx - mn || 1;
   const pts = data.map((v, i) => `${(i / (data.length - 1)) * w},${h - ((v - mn) / rng) * h * 0.88 + h * 0.06}`).join(" ");
-  const cx  = (yearIdx / (data.length - 1)) * w;
-  const cy  = h - ((data[yearIdx] - mn) / rng) * h * 0.88 + h * 0.06;
+  // Smooth fractional index so the dot glides continuously, not in 5-yr steps
+  const fi = Math.min((year - 2025) / 5, data.length - 1);
+  const lo = Math.floor(fi), hi = Math.min(lo + 1, data.length - 1), t = fi - lo;
+  const cx = (fi / (data.length - 1)) * w;
+  const cy = h - ((lerp(data[lo], data[hi], t) - mn) / rng) * h * 0.88 + h * 0.06;
   return (
     <svg viewBox={`0 0 ${w} ${h}`} style={{ width: w, height: h }}>
       <polyline points={pts} fill="none" stroke={color} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" opacity="0.6" />
@@ -116,15 +119,15 @@ function Sparkline({ data, color, yearIdx, w = 80, h = 22 }: { data: number[]; c
 }
 
 // Score trajectory chart showing all 3 cities 2025→2100
-function TrajectoryChart({ yearIdx }: { yearIdx: number }) {
+function TrajectoryChart({ year }: { year: number }) {
   const W = 660, H = 180, px = 32, py = 12;
   const cW = W - px * 2, cH = H - py * 2 - 16;
   const minS = 0, maxS = 100, range = maxS - minS;
   const xp = (i: number) => px + (i / (TRAJ_YEARS.length - 1)) * cW;
   const yp = (s: number) => py + cH - ((s - minS) / range) * cH;
 
-  // Current year x position
-  const curX = px + ((yearIdx) / (TRAJ_YEARS.length - 1)) * cW;
+  // Smooth continuous x — glides with every slider tick, not just 5-yr steps
+  const curX = px + ((year - 2025) / 75) * cW;
 
   return (
     <svg viewBox={`0 0 ${W} ${H}`} style={{ width: "100%", height: H }}>
@@ -155,7 +158,7 @@ function TrajectoryChart({ yearIdx }: { yearIdx: number }) {
         <text key={y} x={xp(i * 2)} y={H - 1} textAnchor="middle" fill={MUTED} fontSize="9">{y}</text>
       ))}
       {/* Current year label */}
-      <text x={curX} y={py - 3} textAnchor="middle" fill={ACCENT} fontSize="9" fontWeight="700">{TRAJ_YEARS[yearIdx]}</text>
+      <text x={curX} y={py - 3} textAnchor="middle" fill={ACCENT} fontSize="9" fontWeight="700">{year}</text>
     </svg>
   );
 }
@@ -271,9 +274,6 @@ export function ComparisonPage() {
     [cityData]
   );
 
-  // Year index in trajectory array (rounded to nearest 5-yr step)
-  const traj5yr = Math.round((year - 2025) / 5);
-  const yearIdx = Math.min(traj5yr, TRAJ_YEARS.length - 1);
   const tPct = ((year - 2025) / 75) * 100;
 
   // Dynamic table rows
@@ -402,7 +402,7 @@ export function ComparisonPage() {
                 </div>
                 {/* Sparkline + trajectory */}
                 <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 2, marginBottom: 10 }}>
-                  <Sparkline data={TRAJECTORIES[ci]} color={city.color} yearIdx={yearIdx} />
+                  <Sparkline data={TRAJECTORIES[ci]} color={city.color} year={year} />
                   <div style={{ fontSize: 8, color: MUTED }}>2025→2100 trajectory</div>
                 </div>
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 4, borderTop: `1px solid ${BORDER}`, paddingTop: 10 }}>
@@ -445,7 +445,7 @@ export function ComparisonPage() {
               ))}
             </div>
           </div>
-          <TrajectoryChart yearIdx={yearIdx} />
+          <TrajectoryChart year={year} />
           <div style={{ marginTop: 8, padding: "8px 12px", background: `${ACCENT}08`, border: `1px solid ${ACCENT}20`, borderRadius: 8, fontSize: 10, color: MUTED }}>
             💡 The vertical cyan line tracks the year slider position. Notice how Oslo maintains strong habitability while Dubai's score rapidly deteriorates.
           </div>
