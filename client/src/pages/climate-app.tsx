@@ -626,6 +626,15 @@ export default function ClimateApp() {
             {error && <div style={{ marginTop: 16, padding: "10px 14px", borderRadius: 8, background: `${RED}14`, border: `1px solid ${RED}30`, color: "#fca5a5", fontSize: 13 }}>{error}</div>}
           </div>
         </main>
+        <footer style={{ borderTop: `1px solid ${BORDER}`, padding: "16px 20px", textAlign: "center" }}>
+          <p style={{ color: MUTED, fontSize: 10 }}>
+            © {new Date().getFullYear()}{" "}
+            <a href="https://github.com/MikkoParkkola" target="_blank" rel="noopener noreferrer" style={{ color: MUTED, textDecoration: "underline", textUnderlineOffset: 2 }}>
+              Mikko Parkkola
+            </a>{" "}
+            · ClimateVision
+          </p>
+        </footer>
         <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
       </div>
     );
@@ -1122,6 +1131,12 @@ export default function ClimateApp() {
       <footer style={{ borderTop: `1px solid ${BORDER}`, padding: "16px 20px", textAlign: "center" }}>
         <p style={{ color: MUTED, fontSize: 10 }}>
           ClimateVision · {d!.model}{d!.modelVersion ? ` ${d!.modelVersion}` : ""} · Confidence: {prettify(d!.confidence)} · RCP 4.5–8.5 / SSP2 · For research &amp; planning
+        </p>
+        <p style={{ color: MUTED, fontSize: 10, marginTop: 6 }}>
+          © {new Date().getFullYear()}{" "}
+          <a href="https://github.com/MikkoParkkola" target="_blank" rel="noopener noreferrer" style={{ color: MUTED, textDecoration: "underline", textUnderlineOffset: 2 }}>
+            Mikko Parkkola
+          </a>
         </p>
       </footer>
       <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
