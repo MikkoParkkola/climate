@@ -1130,7 +1130,7 @@ export default function ClimateApp() {
       )}
 
       <footer className="mt-8 py-6 text-center text-xs text-slate-600" style={{ borderTop: "1px solid hsl(217,33%,15%)" }}>
-        <p>© {new Date().getFullYear()} Mikko Parkkola · ClimateVision</p>
+        <p>© {new Date().getFullYear()} <a href="https://github.com/MikkoParkkola" target="_blank" rel="noopener noreferrer" className="hover:text-slate-400 underline underline-offset-2 transition-colors">Mikko Parkkola</a> · ClimateVision</p>
         <p className="mt-1">Powered by CBottle/ICON Atmospheric Physics · For research and planning purposes only</p>
       </footer>
     </div>
