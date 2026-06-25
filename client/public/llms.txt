@@ -1,0 +1,13 @@
+# Climate Projections Explorer
+> Public tool for exploring future climate projections and comparing locations worldwide.
+
+## About
+Climate Projections Explorer is a free, public web application that lets anyone search for any location on Earth and view projected climate data — including temperature trends, precipitation changes, and risk assessments — using advanced climate modeling data. No account required.
+
+## Priority Pages
+
+/ : Single-location climate projection tool — search for a city or place and explore its projected future climate across multiple decades and emissions scenarios.
+/comparison : Multi-location climate comparison page — compare climate projections side-by-side for two or more locations to understand regional differences.
+
+## Audience
+General public, researchers, journalists, educators, and policymakers interested in understanding how climate change may affect specific locations.
