@@ -1,13 +1,14 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Slider } from "@/components/ui/slider";
-import { Textarea } from "@/components/ui/textarea";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
-import { Thermometer, Droplets, MapPin, TrendingUp, TrendingDown, AlertTriangle, Waves, Cloud, FileText, Globe, Award, CheckCircle, GitCompare } from "lucide-react";
+import {
+  Thermometer, Droplets, MapPin, TrendingUp, AlertTriangle,
+  Waves, Cloud, FileText, Globe, Award, CheckCircle,
+  GitCompare, Loader2, Wind, BarChart2, Activity
+} from "lucide-react";
 import LivabilityIndexBreakdown from "@/components/livability-index-breakdown";
 import HabitabilityRanking from "@/components/habitability-ranking-refactored";
 import GlobalRankingDisplay from "@/components/global-ranking-display";
@@ -21,2176 +22,1123 @@ interface LocationOption {
   state: string;
 }
 
+function HabitabilityBadge({ score }: { score: number }) {
+  if (score >= 80) return <Badge className="bg-emerald-500/20 text-emerald-400 border-emerald-500/30 border">Excellent</Badge>;
+  if (score >= 60) return <Badge className="bg-blue-500/20 text-blue-400 border-blue-500/30 border">Good</Badge>;
+  if (score >= 40) return <Badge className="bg-yellow-500/20 text-yellow-400 border-yellow-500/30 border">Fair</Badge>;
+  if (score >= 20) return <Badge className="bg-orange-500/20 text-orange-400 border-orange-500/30 border">Poor</Badge>;
+  return <Badge className="bg-red-500/20 text-red-400 border-red-500/30 border">Severe</Badge>;
+}
+
+function ScoreRing({ score }: { score: number }) {
+  const color = score >= 80 ? "#34d399" : score >= 60 ? "#60a5fa" : score >= 40 ? "#facc15" : score >= 20 ? "#fb923c" : "#f87171";
+  const r = 42;
+  const circumference = 2 * Math.PI * r;
+  const offset = circumference - (score / 100) * circumference;
+  return (
+    <div className="relative inline-flex items-center justify-center">
+      <svg width="110" height="110" className="-rotate-90">
+        <circle cx="55" cy="55" r={r} fill="none" stroke="rgba(255,255,255,0.07)" strokeWidth="8" />
+        <circle
+          cx="55" cy="55" r={r} fill="none"
+          stroke={color} strokeWidth="8"
+          strokeDasharray={circumference}
+          strokeDashoffset={offset}
+          strokeLinecap="round"
+          style={{ transition: "stroke-dashoffset 0.8s ease" }}
+        />
+      </svg>
+      <div className="absolute flex flex-col items-center">
+        <span className="text-2xl font-bold text-white leading-none">{score.toFixed(0)}</span>
+        <span className="text-xs text-slate-400 mt-0.5">/ 100</span>
+      </div>
+    </div>
+  );
+}
+
 export default function ClimateApp() {
   const [location, setLocation] = useState("");
   const [selectedLocation, setSelectedLocation] = useState<LocationOption | null>(null);
   const [locationSuggestions, setLocationSuggestions] = useState<LocationOption[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
-  const [year, setYear] = useState(2030);
+  const [year, setYear] = useState(2050);
   const [apiKey, setApiKey] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const [logs, setLogs] = useState<string[]>([]);
+  const [statusMessage, setStatusMessage] = useState<string | null>(null);
   const [climateData, setClimateData] = useState<any>(null);
+  const [error, setError] = useState<string | null>(null);
 
-  // Load API key on component mount
   useEffect(() => {
     fetch('/api/config')
       .then(res => res.json())
-      .then(data => {
-        if (data.nvidiaApiKey) {
-          setApiKey(data.nvidiaApiKey);
-          addLog(`🔑 API key loaded from server`);
-        }
-      })
-      .catch(err => {
-        addLog(`❌ Failed to load API key: ${err.message}`);
-      });
+      .then(data => { if (data.nvidiaApiKey) setApiKey(data.nvidiaApiKey); })
+      .catch(() => {});
   }, []);
 
-  // Close suggestions when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       const target = event.target as Element;
-      if (!target.closest('.location-input-container')) {
-        setShowSuggestions(false);
-      }
+      if (!target.closest('.location-input-container')) setShowSuggestions(false);
     };
-
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  const addLog = (message: string) => {
-    setLogs(prev => [...prev, `${new Date().toLocaleTimeString()}: ${message}`]);
-  };
-
-  const exportToPDF = async () => {
-    if (!climateData) return;
-    
-    try {
-      // Dynamic import to avoid SSR issues
-      const html2canvas = (await import('html2canvas')).default;
-      const jsPDF = (await import('jspdf')).jsPDF;
-      
-      addLog(`Generating PDF report for ${climateData.location?.name}, ${climateData.year}...`);
-      
-      // Create PDF with proper page size
-      const pdf = new jsPDF('p', 'mm', 'a4');
-      const pageWidth = pdf.internal.pageSize.getWidth();
-      const pageHeight = pdf.internal.pageSize.getHeight();
-      const margin = 10;
-      let yPosition = margin;
-      
-      // Title page
-      pdf.setFontSize(20);
-      pdf.setFont('helvetica', 'bold');
-      pdf.text('Climate Projection Report', pageWidth / 2, yPosition + 10, { align: 'center' });
-      
-      yPosition += 20;
-      pdf.setFontSize(14);
-      pdf.setFont('helvetica', 'normal');
-      pdf.text(`Location: ${climateData.location?.name || 'Unknown'}`, pageWidth / 2, yPosition, { align: 'center' });
-      
-      yPosition += 10;
-      pdf.text(`Projection Year: ${climateData.year}`, pageWidth / 2, yPosition, { align: 'center' });
-      
-      yPosition += 10;
-      pdf.text(`Generated: ${new Date().toLocaleString()}`, pageWidth / 2, yPosition, { align: 'center' });
-      
-      yPosition += 20;
-      
-      // Climate summary data
-      pdf.setFontSize(16);
-      pdf.setFont('helvetica', 'bold');
-      pdf.text('Climate Overview', margin, yPosition);
-      yPosition += 15;
-      
-      pdf.setFontSize(12);
-      pdf.setFont('helvetica', 'normal');
-      
-      // Temperature data
-      if (climateData.temperature) {
-        pdf.text(`Annual Mean Temperature: ${climateData.temperature.annual_mean?.toFixed(1) || 'N/A'}°C`, margin, yPosition);
-        yPosition += 8;
-        const tempChange = climateData.temperature.change_from_baseline;
-        if (tempChange !== undefined && tempChange !== null) {
-          pdf.text(`Temperature Change: ${tempChange > 0 ? '+' : ''}${tempChange.toFixed(1)}°C`, margin, yPosition);
-        } else {
-          pdf.text(`Temperature Change: Calculated from baseline`, margin, yPosition);
-        }
-        yPosition += 8;
-        pdf.text(`Temperature Range: ${climateData.temperature.min?.toFixed(1) || 'N/A'}°C to ${climateData.temperature.max?.toFixed(1) || 'N/A'}°C`, margin, yPosition);
-        yPosition += 12;
-      }
-      
-      // Precipitation data
-      if (climateData.precipitation) {
-        pdf.text(`Annual Precipitation: ${climateData.precipitation.annual_total?.toFixed(0) || 'N/A'} mm`, margin, yPosition);
-        yPosition += 8;
-        const precipChange = climateData.precipitation.change_from_baseline;
-        if (precipChange !== undefined && precipChange !== null) {
-          pdf.text(`Precipitation Change: ${precipChange > 0 ? '+' : ''}${precipChange.toFixed(1)}%`, margin, yPosition);
-        } else {
-          pdf.text(`Precipitation Change: Calculated from baseline`, margin, yPosition);
-        }
-        yPosition += 12;
-      }
-      
-      // Habitability data
-      if (climateData.habitability) {
-        pdf.text(`Habitability Score: ${climateData.habitability.score?.toFixed(1)}/100`, margin, yPosition);
-        yPosition += 8;
-        
-        const getHabitabilityLevel = (score: number) => {
-          if (score >= 80) return "Excellent";
-          if (score >= 65) return "Good";
-          if (score >= 50) return "Moderate";
-          if (score >= 30) return "Poor";
-          return "Critical";
-        };
-        
-        pdf.text(`Habitability Level: ${getHabitabilityLevel(climateData.habitability.score)}`, margin, yPosition);
-        yPosition += 12;
-      }
-      
-      // Risk factors
-      if (climateData.extremes) {
-        pdf.setFontSize(16);
-        pdf.setFont('helvetica', 'bold');
-        pdf.text('Risk Assessment', margin, yPosition);
-        yPosition += 15;
-        
-        pdf.setFontSize(12);
-        pdf.setFont('helvetica', 'normal');
-        
-        if (climateData.extremes.heat_stress_days !== undefined) {
-          pdf.text(`Heat Stress Days (>35°C): ${climateData.extremes.heat_stress_days} days/year`, margin, yPosition);
-          yPosition += 8;
-        }
-        
-        if (climateData.extremes.drought_risk !== undefined) {
-          pdf.text(`Drought Risk: ${(climateData.extremes.drought_risk * 100).toFixed(1)}%`, margin, yPosition);
-          yPosition += 8;
-        }
-        
-        if (climateData.extremes.flood_risk !== undefined) {
-          pdf.text(`Flood Risk: ${(climateData.extremes.flood_risk * 100).toFixed(1)}%`, margin, yPosition);
-          yPosition += 12;
-        }
-      }
-      
-      // Add new page for charts if needed
-      if (yPosition > pageHeight - 50) {
-        pdf.addPage();
-        yPosition = margin;
-      }
-      
-      // Add detailed climate analysis sections
-      pdf.addPage();
-      yPosition = margin;
-      
-      pdf.setFontSize(16);
-      pdf.setFont('helvetica', 'bold');
-      pdf.text('Detailed Climate Analysis', margin, yPosition);
-      yPosition += 20;
-      
-      // Monthly Temperature Analysis
-      if (climateData.temperature?.monthly) {
-        pdf.setFontSize(14);
-        pdf.setFont('helvetica', 'bold');
-        pdf.text('Monthly Temperature Profile', margin, yPosition);
-        yPosition += 15;
-        
-        pdf.setFontSize(10);
-        pdf.setFont('helvetica', 'normal');
-        
-        const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-        const temps = climateData.temperature.monthly;
-        
-        for (let i = 0; i < months.length && i < temps.length; i++) {
-          pdf.text(`${months[i]}: ${temps[i]?.toFixed(1)}°C`, margin + (i % 4) * 45, yPosition);
-          if (i % 4 === 3) yPosition += 8;
-        }
-        yPosition += 15;
-      }
-      
-      // Monthly Precipitation Analysis
-      if (climateData.precipitation?.monthly) {
-        pdf.setFontSize(14);
-        pdf.setFont('helvetica', 'bold');
-        pdf.text('Monthly Precipitation Profile', margin, yPosition);
-        yPosition += 15;
-        
-        pdf.setFontSize(10);
-        pdf.setFont('helvetica', 'normal');
-        
-        const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-        const precip = climateData.precipitation.monthly;
-        
-        for (let i = 0; i < months.length && i < precip.length; i++) {
-          pdf.text(`${months[i]}: ${precip[i]?.toFixed(0)}mm`, margin + (i % 4) * 45, yPosition);
-          if (i % 4 === 3) yPosition += 8;
-        }
-        yPosition += 15;
-      }
-      
-      // Habitability Breakdown
-      if (climateData.habitability?.breakdown) {
-        pdf.setFontSize(14);
-        pdf.setFont('helvetica', 'bold');
-        pdf.text('Habitability Score Breakdown', margin, yPosition);
-        yPosition += 15;
-        
-        pdf.setFontSize(10);
-        pdf.setFont('helvetica', 'normal');
-        
-        const breakdown = climateData.habitability.breakdown;
-        pdf.text(`Temperature Comfort: ${breakdown.temperature_comfort?.toFixed(1) || 'N/A'}`, margin, yPosition);
-        yPosition += 8;
-        pdf.text(`Precipitation Adequacy: ${breakdown.precipitation_adequacy?.toFixed(1) || 'N/A'}`, margin, yPosition);
-        yPosition += 8;
-        pdf.text(`Infrastructure Adaptation: ${breakdown.infrastructure_adaptation?.toFixed(1) || 'N/A'}`, margin, yPosition);
-        yPosition += 8;
-        pdf.text(`Heat Stress Penalty: -${breakdown.heat_stress_penalty?.toFixed(1) || 'N/A'}`, margin, yPosition);
-        yPosition += 8;
-        pdf.text(`Drought Risk Penalty: -${breakdown.drought_risk_penalty?.toFixed(1) || 'N/A'}`, margin, yPosition);
-        yPosition += 8;
-        pdf.text(`Flood Risk Penalty: -${breakdown.flood_risk_penalty?.toFixed(1) || 'N/A'}`, margin, yPosition);
-        yPosition += 15;
-      }
-      
-      // Time Series Analysis
-      if (climateData.time_series) {
-        pdf.setFontSize(14);
-        pdf.setFont('helvetica', 'bold');
-        pdf.text('Climate Trends (5-Year Intervals)', margin, yPosition);
-        yPosition += 15;
-        
-        pdf.setFontSize(10);
-        pdf.setFont('helvetica', 'normal');
-        
-        climateData.time_series.slice(0, 8).forEach((entry: any) => {
-          pdf.text(`${entry.year}: ${entry.temperature?.toFixed(1)}°C, ${entry.precipitation?.toFixed(0)}mm, Habitability: ${entry.habitability?.toFixed(1)}`, margin, yPosition);
-          yPosition += 8;
-        });
-        yPosition += 15;
-      }
-      
-      // Atmospheric Physics
-      if (climateData.atmospheric_physics) {
-        pdf.setFontSize(14);
-        pdf.setFont('helvetica', 'bold');
-        pdf.text('Atmospheric Physics & Climate Dynamics', margin, yPosition);
-        yPosition += 15;
-        
-        pdf.setFontSize(10);
-        pdf.setFont('helvetica', 'normal');
-        
-        pdf.text(`Climate Zone: ${climateData.atmospheric_physics.climate_zone || 'N/A'}`, margin, yPosition);
-        yPosition += 8;
-        pdf.text(`Circulation Pattern: ${climateData.atmospheric_physics.circulation_pattern || 'N/A'}`, margin, yPosition);
-        yPosition += 8;
-        pdf.text(`Climate Sensitivity: ${climateData.atmospheric_physics.climate_sensitivity || 'N/A'}x global average`, margin, yPosition);
-        yPosition += 8;
-        
-        if (climateData.atmospheric_physics.climate_feedbacks) {
-          pdf.text('Climate Feedbacks:', margin, yPosition);
-          yPosition += 8;
-          climateData.atmospheric_physics.climate_feedbacks.forEach((feedback: string) => {
-            pdf.text(`• ${feedback}`, margin + 10, yPosition);
-            yPosition += 6;
-          });
-        }
-        yPosition += 15;
-      }
-      
-      // Try to capture individual visual elements
-      pdf.addPage();
-      yPosition = margin;
-      
-      pdf.setFontSize(16);
-      pdf.setFont('helvetica', 'bold');
-      pdf.text('Visual Charts & Analysis', margin, yPosition);
-      yPosition += 20;
-      
-      // Capture specific chart sections
-      const chartSections = [
-        { selector: 'canvas', name: 'Temperature/Precipitation Charts' },
-        { selector: '[data-climate-report] .relative', name: 'Monthly Analysis Charts' }
-      ];
-      
-      for (const section of chartSections) {
-        try {
-          const elements = document.querySelectorAll(section.selector);
-          if (elements.length > 0) {
-            pdf.setFontSize(14);
-            pdf.setFont('helvetica', 'bold');
-            pdf.text(section.name, margin, yPosition);
-            yPosition += 15;
-            
-            for (let i = 0; i < Math.min(elements.length, 3); i++) {
-              const element = elements[i];
-              
-              if (yPosition > pageHeight - 100) {
-                pdf.addPage();
-                yPosition = margin;
-              }
-              
-              if (element.tagName === 'CANVAS') {
-                const canvas = element as HTMLCanvasElement;
-                const chartDataUrl = canvas.toDataURL('image/png', 0.9);
-                
-                const chartWidth = pageWidth - (margin * 2);
-                const aspectRatio = canvas.height / canvas.width;
-                const chartHeight = Math.min(chartWidth * aspectRatio, 80);
-                
-                pdf.addImage(chartDataUrl, 'PNG', margin, yPosition, chartWidth, chartHeight);
-                yPosition += chartHeight + 10;
-              } else {
-                // For other elements, try html2canvas
-                const canvas = await html2canvas(element as HTMLElement, {
-                  scale: 0.8,
-                  useCORS: true,
-                  backgroundColor: '#ffffff',
-                  width: 600,
-                  height: 400
-                });
-                
-                const imgData = canvas.toDataURL('image/png', 0.8);
-                const imgWidth = pageWidth - (margin * 2);
-                const imgHeight = Math.min((canvas.height * imgWidth) / canvas.width, 100);
-                
-                pdf.addImage(imgData, 'PNG', margin, yPosition, imgWidth, imgHeight);
-                yPosition += imgHeight + 10;
-              }
-            }
-            yPosition += 10;
-          }
-        } catch (error) {
-          console.log(`Could not capture ${section.name}:`, error);
-        }
-      }
-      
-      // Add metadata and citations on new page
-      pdf.addPage();
-      yPosition = margin;
-      
-      pdf.setFontSize(16);
-      pdf.setFont('helvetica', 'bold');
-      pdf.text('Scientific References', margin, yPosition);
-      yPosition += 15;
-      
-      pdf.setFontSize(10);
-      pdf.setFont('helvetica', 'normal');
-      
-      const citations = [
-        '[1] Annual Mean Temperature: CBottle atmospheric physics calculation using ICON model baseline meteorological data',
-        '[2] Temperature Change (Anomaly): CBottle climate sensitivity analysis with greenhouse gas forcing and feedback mechanisms',
-        '[3] Monthly Temperature Extremes: CBottle seasonal temperature distribution modeling with atmospheric physics constraints',
-        '[4] Annual Precipitation Total: CBottle precipitation model using ICON atmospheric moisture transport calculations',
-        '[5] Precipitation Change: CBottle hydrological cycle modeling with temperature-driven evaporation changes',
-        '[6] Monthly Precipitation Extremes: CBottle seasonal precipitation distribution with realistic wet/dry season patterns',
-        '[7] Habitability Score: CBottle multi-factor habitability assessment (temperature comfort 30%, precipitation adequacy 30%, infrastructure adaptation 40%)',
-        '[8] Heat Stress Days: CBottle calculation of annual days exceeding 35°C threshold using extreme value analysis',
-        '[9] Drought Risk: CBottle drought probability assessment using Palmer Drought Severity Index methodology',
-        '[10] Flood Risk: CBottle flood probability modeling using extreme precipitation analysis and hydrological runoff',
-        '[11] Sea Level Rise: CBottle coastal impact assessment with global mean sea level rise projections and regional factors',
-        '[12] Seasonal Amplitude: Calculated derivative from CBottle monthly temperature data (max - min monthly temperature)',
-        '[13] Temperature Comfort Score: Custom algorithm applied to CBottle temperature data using optimal human comfort range',
-        '[14] Precipitation Adequacy Score: Custom algorithm applied to CBottle precipitation data using optimal range 600-1200mm',
-        '[15] Infrastructure Adaptation Score: Custom algorithm combining latitude-based development potential and coastal proximity',
-        '[16] Heat Stress Penalty: Calculated from CBottle heat stress days using formula (heat_stress_days / 30) × penalty_factor',
-        '[17] Drought Risk Penalty: Calculated from CBottle drought risk assessment using drought_risk_percentage × penalty_multiplier',
-        '[18] Flood Risk Penalty: Calculated from CBottle flood risk assessment using flood_risk_percentage × penalty_multiplier',
-        '[19] Global Habitability Percentile Ranking: Calculated from comprehensive global location dataset using CBottle habitability scores',
-        '[20] Best Overall Habitability Rankings: CBottle-derived habitability scores sorted in descending order globally',
-        '[21] Worst Overall Habitability Rankings: CBottle-derived habitability scores sorted in ascending order globally',
-        '[22] Biggest Habitability Decline Rankings: Calculated from CBottle baseline vs. future habitability comparison',
-        '[23] Best Temperature Comfort Rankings: Derived from CBottle temperature comfort component of habitability assessment',
-        '[24] Best Humidity Conditions Rankings: Derived from CBottle precipitation adequacy component representing humidity',
-        '[25] Best Infrastructure Adaptation Rankings: Derived from infrastructure adaptation component with geographic resilience factors',
-        '[26] Worst Temperature Comfort Rankings: Inverse of temperature comfort rankings with most challenging temperature conditions'
-      ];
-      
-      for (const citation of citations) {
-        if (yPosition > pageHeight - 20) {
-          pdf.addPage();
-          yPosition = margin;
-        }
-        
-        pdf.text(citation, margin, yPosition);
-        yPosition += 6;
-      }
-      
-      // Save PDF
-      const fileName = `Climate_Report_${climateData.location?.name?.replace(/[^a-zA-Z0-9]/g, '_')}_${climateData.year}.pdf`;
-      pdf.save(fileName);
-      
-      addLog(`PDF report generated successfully: ${fileName}`);
-      
-    } catch (error) {
-      console.error('Error generating PDF:', error);
-      addLog(`Error generating PDF: ${error}`);
-      
-      // Fallback to text export if PDF fails
-      const reportContent = generateTextReport(climateData);
-      const blob = new Blob([reportContent], { type: 'text/plain' });
-      const url = URL.createObjectURL(blob);
-      
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = `Climate_Report_${climateData.location?.name?.replace(/[^a-zA-Z0-9]/g, '_')}_${climateData.year}.txt`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      URL.revokeObjectURL(url);
-      
-      addLog(`Fallback: Text report exported instead`);
-    }
-  };
-
-  const generateTextReport = (data: any) => {
-    const location = data.location;
-    const temp = data.temperature;
-    const precip = data.precipitation;
-    const extremes = data.extremes;
-    const habitability = data.habitability;
-    const timeSeries = data.time_series;
-    const physics = data.atmospheric_physics;
-    const metadata = data.metadata;
-
-    return `
-CLIMATE PROJECTION REPORT
-Generated: ${new Date().toLocaleString()}
-Model: ${metadata?.model} ${metadata?.model_version}
-
-========================================
-LOCATION INFORMATION
-========================================
-Location: ${location?.name}
-Coordinates: ${location?.latitude}°N, ${location?.longitude}°E
-Target Year: ${data.year}
-Climate Zone: ${physics?.climate_zone}
-
-========================================
-TEMPERATURE ANALYSIS
-========================================
-Annual Average: ${temp?.annual_average?.toFixed(1)}°C
-Temperature Change: ${temp?.temperature_change >= 0 ? '+' : ''}${temp?.temperature_change?.toFixed(1)}°C from baseline
-Seasonal Range: ${temp?.coldest_month?.toFixed(1)}°C to ${temp?.warmest_month?.toFixed(1)}°C
-
-Monthly Temperature Profile (°C):
-${temp?.monthly?.map((t: number, i: number) => {
-  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-  return `${months[i]}: ${t?.toFixed(1)}`;
-}).join(', ')}
-
-========================================
-PRECIPITATION ANALYSIS
-========================================
-Annual Total: ${precip?.annual_total?.toFixed(0)}mm
-Precipitation Change: ${precip?.precipitation_change >= 0 ? '+' : ''}${precip?.precipitation_change?.toFixed(0)}mm from baseline
-Wettest Month: ${precip?.wettest_month_name} (${precip?.wettest_month?.toFixed(0)}mm)
-Driest Month: ${precip?.driest_month_name} (${precip?.driest_month?.toFixed(0)}mm)
-
-Monthly Precipitation Profile (mm):
-${precip?.monthly?.map((p: number, i: number) => {
-  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-  return `${months[i]}: ${p?.toFixed(0)}`;
-}).join(', ')}
-
-========================================
-EXTREME WEATHER & RISK ASSESSMENT
-========================================
-Heat Stress Days (>35°C): ${extremes?.heat_stress_days || 0} days/year
-Drought Risk: ${((extremes?.drought_risk || 0) * 100).toFixed(0)}%
-Flood Risk: ${((extremes?.flood_risk || 0) * 100).toFixed(0)}%
-Sea Level Rise: ${extremes?.sea_level_rise_cm?.toFixed(1)}cm by ${data.year}
-
-========================================
-HABITABILITY ASSESSMENT
-========================================
-Overall Score: ${habitability?.score?.toFixed(0)}/100 (${habitability?.category})
-Assessment: ${
-  habitability?.score >= 80 ? 'Excellent - Optimal climate conditions for human settlement' :
-  habitability?.score >= 60 ? 'Good - Comfortable living with minor climate challenges' :
-  habitability?.score >= 40 ? 'Fair - Manageable conditions with adaptation measures needed' :
-  habitability?.score >= 20 ? 'Poor - Significant climate stress requiring major adaptations' :
-  'Severe - Extreme conditions challenging for human habitation'
-}
-
-========================================
-TIME SERIES PROJECTIONS
-========================================
-Baseline Temperature: ${timeSeries?.temperature_baseline?.toFixed(1)}°C
-Baseline Precipitation: ${timeSeries?.precipitation_baseline?.toFixed(0)}mm
-
-Temperature Trend:
-${timeSeries?.years?.map((year: number, i: number) => {
-  const temp = timeSeries?.temperature_trend?.[i];
-  const diff = timeSeries?.temperature_differences?.[i];
-  const diffText = diff >= 0 ? `+${diff?.toFixed(1)}` : `${diff?.toFixed(1)}`;
-  return `${year}: ${temp?.toFixed(1)}°C (${diffText}°C)`;
-}).join('\n')}
-
-Precipitation Trend:
-${timeSeries?.years?.map((year: number, i: number) => {
-  const precip = timeSeries?.precipitation_trend?.[i];
-  const diff = timeSeries?.precipitation_differences?.[i];
-  const diffText = diff >= 0 ? `+${diff?.toFixed(0)}` : `${diff?.toFixed(0)}`;
-  return `${year}: ${precip?.toFixed(0)}mm (${diffText}mm)`;
-}).join('\n')}
-
-Habitability Trend:
-${timeSeries?.years?.map((year: number, i: number) => {
-  const habit = timeSeries?.habitability_trend?.[i];
-  return `${year}: ${habit?.toFixed(0)}/100`;
-}).join('\n')}
-
-========================================
-ATMOSPHERIC PHYSICS & DYNAMICS
-========================================
-Climate Zone: ${physics?.climate_zone}
-Circulation Pattern: ${physics?.circulation_pattern}
-Climate Sensitivity: ${physics?.climate_sensitivity}× global average
-Regional Response: ${physics?.climate_sensitivity > 1 ? 'Above average warming' : 'Below average warming'}
-
-Feedback Mechanisms:
-${physics?.feedback_mechanisms?.map((feedback: string) => `• ${feedback}`).join('\n')}
-
-========================================
-DATA QUALITY & METHODOLOGY
-========================================
-Model: ${metadata?.model}
-Version: ${metadata?.model_version}
-Resolution: ${metadata?.resolution}
-Confidence Level: ${metadata?.confidence}
-Projection Method: ${metadata?.projection_method}
-Data Source: ${metadata?.data_source}
-Generated: ${new Date(metadata?.generated_at).toLocaleString()}
-
-This report uses authentic atmospheric physics patterns from NVIDIA's CBottle 
-project, employing the ICON atmospheric model framework. Climate projections 
-incorporate realistic seasonal patterns, atmospheric circulation dynamics, 
-regional climate sensitivity factors, and physical feedback mechanisms.
-
-========================================
-DISCLAIMER
-========================================
-This climate projection is generated using advanced atmospheric modeling 
-techniques for research and planning purposes. Actual climate conditions 
-may vary due to complex Earth system interactions, policy changes, and 
-technological developments not fully captured in current models.
-
-Report generated by Climate Projection System
-© 2024 - Powered by CBottle/ICON Atmospheric Physics
-`;
-  };
-
-  // Search locations with debouncing
   useEffect(() => {
-    if (location.length < 2) {
-      setLocationSuggestions([]);
-      setShowSuggestions(false);
-      return;
-    }
-
+    if (location.length < 2) { setLocationSuggestions([]); setShowSuggestions(false); return; }
     const timeoutId = setTimeout(async () => {
       try {
         const response = await fetch(`/api/locations/search?q=${encodeURIComponent(location)}`);
         const suggestions = await response.json();
         setLocationSuggestions(suggestions);
         setShowSuggestions(true);
-      } catch (error) {
-        addLog(`❌ Location search failed: ${error}`);
-      }
+      } catch {}
     }, 300);
-
     return () => clearTimeout(timeoutId);
   }, [location]);
 
-  const selectLocation = (locationOption: LocationOption) => {
-    setSelectedLocation(locationOption);
-    setLocation(locationOption.name);
+  const selectLocation = (opt: LocationOption) => {
+    setSelectedLocation(opt);
+    setLocation(opt.name);
     setShowSuggestions(false);
-    addLog(`📍 Selected location: ${locationOption.name} (${locationOption.lat}, ${locationOption.lng})`);
   };
 
   const handleSubmit = async () => {
-    if (!selectedLocation) {
-      addLog("❌ Error: Please select a location from the dropdown");
-      return;
-    }
-    
-    if (!apiKey.trim()) {
-      addLog("❌ Error: NVIDIA API key is required");
-      return;
-    }
-
-    if (year < 2024 || year > 2100) {
-      addLog("❌ Error: Year must be between 2024 and 2100");
-      return;
-    }
-
+    if (!selectedLocation) { setError("Please select a location from the suggestions."); return; }
+    if (!apiKey.trim()) { setError("No API key configured."); return; }
+    setError(null);
     setIsLoading(true);
-    addLog(`📍 Input validated - Location: ${selectedLocation.name}, Year: ${year}`);
-    addLog(`🔑 API Key provided (${apiKey.length} characters)`);
-    addLog(`📌 Coordinates: ${selectedLocation.lat}, ${selectedLocation.lng}`);
-    
+    setClimateData(null);
+    setStatusMessage("Connecting to climate model...");
     try {
-      addLog("🌐 Making API request to NVIDIA Climate in a Bottle API...");
-      
-      const requestBody = {
-        location: selectedLocation.name,
-        coordinates: {
-          lat: selectedLocation.lat,
-          lng: selectedLocation.lng
-        },
-        year: year,
-        apiKey: apiKey
-      };
-      
-      addLog("📤 Request payload:");
-      addLog(JSON.stringify(requestBody, null, 2));
-      
+      setStatusMessage("Running CBottle ICON atmospheric model...");
       const response = await fetch("/api/climate-projection", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(requestBody)
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ location: selectedLocation.name, coordinates: { lat: selectedLocation.lat, lng: selectedLocation.lng }, year, apiKey })
       });
-
-      addLog(`📡 API Response Status: ${response.status} ${response.statusText}`);
-      
+      setStatusMessage("Processing climate projection data...");
       const data = await response.json();
-      addLog("📊 API Response Data:");
-      addLog(JSON.stringify(data, null, 2));
-      
-      // Store climate data for visualization
       if (data.success && data.data) {
         setClimateData(data.data);
-        addLog("✅ Climate data stored for visualization");
+        setStatusMessage(null);
+      } else {
+        setError(data.error || "Projection failed. Please try again.");
       }
-
-    } catch (error) {
-      addLog(`❌ Request failed: ${error}`);
+    } catch (err) {
+      setError("Network error. Please check your connection.");
     } finally {
       setIsLoading(false);
+      setStatusMessage(null);
     }
   };
 
-  const setDecade = (decade: number) => {
-    setYear(decade);
+  const exportToPDF = async () => {
+    if (!climateData) return;
+    try {
+      const html2canvas = (await import('html2canvas')).default;
+      const jsPDF = (await import('jspdf')).jsPDF;
+      const pdf = new jsPDF('p', 'mm', 'a4');
+      const pageWidth = pdf.internal.pageSize.getWidth();
+      const margin = 10;
+      let y = margin;
+
+      pdf.setFontSize(20); pdf.setFont('helvetica', 'bold');
+      pdf.text('Climate Projection Report', pageWidth / 2, y + 10, { align: 'center' });
+      y += 20;
+      pdf.setFontSize(14); pdf.setFont('helvetica', 'normal');
+      pdf.text(`Location: ${climateData.location?.name || 'Unknown'}`, pageWidth / 2, y, { align: 'center' });
+      y += 10;
+      pdf.text(`Projection Year: ${climateData.year}`, pageWidth / 2, y, { align: 'center' });
+      y += 10;
+      pdf.text(`Generated: ${new Date().toLocaleString()}`, pageWidth / 2, y, { align: 'center' });
+      y += 20;
+      if (climateData.temperature) {
+        pdf.setFontSize(12);
+        pdf.text(`Annual Mean Temperature: ${climateData.temperature.annual_mean?.toFixed(1)}°C`, margin, y); y += 8;
+        pdf.text(`Temperature Change: +${climateData.temperature.anomaly?.toFixed(1)}°C`, margin, y); y += 8;
+        pdf.text(`Range: ${climateData.temperature.min?.toFixed(1)}°C to ${climateData.temperature.max?.toFixed(1)}°C`, margin, y); y += 12;
+      }
+      if (climateData.precipitation) {
+        pdf.text(`Annual Precipitation: ${climateData.precipitation.annual_total?.toFixed(0)} mm`, margin, y); y += 8;
+        pdf.text(`Precipitation Change: ${climateData.precipitation.anomaly_percent > 0 ? '+' : ''}${climateData.precipitation.anomaly_percent?.toFixed(1)}%`, margin, y); y += 12;
+      }
+      if (climateData.habitability) {
+        pdf.text(`Habitability Score: ${climateData.habitability.score?.toFixed(1)}/100 (${climateData.habitability.category})`, margin, y); y += 12;
+      }
+      const fileName = `Climate_Report_${climateData.location?.name?.replace(/[^a-zA-Z0-9]/g, '_')}_${climateData.year}.pdf`;
+      pdf.save(fileName);
+    } catch {
+      const reportContent = `CLIMATE PROJECTION REPORT\nLocation: ${climateData.location?.name}\nYear: ${climateData.year}\nTemp: ${climateData.temperature?.annual_mean?.toFixed(1)}°C\nPrecip: ${climateData.precipitation?.annual_total?.toFixed(0)}mm\nHabitability: ${climateData.habitability?.score?.toFixed(0)}/100`;
+      const blob = new Blob([reportContent], { type: 'text/plain' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url; link.download = `Climate_Report_${climateData.location?.name?.replace(/[^a-zA-Z0-9]/g, '_')}_${climateData.year}.txt`;
+      document.body.appendChild(link); link.click(); document.body.removeChild(link); URL.revokeObjectURL(url);
+    }
   };
 
+  const habitScore = climateData?.habitability?.score ?? 0;
+  const tempMean = climateData?.temperature?.annual_mean;
+  const precip = climateData?.precipitation?.annual_total;
+
   return (
-    <div className="container mx-auto p-6 max-w-4xl">
-      <div className="flex items-center justify-between mb-8">
-        <h1 className="text-3xl font-bold">Climate Projection Tool</h1>
-        <Button 
-          variant="outline" 
-          onClick={() => window.location.href = '/comparison'}
-          className="flex items-center gap-2"
-        >
-          <GitCompare className="w-4 h-4" />
-          Compare Locations
-        </Button>
-      </div>
-      
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Input Panel */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Climate Projection Settings</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            {/* API Key Input */}
-            <div className="space-y-2">
-              <Label htmlFor="apiKey">NVIDIA API Key</Label>
-              <Input
-                id="apiKey"
-                type="password"
-                placeholder="Enter your NVIDIA API key"
-                value={apiKey}
-                onChange={(e) => setApiKey(e.target.value)}
-              />
-              {apiKey && (
-                <p className="text-xs text-gray-500">
-                  API key loaded from environment (development only)
-                </p>
-              )}
-            </div>
+    <div className="min-h-screen" style={{ background: "hsl(222, 47%, 8%)" }}>
 
-            {/* Location Input */}
-            <div className="space-y-2 relative location-input-container">
-              <Label htmlFor="location">Location</Label>
-              <Input
-                id="location"
-                placeholder="Enter city name (e.g., New York, London, Tokyo)"
-                value={location}
-                onChange={(e) => {
-                  setLocation(e.target.value);
-                  setSelectedLocation(null);
-                }}
-                onFocus={() => {
-                  if (locationSuggestions.length > 0) {
-                    setShowSuggestions(true);
-                  }
-                }}
-              />
-              
-              {/* Location Suggestions Dropdown */}
-              {showSuggestions && locationSuggestions.length > 0 && (
-                <div className="absolute z-10 w-full bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-auto mt-1">
-                  {locationSuggestions.map((suggestion, index) => (
-                    <div
-                      key={index}
-                      className="px-4 py-2 hover:bg-gray-100 cursor-pointer border-b border-gray-100 last:border-b-0"
-                      onClick={() => selectLocation(suggestion)}
-                    >
-                      <div className="font-medium text-sm">{suggestion.city || suggestion.name.split(',')[0]}</div>
-                      <div className="text-xs text-gray-500 truncate">{suggestion.name}</div>
-                    </div>
-                  ))}
+      {/* ── Header ── */}
+      <header className="sticky top-0 z-50 border-b" style={{ background: "hsla(222,47%,8%,0.9)", backdropFilter: "blur(16px)", borderColor: "hsl(217,33%,18%)" }}>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: "linear-gradient(135deg, hsl(192,91%,36%) 0%, hsl(215,91%,50%) 100%)" }}>
+              <Globe className="w-4 h-4 text-white" />
+            </div>
+            <span className="font-semibold text-white text-lg tracking-tight">ClimateVision</span>
+            <span className="hidden sm:inline text-xs px-2 py-0.5 rounded-full font-medium" style={{ background: "hsla(192,91%,46%,0.15)", color: "hsl(192,91%,60%)", border: "1px solid hsla(192,91%,46%,0.25)" }}>
+              CBottle/ICON Model
+            </span>
+          </div>
+          <div className="flex items-center gap-3">
+            {climateData && (
+              <Button onClick={exportToPDF} size="sm" variant="ghost" className="gap-2 text-slate-400 hover:text-white hover:bg-white/5">
+                <FileText className="w-4 h-4" />
+                <span className="hidden sm:inline">Export PDF</span>
+              </Button>
+            )}
+            <Button
+              size="sm" variant="ghost"
+              onClick={() => window.location.href = '/comparison'}
+              className="gap-2 text-slate-400 hover:text-white hover:bg-white/5"
+            >
+              <GitCompare className="w-4 h-4" />
+              <span className="hidden sm:inline">Compare</span>
+            </Button>
+          </div>
+        </div>
+      </header>
+
+      {/* ── Hero / Search ── */}
+      <section className="relative overflow-hidden" style={{ background: "linear-gradient(160deg, hsl(222,47%,9%) 0%, hsl(215,55%,11%) 50%, hsl(192,55%,9%) 100%)" }}>
+        <div className="absolute inset-0 pointer-events-none" style={{ background: "radial-gradient(ellipse 80% 60% at 50% -20%, hsla(192,91%,46%,0.08) 0%, transparent 70%)" }} />
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 py-12 sm:py-16 relative">
+          <div className="text-center mb-8">
+            <h1 className="text-3xl sm:text-4xl font-bold text-white mb-3">
+              Climate Projections
+              <span className="block text-gradient text-2xl sm:text-3xl mt-1">for Any Location on Earth</span>
+            </h1>
+            <p className="text-slate-400 text-sm sm:text-base max-w-xl mx-auto">
+              Explore temperature, precipitation, heat stress, and habitability forecasts powered by the CBottle atmospheric model.
+            </p>
+          </div>
+
+          {/* Search card */}
+          <div className="rounded-2xl p-5 sm:p-6 shadow-2xl" style={{ background: "hsl(222,47%,12%)", border: "1px solid hsl(217,33%,22%)" }}>
+            <div className="flex flex-col sm:flex-row gap-4">
+              {/* Location input */}
+              <div className="relative location-input-container flex-1">
+                <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none">
+                  <MapPin className="w-4 h-4 text-slate-500" />
                 </div>
-              )}
-              
-              {selectedLocation && (
-                <p className="text-xs text-green-600">
-                  ✓ Selected: {selectedLocation.city || selectedLocation.name.split(',')[0]}, {selectedLocation.country}
-                </p>
-              )}
+                <Input
+                  placeholder="Search for a city or location..."
+                  value={location}
+                  onChange={(e) => { setLocation(e.target.value); setSelectedLocation(null); }}
+                  onFocus={() => { if (locationSuggestions.length > 0) setShowSuggestions(true); }}
+                  className="pl-9 h-11 text-sm rounded-xl"
+                  style={{ background: "hsl(222,47%,9%)", borderColor: "hsl(217,33%,25%)", color: "white" }}
+                />
+                {showSuggestions && locationSuggestions.length > 0 && (
+                  <div className="absolute z-50 left-0 right-0 top-full mt-1 rounded-xl shadow-2xl overflow-hidden max-h-60 overflow-y-auto" style={{ background: "hsl(222,47%,13%)", border: "1px solid hsl(217,33%,25%)" }}>
+                    {locationSuggestions.map((s, i) => (
+                      <div key={i} onClick={() => selectLocation(s)}
+                        className="px-4 py-3 cursor-pointer flex items-start gap-3 hover:bg-white/5 transition-colors border-b last:border-b-0"
+                        style={{ borderColor: "hsl(217,33%,20%)" }}>
+                        <MapPin className="w-3.5 h-3.5 text-cyan-500 mt-0.5 shrink-0" />
+                        <div>
+                          <div className="text-sm font-medium text-white">{s.city || s.name.split(',')[0]}</div>
+                          <div className="text-xs text-slate-500 truncate">{s.name}</div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                {selectedLocation && (
+                  <div className="absolute -bottom-5 left-0 text-xs text-cyan-500 flex items-center gap-1">
+                    <CheckCircle className="w-3 h-3" />
+                    {selectedLocation.city || selectedLocation.name.split(',')[0]}, {selectedLocation.country}
+                  </div>
+                )}
+              </div>
+
+              {/* Submit */}
+              <Button
+                onClick={handleSubmit}
+                disabled={isLoading || !selectedLocation}
+                className="h-11 px-6 rounded-xl font-semibold text-sm shrink-0"
+                style={{ background: isLoading || !selectedLocation ? "hsl(217,33%,22%)" : "linear-gradient(135deg, hsl(192,91%,40%) 0%, hsl(215,91%,55%) 100%)", color: isLoading || !selectedLocation ? "hsl(215,20%,45%)" : "white", border: "none" }}
+              >
+                {isLoading ? <><Loader2 className="w-4 h-4 mr-2 spin" />Analyzing...</> : "Generate Projection"}
+              </Button>
             </div>
 
-            {/* Year Selection */}
-            <div className="space-y-4">
-              <Label>Target Year: {year}</Label>
-              
-              {/* Decade Buttons */}
-              <div className="flex flex-wrap gap-2">
-                {[2030, 2040, 2050, 2060, 2070, 2080, 2090, 2100].map((decade) => (
-                  <Button
-                    key={decade}
-                    variant={year === decade ? "default" : "outline"}
-                    size="sm"
-                    onClick={() => setDecade(decade)}
-                  >
-                    {decade}
-                  </Button>
+            {/* Year selector */}
+            <div className="mt-5 pt-5" style={{ borderTop: "1px solid hsl(217,33%,20%)" }}>
+              <div className="flex items-center justify-between mb-3">
+                <span className="text-xs font-medium text-slate-400 uppercase tracking-wide">Projection Year</span>
+                <span className="text-lg font-bold text-white">{year}</span>
+              </div>
+              <div className="flex flex-wrap gap-2 mb-3">
+                {[2030, 2040, 2050, 2060, 2070, 2080, 2090, 2100].map((d) => (
+                  <button key={d} onClick={() => setYear(d)}
+                    className="text-xs px-3 py-1.5 rounded-lg font-medium transition-all"
+                    style={{
+                      background: year === d ? "hsla(192,91%,46%,0.2)" : "hsl(222,47%,9%)",
+                      color: year === d ? "hsl(192,91%,60%)" : "hsl(215,20%,55%)",
+                      border: `1px solid ${year === d ? "hsla(192,91%,46%,0.4)" : "hsl(217,33%,22%)"}`
+                    }}>
+                    {d}
+                  </button>
+                ))}
+              </div>
+              <Slider value={[year]} onValueChange={(v) => setYear(v[0])} min={2025} max={2100} step={1} className="w-full" />
+            </div>
+
+            {/* Status / Error */}
+            {error && (
+              <div className="mt-4 flex items-center gap-2 px-4 py-3 rounded-xl text-sm" style={{ background: "hsla(0,84%,60%,0.1)", border: "1px solid hsla(0,84%,60%,0.25)", color: "hsl(0,84%,72%)" }}>
+                <AlertTriangle className="w-4 h-4 shrink-0" />{error}
+              </div>
+            )}
+            {isLoading && statusMessage && (
+              <div className="mt-4 status-bar animate-fade-in">
+                <Loader2 className="w-4 h-4 spin shrink-0" />
+                {statusMessage}
+              </div>
+            )}
+          </div>
+        </div>
+      </section>
+
+      {/* ── Loading skeleton ── */}
+      {isLoading && (
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8 space-y-6 animate-fade-in">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+            {[...Array(4)].map((_, i) => <div key={i} className="skeleton h-24 rounded-2xl" />)}
+          </div>
+          <div className="skeleton h-48 rounded-2xl" />
+          <div className="grid sm:grid-cols-2 gap-4">
+            <div className="skeleton h-64 rounded-2xl" />
+            <div className="skeleton h-64 rounded-2xl" />
+          </div>
+        </div>
+      )}
+
+      {/* ── Empty state ── */}
+      {!isLoading && !climateData && (
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-16 text-center animate-fade-in">
+          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl mb-6" style={{ background: "hsl(222,47%,13%)", border: "1px solid hsl(217,33%,22%)" }}>
+            <Globe className="w-8 h-8 text-slate-500" />
+          </div>
+          <h2 className="text-lg font-semibold text-white mb-2">Search for a location to get started</h2>
+          <p className="text-slate-500 text-sm max-w-md mx-auto">
+            Type any city name, select it from the suggestions, choose your target year, and click Generate Projection.
+          </p>
+          <div className="mt-8 grid grid-cols-1 sm:grid-cols-3 gap-4 max-w-2xl mx-auto text-left">
+            {[
+              { icon: Thermometer, title: "Temperature", desc: "Monthly profiles and annual mean temperature projections" },
+              { icon: Droplets, title: "Precipitation", desc: "Rainfall patterns, seasonal distribution and drought risk" },
+              { icon: Award, title: "Habitability", desc: "Comprehensive score combining all climate factors" },
+            ].map(({ icon: Icon, title, desc }) => (
+              <div key={title} className="rounded-xl p-4" style={{ background: "hsl(222,47%,12%)", border: "1px solid hsl(217,33%,20%)" }}>
+                <Icon className="w-5 h-5 mb-2" style={{ color: "hsl(192,91%,50%)" }} />
+                <div className="text-sm font-medium text-white mb-1">{title}</div>
+                <div className="text-xs text-slate-500">{desc}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* ── Results ── */}
+      {!isLoading && climateData && (
+        <main className="max-w-7xl mx-auto px-4 sm:px-6 py-8 space-y-8 animate-fade-in">
+
+          {/* ── KPI strip ── */}
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+            {/* Temperature */}
+            <div className="stat-card">
+              <div className="flex items-center gap-2 mb-3">
+                <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: "hsla(0,84%,60%,0.15)" }}>
+                  <Thermometer className="w-4 h-4" style={{ color: "hsl(0,84%,65%)" }} />
+                </div>
+                <span className="text-xs text-slate-400 font-medium uppercase tracking-wide">Temperature</span>
+              </div>
+              <div className="text-2xl sm:text-3xl font-bold text-white mb-1">
+                {tempMean?.toFixed(1)}<span className="text-lg text-slate-400">°C</span>
+              </div>
+              <div className="text-xs text-slate-500">
+                {climateData.temperature?.anomaly > 0 ? "+" : ""}{climateData.temperature?.anomaly?.toFixed(1)}°C vs baseline
+              </div>
+            </div>
+
+            {/* Precipitation */}
+            <div className="stat-card">
+              <div className="flex items-center gap-2 mb-3">
+                <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: "hsla(207,90%,54%,0.15)" }}>
+                  <Droplets className="w-4 h-4" style={{ color: "hsl(207,90%,65%)" }} />
+                </div>
+                <span className="text-xs text-slate-400 font-medium uppercase tracking-wide">Precipitation</span>
+              </div>
+              <div className="text-2xl sm:text-3xl font-bold text-white mb-1">
+                {precip?.toFixed(0)}<span className="text-lg text-slate-400"> mm</span>
+              </div>
+              <div className="text-xs text-slate-500">
+                {climateData.precipitation?.anomaly_percent > 0 ? "+" : ""}{climateData.precipitation?.anomaly_percent?.toFixed(1)}% vs baseline
+              </div>
+            </div>
+
+            {/* Heat Stress */}
+            <div className="stat-card">
+              <div className="flex items-center gap-2 mb-3">
+                <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: "hsla(24,92%,60%,0.15)" }}>
+                  <Activity className="w-4 h-4" style={{ color: "hsl(24,92%,65%)" }} />
+                </div>
+                <span className="text-xs text-slate-400 font-medium uppercase tracking-wide">Heat Stress</span>
+              </div>
+              <div className="text-2xl sm:text-3xl font-bold text-white mb-1">
+                {climateData.extremes?.heat_stress_days ?? 0}<span className="text-lg text-slate-400"> days</span>
+              </div>
+              <div className="text-xs text-slate-500">Days above 35°C per year</div>
+            </div>
+
+            {/* Habitability */}
+            <div className="stat-card">
+              <div className="flex items-center gap-2 mb-3">
+                <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: "hsla(142,76%,45%,0.15)" }}>
+                  <Award className="w-4 h-4" style={{ color: "hsl(142,76%,55%)" }} />
+                </div>
+                <span className="text-xs text-slate-400 font-medium uppercase tracking-wide">Habitability</span>
+              </div>
+              <div className="text-2xl sm:text-3xl font-bold text-white mb-1">
+                {habitScore.toFixed(0)}<span className="text-lg text-slate-400">/100</span>
+              </div>
+              <HabitabilityBadge score={habitScore} />
+            </div>
+          </div>
+
+          {/* ── Location header ── */}
+          <div className="rounded-2xl p-5 flex flex-col sm:flex-row sm:items-center gap-4" style={{ background: "hsl(222,47%,12%)", border: "1px solid hsl(217,33%,22%)" }}>
+            <div className="flex items-center gap-4 flex-1">
+              <div className="w-12 h-12 rounded-xl flex items-center justify-center shrink-0" style={{ background: "hsla(192,91%,46%,0.12)", border: "1px solid hsla(192,91%,46%,0.2)" }}>
+                <MapPin className="w-6 h-6" style={{ color: "hsl(192,91%,56%)" }} />
+              </div>
+              <div>
+                <h2 className="text-lg font-bold text-white leading-tight">{climateData.location?.name}</h2>
+                <p className="text-sm text-slate-400">
+                  {climateData.location?.latitude?.toFixed(4)}°, {climateData.location?.longitude?.toFixed(4)}° · {climateData.location?.climate_zone} Climate Zone
+                </p>
+              </div>
+            </div>
+            <div className="flex flex-wrap gap-2 sm:justify-end">
+              <span className="text-xs px-3 py-1.5 rounded-lg font-medium" style={{ background: "hsla(192,91%,46%,0.1)", color: "hsl(192,91%,65%)", border: "1px solid hsla(192,91%,46%,0.2)" }}>
+                Projection: {climateData.year}
+              </span>
+              <span className="text-xs px-3 py-1.5 rounded-lg font-medium" style={{ background: "hsl(222,47%,9%)", color: "hsl(215,20%,55%)", border: "1px solid hsl(217,33%,22%)" }}>
+                {climateData.metadata?.model}
+              </span>
+            </div>
+          </div>
+
+          {/* ── Satellite Map ── */}
+          <div className="section-card">
+            <div className="section-header">
+              <MapPin className="w-5 h-5" style={{ color: "hsl(192,91%,56%)" }} />
+              <h3 className="font-semibold text-white">Location Overview</h3>
+            </div>
+            <div className="p-5">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+                <div className="rounded-xl overflow-hidden border aspect-video" style={{ borderColor: "hsl(217,33%,22%)" }}>
+                  <iframe
+                    src={`https://maps.google.com/maps?q=${climateData.location?.latitude},${climateData.location?.longitude}&t=k&z=10&ie=UTF8&iwloc=&output=embed`}
+                    width="100%" height="100%" style={{ border: 0 }} allowFullScreen loading="lazy"
+                    referrerPolicy="no-referrer-when-downgrade" title="Satellite View"
+                  />
+                </div>
+                <div className="space-y-3">
+                  <div className="rounded-xl p-4" style={{ background: "hsl(222,47%,10%)", border: "1px solid hsl(217,33%,20%)" }}>
+                    <h4 className="text-sm font-medium text-slate-300 mb-3">Geographic Details</h4>
+                    <div className="space-y-2 text-sm">
+                      <div className="flex justify-between"><span className="text-slate-500">Location</span><span className="text-white font-medium">{climateData.location?.name}</span></div>
+                      <div className="flex justify-between"><span className="text-slate-500">Coordinates</span><span className="text-white font-mono text-xs">{climateData.location?.latitude?.toFixed(4)}°, {climateData.location?.longitude?.toFixed(4)}°</span></div>
+                      <div className="flex justify-between"><span className="text-slate-500">Climate Zone</span><span className="text-white">{climateData.location?.climate_zone}</span></div>
+                      <div className="flex justify-between"><span className="text-slate-500">Target Year</span><span className="text-white">{climateData.year}</span></div>
+                    </div>
+                  </div>
+                  <div className="rounded-xl p-4" style={{ background: "hsl(222,47%,10%)", border: "1px solid hsl(217,33%,20%)" }}>
+                    <h4 className="text-sm font-medium text-slate-300 mb-2">Atmospheric Pattern</h4>
+                    <p className="text-sm text-slate-400">{climateData.atmospheric_physics?.circulation_pattern}</p>
+                    <p className="text-xs mt-1" style={{ color: "hsl(192,91%,60%)" }}>Sensitivity: {climateData.atmospheric_physics?.climate_sensitivity}× global average</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Adaptation analysis */}
+              <div className="mt-5 grid grid-cols-1 lg:grid-cols-2 gap-4">
+                {/* Challenges */}
+                {(() => {
+                  const challenges: any[] = [];
+                  const tempChange = climateData.temperature_change || 0;
+                  const precipChange = climateData.precipitation_change || 0;
+                  const latitude = climateData.location?.latitude || 0;
+                  const coastal = Math.abs(latitude) < 60 && climateData.sea_level_rise > 0;
+                  const habitScore = climateData.habitability?.score || 0;
+
+                  if (tempChange > 3) challenges.push({ issue: "Extreme Heat Stress", description: `${tempChange.toFixed(1)}°C warming creates dangerous heat conditions`, impact: "HIGH", magnitude: "85-95% increase in heat days" });
+                  else if (tempChange > 1.5) challenges.push({ issue: "Rising Temperature Discomfort", description: `${tempChange.toFixed(1)}°C warming affects daily comfort`, impact: "MEDIUM", magnitude: "40-60% increase in uncomfortable days" });
+                  if (precipChange < -20) challenges.push({ issue: "Severe Drought Risk", description: `${Math.abs(precipChange).toFixed(0)}% precipitation decline threatens water security`, impact: "HIGH", magnitude: "60-80% higher drought frequency" });
+                  else if (precipChange > 25) challenges.push({ issue: "Increased Flood Risk", description: `${precipChange.toFixed(0)}% more precipitation increases flooding`, impact: "MEDIUM-HIGH", magnitude: "50-70% more flood events" });
+                  if (latitude > 55) challenges.push({ issue: "Arctic Climate Instability", description: "High-latitude regions face rapid climate shifts", impact: "MEDIUM", magnitude: "2-3x faster warming than global average" });
+                  if (coastal) challenges.push({ issue: "Sea Level Rise Impact", description: `${climateData.sea_level_rise}cm rise threatens coastal infrastructure`, impact: "MEDIUM-HIGH", magnitude: "30-50% of coastal areas at risk" });
+                  if (tempChange > 2 || Math.abs(precipChange) > 20) challenges.push({ issue: "Infrastructure Adaptation Costs", description: "Existing infrastructure needs climate-proofing", impact: "MEDIUM", magnitude: "15-25% increase in maintenance costs" });
+                  if (challenges.length < 2 && latitude > 45 && latitude < 60) {
+                    challenges.push({ issue: "European Climate Transition", description: "Western Europe faces shifting precipitation patterns and increasing weather variability", impact: "MEDIUM", magnitude: "20-30% increase in weather extremes" });
+                    challenges.push({ issue: "Urban Heat Island Effect", description: "Cities experience amplified warming compared to rural areas", impact: "MEDIUM", magnitude: "2-5°C additional warming in urban centers" });
+                  }
+                  challenges.push({ issue: "Economic Adaptation Costs", description: "Regional economy needs investment in climate resilience", impact: "MEDIUM", magnitude: "5-15% of regional GDP for adaptation" });
+
+                  return (
+                    <div className="rounded-xl p-4" style={{ background: "hsla(0,84%,60%,0.06)", border: "1px solid hsla(0,84%,60%,0.2)" }}>
+                      <h5 className="text-sm font-semibold mb-3 flex items-center gap-2" style={{ color: "hsl(0,84%,70%)" }}>
+                        <AlertTriangle className="w-4 h-4" />Key Challenges
+                      </h5>
+                      <div className="space-y-3">
+                        {challenges.slice(0, 4).map((c, i) => (
+                          <div key={i} className="pl-3 border-l-2" style={{ borderColor: c.impact === "HIGH" ? "hsl(0,84%,60%)" : "hsl(24,92%,55%)" }}>
+                            <div className="flex items-center gap-2 mb-0.5">
+                              <span className="text-sm font-medium text-white">{c.issue}</span>
+                              <span className="text-xs px-1.5 py-0.5 rounded font-medium" style={{ background: c.impact === "HIGH" ? "hsla(0,84%,60%,0.2)" : "hsla(24,92%,60%,0.2)", color: c.impact === "HIGH" ? "hsl(0,84%,70%)" : "hsl(24,92%,70%)" }}>{c.impact}</span>
+                            </div>
+                            <p className="text-xs text-slate-500">{c.description}</p>
+                            <p className="text-xs font-medium mt-0.5" style={{ color: "hsl(24,92%,65%)" }}>Impact: {c.magnitude}</p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })()}
+
+                {/* Opportunities */}
+                {(() => {
+                  const opps: any[] = [];
+                  const tempChange = climateData.temperature_change || 0;
+                  const precipChange = climateData.precipitation_change || 0;
+                  const latitude = climateData.location?.latitude || 0;
+                  const habitScore = climateData.habitability?.score || 0;
+                  if (latitude > 55) opps.push({ advantage: "Climate Refuge Potential", description: "High-latitude location offers relative climate stability", impact: "HIGH", magnitude: "2-3x better than equatorial regions" });
+                  if (tempChange > 0 && tempChange < 3 && latitude > 50) opps.push({ advantage: "Extended Growing Season", description: `${tempChange.toFixed(1)}°C warming extends agricultural potential`, impact: "MEDIUM", magnitude: "20-40% longer growing season" });
+                  if (precipChange > -10 && precipChange < 15) opps.push({ advantage: "Stable Water Resources", description: "Minimal precipitation change maintains water security", impact: "MEDIUM-HIGH", magnitude: "90%+ water availability maintained" });
+                  if (habitScore > 45) opps.push({ advantage: "Climate Migration Destination", description: "Above-average habitability attracts climate migrants", impact: "MEDIUM", magnitude: "25-40% economic growth potential" });
+                  if (latitude > 50) opps.push({ advantage: "Reduced Cooling Costs", description: "Northern location requires less air conditioning", impact: "LOW-MEDIUM", magnitude: "30-50% lower cooling energy needs" });
+                  opps.push({ advantage: "Green Technology Leadership", description: "Early adaptation creates competitive advantage", impact: "MEDIUM", magnitude: "15-30% innovation economy growth" });
+                  return (
+                    <div className="rounded-xl p-4" style={{ background: "hsla(142,76%,45%,0.06)", border: "1px solid hsla(142,76%,45%,0.2)" }}>
+                      <h5 className="text-sm font-semibold mb-3 flex items-center gap-2" style={{ color: "hsl(142,76%,55%)" }}>
+                        <CheckCircle className="w-4 h-4" />Adaptation Opportunities
+                      </h5>
+                      <div className="space-y-3">
+                        {opps.slice(0, 4).map((o, i) => (
+                          <div key={i} className="pl-3 border-l-2" style={{ borderColor: "hsl(142,76%,40%)" }}>
+                            <div className="flex items-center gap-2 mb-0.5">
+                              <span className="text-sm font-medium text-white">{o.advantage}</span>
+                              <span className="text-xs px-1.5 py-0.5 rounded font-medium" style={{ background: "hsla(142,76%,45%,0.2)", color: "hsl(142,76%,65%)" }}>{o.impact}</span>
+                            </div>
+                            <p className="text-xs text-slate-500">{o.description}</p>
+                            <p className="text-xs font-medium mt-0.5" style={{ color: "hsl(142,76%,55%)" }}>Benefit: {o.magnitude}</p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })()}
+              </div>
+
+              <div className="mt-4 rounded-xl p-4" style={{ background: "hsla(207,90%,54%,0.06)", border: "1px solid hsla(207,90%,54%,0.2)" }}>
+                <h5 className="text-sm font-semibold mb-1" style={{ color: "hsl(207,90%,65%)" }}>Comparative Global Position</h5>
+                <p className="text-sm text-slate-400">
+                  {(() => {
+                    const score = climateData.habitability?.score || 0;
+                    const latitude = climateData.location?.latitude || 0;
+                    const tempChange = climateData.temperature_change || 0;
+                    if (score > 60 && latitude > 50) return `This location offers significant climate advantages compared to lower-latitude regions, with ${tempChange > 0 && tempChange < 3 ? 'moderate warming that may extend growing seasons' : 'relatively stable temperature conditions'} and ${latitude > 55 ? 'potential as a climate refuge destination' : 'good adaptation prospects'}.`;
+                    else if (score > 45) return `This location maintains moderate habitability compared to global averages, with ${tempChange < 2 ? 'manageable temperature changes' : 'adaptation challenges that are still addressable'} and opportunities for ${latitude > 50 ? 'northern climate advantages' : 'strategic climate planning'}.`;
+                    return `This location faces significant climate adaptation challenges compared to more favorable regions, requiring ${tempChange > 3 ? 'major heat management strategies' : 'comprehensive climate resilience planning'} and ${Math.abs(climateData.precipitation_change || 0) > 20 ? 'water resource adaptation' : 'infrastructure hardening'}.`;
+                  })()}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* ── Location & Year cards ── */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div className="rounded-xl p-4" style={{ background: "hsl(222,47%,12%)", border: "1px solid hsla(192,91%,46%,0.2)" }}>
+              <div className="flex items-center gap-2 mb-2"><MapPin className="w-4 h-4" style={{ color: "hsl(192,91%,56%)" }} /><span className="text-xs font-medium text-slate-400 uppercase tracking-wide">Location</span></div>
+              <p className="text-base font-semibold text-white">{climateData.location?.name}</p>
+              <p className="text-xs text-slate-500 mt-0.5">{climateData.location?.latitude?.toFixed(4)}°, {climateData.location?.longitude?.toFixed(4)}°</p>
+              <p className="text-xs mt-1 font-medium" style={{ color: "hsl(192,91%,60%)" }}>{climateData.location?.climate_zone} Climate Zone</p>
+            </div>
+            <div className="rounded-xl p-4" style={{ background: "hsl(222,47%,12%)", border: "1px solid hsla(142,76%,45%,0.2)" }}>
+              <div className="flex items-center gap-2 mb-2"><TrendingUp className="w-4 h-4" style={{ color: "hsl(142,76%,55%)" }} /><span className="text-xs font-medium text-slate-400 uppercase tracking-wide">Target Year</span></div>
+              <p className="text-base font-semibold text-white">{climateData.year}</p>
+              <p className="text-xs text-slate-500 mt-0.5">{climateData.year - new Date().getFullYear()} years from now</p>
+            </div>
+            <div className="rounded-xl p-4" style={{ background: "hsl(222,47%,12%)", border: "1px solid hsla(280,87%,65%,0.2)" }}>
+              <div className="flex items-center gap-2 mb-2"><Cloud className="w-4 h-4" style={{ color: "hsl(280,87%,70%)" }} /><span className="text-xs font-medium text-slate-400 uppercase tracking-wide">Model</span></div>
+              <p className="text-sm font-semibold text-white">{climateData.metadata?.model}</p>
+              <p className="text-xs text-slate-500 mt-0.5">Resolution: {climateData.metadata?.resolution}</p>
+            </div>
+          </div>
+
+          {/* ── Temperature Analysis ── */}
+          <div className="section-card">
+            <div className="section-header">
+              <Thermometer className="w-5 h-5" style={{ color: "hsl(0,84%,65%)" }} />
+              <h3 className="font-semibold text-white">Temperature Analysis</h3>
+            </div>
+            <div className="p-5 space-y-5">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                {[
+                  { label: "Annual Mean", value: `${climateData.temperature?.annual_mean?.toFixed(1)}°C`, color: "hsl(0,84%,65%)", note: "[1]" },
+                  { label: "Temp Change", value: `+${climateData.temperature?.anomaly?.toFixed(1)}°C`, color: "hsl(24,92%,65%)", note: "[2]" },
+                  { label: "Minimum", value: `${climateData.temperature?.min?.toFixed(1)}°C`, color: "hsl(207,90%,65%)", note: "[3]" },
+                  { label: "Maximum", value: `${climateData.temperature?.max?.toFixed(1)}°C`, color: "hsl(0,84%,65%)", note: "[3]" },
+                ].map(({ label, value, color, note }) => (
+                  <div key={label} className="rounded-xl p-3 text-center" style={{ background: "hsl(222,47%,10%)", border: "1px solid hsl(217,33%,20%)" }}>
+                    <p className="text-xs text-slate-500 mb-1">{label}<sup className="text-slate-600">{note}</sup></p>
+                    <p className="text-xl font-bold" style={{ color }}>{value}</p>
+                  </div>
                 ))}
               </div>
 
-              {/* Year Slider */}
-              <div className="space-y-2">
-                <Label className="text-sm text-gray-600">Fine-tune year:</Label>
-                <Slider
-                  value={[year]}
-                  onValueChange={(value) => setYear(value[0])}
-                  min={2024}
-                  max={2100}
-                  step={1}
-                  className="w-full"
-                />
-              </div>
-
-              {/* Manual Year Input */}
-              <div className="space-y-2">
-                <Label htmlFor="yearInput" className="text-sm text-gray-600">Or type exact year:</Label>
-                <Input
-                  id="yearInput"
-                  type="number"
-                  min={2024}
-                  max={2100}
-                  value={year}
-                  onChange={(e) => setYear(parseInt(e.target.value) || 2030)}
-                  className="w-32"
-                />
-              </div>
-            </div>
-
-            {/* Submit Button */}
-            <Button 
-              onClick={handleSubmit} 
-              disabled={isLoading}
-              className="w-full"
-            >
-              {isLoading ? "Getting Climate Projection..." : "Get Climate Projection"}
-            </Button>
-          </CardContent>
-        </Card>
-
-        {/* Logs Panel */}
-        <Card>
-          <CardHeader>
-            <CardTitle>API Logs</CardTitle>
-            <Button 
-              variant="outline" 
-              size="sm" 
-              onClick={() => setLogs([])}
-              className="ml-auto"
-            >
-              Clear Logs
-            </Button>
-          </CardHeader>
-          <CardContent>
-            <Textarea
-              value={logs.join('\n')}
-              readOnly
-              className="h-96 font-mono text-sm"
-              placeholder="API request and response logs will appear here..."
-            />
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Climate Data Visualization Report */}
-      {climateData && (
-        <div className="mt-8">
-          <Card>
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <div>
-                  <CardTitle className="flex items-center gap-2">
-                    <Cloud className="w-6 h-6" />
-                    Climate Data Visualization Report
-                  </CardTitle>
-                  <p className="text-sm text-gray-600">
-                    Detailed analysis of climate projection data from CBottle local implementation
-                  </p>
-                </div>
-                <Button 
-                  onClick={() => exportToPDF()}
-                  variant="outline"
-                  size="sm"
-                  className="flex items-center gap-2"
-                >
-                  <FileText className="w-4 h-4" />
-                  Save as PDF
-                </Button>
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-8" data-climate-report>
-              
-              {/* Satellite Map Section */}
-              <Card className="border-green-200">
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2 text-green-700">
-                    <MapPin className="w-5 h-5" />
-                    Location Overview
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <div className="aspect-video bg-gray-100 rounded-lg overflow-hidden border-2 border-gray-200">
-                        <iframe
-                          src={`https://maps.google.com/maps?q=${climateData.location?.latitude},${climateData.location?.longitude}&t=k&z=10&ie=UTF8&iwloc=&output=embed`}
-                          width="100%"
-                          height="100%"
-                          style={{ border: 0 }}
-                          allowFullScreen
-                          loading="lazy"
-                          referrerPolicy="no-referrer-when-downgrade"
-                          title="Satellite View"
-                        ></iframe>
-                      </div>
-                      <p className="text-xs text-gray-600 text-center">
-                        Satellite view of {climateData.location?.name}
-                      </p>
-                    </div>
-                    
-                    <div className="space-y-3">
-                      <div className="p-3 bg-green-50 rounded-lg">
-                        <h4 className="font-medium text-green-800 mb-2">Geographic Details</h4>
-                        <div className="space-y-1 text-sm">
-                          <p><strong>Location:</strong> {climateData.location?.name}</p>
-                          <p><strong>Coordinates:</strong> {climateData.location?.latitude?.toFixed(4)}°, {climateData.location?.longitude?.toFixed(4)}°</p>
-                          <p><strong>Climate Zone:</strong> {climateData.location?.climate_zone}</p>
-                          <p><strong>Projection Year:</strong> {climateData.year}</p>
+              <div>
+                <h4 className="text-sm font-medium text-slate-300 mb-3">Monthly Temperature Distribution</h4>
+                <div className="rounded-xl p-4" style={{ background: "hsl(222,47%,10%)", border: "1px solid hsl(217,33%,20%)" }}>
+                  {(() => {
+                    const monthlyTemps = climateData.temperature?.monthly || [];
+                    const minTemp = Math.min(...monthlyTemps);
+                    const maxTemp = Math.max(...monthlyTemps);
+                    const range = maxTemp - minTemp;
+                    const pad = range * 0.1;
+                    const scaleMin = minTemp - pad;
+                    const scaleMax = maxTemp + pad;
+                    const scaleRange = scaleMax - scaleMin;
+                    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+                    return (
+                      <div className="relative" style={{ height: "220px" }}>
+                        <div className="absolute left-0 top-0 bottom-10 w-10 flex flex-col justify-between text-right">
+                          {[scaleMax, scaleMax * 0.75 + scaleMin * 0.25, (scaleMax + scaleMin) / 2, scaleMax * 0.25 + scaleMin * 0.75, scaleMin].map((t, i) => (
+                            <span key={i} className="text-xs leading-none" style={{ color: "hsl(215,20%,45%)" }}>{t.toFixed(0)}°</span>
+                          ))}
                         </div>
-                      </div>
-                      
-                      <div className="p-3 bg-blue-50 rounded-lg">
-                        <h4 className="font-medium text-blue-800 mb-2">Current Climate Classification</h4>
-                        <div className="text-sm text-blue-700">
-                          <p>{climateData.atmospheric_physics?.circulation_pattern}</p>
-                          <p className="mt-1 text-xs">
-                            Regional sensitivity: {climateData.atmospheric_physics?.climate_sensitivity}× global average
-                          </p>
+                        <div className="absolute left-12 right-0 top-0 bottom-10">
+                          <svg className="w-full h-full" viewBox="0 0 100 100" preserveAspectRatio="none">
+                            <defs>
+                              <linearGradient id="tempGrad" x1="0" y1="0" x2="0" y2="1">
+                                <stop offset="0%" stopColor="hsl(0,84%,65%)" stopOpacity="0.3" />
+                                <stop offset="100%" stopColor="hsl(0,84%,65%)" stopOpacity="0" />
+                              </linearGradient>
+                            </defs>
+                            <polygon
+                              fill="url(#tempGrad)"
+                              points={[
+                                ...monthlyTemps.map((t: number, i: number) => `${(i / 11) * 100},${100 - ((t - scaleMin) / scaleRange) * 100}`),
+                                `100,100`, `0,100`
+                              ].join(' ')}
+                            />
+                            <polyline
+                              fill="none" stroke="hsl(0,84%,65%)" strokeWidth="2.5"
+                              vectorEffect="non-scaling-stroke"
+                              points={monthlyTemps.map((t: number, i: number) => `${(i / 11) * 100},${100 - ((t - scaleMin) / scaleRange) * 100}`).join(' ')}
+                            />
+                            {monthlyTemps.map((t: number, i: number) => (
+                              <circle key={i} cx={(i / 11) * 100} cy={100 - ((t - scaleMin) / scaleRange) * 100} r="1.5" fill="hsl(0,84%,65%)" vectorEffect="non-scaling-stroke" />
+                            ))}
+                          </svg>
                         </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Climate Adaptation Analysis */}
-                  <div className="mt-6 space-y-4">
-                    <h4 className="font-medium text-green-700 border-b border-green-200 pb-2">
-                      Climate Adaptation Analysis for {climateData.year}
-                    </h4>
-                    
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                      {/* Challenges */}
-                      {(() => {
-                        const challenges = [];
-                        const tempChange = climateData.temperature_change || 0;
-                        const precipChange = climateData.precipitation_change || 0;
-                        const latitude = climateData.location?.latitude || 0;
-                        const coastal = Math.abs(latitude) < 60 && climateData.sea_level_rise > 0;
-                        const habitScore = climateData.habitability?.score || 0;
-                        
-                        // Temperature-based challenges
-                        if (tempChange > 3) {
-                          challenges.push({
-                            issue: "Extreme Heat Stress",
-                            description: `${tempChange.toFixed(1)}°C warming creates dangerous heat conditions`,
-                            impact: "HIGH",
-                            magnitude: "85-95% increase in heat days"
-                          });
-                        } else if (tempChange > 1.5) {
-                          challenges.push({
-                            issue: "Rising Temperature Discomfort",
-                            description: `${tempChange.toFixed(1)}°C warming affects daily comfort`,
-                            impact: "MEDIUM",
-                            magnitude: "40-60% increase in uncomfortable days"
-                          });
-                        }
-                        
-                        // Precipitation challenges
-                        if (precipChange < -20) {
-                          challenges.push({
-                            issue: "Severe Drought Risk",
-                            description: `${Math.abs(precipChange).toFixed(0)}% precipitation decline threatens water security`,
-                            impact: "HIGH",
-                            magnitude: "60-80% higher drought frequency"
-                          });
-                        } else if (precipChange > 25) {
-                          challenges.push({
-                            issue: "Increased Flood Risk",
-                            description: `${precipChange.toFixed(0)}% more precipitation increases flooding`,
-                            impact: "MEDIUM-HIGH",
-                            magnitude: "50-70% more flood events"
-                          });
-                        }
-                        
-                        // Location-specific challenges
-                        if (latitude > 55) {
-                          challenges.push({
-                            issue: "Arctic Climate Instability",
-                            description: "High-latitude regions face rapid climate shifts",
-                            impact: "MEDIUM",
-                            magnitude: "2-3x faster warming than global average"
-                          });
-                        }
-                        
-                        if (coastal) {
-                          challenges.push({
-                            issue: "Sea Level Rise Impact",
-                            description: `${climateData.sea_level_rise}cm rise threatens coastal infrastructure`,
-                            impact: "MEDIUM-HIGH",
-                            magnitude: "30-50% of coastal areas at risk"
-                          });
-                        }
-                        
-                        // Infrastructure challenges
-                        if (tempChange > 2 || Math.abs(precipChange) > 20) {
-                          challenges.push({
-                            issue: "Infrastructure Adaptation Costs",
-                            description: "Existing infrastructure needs climate-proofing",
-                            impact: "MEDIUM",
-                            magnitude: "15-25% increase in maintenance costs"
-                          });
-                        }
-                        
-                        // Add generic regional challenges if specific ones are limited
-                        if (challenges.length < 2) {
-                          // Western Europe generic challenges
-                          if (latitude > 45 && latitude < 60 && climateData.location?.longitude > -10 && climateData.location?.longitude < 30) {
-                            challenges.push({
-                              issue: "European Climate Transition",
-                              description: "Western Europe faces shifting precipitation patterns and increasing weather variability",
-                              impact: "MEDIUM",
-                              magnitude: "20-30% increase in weather extremes"
-                            });
-                            
-                            challenges.push({
-                              issue: "Urban Heat Island Effect",
-                              description: "Cities experience amplified warming compared to rural areas",
-                              impact: "MEDIUM",
-                              magnitude: "2-5°C additional warming in urban centers"
-                            });
-                            
-                            challenges.push({
-                              issue: "Seasonal Disruption",
-                              description: "Traditional seasonal patterns becoming less predictable",
-                              impact: "LOW-MEDIUM",
-                              magnitude: "15-25% shift in seasonal timing"
-                            });
-                          }
-                          
-                          // General adaptation challenges
-                          challenges.push({
-                            issue: "Economic Adaptation Costs",
-                            description: "Regional economy needs investment in climate resilience",
-                            impact: "MEDIUM",
-                            magnitude: "5-15% of regional GDP for adaptation"
-                          });
-                        }
-                        
-                        const hasHighRiskChallenges = challenges.some(c => c.impact === "HIGH");
-                        const severityLevel = hasHighRiskChallenges ? "high" : challenges.length > 2 ? "medium" : "low";
-                        
-                        const bgColor = severityLevel === "high" ? "bg-red-50" : 
-                                       severityLevel === "medium" ? "bg-yellow-50" : "bg-orange-50";
-                        const borderColor = severityLevel === "high" ? "border-red-200" : 
-                                           severityLevel === "medium" ? "border-yellow-200" : "border-orange-200";
-                        const textColor = severityLevel === "high" ? "text-red-700" : 
-                                         severityLevel === "medium" ? "text-yellow-700" : "text-orange-700";
-                        const leftBorderColor = severityLevel === "high" ? "border-red-400" : 
-                                               severityLevel === "medium" ? "border-yellow-400" : "border-orange-400";
-                        const itemTextColor = severityLevel === "high" ? "text-red-800" : 
-                                             severityLevel === "medium" ? "text-yellow-800" : "text-orange-800";
-                        const descTextColor = severityLevel === "high" ? "text-red-700" : 
-                                             severityLevel === "medium" ? "text-yellow-700" : "text-orange-700";
-                        const magnTextColor = severityLevel === "high" ? "text-red-600" : 
-                                             severityLevel === "medium" ? "text-yellow-600" : "text-orange-600";
-                        
-                        return (
-                          <div className={`${bgColor} border ${borderColor} rounded-lg p-4`}>
-                            <h5 className={`font-medium ${textColor} mb-3 flex items-center gap-2`}>
-                              <AlertTriangle className="w-4 h-4" />
-                              Key Challenges
-                            </h5>
-                            <div className="space-y-3">
-                              {challenges.slice(0, 4).map((challenge, index) => (
-                                <div key={index} className={`border-l-4 ${leftBorderColor} pl-3`}>
-                                  <div className="flex items-center gap-2 mb-1">
-                                    <span className={`font-medium ${itemTextColor} text-sm`}>{challenge.issue}</span>
-                                    <Badge 
-                                      variant={challenge.impact === "HIGH" ? "destructive" : 
-                                             challenge.impact === "MEDIUM-HIGH" ? "destructive" : "secondary"}
-                                      className="text-xs"
-                                    >
-                                      {challenge.impact}
-                                    </Badge>
-                                  </div>
-                                  <p className={`text-xs ${descTextColor} mb-1`}>{challenge.description}</p>
-                                  <p className={`text-xs ${magnTextColor} font-medium`}>Impact: {challenge.magnitude}</p>
-                                </div>
-                              ))}
-                            </div>
-                          </div>
-                        );
-                      })()}
-                      
-                      {/* Opportunities */}
-                      <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-                        <h5 className="font-medium text-green-700 mb-3 flex items-center gap-2">
-                          <CheckCircle className="w-4 h-4" />
-                          Adaptation Opportunities
-                        </h5>
-                        <div className="space-y-3">
-                          {(() => {
-                            const opportunities = [];
-                            const tempChange = climateData.temperature_change || 0;
-                            const precipChange = climateData.precipitation_change || 0;
-                            const latitude = climateData.location?.latitude || 0;
-                            const habitScore = climateData.habitability?.score || 0;
-                            
-                            // Nordic/high-latitude advantages
-                            if (latitude > 55) {
-                              opportunities.push({
-                                advantage: "Climate Refuge Potential",
-                                description: "High-latitude location offers relative climate stability",
-                                impact: "HIGH",
-                                magnitude: "2-3x better than equatorial regions"
-                              });
-                            }
-                            
-                            // Temperature advantages
-                            if (tempChange > 0 && tempChange < 3 && latitude > 50) {
-                              opportunities.push({
-                                advantage: "Extended Growing Season",
-                                description: `${tempChange.toFixed(1)}°C warming extends agricultural potential`,
-                                impact: "MEDIUM",
-                                magnitude: "20-40% longer growing season"
-                              });
-                            }
-                            
-                            // Water resource advantages
-                            if (precipChange > -10 && precipChange < 15) {
-                              opportunities.push({
-                                advantage: "Stable Water Resources",
-                                description: "Minimal precipitation change maintains water security",
-                                impact: "MEDIUM-HIGH", 
-                                magnitude: "90%+ water availability maintained"
-                              });
-                            }
-                            
-                            // Economic opportunities
-                            if (habitScore > 45) {
-                              opportunities.push({
-                                advantage: "Climate Migration Destination",
-                                description: "Above-average habitability attracts climate migrants",
-                                impact: "MEDIUM",
-                                magnitude: "25-40% economic growth potential"
-                              });
-                            }
-                            
-                            // Infrastructure advantages
-                            if (latitude > 50) {
-                              opportunities.push({
-                                advantage: "Reduced Cooling Costs",
-                                description: "Northern location requires less air conditioning",
-                                impact: "LOW-MEDIUM",
-                                magnitude: "30-50% lower cooling energy needs"
-                              });
-                            }
-                            
-                            // Technology opportunities
-                            opportunities.push({
-                              advantage: "Green Technology Leadership",
-                              description: "Early adaptation creates competitive advantage",
-                              impact: "MEDIUM",
-                              magnitude: "15-30% innovation economy growth"
-                            });
-                            
-                            // Renewable energy
-                            if (latitude > 50 || precipChange > 5) {
-                              opportunities.push({
-                                advantage: "Renewable Energy Potential",
-                                description: "Climate patterns favorable for clean energy",
-                                impact: "MEDIUM",
-                                magnitude: "60-80% renewable energy feasibility"
-                              });
-                            }
-                            
-                            return opportunities.slice(0, 4).map((opportunity, index) => (
-                              <div key={index} className="border-l-4 border-green-400 pl-3">
-                                <div className="flex items-center gap-2 mb-1">
-                                  <span className="font-medium text-green-800 text-sm">{opportunity.advantage}</span>
-                                  <Badge 
-                                    variant={opportunity.impact === "HIGH" ? "default" : 
-                                           opportunity.impact === "MEDIUM-HIGH" ? "default" : "secondary"}
-                                    className="text-xs"
-                                  >
-                                    {opportunity.impact}
-                                  </Badge>
-                                </div>
-                                <p className="text-xs text-green-700 mb-1">{opportunity.description}</p>
-                                <p className="text-xs text-green-600 font-medium">Benefit: {opportunity.magnitude}</p>
-                              </div>
-                            ));
-                          })()}
-                        </div>
-                      </div>
-                    </div>
-                    
-                    {/* Comparative Advantage Summary */}
-                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                      <h5 className="font-medium text-blue-700 mb-2">Comparative Global Position</h5>
-                      <p className="text-sm text-blue-800">
-                        {(() => {
-                          const score = climateData.habitability?.score || 0;
-                          const latitude = climateData.location?.latitude || 0;
-                          const tempChange = climateData.temperature_change || 0;
-                          
-                          if (score > 60 && latitude > 50) {
-                            return `This location offers significant climate advantages compared to lower-latitude regions, with ${tempChange > 0 && tempChange < 3 ? 'moderate warming that may extend growing seasons' : 'relatively stable temperature conditions'} and ${latitude > 55 ? 'potential as a climate refuge destination' : 'good adaptation prospects'}.`;
-                          } else if (score > 45) {
-                            return `This location maintains moderate habitability compared to global averages, with ${tempChange < 2 ? 'manageable temperature changes' : 'adaptation challenges that are still addressable'} and opportunities for ${latitude > 50 ? 'northern climate advantages' : 'strategic climate planning'}.`;
-                          } else {
-                            return `This location faces significant climate adaptation challenges compared to more favorable regions, requiring ${tempChange > 3 ? 'major heat management strategies' : 'comprehensive climate resilience planning'} and ${Math.abs(climateData.precipitation_change || 0) > 20 ? 'water resource adaptation' : 'infrastructure hardening'}.`;
-                          }
-                        })()}
-                      </p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-              
-              {/* Location & Basic Info */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <Card className="border-blue-200">
-                  <CardContent className="pt-4">
-                    <div className="flex items-center gap-2 mb-2">
-                      <MapPin className="w-4 h-4 text-blue-600" />
-                      <span className="font-medium text-sm">Location</span>
-                    </div>
-                    <p className="text-lg font-semibold">{climateData.location?.name}</p>
-                    <p className="text-sm text-gray-600">
-                      {climateData.location?.latitude?.toFixed(4)}°, {climateData.location?.longitude?.toFixed(4)}°
-                    </p>
-                    <p className="text-xs text-blue-600 font-medium">
-                      {climateData.location?.climate_zone} Climate Zone
-                    </p>
-                  </CardContent>
-                </Card>
-                
-                <Card className="border-green-200">
-                  <CardContent className="pt-4">
-                    <div className="flex items-center gap-2 mb-2">
-                      <TrendingUp className="w-4 h-4 text-green-600" />
-                      <span className="font-medium text-sm">Target Year</span>
-                    </div>
-                    <p className="text-lg font-semibold">{climateData.year}</p>
-                    <p className="text-sm text-gray-600">
-                      {climateData.year - new Date().getFullYear()} years from now
-                    </p>
-                  </CardContent>
-                </Card>
-
-                <Card className="border-purple-200">
-                  <CardContent className="pt-4">
-                    <div className="flex items-center gap-2 mb-2">
-                      <AlertTriangle className="w-4 h-4 text-purple-600" />
-                      <span className="font-medium text-sm">Model</span>
-                    </div>
-                    <p className="text-sm font-semibold">{climateData.metadata?.model}</p>
-                    <p className="text-sm text-gray-600">
-                      Resolution: {climateData.metadata?.resolution}
-                    </p>
-                  </CardContent>
-                </Card>
-              </div>
-
-              {/* Temperature Analysis */}
-              <Card className="border-red-200">
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2 text-red-700">
-                    <Thermometer className="w-5 h-5" />
-                    Temperature Analysis
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                    <div className="text-center p-3 bg-red-50 rounded-lg">
-                      <p className="text-sm text-gray-600">Annual Mean<sup>[1]</sup></p>
-                      <p className="text-xl font-bold text-red-700">
-                        {climateData.temperature?.annual_mean?.toFixed(1)}°C
-                      </p>
-                    </div>
-                    <div className="text-center p-3 bg-orange-50 rounded-lg">
-                      <p className="text-sm text-gray-600">Temperature Change<sup>[2]</sup></p>
-                      <p className="text-xl font-bold text-orange-700">
-                        +{climateData.temperature?.anomaly?.toFixed(1)}°C
-                      </p>
-                    </div>
-                    <div className="text-center p-3 bg-blue-50 rounded-lg">
-                      <p className="text-sm text-gray-600">Minimum<sup>[3]</sup></p>
-                      <p className="text-xl font-bold text-blue-700">
-                        {climateData.temperature?.min?.toFixed(1)}°C
-                      </p>
-                    </div>
-                    <div className="text-center p-3 bg-red-50 rounded-lg">
-                      <p className="text-sm text-gray-600">Maximum<sup>[3]</sup></p>
-                      <p className="text-xl font-bold text-red-700">
-                        {climateData.temperature?.max?.toFixed(1)}°C
-                      </p>
-                    </div>
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <h4 className="font-medium">Temperature Interpretation:</h4>
-                    <ul className="text-sm space-y-1 text-gray-700">
-                      <li>• <strong>Annual Mean:</strong> Average temperature across all months for {climateData.year}</li>
-                      <li>• <strong>Temperature Change:</strong> Warming compared to current climate baseline</li>
-                      <li>• <strong>Range:</strong> Seasonal temperature variation from coldest to warmest month</li>
-                      <li>• <strong>Context:</strong> Arctic regions show amplified warming; tropical areas have smaller changes</li>
-                    </ul>
-                  </div>
-
-                  {/* Monthly Temperature Line Chart with Baseline Comparison */}
-                  <div className="space-y-2">
-                    <h4 className="font-medium">Monthly Temperature Distribution</h4>
-                    <div className="relative bg-gray-50 rounded-lg p-4 h-64">
-                      {(() => {
-                        const monthlyTemps = climateData.temperature?.monthly || [];
-                        const tempChange = climateData.temperature_change || 0;
-                        
-                        // Calculate scale for projected temperatures only
-                        const minTemp = Math.min(...monthlyTemps);
-                        const maxTemp = Math.max(...monthlyTemps);
-                        const tempRange = maxTemp - minTemp;
-                        const padding = tempRange * 0.1;
-                        const scaleMin = minTemp - padding;
-                        const scaleMax = maxTemp + padding;
-                        const scaleRange = scaleMax - scaleMin;
-                        
-                        // Calculate 0°C position if it's in range
-                        const zeroPosition = (0 >= scaleMin && 0 <= scaleMax) ? 
-                          100 - ((0 - scaleMin) / scaleRange) * 100 : null;
-                        
-                        // Generate scale labels
-                        const scaleLabels = [];
-                        const numLabels = 5;
-                        for (let i = 0; i < numLabels; i++) {
-                          const temp = scaleMax - (i * scaleRange / (numLabels - 1));
-                          scaleLabels.push(temp);
-                        }
-                        
-                        return (
-                          <>
-                            {/* Temperature scale */}
-                            <div className="absolute left-2 top-4 bottom-16 w-12 flex flex-col justify-between items-end text-xs text-gray-500">
-                              {scaleLabels.map((temp, index) => (
-                                <span 
-                                  key={index} 
-                                  className={`leading-none ${Math.abs(temp) < 0.5 ? 'font-bold text-gray-700' : ''}`}
-                                >
-                                  {temp.toFixed(0)}°C
-                                </span>
-                              ))}
-                            </div>
-                            
-                            {/* Chart area */}
-                            <div className="absolute left-14 right-4 top-4 bottom-16">
-                              {/* 0°C reference line (only if 0°C is visible) */}
-                              {zeroPosition !== null && (
-                                <div 
-                                  className="absolute left-0 right-0 h-0.5 bg-gray-400 z-10"
-                                  style={{ top: `${zeroPosition}%` }}
-                                ></div>
-                              )}
-                              
-                              {/* Temperature line chart */}
-                              <svg className="w-full h-full" viewBox="0 0 100 100" preserveAspectRatio="none">
-                                <polyline
-                                  fill="none"
-                                  stroke="#dc2626"
-                                  strokeWidth="3"
-                                  vectorEffect="non-scaling-stroke"
-                                  points={monthlyTemps.map((temp: number, index: number) => {
-                                    const x = (index / 11) * 100;
-                                    const y = 100 - ((temp - scaleMin) / scaleRange) * 100;
-                                    return `${x},${y}`;
-                                  }).join(' ')}
-                                />
-                              </svg>
-                            </div>
-                            
-
-                            
-                            {/* Month labels with temperature values */}
-                            <div className="absolute bottom-0 left-14 right-4 h-16">
-                              <div className="relative w-full h-full">
-                                {['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'].map((month, index) => {
-                                  const projectedTemp = monthlyTemps[index];
-                                  
-                                  return (
-                                    <div 
-                                      key={index} 
-                                      className="absolute text-xs text-center transform -translate-x-1/2"
-                                      style={{ left: `${(index / 11) * 100}%` }}
-                                    >
-                                      <div className="text-gray-600 font-medium">{month}</div>
-                                      <div className={`font-mono text-xs font-bold ${projectedTemp >= 0 ? 'text-red-600' : 'text-blue-600'}`}>
-                                        {projectedTemp?.toFixed(1)}°C<sup>[3]</sup>
-                                      </div>
-                                    </div>
-                                  );
-                                })}
-                              </div>
-                            </div>
-                          </>
-                        );
-                      })()}
-                    </div>
-                    
-                    <div className="mt-2 p-2 bg-red-50 rounded text-xs">
-                      <p><strong>Temperature Range:</strong> {climateData.temperature?.min?.toFixed(1)}°C<sup>[3]</sup> to {climateData.temperature?.max?.toFixed(1)}°C<sup>[3]</sup> 
-                      (seasonal amplitude: {climateData.temperature?.seasonal_amplitude?.toFixed(1)}°C<sup>[12]</sup>)</p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* Precipitation Analysis */}
-              <Card className="border-blue-200">
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2 text-blue-700">
-                    <Droplets className="w-5 h-5" />
-                    Precipitation Analysis
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                    <div className="text-center p-3 bg-blue-50 rounded-lg">
-                      <p className="text-sm text-gray-600">Annual Total<sup>[4]</sup></p>
-                      <p className="text-xl font-bold text-blue-700">
-                        {climateData.precipitation?.annual_total?.toFixed(0)} mm
-                      </p>
-                      <p className="text-xs text-gray-500 mt-1">
-                        {(() => {
-                          const annual = climateData.precipitation?.annual_total || 0;
-                          if (annual > 1200) return "Very wet (above global average)";
-                          if (annual > 800) return "Wet (above temperate average)";
-                          if (annual > 500) return "Moderate precipitation";
-                          if (annual > 200) return "Dry (below average)";
-                          return "Very dry (arid conditions)";
-                        })()}
-                      </p>
-                    </div>
-                    <div className="text-center p-3 bg-green-50 rounded-lg">
-                      <p className="text-sm text-gray-600">Change<sup>[5]</sup></p>
-                      <p className="text-xl font-bold text-green-700">
-                        {climateData.precipitation?.anomaly_percent > 0 ? '+' : ''}
-                        {climateData.precipitation?.anomaly_percent?.toFixed(1)}%
-                      </p>
-                    </div>
-                    <div className="text-center p-3 bg-amber-50 rounded-lg">
-                      <p className="text-sm text-gray-600">Wettest Month<sup>[6]</sup></p>
-                      <p className="text-xl font-bold text-amber-700">
-                        {climateData.precipitation?.wettest_month?.toFixed(0)} mm
-                      </p>
-                    </div>
-                    <div className="text-center p-3 bg-yellow-50 rounded-lg">
-                      <p className="text-sm text-gray-600">Driest Month<sup>[6]</sup></p>
-                      <p className="text-xl font-bold text-yellow-700">
-                        {climateData.precipitation?.driest_month?.toFixed(0)} mm
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="space-y-2">
-                    <h4 className="font-medium">Precipitation Interpretation:</h4>
-                    <ul className="text-sm space-y-1 text-gray-700">
-                      <li>• <strong>Annual Total:</strong> Total rainfall and snowfall expected in {climateData.year}</li>
-                      <li>• <strong>Change:</strong> Percentage increase/decrease from current climate patterns</li>
-                      <li>• <strong>Seasonal Variation:</strong> Difference between wettest and driest months</li>
-                      <li>• <strong>Global Context:</strong> High latitudes typically get wetter; subtropics may get drier</li>
-                    </ul>
-                  </div>
-
-                  {/* Monthly Precipitation Distribution */}
-                  <div className="space-y-4">
-                    <h4 className="font-medium">Monthly Precipitation Distribution</h4>
-                    <div className="relative">
-                      <div className="grid grid-cols-12 gap-1 text-xs mb-8 mt-4">
-                        {climateData.precipitation?.monthly?.map((precip: number, index: number) => {
-                          const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-                          
-                          // Use maximum for scaling
-                          const maxPrecip = Math.max(...climateData.precipitation.monthly);
-                          const projectedHeight = Math.max(8, (precip / maxPrecip) * 96);
-                          
-                          return (
-                            <div key={index} className="text-center flex flex-col h-40">
-                              {/* Precipitation bar */}
-                              <div className="flex items-end justify-center mb-2 h-24">
-                                <div 
-                                  className="bg-gradient-to-t from-blue-600 to-blue-300 rounded-t w-8"
-                                  style={{ height: `${projectedHeight}px` }}
-                                  title={`${months[index]} Projected: ${precip.toFixed(1)}mm`}
-                                ></div>
-                              </div>
-                              
-                              <div className="text-xs text-gray-600 font-medium mb-1">{months[index]}</div>
-                              <div className="text-xs font-mono text-blue-700 font-bold">
-                                {precip.toFixed(0)}mm<sup>[6]</sup>
-                              </div>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </div>
-                    
-                    <div className="mt-6 p-3 bg-blue-50 rounded text-xs">
-                      <p><strong>Seasonal Pattern:</strong> Wettest month is {climateData.precipitation?.wettest_month_name} 
-                      ({climateData.precipitation?.wettest_month?.toFixed(0)}mm<sup>[6]</sup>), driest is {climateData.precipitation?.driest_month_name} 
-                      ({climateData.precipitation?.driest_month?.toFixed(0)}mm<sup>[6]</sup>)</p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* Extreme Weather & Risks */}
-              <Card className="border-orange-200">
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2 text-orange-700">
-                    <AlertTriangle className="w-5 h-5" />
-                    Extreme Weather & Risk Assessment
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                    <div className="text-center p-3 bg-red-50 rounded-lg border border-red-200">
-                      <p className="text-sm text-gray-600">Heat Stress Days<sup>[8]</sup></p>
-                      <p className="text-2xl font-bold text-red-700">
-                        {climateData.extremes?.heat_stress_days || 0}
-                      </p>
-                      <p className="text-xs text-gray-500">days {'>'} 35°C</p>
-                    </div>
-                    
-                    <div className="text-center p-3 bg-yellow-50 rounded-lg border border-yellow-200">
-                      <p className="text-sm text-gray-600">Drought Risk<sup>[9]</sup></p>
-                      <div className="mt-1 mb-2">
-                        <Progress value={(climateData.extremes?.drought_risk || 0) * 100} className="h-2" />
-                      </div>
-                      <p className="text-sm font-bold text-yellow-700">
-                        {((climateData.extremes?.drought_risk || 0) * 100).toFixed(0)}% Risk
-                      </p>
-                    </div>
-                    
-                    <div className="text-center p-3 bg-blue-50 rounded-lg border border-blue-200">
-                      <p className="text-sm text-gray-600">Flood Risk<sup>[10]</sup></p>
-                      <div className="mt-1 mb-2">
-                        <Progress value={(climateData.extremes?.flood_risk || 0) * 100} className="h-2" />
-                      </div>
-                      <p className="text-sm font-bold text-blue-700">
-                        {((climateData.extremes?.flood_risk || 0) * 100).toFixed(0)}% Risk
-                      </p>
-                    </div>
-                    
-                    <div className="text-center p-3 bg-cyan-50 rounded-lg border border-cyan-200">
-                      <p className="text-sm text-gray-600">Sea Level Rise<sup>[11]</sup></p>
-                      <p className="text-2xl font-bold text-cyan-700">
-                        {climateData.extremes?.sea_level_rise_cm?.toFixed(1)} cm
-                      </p>
-                      <p className="text-xs text-gray-500">by {climateData.year}</p>
-                    </div>
-                  </div>
-
-                  <div className="space-y-2">
-                    <h4 className="font-medium">Risk Metrics Explanation:</h4>
-                    <ul className="text-sm space-y-1 text-gray-700">
-                      <li>• <strong>Heat Stress Days:</strong> Number of days exceeding 35°C, dangerous for human health and agriculture</li>
-                      <li>• <strong>Drought Risk (0-100%):</strong> Probability of water scarcity based on precipitation deficits</li>
-                      <li>• <strong>Flood Risk (0-100%):</strong> Likelihood of flooding from extreme precipitation events</li>
-                      <li>• <strong>Sea Level Rise:</strong> Projected increase in sea level affecting coastal areas</li>
-                    </ul>
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* Habitability Assessment */}
-              <Card className="border-green-200">
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2 text-green-700">
-                    <Waves className="w-5 h-5" />
-                    Habitability Assessment
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="text-center p-6 bg-gradient-to-r from-green-50 to-blue-50 rounded-lg border">
-                    <div className="mb-4">
-                      <p className="text-lg text-gray-600">Overall Habitability Score</p>
-                      <div className="flex items-center justify-center gap-4 mt-2">
-                        <div className="text-4xl font-bold text-green-700">
-                          {climateData.habitability?.score?.toFixed(0)}/100<sup>[7]</sup>
-                        </div>
-                        <Badge 
-                          variant={
-                            climateData.habitability?.score >= 80 ? "default" :
-                            climateData.habitability?.score >= 60 ? "secondary" :
-                            climateData.habitability?.score >= 40 ? "outline" : "destructive"
-                          }
-                          className="text-lg px-3 py-1"
-                        >
-                          {climateData.habitability?.category}
-                        </Badge>
-                      </div>
-                      
-                      {/* Global Ranking Display */}
-                      <GlobalRankingDisplay 
-                        currentScore={climateData.habitability?.score || 0}
-                        targetYear={climateData.year}
-                        latitude={climateData.location?.latitude || 0}
-                        longitude={climateData.location?.longitude || 0}
-                      />
-                    </div>
-                    
-                    <Progress 
-                      value={climateData.habitability?.score || 0} 
-                      className="h-3 mb-2"
-                    />
-                    
-                    <p className="text-sm text-gray-600 mt-2">
-                      Based on temperature comfort, precipitation adequacy, and extreme weather risks
-                    </p>
-                  </div>
-
-                  <div className="space-y-2">
-                    <h4 className="font-medium">Habitability Scale Interpretation:</h4>
-                    <div className="grid grid-cols-1 md:grid-cols-5 gap-2 text-xs">
-                      <div className="p-2 bg-green-100 rounded text-center border border-green-300">
-                        <div className="font-bold text-green-800">80-100</div>
-                        <div className="text-green-700">Excellent</div>
-                      </div>
-                      <div className="p-2 bg-blue-100 rounded text-center border border-blue-300">
-                        <div className="font-bold text-blue-800">60-79</div>
-                        <div className="text-blue-700">Good</div>
-                      </div>
-                      <div className="p-2 bg-yellow-100 rounded text-center border border-yellow-300">
-                        <div className="font-bold text-yellow-800">40-59</div>
-                        <div className="text-yellow-700">Fair</div>
-                      </div>
-                      <div className="p-2 bg-orange-100 rounded text-center border border-orange-300">
-                        <div className="font-bold text-orange-800">20-39</div>
-                        <div className="text-orange-700">Poor</div>
-                      </div>
-                      <div className="p-2 bg-red-100 rounded text-center border border-red-300">
-                        <div className="font-bold text-red-800">0-19</div>
-                        <div className="text-red-700">Severe</div>
-                      </div>
-                    </div>
-                    
-                    <ul className="text-sm space-y-1 text-gray-700 mt-3">
-                      <li>• <strong>Excellent (80-100):</strong> Optimal climate conditions for human settlement</li>
-                      <li>• <strong>Good (60-79):</strong> Comfortable living with minor climate challenges</li>
-                      <li>• <strong>Fair (40-59):</strong> Manageable conditions with adaptation measures needed</li>
-                      <li>• <strong>Poor (20-39):</strong> Significant climate stress requiring major adaptations</li>
-                      <li>• <strong>Severe (0-19):</strong> Extreme conditions challenging for human habitation</li>
-                    </ul>
-                  </div>
-
-                  {/* Habitability Waterfall Chart - Last in this section */}
-                  {climateData.habitability?.breakdown && (
-                    <div className="space-y-3 mt-6">
-                      <h4 className="font-medium text-purple-700">Habitability Score Breakdown</h4>
-                      <div className="bg-white p-4 border rounded-lg">
-                        <div className="relative">
-                          {/* Create waterfall chart data */}
-                          {(() => {
-                            const breakdown = climateData.habitability.breakdown;
-                            const components = [
-                              { name: 'Temperature Comfort', value: breakdown.temperature_comfort, color: 'bg-red-500' },
-                              { name: 'Precipitation Adequacy', value: breakdown.precipitation_adequacy, color: 'bg-blue-500' },
-                              { name: 'Infrastructure Adaptation', value: breakdown.infrastructure_adaptation, color: 'bg-green-500' },
-                              { name: 'Heat Stress Penalty', value: -breakdown.heat_stress_penalty, color: 'bg-orange-500' },
-                              { name: 'Drought Risk Penalty', value: -breakdown.drought_risk_penalty, color: 'bg-yellow-600' },
-                              { name: 'Flood Risk Penalty', value: -breakdown.flood_risk_penalty, color: 'bg-cyan-600' },
-
-                            ];
-                            
-                            let runningTotal = 0;
-                            const chartData = components.map((comp, index) => {
-                              const startValue = runningTotal;
-                              runningTotal += comp.value;
-                              return {
-                                ...comp,
-                                startValue,
-                                endValue: runningTotal,
-                                isPositive: comp.value >= 0
-                              };
-                            });
-                            
-                            const finalScore = climateData.habitability.score;
-                            const maxValue = Math.max(100, ...chartData.map(d => Math.max(d.startValue, d.endValue)));
-                            
-                            return (
-                              <div className="space-y-4">
-                                {/* Chart container */}
-                                <div className="relative h-80 flex items-end justify-between px-4">
-                                  {/* Zero line */}
-                                  <div className="absolute bottom-20 left-0 right-0 h-px bg-gray-400"></div>
-                                  <div className="absolute bottom-18 left-2 text-xs text-gray-500">0</div>
-                                  
-                                  {/* Bars */}
-                                  {chartData.map((item, index) => {
-                                    const barHeight = Math.abs(item.value) / maxValue * 200; // 200px max height
-                                    
-                                    // For negative values, bars should extend downward from their start position
-                                    let bottomOffset, barPosition;
-                                    if (item.value >= 0) {
-                                      // Positive values: bar sits on top of start value
-                                      bottomOffset = (item.startValue / maxValue * 200) + 80;
-                                      barPosition = bottomOffset;
-                                    } else {
-                                      // Negative values: bar extends downward from start value
-                                      bottomOffset = (item.startValue / maxValue * 200) + 80;
-                                      barPosition = bottomOffset - barHeight;
-                                    }
-                                    
-                                    return (
-                                      <div key={index} className="relative flex flex-col items-center" style={{ width: '13%' }}>
-                                        {/* Bar */}
-                                        <div
-                                          className={`${item.color} relative border border-gray-300 transition-all duration-300 hover:opacity-90`}
-                                          style={{
-                                            height: `${barHeight}px`,
-                                            width: '100%',
-                                            position: 'absolute',
-                                            bottom: `${barPosition}px`,
-                                            zIndex: 10
-                                          }}
-                                        ></div>
-                                        
-                                        {/* Value label */}
-                                        <div 
-                                          className="absolute text-xs font-bold text-gray-800 text-center bg-white px-1 rounded"
-                                          style={{
-                                            bottom: `${item.value >= 0 ? barPosition + barHeight + 5 : barPosition - 15}px`,
-                                            zIndex: 15
-                                          }}
-                                        >
-                                          {item.value >= 0 ? '+' : ''}{item.value.toFixed(1)}
-                                        </div>
-                                        
-                                        {/* Component name */}
-                                        <div className="absolute bottom-2 text-xs text-center font-medium text-gray-700 px-1 leading-tight bg-white rounded">
-                                          {item.name}
-                                        </div>
-                                      </div>
-                                    );
-                                  })}
-                                  
-                                  {/* Final score bar */}
-                                  <div className="relative flex flex-col items-center" style={{ width: '13%' }}>
-                                    <div
-                                      className="bg-purple-600 relative border border-gray-300"
-                                      style={{
-                                        height: `${(finalScore / maxValue) * 200}px`,
-                                        width: '100%',
-                                        position: 'absolute',
-                                        bottom: '80px',
-                                        zIndex: 10
-                                      }}
-                                    ></div>
-                                    
-                                    {/* Final score label above bar */}
-                                    <div 
-                                      className="absolute text-xs font-bold text-purple-800 text-center"
-                                      style={{
-                                        bottom: `${80 + (finalScore / maxValue) * 200 + 5}px`,
-                                        zIndex: 15
-                                      }}
-                                    >
-                                      {finalScore.toFixed(0)}
-                                    </div>
-                                    
-                                    <div className="absolute bottom-12 text-xs text-center font-bold text-purple-700 px-1">
-                                      Final Score
-                                    </div>
-                                  </div>
-                                </div>
-                                
-                                {/* Legend - completely isolated from chart */}
-                                <div className="text-xs text-gray-600 bg-gray-50 p-3 rounded-lg border-t-2 border-gray-200 relative" style={{ zIndex: 1 }}>
-                                  <p className="font-medium mb-2">How the habitability score is calculated:</p>
-                                  <div className="grid grid-cols-2 gap-2 relative bg-gray-50">
-                                    <div>• <span className="text-red-600">Temperature Comfort<sup>[13]</sup>:</span> Optimal range assessment</div>
-                                    <div>• <span className="text-blue-600">Precipitation<sup>[14]</sup>:</span> Water availability adequacy</div>
-                                    <div>• <span className="text-green-600">Infrastructure<sup>[15]</sup>:</span> Adaptation capacity</div>
-                                    <div>• <span className="text-orange-600">Heat Stress<sup>[16]</sup>:</span> Extreme temperature penalty</div>
-                                    <div>• <span className="text-yellow-700">Drought Risk<sup>[17]</sup>:</span> Water scarcity penalty</div>
-                                    <div>• <span className="text-cyan-700">Flood Risk<sup>[18]</sup>:</span> Extreme precipitation penalty</div>
-                                  </div>
-                                </div>
-                              </div>
-                            );
-                          })()}
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-
-              {/* Climate Time Series Analysis */}
-              {climateData.time_series && (
-                <Card className="border-indigo-200">
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2 text-indigo-700">
-                      <TrendingUp className="w-5 h-5" />
-                      Climate Time Series & Trends
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-6">
-                    {/* Monthly Temperature Table */}
-                    <div className="space-y-3">
-                      <h4 className="font-medium text-red-700">Monthly Temperature Projections (°C)<sup>[3]</sup></h4>
-                      <div className="text-xs text-red-600 mb-2">
-                        Baseline: {climateData.time_series.temperature_baseline?.toFixed(1)}°C<sup>[1]</sup>
-                      </div>
-                      <div className="overflow-x-auto">
-                        <table className="w-full text-xs border-collapse border border-red-200">
-                          <thead>
-                            <tr className="bg-red-50">
-                              <th className="border border-red-200 px-2 py-1 text-left font-medium">Year</th>
-                              {['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'].map((month) => (
-                                <th key={month} className="border border-red-200 px-1 py-1 text-center font-medium">{month}</th>
-                              ))}
-                              <th className="border border-red-200 px-2 py-1 text-center font-medium">Annual</th>
-                              <th className="border border-red-200 px-2 py-1 text-center font-medium">Change</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {climateData.time_series.years?.map((year: number, index: number) => {
-                              const monthlyTemps = climateData.time_series.monthly_temperature_series?.[index] || [];
-                              const annualTemp = climateData.time_series.temperature_trend?.[index];
-                              const tempDiff = climateData.time_series.temperature_differences?.[index];
-                              const isTarget = year === climateData.year;
-                              const diffText = tempDiff >= 0 ? `+${tempDiff?.toFixed(1)}` : `${tempDiff?.toFixed(1)}`;
-                              const diffColor = tempDiff >= 0 ? 'text-red-600' : 'text-blue-600';
-                              
-                              return (
-                                <tr key={year} className={`${isTarget ? 'bg-red-50 font-semibold' : 'hover:bg-gray-50'}`}>
-                                  <td className="border border-red-200 px-2 py-1 font-medium">{year}</td>
-                                  {monthlyTemps.map((temp: number, monthIndex: number) => (
-                                    <td key={monthIndex} className={`border border-red-200 px-1 py-1 text-center font-mono ${temp >= 0 ? 'text-red-600' : 'text-blue-600'}`}>
-                                      {temp?.toFixed(1)}<sup>[3]</sup>
-                                    </td>
-                                  ))}
-                                  <td className="border border-red-200 px-2 py-1 text-center font-mono font-semibold">
-                                    {annualTemp?.toFixed(1)}<sup>[1]</sup>
-                                  </td>
-                                  <td className={`border border-red-200 px-2 py-1 text-center font-mono font-semibold ${diffColor}`}>
-                                    {diffText}°C<sup>[2]</sup>
-                                  </td>
-                                </tr>
-                              );
-                            })}
-                          </tbody>
-                        </table>
-                      </div>
-                    </div>
-
-                    {/* Monthly Precipitation Table */}
-                    <div className="space-y-3">
-                      <h4 className="font-medium text-blue-700">Monthly Precipitation Projections (mm)<sup>[6]</sup></h4>
-                      <div className="text-xs text-blue-600 mb-2">
-                        Baseline: {climateData.time_series.precipitation_baseline?.toFixed(0)}mm<sup>[4]</sup>
-                      </div>
-                      <div className="overflow-x-auto">
-                        <table className="w-full text-xs border-collapse border border-blue-200">
-                          <thead>
-                            <tr className="bg-blue-50">
-                              <th className="border border-blue-200 px-2 py-1 text-left font-medium">Year</th>
-                              {['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'].map((month) => (
-                                <th key={month} className="border border-blue-200 px-1 py-1 text-center font-medium">{month}</th>
-                              ))}
-                              <th className="border border-blue-200 px-2 py-1 text-center font-medium">Annual</th>
-                              <th className="border border-blue-200 px-2 py-1 text-center font-medium">Change</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {climateData.time_series.years?.map((year: number, index: number) => {
-                              const monthlyPrecip = climateData.time_series.monthly_precipitation_series?.[index] || [];
-                              const annualPrecip = climateData.time_series.precipitation_trend?.[index];
-                              const precipDiff = climateData.time_series.precipitation_differences?.[index];
-                              const isTarget = year === climateData.year;
-                              const diffText = precipDiff >= 0 ? `+${precipDiff?.toFixed(0)}` : `${precipDiff?.toFixed(0)}`;
-                              const diffColor = precipDiff >= 0 ? 'text-green-600' : 'text-orange-600';
-                              
-                              return (
-                                <tr key={year} className={`${isTarget ? 'bg-blue-50 font-semibold' : 'hover:bg-gray-50'}`}>
-                                  <td className="border border-blue-200 px-2 py-1 font-medium">{year}</td>
-                                  {monthlyPrecip.map((precip: number, monthIndex: number) => (
-                                    <td key={monthIndex} className="border border-blue-200 px-1 py-1 text-center font-mono text-blue-600">
-                                      {precip?.toFixed(0)}<sup>[6]</sup>
-                                    </td>
-                                  ))}
-                                  <td className="border border-blue-200 px-2 py-1 text-center font-mono font-semibold">
-                                    {annualPrecip?.toFixed(0)}<sup>[4]</sup>
-                                  </td>
-                                  <td className={`border border-blue-200 px-2 py-1 text-center font-mono font-semibold ${diffColor}`}>
-                                    {diffText}mm<sup>[5]</sup>
-                                  </td>
-                                </tr>
-                              );
-                            })}
-                          </tbody>
-                        </table>
-                      </div>
-                    </div>
-
-                    {/* Habitability Trend - Bar Chart with Year-over-Year Changes */}
-                    <div className="space-y-3">
-                      <h4 className="font-medium text-green-700">Habitability Trend & Year-over-Year Changes</h4>
-                      <div className="space-y-2">
-                        {climateData.time_series.years?.map((year: number, index: number) => {
-                          const habit = climateData.time_series.habitability_trend[index];
-                          const isTarget = year === climateData.year;
-                          const barWidth = (habit / 100) * 100; // Convert to percentage width
-                          
-                          // Calculate year-over-year change
-                          const prevHabit = index > 0 ? climateData.time_series.habitability_trend[index - 1] : null;
-                          const habitChange = prevHabit ? habit - prevHabit : 0;
-                          
-                          return (
-                            <div key={year} className={`p-3 rounded-lg border ${isTarget ? 'bg-green-50 border-green-200' : 'bg-gray-50 border-gray-200'}`}>
-                              <div className="flex items-center gap-3 mb-2">
-                                <div className="w-12 text-xs font-medium text-gray-700">{year}</div>
-                                <div className="flex-1 relative h-6 bg-gray-200 rounded overflow-hidden">
-                                  <div 
-                                    className={`h-full rounded transition-all duration-300 ${
-                                      habit >= 80 ? 'bg-green-500' :
-                                      habit >= 60 ? 'bg-blue-500' :
-                                      habit >= 40 ? 'bg-yellow-500' :
-                                      habit >= 20 ? 'bg-orange-500' : 'bg-red-500'
-                                    }`}
-                                    style={{ width: `${barWidth}%` }}
-                                  ></div>
-                                  <div className="absolute inset-0 flex items-center justify-center">
-                                    <span className={`text-xs font-bold ${barWidth > 50 ? 'text-white' : 'text-gray-800'}`}>
-                                      {habit?.toFixed(1)}/100
-                                    </span>
-                                  </div>
-                                </div>
-                                <div className="w-16 text-xs text-gray-600">
-                                  {habit >= 80 ? 'Excellent' :
-                                   habit >= 60 ? 'Good' :
-                                   habit >= 40 ? 'Fair' :
-                                   habit >= 20 ? 'Poor' : 'Severe'}
-                                </div>
-                                {/* Always show change column for consistent sizing */}
-                                <div className={`w-20 text-xs font-medium text-right ${
-                                  habitChange > 0 ? 'text-green-600' : 
-                                  habitChange < 0 ? 'text-red-600' : 'text-gray-600'
-                                }`}>
-                                  {habitChange === 0 ? '±0.0' : 
-                                   habitChange > 0 ? `+${habitChange.toFixed(1)}` : 
-                                   `${habitChange.toFixed(1)}`}
-                                </div>
-                              </div>
-                              
-                              {/* Show breakdown changes for all years with changes */}
-                              {Math.abs(habitChange) > 0.1 && (
-                                <div className="mt-2 p-2 bg-white rounded border border-gray-200">
-                                  <div className="text-xs font-medium text-gray-700 mb-1">
-                                    Habitability change breakdown since {year - 5}:
-                                  </div>
-                                  <div className="grid grid-cols-2 gap-1 text-xs">
-                                    <div className={`${habitChange > 0 ? 'text-green-600' : habitChange < 0 ? 'text-red-600' : 'text-gray-600'}`}>
-                                      • Temperature comfort: {habitChange === 0 ? '±0.0' : 
-                                        habitChange > 0 ? `+${(habitChange * 0.4).toFixed(1)}` : 
-                                        `${(habitChange * 0.4).toFixed(1)}`}
-                                    </div>
-                                    <div className={`${habitChange > 0 ? 'text-green-600' : habitChange < 0 ? 'text-red-600' : 'text-gray-600'}`}>
-                                      • Precipitation adequacy: {habitChange === 0 ? '±0.0' : 
-                                        habitChange > 0 ? `+${(habitChange * 0.3).toFixed(1)}` : 
-                                        `${(habitChange * 0.3).toFixed(1)}`}
-                                    </div>
-                                    <div className={`${habitChange < 0 ? 'text-orange-600' : 'text-gray-600'}`}>
-                                      • Heat stress penalty: {habitChange === 0 ? '±0.0' : 
-                                        habitChange < 0 ? `+${Math.abs(habitChange * 0.2).toFixed(1)}` : 
-                                        `-${Math.abs(habitChange * 0.2).toFixed(1)}`}
-                                    </div>
-                                    <div className={`${habitChange < 0 ? 'text-yellow-600' : 'text-gray-600'}`}>
-                                      • Drought/flood risks: {habitChange === 0 ? '±0.0' : 
-                                        habitChange < 0 ? `+${Math.abs(habitChange * 0.1).toFixed(1)}` : 
-                                        `-${Math.abs(habitChange * 0.1).toFixed(1)}`}
-                                    </div>
-                                  </div>
-                                </div>
-                              )}
-                            </div>
-                          );
-                        })}
-                      </div>
-                      
-                      {/* Explanation note */}
-                      <div className="text-xs text-gray-600 bg-blue-50 p-2 rounded">
-                        <strong>Note:</strong> The target year habitability score ({climateData.habitability?.score?.toFixed(1)}) 
-                        matches the trend chart value for {climateData.year}. Year-over-year changes show how climate factors 
-                        contribute to habitability shifts over time.
-                      </div>
-                    </div>
-
-                    <div className="mt-4 p-3 bg-indigo-50 rounded-lg text-sm">
-                      <h4 className="font-medium text-indigo-800 mb-2">Time Series Interpretation:</h4>
-                      <ul className="text-indigo-700 space-y-1 text-xs">
-                        <li>• <strong>Temperature Values:</strong> Absolute annual mean temperatures showing gradual warming from baseline</li>
-                        <li>• <strong>Precipitation Values:</strong> Absolute annual totals with slight increases over time</li>
-                        <li>• <strong>Difference Indicators:</strong> Show change from current baseline conditions (+ = increase, - = decrease)</li>
-                        <li>• <strong>Habitability Score:</strong> Realistic assessment adjusted for northern climate conditions (25-100 scale)</li>
-                        <li>• <strong>Target Year:</strong> Highlighted values represent projected conditions in {climateData.year}</li>
-                      </ul>
-                    </div>
-                  </CardContent>
-                </Card>
-              )}
-
-              {/* Atmospheric Physics & Climate Dynamics */}
-              {climateData.atmospheric_physics && (
-                <Card className="border-purple-200">
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2 text-purple-700">
-                      <Cloud className="w-5 h-5" />
-                      Atmospheric Physics & Climate Dynamics
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      
-                      <div className="space-y-3">
-                        <div className="p-3 bg-purple-50 rounded-lg">
-                          <h4 className="font-medium text-purple-800 mb-2">Circulation Pattern</h4>
-                          <p className="text-sm text-purple-700">
-                            {climateData.atmospheric_physics.circulation_pattern}
-                          </p>
-                        </div>
-                        
-                        <div className="p-3 bg-indigo-50 rounded-lg">
-                          <h4 className="font-medium text-indigo-800 mb-2">Climate Sensitivity</h4>
-                          <p className="text-sm text-indigo-700">
-                            Regional sensitivity factor: <strong>{climateData.atmospheric_physics.climate_sensitivity}×</strong> global average
-                          </p>
-                          <p className="text-xs text-indigo-600 mt-1">
-                            Higher values indicate greater temperature response to forcing
-                          </p>
-                        </div>
-                      </div>
-
-                      <div className="space-y-3">
-                        <h4 className="font-medium text-purple-800">Climate Feedback Mechanisms</h4>
-                        <div className="space-y-2">
-                          {climateData.atmospheric_physics.feedback_mechanisms?.map((feedback: string, index: number) => (
-                            <div key={index} className="p-2 bg-gray-50 rounded text-xs border-l-3 border-purple-400">
-                              {feedback}
+                        <div className="absolute left-12 right-0 bottom-0 h-8 flex justify-between items-end">
+                          {months.map((m, i) => (
+                            <div key={i} className="text-center flex-1">
+                              <div className="text-xs leading-none" style={{ color: "hsl(215,20%,45%)" }}>{m}</div>
                             </div>
                           ))}
                         </div>
                       </div>
-                    </div>
+                    );
+                  })()}
+                </div>
+                <div className="mt-3 grid grid-cols-2 sm:grid-cols-4 gap-2">
+                  {climateData.temperature?.monthly?.map((temp: number, i: number) => {
+                    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+                    return (
+                      <div key={i} className="flex justify-between text-xs px-2 py-1 rounded" style={{ background: "hsl(222,47%,10%)", border: "1px solid hsl(217,33%,18%)" }}>
+                        <span className="text-slate-500">{months[i]}</span>
+                        <span className="font-mono font-medium" style={{ color: temp >= 0 ? "hsl(0,84%,65%)" : "hsl(207,90%,65%)" }}>{temp?.toFixed(1)}°C</span>
+                      </div>
+                    );
+                  })}
+                </div>
+                <div className="mt-2 text-xs text-slate-500 px-1">
+                  Seasonal amplitude: {climateData.temperature?.seasonal_amplitude?.toFixed(1)}°C · Range: {climateData.temperature?.min?.toFixed(1)}°C to {climateData.temperature?.max?.toFixed(1)}°C
+                </div>
+              </div>
+            </div>
+          </div>
 
-                    <div className="mt-4 p-3 bg-purple-50 rounded-lg text-sm">
-                      <h4 className="font-medium text-purple-800 mb-2">ICON Atmospheric Model Physics:</h4>
-                      <ul className="text-purple-700 space-y-1 text-xs">
-                        <li>• <strong>Circulation Patterns:</strong> Based on global atmospheric circulation cells and pressure systems</li>
-                        <li>• <strong>Climate Sensitivity:</strong> Regional response varies with latitude, geography, and local feedbacks</li>
-                        <li>• <strong>Feedback Mechanisms:</strong> Include ice-albedo, water vapor, cloud, and vegetation feedbacks</li>
-                        <li>• <strong>Physical Constraints:</strong> All projections follow conservation of energy and mass principles</li>
-                      </ul>
-                    </div>
-                  </CardContent>
-                </Card>
+          {/* ── Precipitation Analysis ── */}
+          <div className="section-card">
+            <div className="section-header">
+              <Droplets className="w-5 h-5" style={{ color: "hsl(207,90%,65%)" }} />
+              <h3 className="font-semibold text-white">Precipitation Analysis</h3>
+            </div>
+            <div className="p-5 space-y-5">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                {[
+                  { label: "Annual Total", value: `${climateData.precipitation?.annual_total?.toFixed(0)} mm`, sub: (() => { const a = climateData.precipitation?.annual_total || 0; return a > 1200 ? "Very wet" : a > 800 ? "Wet" : a > 500 ? "Moderate" : a > 200 ? "Dry" : "Very dry (arid)"; })(), color: "hsl(207,90%,65%)" },
+                  { label: "Change", value: `${climateData.precipitation?.anomaly_percent > 0 ? '+' : ''}${climateData.precipitation?.anomaly_percent?.toFixed(1)}%`, sub: "vs baseline", color: "hsl(142,76%,55%)" },
+                  { label: "Wettest Month", value: `${climateData.precipitation?.wettest_month?.toFixed(0)} mm`, sub: climateData.precipitation?.wettest_month_name, color: "hsl(207,90%,65%)" },
+                  { label: "Driest Month", value: `${climateData.precipitation?.driest_month?.toFixed(0)} mm`, sub: climateData.precipitation?.driest_month_name, color: "hsl(42,87%,60%)" },
+                ].map(({ label, value, sub, color }) => (
+                  <div key={label} className="rounded-xl p-3 text-center" style={{ background: "hsl(222,47%,10%)", border: "1px solid hsl(217,33%,20%)" }}>
+                    <p className="text-xs text-slate-500 mb-1">{label}</p>
+                    <p className="text-xl font-bold" style={{ color }}>{value}</p>
+                    <p className="text-xs text-slate-600 mt-0.5">{sub}</p>
+                  </div>
+                ))}
+              </div>
+
+              <div>
+                <h4 className="text-sm font-medium text-slate-300 mb-3">Monthly Precipitation Distribution</h4>
+                <div className="rounded-xl p-4" style={{ background: "hsl(222,47%,10%)", border: "1px solid hsl(217,33%,20%)" }}>
+                  <div className="grid grid-cols-12 gap-1 items-end" style={{ height: "120px" }}>
+                    {climateData.precipitation?.monthly?.map((p: number, i: number) => {
+                      const maxP = Math.max(...climateData.precipitation.monthly);
+                      const pct = Math.max(8, (p / maxP) * 100);
+                      const months = ['J','F','M','A','M','J','J','A','S','O','N','D'];
+                      return (
+                        <div key={i} className="flex flex-col items-center justify-end h-full gap-1">
+                          <div className="w-full rounded-t transition-all" style={{ height: `${pct}%`, background: "linear-gradient(to top, hsl(207,90%,50%), hsl(207,90%,75%))", minHeight: "4px" }} title={`${months[i]}: ${p.toFixed(0)}mm`} />
+                          <span className="text-xs leading-none" style={{ color: "hsl(215,20%,40%)" }}>{months[i]}</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+                <div className="mt-3 grid grid-cols-2 sm:grid-cols-4 gap-2">
+                  {climateData.precipitation?.monthly?.map((p: number, i: number) => {
+                    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+                    return (
+                      <div key={i} className="flex justify-between text-xs px-2 py-1 rounded" style={{ background: "hsl(222,47%,10%)", border: "1px solid hsl(217,33%,18%)" }}>
+                        <span className="text-slate-500">{months[i]}</span>
+                        <span className="font-mono font-medium" style={{ color: "hsl(207,90%,65%)" }}>{p.toFixed(0)} mm</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* ── Extreme Weather ── */}
+          <div className="section-card">
+            <div className="section-header">
+              <AlertTriangle className="w-5 h-5" style={{ color: "hsl(24,92%,65%)" }} />
+              <h3 className="font-semibold text-white">Extreme Weather & Risk Assessment</h3>
+            </div>
+            <div className="p-5 space-y-5">
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                <div className="rounded-xl p-4 text-center" style={{ background: "hsla(0,84%,60%,0.08)", border: "1px solid hsla(0,84%,60%,0.25)" }}>
+                  <p className="text-xs text-slate-500 mb-2">Heat Stress Days<sup className="text-slate-600">[8]</sup></p>
+                  <p className="text-3xl font-bold" style={{ color: "hsl(0,84%,65%)" }}>{climateData.extremes?.heat_stress_days || 0}</p>
+                  <p className="text-xs text-slate-500 mt-1">days &gt; 35°C</p>
+                </div>
+                <div className="rounded-xl p-4" style={{ background: "hsla(42,87%,55%,0.08)", border: "1px solid hsla(42,87%,55%,0.25)" }}>
+                  <p className="text-xs text-slate-500 mb-2">Drought Risk<sup className="text-slate-600">[9]</sup></p>
+                  <div className="flex items-end gap-2 mb-2">
+                    <p className="text-3xl font-bold" style={{ color: "hsl(42,87%,65%)" }}>{((climateData.extremes?.drought_risk || 0) * 100).toFixed(0)}%</p>
+                  </div>
+                  <div className="h-2 rounded-full overflow-hidden" style={{ background: "hsl(217,33%,20%)" }}>
+                    <div className="h-full rounded-full" style={{ width: `${(climateData.extremes?.drought_risk || 0) * 100}%`, background: "hsl(42,87%,55%)" }} />
+                  </div>
+                </div>
+                <div className="rounded-xl p-4" style={{ background: "hsla(207,90%,54%,0.08)", border: "1px solid hsla(207,90%,54%,0.25)" }}>
+                  <p className="text-xs text-slate-500 mb-2">Flood Risk<sup className="text-slate-600">[10]</sup></p>
+                  <p className="text-3xl font-bold mb-2" style={{ color: "hsl(207,90%,65%)" }}>{((climateData.extremes?.flood_risk || 0) * 100).toFixed(0)}%</p>
+                  <div className="h-2 rounded-full overflow-hidden" style={{ background: "hsl(217,33%,20%)" }}>
+                    <div className="h-full rounded-full" style={{ width: `${(climateData.extremes?.flood_risk || 0) * 100}%`, background: "hsl(207,90%,54%)" }} />
+                  </div>
+                </div>
+                <div className="rounded-xl p-4 text-center" style={{ background: "hsla(192,91%,46%,0.08)", border: "1px solid hsla(192,91%,46%,0.25)" }}>
+                  <p className="text-xs text-slate-500 mb-2">Sea Level Rise<sup className="text-slate-600">[11]</sup></p>
+                  <p className="text-3xl font-bold" style={{ color: "hsl(192,91%,60%)" }}>{climateData.extremes?.sea_level_rise_cm?.toFixed(1)}<span className="text-lg"> cm</span></p>
+                  <p className="text-xs text-slate-500 mt-1">by {climateData.year}</p>
+                </div>
+              </div>
+              <div className="rounded-xl p-4 text-sm" style={{ background: "hsl(222,47%,10%)", border: "1px solid hsl(217,33%,20%)" }}>
+                <ul className="space-y-1.5 text-slate-400">
+                  <li><span className="text-white font-medium">Heat Stress Days:</span> Days exceeding 35°C WHO threshold — dangerous for human health and agriculture</li>
+                  <li><span className="text-white font-medium">Drought Risk:</span> Probability of water scarcity based on precipitation deficits and evapotranspiration</li>
+                  <li><span className="text-white font-medium">Flood Risk:</span> Likelihood of flooding from extreme precipitation events and soil saturation</li>
+                  <li><span className="text-white font-medium">Sea Level Rise:</span> Projected coastal sea level increase by the target year</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+
+          {/* ── Habitability ── */}
+          <div className="section-card">
+            <div className="section-header">
+              <Award className="w-5 h-5" style={{ color: "hsl(142,76%,55%)" }} />
+              <h3 className="font-semibold text-white">Habitability Assessment</h3>
+            </div>
+            <div className="p-5 space-y-5">
+              <div className="rounded-xl p-6 flex flex-col sm:flex-row items-center gap-6" style={{ background: "hsl(222,47%,10%)", border: "1px solid hsl(217,33%,20%)" }}>
+                <ScoreRing score={habitScore} />
+                <div className="flex-1 text-center sm:text-left">
+                  <div className="flex items-center gap-3 justify-center sm:justify-start mb-2">
+                    <span className="text-2xl font-bold text-white">Overall Habitability</span>
+                    <HabitabilityBadge score={habitScore} />
+                  </div>
+                  <p className="text-sm text-slate-400 mb-4">Based on temperature comfort, precipitation adequacy, and extreme weather risks</p>
+                  <GlobalRankingDisplay
+                    currentScore={climateData.habitability?.score || 0}
+                    targetYear={climateData.year}
+                    latitude={climateData.location?.latitude || 0}
+                    longitude={climateData.location?.longitude || 0}
+                  />
+                </div>
+              </div>
+
+              {/* Score scale */}
+              <div className="grid grid-cols-5 gap-2">
+                {[
+                  { range: "80-100", label: "Excellent", color: "hsla(142,76%,45%,0.15)", border: "hsla(142,76%,45%,0.35)", text: "hsl(142,76%,55%)" },
+                  { range: "60-79", label: "Good", color: "hsla(207,90%,54%,0.15)", border: "hsla(207,90%,54%,0.35)", text: "hsl(207,90%,65%)" },
+                  { range: "40-59", label: "Fair", color: "hsla(42,87%,55%,0.15)", border: "hsla(42,87%,55%,0.35)", text: "hsl(42,87%,65%)" },
+                  { range: "20-39", label: "Poor", color: "hsla(24,92%,60%,0.15)", border: "hsla(24,92%,60%,0.35)", text: "hsl(24,92%,65%)" },
+                  { range: "0-19", label: "Severe", color: "hsla(0,84%,60%,0.15)", border: "hsla(0,84%,60%,0.35)", text: "hsl(0,84%,65%)" },
+                ].map(({ range, label, color, border, text }) => (
+                  <div key={range} className="rounded-lg p-2 text-center border" style={{ background: color, borderColor: border }}>
+                    <div className="text-xs font-bold" style={{ color: text }}>{range}</div>
+                    <div className="text-xs" style={{ color: text }}>{label}</div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Score breakdown waterfall */}
+              {climateData.habitability?.breakdown && (
+                <div>
+                  <h4 className="text-sm font-medium text-slate-300 mb-3">Score Breakdown</h4>
+                  <div className="rounded-xl p-4" style={{ background: "hsl(222,47%,10%)", border: "1px solid hsl(217,33%,20%)" }}>
+                    {(() => {
+                      const b = climateData.habitability.breakdown;
+                      const items = [
+                        { name: "Temp Comfort", value: b.temperature_comfort, color: "hsl(0,84%,60%)", positive: true },
+                        { name: "Precipitation", value: b.precipitation_adequacy, color: "hsl(207,90%,55%)", positive: true },
+                        { name: "Infrastructure", value: b.infrastructure_adaptation, color: "hsl(142,76%,45%)", positive: true },
+                        { name: "Heat Penalty", value: -b.heat_stress_penalty, color: "hsl(24,92%,55%)", positive: false },
+                        { name: "Drought Risk", value: -b.drought_risk_penalty, color: "hsl(42,87%,55%)", positive: false },
+                        { name: "Flood Risk", value: -b.flood_risk_penalty, color: "hsl(192,91%,46%)", positive: false },
+                      ];
+                      return (
+                        <div className="space-y-2">
+                          {items.map(({ name, value, color, positive }) => (
+                            <div key={name} className="flex items-center gap-3">
+                              <div className="text-xs text-slate-500 w-24 shrink-0">{name}</div>
+                              <div className="flex-1 flex items-center gap-2">
+                                <div className="flex-1 h-5 rounded overflow-hidden relative" style={{ background: "hsl(217,33%,18%)" }}>
+                                  <div className="h-full rounded transition-all duration-500" style={{ width: `${Math.min(100, Math.abs(value) / 35 * 100)}%`, background: color, opacity: positive ? 1 : 0.7 }} />
+                                </div>
+                                <span className="text-xs font-mono w-12 text-right" style={{ color: positive ? "hsl(142,76%,55%)" : "hsl(0,84%,65%)" }}>
+                                  {positive ? "+" : ""}{value.toFixed(1)}
+                                </span>
+                              </div>
+                            </div>
+                          ))}
+                          <div className="pt-2 mt-2 flex items-center gap-3" style={{ borderTop: "1px solid hsl(217,33%,22%)" }}>
+                            <div className="text-xs font-semibold text-white w-24 shrink-0">Final Score</div>
+                            <div className="flex-1 flex items-center gap-2">
+                              <div className="flex-1 h-5 rounded overflow-hidden" style={{ background: "hsl(217,33%,18%)" }}>
+                                <div className="h-full rounded" style={{ width: `${habitScore}%`, background: "linear-gradient(90deg, hsl(142,76%,40%), hsl(192,91%,46%))" }} />
+                              </div>
+                              <span className="text-xs font-mono font-bold w-12 text-right text-white">{habitScore.toFixed(1)}</span>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })()}
+                  </div>
+                </div>
               )}
 
+              {/* Livability breakdown */}
+              <LivabilityIndexBreakdown
+                score={climateData.habitability?.score || 0}
+                breakdown={climateData.habitability?.breakdown}
+                location={climateData.location?.name}
+                year={climateData.year}
+              />
+            </div>
+          </div>
 
-            </CardContent>
-          </Card>
-        </div>
-      )}
-
-      {/* Global Habitability Rankings - Independent Main Section */}
-      {climateData && (
-        <div className="mt-8">
-          <HabitabilityRanking 
-            selectedYear={climateData.year}
-            onLocationSelect={(lat, lng) => {
-              setSelectedLocation({
-                name: `Location ${lat.toFixed(2)}, ${lng.toFixed(2)}`,
-                lat,
-                lng,
-                country: '',
-                city: '',
-                state: ''
-              });
-              setLocation(`${lat.toFixed(4)}, ${lng.toFixed(4)}`);
-            }}
-          />
-        </div>
-      )}
-
-      {/* Data Quality & Methodology - Independent Main Section */}
-      {climateData && (
-        <div className="mt-8">
-          <Card className="border-gray-200">
-            <CardHeader>
-              <CardTitle className="text-gray-700">Data Quality & Methodology</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
-                <div>
-                  <h4 className="font-medium text-gray-800">Model Information</h4>
-                  <p><strong>Model:</strong> {climateData.metadata?.model}</p>
-                  <p><strong>Version:</strong> {climateData.metadata?.model_version}</p>
-                  <p><strong>Resolution:</strong> {climateData.metadata?.resolution}</p>
-                  <p><strong>Confidence:</strong> {climateData.metadata?.confidence}</p>
-                </div>
-                <div>
-                  <h4 className="font-medium text-gray-800">Temporal Coverage</h4>
-                  <p><strong>Base Year:</strong> {new Date().getFullYear()}</p>
-                  <p><strong>Target Year:</strong> {climateData.year}</p>
-                  <p><strong>Projection Period:</strong> {climateData.year - new Date().getFullYear()} years</p>
-                  <p><strong>Time Series:</strong> 5-year intervals</p>
-                </div>
-                <div>
-                  <h4 className="font-medium text-gray-800">Data Generation</h4>
-                  <p><strong>Generated:</strong> {new Date(climateData.metadata?.generated_at).toLocaleString()}</p>
-                  <p><strong>Method:</strong> {climateData.metadata?.projection_method}</p>
-                  <p><strong>Data Source:</strong> {climateData.metadata?.data_source}</p>
-                </div>
+          {/* ── Climate Time Series ── */}
+          {climateData.time_series && (
+            <div className="section-card">
+              <div className="section-header">
+                <TrendingUp className="w-5 h-5" style={{ color: "hsl(192,91%,56%)" }} />
+                <h3 className="font-semibold text-white">Climate Trends Over Time</h3>
               </div>
-              
-              <div className="mt-4 p-3 bg-gray-50 rounded-lg text-xs text-gray-600">
-                <p><strong>Methodology:</strong> This implementation uses authentic atmospheric physics patterns from NVIDIA's CBottle 
-                project, which employs the ICON atmospheric model framework. The climate projections incorporate realistic seasonal 
-                patterns, atmospheric circulation dynamics, regional climate sensitivity factors, and physical feedback mechanisms. 
-                Monthly data follows scientifically-validated climate zone patterns with appropriate seasonal phasing for hemisphere 
-                and latitude-dependent weather systems.</p>
-              </div>
+              <div className="p-5 space-y-6">
+                {/* Temperature table */}
+                <div>
+                  <h4 className="text-sm font-medium mb-2" style={{ color: "hsl(0,84%,65%)" }}>Monthly Temperature Projections (°C)<sup className="text-slate-600">[3]</sup></h4>
+                  <p className="text-xs text-slate-500 mb-2">Baseline: {climateData.time_series.temperature_baseline?.toFixed(1)}°C</p>
+                  <div className="overflow-x-auto rounded-xl" style={{ border: "1px solid hsl(217,33%,20%)" }}>
+                    <table className="climate-table w-full text-xs">
+                      <thead>
+                        <tr>
+                          <th className="px-2 py-2 text-left sticky left-0" style={{ background: "hsl(222,47%,10%)", color: "hsl(215,20%,55%)" }}>Year</th>
+                          {['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'].map(m => (
+                            <th key={m} className="px-1.5 py-2 text-center min-w-[42px]" style={{ background: "hsl(222,47%,10%)", color: "hsl(215,20%,55%)" }}>{m}</th>
+                          ))}
+                          <th className="px-2 py-2 text-center min-w-[52px]" style={{ background: "hsl(222,47%,10%)", color: "hsl(215,20%,55%)" }}>Annual</th>
+                          <th className="px-2 py-2 text-center min-w-[52px]" style={{ background: "hsl(222,47%,10%)", color: "hsl(215,20%,55%)" }}>Δ</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {climateData.time_series.years?.map((yr: number, idx: number) => {
+                          const mTemps = climateData.time_series.monthly_temperature_series?.[idx] || [];
+                          const annual = climateData.time_series.temperature_trend?.[idx];
+                          const diff = climateData.time_series.temperature_differences?.[idx];
+                          const isTarget = yr === climateData.year;
+                          return (
+                            <tr key={yr} style={{ background: isTarget ? "hsla(192,91%,46%,0.07)" : "transparent" }}>
+                              <td className="px-2 py-1.5 font-semibold text-white sticky left-0" style={{ background: isTarget ? "hsla(192,91%,46%,0.12)" : "hsl(222,47%,11%)" }}>{yr}{isTarget && <span className="ml-1 text-cyan-500">★</span>}</td>
+                              {mTemps.map((t: number, mi: number) => (
+                                <td key={mi} className="px-1.5 py-1.5 text-center font-mono" style={{ color: t >= 0 ? "hsl(0,84%,65%)" : "hsl(207,90%,65%)" }}>{t?.toFixed(1)}</td>
+                              ))}
+                              <td className="px-2 py-1.5 text-center font-mono font-semibold text-white">{annual?.toFixed(1)}</td>
+                              <td className="px-2 py-1.5 text-center font-mono font-semibold" style={{ color: diff >= 0 ? "hsl(0,84%,65%)" : "hsl(207,90%,65%)" }}>{diff >= 0 ? "+" : ""}{diff?.toFixed(1)}°</td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
 
-              {/* Scientific References Section */}
-              <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-                <h4 className="font-bold text-blue-800 mb-3">Scientific References & Data Sources</h4>
-                <div className="text-xs text-blue-700 space-y-2">
-                  <p><strong>[1] Annual Mean Temperature:</strong> CBottle atmospheric physics calculation using ICON model baseline meteorological data and regional climate patterns. Derived from latitude-specific temperature profiles and seasonal averaging algorithms.</p>
-                  
-                  <p><strong>[2] Temperature Change (Anomaly):</strong> CBottle climate sensitivity analysis incorporating greenhouse gas forcing, regional feedback mechanisms, and atmospheric circulation pattern shifts. Calculated using statistical downscaling from global climate projections.</p>
-                  
-                  <p><strong>[3] Monthly Temperature Extremes:</strong> CBottle seasonal temperature distribution modeling based on atmospheric physics constraints and regional climate zone characteristics. Generated using monthly temperature series algorithms with realistic seasonal phasing.</p>
-                  
-                  <p><strong>[4] Annual Precipitation Total:</strong> CBottle precipitation model using ICON atmospheric moisture transport calculations, regional precipitation patterns, and orographic effects. Incorporates latitude-dependent seasonal precipitation cycles.</p>
-                  
-                  <p><strong>[5] Precipitation Change:</strong> CBottle hydrological cycle modeling incorporating temperature-driven evaporation changes, atmospheric moisture capacity variations, and regional precipitation pattern shifts due to circulation changes.</p>
-                  
-                  <p><strong>[6] Monthly Precipitation Extremes:</strong> CBottle seasonal precipitation distribution calculated using monthly precipitation series with realistic wet/dry season patterns for specific climate zones and latitudinal bands.</p>
-                  
-                  <p><strong>[7] Habitability Score:</strong> CBottle multi-factor habitability assessment incorporating temperature comfort (30% weight), precipitation adequacy (30% weight), infrastructure adaptation potential (40% weight), and risk factor penalties (extreme weather, drought, flooding). Methodology follows established climate habitability research frameworks.</p>
-                  
-                  <p><strong>[8] Heat Stress Days:</strong> CBottle calculation of annual days exceeding 35°C threshold based on monthly temperature distributions and extreme value analysis. Uses statistical modeling of temperature extremes from baseline climatology and projected warming patterns.</p>
-                  
-                  <p><strong>[9] Drought Risk:</strong> CBottle drought probability assessment using Palmer Drought Severity Index methodology with precipitation deficit analysis. Incorporates soil moisture capacity, evapotranspiration rates, and regional water balance calculations.</p>
-                  
-                  <p><strong>[10] Flood Risk:</strong> CBottle flood probability modeling using extreme precipitation analysis and hydrological runoff calculations. Based on statistical analysis of precipitation intensity-duration-frequency curves and regional drainage characteristics.</p>
-                  
-                  <p><strong>[11] Sea Level Rise:</strong> CBottle coastal impact assessment incorporating global mean sea level rise projections with regional adjustment factors for thermal expansion, ice sheet dynamics, and local subsidence patterns.</p>
-                  
-                  <p><strong>[12] Seasonal Amplitude:</strong> Calculated derivative from CBottle monthly temperature data. Formula: (Maximum monthly temperature - Minimum monthly temperature). This represents the annual temperature variation and is computed from the monthly temperature series [3].</p>
-                  
-                  <p><strong>[13] Temperature Comfort Score:</strong> Custom algorithm applied to CBottle temperature data. Uses optimal human comfort range of 18-24°C. Formula: 100 - (deviation from optimal range)². Penalty applied for temperatures outside 15-27°C range. Based on annual mean temperature [1] and temperature extremes [3].</p>
-                  
-                  <p><strong>[14] Precipitation Adequacy Score:</strong> Custom algorithm applied to CBottle precipitation data. Uses optimal annual precipitation range of 600-1200mm for human settlement. Formula: 100 - |deviation from optimal|/optimal × 100. Incorporates seasonal distribution patterns from monthly precipitation [6].</p>
-                  
-                  <p><strong>[15] Infrastructure Adaptation Score:</strong> Custom algorithm combining multiple factors: latitude-based development potential (higher latitudes score higher due to climate refuge potential), coastal proximity (penalties for sea level rise exposure), and regional economic capacity estimates. NOT directly sourced from CBottle - uses geographic and socioeconomic modeling.</p>
-                  
-                  <p><strong>[16] Heat Stress Penalty:</strong> Calculated from CBottle heat stress days [8]. Formula: (heat_stress_days / 30) × penalty_factor. Each day above 35°C reduces habitability score. Uses CBottle-derived extreme temperature analysis.</p>
-                  
-                  <p><strong>[17] Drought Risk Penalty:</strong> Calculated from CBottle drought risk assessment [9]. Formula: drought_risk_percentage × penalty_multiplier. Uses CBottle precipitation deficit analysis and Palmer Drought Severity Index methodology.</p>
-                  
-                  <p><strong>[18] Flood Risk Penalty:</strong> Calculated from CBottle flood risk assessment [10]. Formula: flood_risk_percentage × penalty_multiplier. Uses CBottle extreme precipitation analysis and hydrological runoff calculations.</p>
-                  
-                  <p><strong>[19] Global Habitability Percentile Ranking:</strong> Calculated from comprehensive global location dataset using CBottle habitability scores [7]. Percentile formula: ((total_locations - current_rank) / total_locations) × 100. Rankings based on future habitability projections for target year, with locations matched by coordinate proximity (±0.5° tolerance).</p>
-                  
-                  <p><strong>[20] Best Overall Habitability Rankings:</strong> CBottle-derived habitability scores [7] sorted in descending order globally. Top-performing locations identified by highest future habitability values from comprehensive atmospheric physics modeling using temperature comfort, precipitation adequacy, and infrastructure adaptation factors.</p>
-                  
-                  <p><strong>[21] Worst Overall Habitability Rankings:</strong> CBottle-derived habitability scores [7] sorted in ascending order globally. Lowest-performing locations identified by habitability challenges from extreme temperature stress, precipitation deficits, and infrastructure adaptation constraints.</p>
-                  
-                  <p><strong>[22] Biggest Habitability Decline Rankings:</strong> Calculated from CBottle baseline vs. future habitability comparison [7]. Formula: future_habitability - baseline_habitability. Locations with largest negative changes due to accelerated climate impacts and reduced adaptive capacity.</p>
-                  
-                  <p><strong>[23] Best Temperature Comfort Rankings:</strong> Derived from CBottle temperature comfort component [13] of habitability assessment. Locations with optimal temperature ranges (18-24°C annual mean) and minimal extreme temperature exposure based on CBottle atmospheric physics calculations.</p>
-                  
-                  <p><strong>[24] Best Humidity Conditions Rankings:</strong> Derived from CBottle precipitation adequacy component [14] representing humidity and moisture availability. Locations with optimal precipitation patterns (600-1200mm annually) and balanced seasonal distribution for human comfort and agricultural productivity.</p>
-                  
-                  <p><strong>[25] Best Infrastructure Adaptation Rankings:</strong> Derived from infrastructure adaptation component [15] incorporating geographic and socioeconomic resilience factors. Higher scores for locations with development potential, climate refuge characteristics, and reduced vulnerability to sea level rise.</p>
-                  
-                  <p><strong>[26] Worst Temperature Comfort Rankings:</strong> Inverse of temperature comfort rankings [23]. Locations with most challenging temperature conditions including extreme heat exposure, large seasonal temperature swings, and temperatures outside human comfort zones based on CBottle atmospheric modeling.</p>
-                  
-                  <div className="mt-3 pt-3 border-t border-blue-300">
-                    <p><strong>Data Source Transparency:</strong></p>
-                    <p><strong>Direct CBottle Sources:</strong> Annual temperature [1], temperature anomaly [2], monthly temperatures [3], annual precipitation [4], precipitation change [5], monthly precipitation [6], heat stress days [8], drought risk [9], flood risk [10], sea level rise [11].</p>
-                    <p><strong>Calculated Derivatives:</strong> Seasonal amplitude [12] (from CBottle monthly data), habitability components [13-18] (algorithms applied to CBottle data), overall habitability score [7] (weighted combination of components).</p>
-                    <p><strong>Model Framework:</strong> All calculations use NVIDIA Earth2Studio CBottle implementation with ICON atmospheric model physics. Baseline data derived from actual meteorological station records and satellite observations. Projection methodology employs statistical downscaling with physical constraints to maintain energy and mass conservation principles.</p>
+                {/* Precipitation table */}
+                <div>
+                  <h4 className="text-sm font-medium mb-2" style={{ color: "hsl(207,90%,65%)" }}>Monthly Precipitation Projections (mm)<sup className="text-slate-600">[6]</sup></h4>
+                  <p className="text-xs text-slate-500 mb-2">Baseline: {climateData.time_series.precipitation_baseline?.toFixed(0)} mm</p>
+                  <div className="overflow-x-auto rounded-xl" style={{ border: "1px solid hsl(217,33%,20%)" }}>
+                    <table className="climate-table w-full text-xs">
+                      <thead>
+                        <tr>
+                          <th className="px-2 py-2 text-left sticky left-0" style={{ background: "hsl(222,47%,10%)", color: "hsl(215,20%,55%)" }}>Year</th>
+                          {['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'].map(m => (
+                            <th key={m} className="px-1.5 py-2 text-center min-w-[42px]" style={{ background: "hsl(222,47%,10%)", color: "hsl(215,20%,55%)" }}>{m}</th>
+                          ))}
+                          <th className="px-2 py-2 text-center" style={{ background: "hsl(222,47%,10%)", color: "hsl(215,20%,55%)" }}>Annual</th>
+                          <th className="px-2 py-2 text-center" style={{ background: "hsl(222,47%,10%)", color: "hsl(215,20%,55%)" }}>Δ</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {climateData.time_series.years?.map((yr: number, idx: number) => {
+                          const mP = climateData.time_series.monthly_precipitation_series?.[idx] || [];
+                          const annual = climateData.time_series.precipitation_trend?.[idx];
+                          const diff = climateData.time_series.precipitation_differences?.[idx];
+                          const isTarget = yr === climateData.year;
+                          return (
+                            <tr key={yr} style={{ background: isTarget ? "hsla(207,90%,54%,0.07)" : "transparent" }}>
+                              <td className="px-2 py-1.5 font-semibold text-white sticky left-0" style={{ background: isTarget ? "hsla(207,90%,54%,0.12)" : "hsl(222,47%,11%)" }}>{yr}{isTarget && <span className="ml-1 text-blue-400">★</span>}</td>
+                              {mP.map((p: number, mi: number) => (
+                                <td key={mi} className="px-1.5 py-1.5 text-center font-mono" style={{ color: "hsl(207,90%,65%)" }}>{p?.toFixed(0)}</td>
+                              ))}
+                              <td className="px-2 py-1.5 text-center font-mono font-semibold text-white">{annual?.toFixed(0)}</td>
+                              <td className="px-2 py-1.5 text-center font-mono font-semibold" style={{ color: diff >= 0 ? "hsl(142,76%,55%)" : "hsl(24,92%,65%)" }}>{diff >= 0 ? "+" : ""}{diff?.toFixed(0)} mm</td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+
+                {/* Habitability trend */}
+                <div>
+                  <h4 className="text-sm font-medium text-slate-300 mb-3">Habitability Trend</h4>
+                  <div className="space-y-2">
+                    {climateData.time_series.years?.map((yr: number, idx: number) => {
+                      const h = climateData.time_series.habitability_trend[idx];
+                      const prev = idx > 0 ? climateData.time_series.habitability_trend[idx - 1] : null;
+                      const change = prev ? h - prev : 0;
+                      const isTarget = yr === climateData.year;
+                      const barColor = h >= 80 ? "hsl(142,76%,45%)" : h >= 60 ? "hsl(207,90%,54%)" : h >= 40 ? "hsl(42,87%,55%)" : h >= 20 ? "hsl(24,92%,55%)" : "hsl(0,84%,55%)";
+                      return (
+                        <div key={yr} className="rounded-xl p-3 flex items-center gap-3" style={{ background: isTarget ? "hsla(192,91%,46%,0.07)" : "hsl(222,47%,10%)", border: `1px solid ${isTarget ? "hsla(192,91%,46%,0.25)" : "hsl(217,33%,20%)"}` }}>
+                          <span className="text-sm font-medium text-white w-12 shrink-0">{yr}</span>
+                          <div className="flex-1 h-6 rounded-lg overflow-hidden relative" style={{ background: "hsl(217,33%,18%)" }}>
+                            <div className="h-full rounded-lg transition-all" style={{ width: `${h}%`, background: barColor }} />
+                            <span className="absolute inset-0 flex items-center justify-center text-xs font-bold" style={{ color: h > 50 ? "white" : "hsl(215,20%,65%)" }}>{h?.toFixed(1)}/100</span>
+                          </div>
+                          <span className="text-xs text-slate-500 w-16 shrink-0 text-right">{h >= 80 ? "Excellent" : h >= 60 ? "Good" : h >= 40 ? "Fair" : h >= 20 ? "Poor" : "Severe"}</span>
+                          <span className="text-xs font-medium w-12 text-right shrink-0" style={{ color: change > 0 ? "hsl(142,76%,55%)" : change < 0 ? "hsl(0,84%,65%)" : "hsl(215,20%,50%)" }}>
+                            {change === 0 ? "±0.0" : change > 0 ? `+${change.toFixed(1)}` : change.toFixed(1)}
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                  <div className="mt-3 text-xs text-slate-500 px-1">
+                    ★ marks the target year. Δ shows change from prior 5-year interval.
                   </div>
                 </div>
               </div>
-            </CardContent>
-          </Card>
-        </div>
+            </div>
+          )}
+
+          {/* ── Atmospheric Physics ── */}
+          {climateData.atmospheric_physics && (
+            <div className="section-card">
+              <div className="section-header">
+                <Wind className="w-5 h-5" style={{ color: "hsl(280,87%,70%)" }} />
+                <h3 className="font-semibold text-white">Atmospheric Physics & Climate Dynamics</h3>
+              </div>
+              <div className="p-5">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
+                  <div className="rounded-xl p-4" style={{ background: "hsl(222,47%,10%)", border: "1px solid hsl(217,33%,20%)" }}>
+                    <h4 className="text-sm font-medium mb-2" style={{ color: "hsl(280,87%,70%)" }}>Circulation Pattern</h4>
+                    <p className="text-sm text-slate-400">{climateData.atmospheric_physics.circulation_pattern}</p>
+                  </div>
+                  <div className="rounded-xl p-4" style={{ background: "hsl(222,47%,10%)", border: "1px solid hsl(217,33%,20%)" }}>
+                    <h4 className="text-sm font-medium mb-2" style={{ color: "hsl(192,91%,60%)" }}>Climate Sensitivity</h4>
+                    <p className="text-sm text-slate-400">Regional factor: <span className="text-white font-semibold">{climateData.atmospheric_physics.climate_sensitivity}×</span> global average</p>
+                    <p className="text-xs text-slate-600 mt-1">Higher values indicate greater temperature response to radiative forcing</p>
+                  </div>
+                </div>
+                <div>
+                  <h4 className="text-sm font-medium text-slate-300 mb-3">Feedback Mechanisms</h4>
+                  <div className="space-y-2">
+                    {climateData.atmospheric_physics.feedback_mechanisms?.map((fb: string, i: number) => (
+                      <div key={i} className="rounded-lg px-4 py-2.5 text-sm text-slate-400 border-l-2" style={{ background: "hsl(222,47%,10%)", borderColor: "hsl(280,87%,55%)" }}>
+                        {fb}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* ── Global Rankings ── */}
+          <HabitabilityRanking
+            selectedYear={climateData.year}
+            onLocationSelect={(lat, lng) => {
+              setSelectedLocation({ name: `Location ${lat.toFixed(2)}, ${lng.toFixed(2)}`, lat, lng, country: '', city: '', state: '' });
+              setLocation(`${lat.toFixed(4)}, ${lng.toFixed(4)}`);
+            }}
+          />
+
+          {/* ── Methodology ── */}
+          <div className="section-card">
+            <div className="section-header">
+              <BarChart2 className="w-5 h-5" style={{ color: "hsl(215,20%,55%)" }} />
+              <h3 className="font-semibold text-white">Data Quality & Methodology</h3>
+            </div>
+            <div className="p-5 space-y-4">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-sm">
+                <div className="rounded-xl p-4" style={{ background: "hsl(222,47%,10%)", border: "1px solid hsl(217,33%,20%)" }}>
+                  <h4 className="font-medium text-slate-300 mb-3">Model Information</h4>
+                  <div className="space-y-1.5">
+                    {[["Model", climateData.metadata?.model], ["Version", climateData.metadata?.model_version], ["Resolution", climateData.metadata?.resolution], ["Confidence", climateData.metadata?.confidence]].map(([k, v]) => (
+                      <div key={k} className="flex justify-between text-xs">
+                        <span className="text-slate-500">{k}</span>
+                        <span className="text-slate-300 font-medium">{v}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+                <div className="rounded-xl p-4" style={{ background: "hsl(222,47%,10%)", border: "1px solid hsl(217,33%,20%)" }}>
+                  <h4 className="font-medium text-slate-300 mb-3">Temporal Coverage</h4>
+                  <div className="space-y-1.5">
+                    {[["Base Year", new Date().getFullYear()], ["Target Year", climateData.year], ["Projection Period", `${climateData.year - new Date().getFullYear()} years`], ["Time Series", "5-year intervals"]].map(([k, v]) => (
+                      <div key={k} className="flex justify-between text-xs">
+                        <span className="text-slate-500">{k}</span>
+                        <span className="text-slate-300 font-medium">{v}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+                <div className="rounded-xl p-4" style={{ background: "hsl(222,47%,10%)", border: "1px solid hsl(217,33%,20%)" }}>
+                  <h4 className="font-medium text-slate-300 mb-3">Generation</h4>
+                  <div className="space-y-1.5">
+                    {[["Method", climateData.metadata?.projection_method], ["Source", climateData.metadata?.data_source]].map(([k, v]) => (
+                      <div key={k} className="flex justify-between gap-2 text-xs">
+                        <span className="text-slate-500 shrink-0">{k}</span>
+                        <span className="text-slate-300 font-medium text-right">{v}</span>
+                      </div>
+                    ))}
+                    <div className="flex justify-between text-xs">
+                      <span className="text-slate-500">Generated</span>
+                      <span className="text-slate-300 font-medium">{new Date(climateData.metadata?.generated_at).toLocaleString()}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="rounded-xl p-4 text-xs text-slate-500" style={{ background: "hsl(222,47%,10%)", border: "1px solid hsl(217,33%,20%)" }}>
+                <p className="font-medium text-slate-300 mb-2">Methodology Note</p>
+                <p>This implementation uses atmospheric physics patterns from NVIDIA's CBottle project, employing the ICON atmospheric model framework. Climate projections incorporate realistic seasonal patterns, atmospheric circulation dynamics, regional climate sensitivity factors, and physical feedback mechanisms.</p>
+              </div>
+
+              {/* Scientific references — collapsible */}
+              <details className="rounded-xl overflow-hidden" style={{ background: "hsl(222,47%,10%)", border: "1px solid hsl(217,33%,20%)" }}>
+                <summary className="px-4 py-3 cursor-pointer text-sm font-medium text-slate-300 hover:text-white transition-colors select-none">
+                  Scientific References & Data Sources [1–26]
+                </summary>
+                <div className="px-4 pb-4 text-xs text-slate-500 space-y-2 max-h-80 overflow-y-auto">
+                  {[
+                    ["[1] Annual Mean Temperature", "CBottle atmospheric physics calculation using ICON model baseline meteorological data."],
+                    ["[2] Temperature Change (Anomaly)", "CBottle climate sensitivity analysis incorporating greenhouse gas forcing and regional feedback mechanisms."],
+                    ["[3] Monthly Temperature Extremes", "CBottle seasonal temperature distribution modeling based on atmospheric physics constraints."],
+                    ["[4] Annual Precipitation Total", "CBottle precipitation model using ICON atmospheric moisture transport calculations."],
+                    ["[5] Precipitation Change", "CBottle hydrological cycle modeling incorporating temperature-driven evaporation changes."],
+                    ["[6] Monthly Precipitation", "CBottle seasonal precipitation distribution with realistic wet/dry season patterns."],
+                    ["[7] Habitability Score", "Multi-factor assessment: temperature comfort (30%), precipitation adequacy (30%), infrastructure adaptation (40%), minus risk penalties."],
+                    ["[8] Heat Stress Days", "Annual days exceeding 35°C threshold using extreme value analysis."],
+                    ["[9] Drought Risk", "Palmer Drought Severity Index methodology with precipitation deficit analysis."],
+                    ["[10] Flood Risk", "Extreme precipitation analysis and hydrological runoff calculations."],
+                    ["[11] Sea Level Rise", "Global mean sea level rise projections with regional adjustment factors."],
+                    ["[12] Seasonal Amplitude", "max(monthly temperature) − min(monthly temperature)."],
+                    ["[13] Temperature Comfort Score", "Optimal range 15-25°C, steep penalties for heat above 25°C, graduated penalties for cold."],
+                    ["[14] Precipitation Adequacy Score", "Optimal annual range 600-1200mm for human settlement."],
+                    ["[15] Infrastructure Adaptation Score", "Latitude-based development potential, coastal proximity, regional economic capacity."],
+                    ["[16-18] Risk Penalties", "Heat stress, drought, and flood penalties applied proportionally to projection values."],
+                    ["[19-26] Global Rankings", "CBottle habitability scores sorted globally by category (best overall, worst, biggest decline, temperature, humidity, infrastructure)."],
+                  ].map(([ref, desc]) => (
+                    <div key={ref}>
+                      <span className="font-medium text-slate-400">{ref}:</span> {desc}
+                    </div>
+                  ))}
+                </div>
+              </details>
+            </div>
+          </div>
+
+        </main>
       )}
+
+      <footer className="mt-8 py-6 text-center text-xs text-slate-600" style={{ borderTop: "1px solid hsl(217,33%,15%)" }}>
+        ClimateVision · Powered by CBottle/ICON Atmospheric Physics · For research and planning purposes only
+      </footer>
     </div>
   );
 }
