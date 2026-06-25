@@ -351,12 +351,23 @@ export function ComparisonPage() {
                 </button>
               ))}
             </div>
-            {/* Slider */}
-            <div style={{ flex: 1, position: "relative" }}>
-              <input type="range" min="2025" max="2100" step="1" value={year}
-                onChange={e => setYear(Number(e.target.value))}
-                style={{ width: "100%", cursor: "pointer", accentColor: ACCENT }} />
-              <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: 4, borderRadius: 2, pointerEvents: "none", background: `linear-gradient(to right, ${GREEN} 0%, ${AMBER} 40%, ${ORANGE} 65%, ${RED} 100%)`, opacity: 0.35 }} />
+            {/* Slider + tick marks share the same flex:1 column so they stay aligned */}
+            <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 0 }}>
+              <div style={{ position: "relative" }}>
+                <div style={{ position: "absolute", top: 8, left: 0, right: 0, height: 4, borderRadius: 2, pointerEvents: "none", background: `linear-gradient(to right, ${GREEN} 0%, ${AMBER} 40%, ${ORANGE} 65%, ${RED} 100%)`, opacity: 0.35 }} />
+                <input type="range" min="2025" max="2100" step="1" value={year}
+                  onChange={e => setYear(Number(e.target.value))}
+                  style={{ width: "100%", cursor: "pointer", accentColor: ACCENT, position: "relative", zIndex: 1, margin: 0, display: "block" }} />
+              </div>
+              {/* Tick marks — padded ~8px each side to align with track endpoints */}
+              <div style={{ display: "flex", justifyContent: "space-between", padding: "0 8px", marginTop: 1 }}>
+                {[2025,2030,2035,2040,2045,2050,2055,2060,2065,2070,2075,2080,2085,2090,2095,2100].map(y => (
+                  <div key={y} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 1 }}>
+                    <div style={{ width: 1, height: y % 25 === 0 ? 6 : 3, background: y % 25 === 0 ? MUTED : "rgba(255,255,255,0.18)" }} />
+                    {y % 25 === 0 && <span style={{ fontSize: 8, color: MUTED, whiteSpace: "nowrap" }}>{y}</span>}
+                  </div>
+                ))}
+              </div>
             </div>
             {/* City score readouts */}
             <div style={{ display: "flex", gap: 6 }}>
@@ -367,14 +378,6 @@ export function ComparisonPage() {
                 </div>
               ))}
             </div>
-          </div>
-          {/* Tick marks */}
-          <div style={{ display: "flex", justifyContent: "space-between", marginTop: 4 }}>
-            {[2025,2030,2035,2040,2045,2050,2055,2060,2065,2070,2075,2080,2085,2090,2095,2100].map(y => (
-              <div key={y} style={{ width: 1, height: y % 25 === 0 ? 6 : 3, background: y % 25 === 0 ? MUTED : "rgba(255,255,255,0.15)", position: "relative" }}>
-                {y % 25 === 0 && <span style={{ position: "absolute", top: 8, left: "50%", transform: "translateX(-50%)", fontSize: 8, color: MUTED, whiteSpace: "nowrap" }}>{y}</span>}
-              </div>
-            ))}
           </div>
         </div>
       </div>
