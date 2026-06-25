@@ -74,17 +74,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
     if (cached) {
       return { ...cached, dataSource: "CACHED" };
     }
-    // 2. Fetch from NVIDIA API
-    console.log(`🌐 Fetching from NVIDIA API: location ${locationId}, year ${year}`);
+    // 2. Fetch from API
     const fresh = await fetchClimateProjectionFromAPI(locationId, year);
     if (fresh) {
       fresh.dataSource = "NVIDIA_API";
       fresh.fetchedAt = new Date();
       await storage.createClimateProjection(fresh);
-      console.log(`✅ NVIDIA API success: ${locationId}/${year}`);
       return fresh;
     }
-    console.warn(`⚠️  NVIDIA API unavailable for ${locationId}/${year}`);
+    console.warn(`Climate API unavailable for location ${locationId}, year ${year}`);
     return null;
   }
 
@@ -456,12 +454,10 @@ async function fetchClimateProjectionFromAPI(locationId: number, year: number) {
       throw new Error("Location not found");
     }
 
-    console.log(`Generating climate projection using NVIDIA Earth-2 Studio algorithms for ${location.name} (${location.latitude}, ${location.longitude}) for year ${year}`);
-    
     const apiKey = process.env.NVIDIA_API_KEY;
     let climateData = null;
     
-    // Try authentic climate data APIs first
+    // Try authentic climate data APIs first, fall back to IPCC-based calculations
     let dataSource = "CLIMATE_API";
     climateData = await callNOAAClimateAPI(location, year);
     
@@ -469,13 +465,9 @@ async function fetchClimateProjectionFromAPI(locationId: number, year: number) {
       climateData = await callOpenWeatherClimateAPI(location, year);
     }
     
-    // Use scientific climate calculations if APIs unavailable
     if (!climateData) {
-      console.log("Using authentic climate science algorithms based on IPCC models");
       dataSource = "SCIENTIFIC_CALCULATION";
       climateData = await generateRealisticClimateData(location, year);
-    } else {
-      console.log("✅ SUCCESS: Authentic climate data API returned data");
     }
     
     // Find comparable location based on projected climate
@@ -533,15 +525,13 @@ async function callNOAAClimateAPI(location: any, year: number) {
     });
 
     if (!response.ok) {
-      console.log(`NOAA Climate API returned ${response.status}: ${response.statusText}`);
+      console.warn(`NOAA Climate API ${response.status}: ${response.statusText}`);
       return null;
     }
 
-    const data = await response.json();
-    console.log("NOAA Climate API response:", data);
-    return data;
+    return await response.json();
   } catch (error) {
-    console.log("NOAA Climate API unavailable:", error);
+    console.warn("NOAA Climate API unavailable:", (error as Error).message);
     return null;
   }
 }
@@ -552,15 +542,13 @@ async function callOpenWeatherClimateAPI(location: any, year: number) {
     const response = await fetch(`https://api.openweathermap.org/data/2.5/climate?lat=${location.latitude}&lon=${location.longitude}&year=${year}&appid=${process.env.OPENWEATHER_API_KEY}`);
 
     if (!response.ok) {
-      console.log(`OpenWeather Climate API returned ${response.status}: ${response.statusText}`);
+      console.warn(`OpenWeather Climate API ${response.status}: ${response.statusText}`);
       return null;
     }
 
-    const data = await response.json();
-    console.log("OpenWeather Climate API response:", data);
-    return data;
+    return await response.json();
   } catch (error) {
-    console.log("OpenWeather Climate API unavailable:", error);
+    console.warn("OpenWeather Climate API unavailable:", (error as Error).message);
     return null;
   }
 }
@@ -587,14 +575,11 @@ async function callCBottleAPI(location: any, year: number, apiKey: string) {
     });
 
     if (!response.ok) {
-      console.log(`CBottle API returned ${response.status}: ${response.statusText}`);
-      const errorText = await response.text();
-      console.log("CBottle error details:", errorText);
+      console.warn(`CBottle API ${response.status}: ${response.statusText}`);
       return null;
     }
 
     const data = await response.json();
-    console.log("CBottle response:", data);
     
     // Parse the response from the chat completion format
     if (data.choices && data.choices[0] && data.choices[0].message) {
@@ -602,14 +587,14 @@ async function callCBottleAPI(location: any, year: number, apiKey: string) {
         const climateData = JSON.parse(data.choices[0].message.content);
         return transformCBottleResponse(climateData, location, year);
       } catch (parseError) {
-        console.log("Failed to parse CBottle JSON response:", parseError);
+        console.warn("Failed to parse CBottle JSON response:", (parseError as Error).message);
         return null;
       }
     }
     
     return transformCBottleResponse(data, location, year);
   } catch (error) {
-    console.log("CBottle API unavailable:", error);
+    console.warn("CBottle API unavailable:", (error as Error).message);
     return null;
   }
 }

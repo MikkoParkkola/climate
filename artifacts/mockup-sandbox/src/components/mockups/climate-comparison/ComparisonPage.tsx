@@ -274,8 +274,6 @@ export function ComparisonPage() {
     [cityData]
   );
 
-  const tPct = ((year - 2025) / 75) * 100;
-
   // Dynamic table rows
   const tempRows: TableRow[] = [
     { label: "Annual Mean", vals: cityData.map(d => `${d.temp.toFixed(1)}°C`), winnerIdx: cityData.reduce((mi, d, i) => d.temp < cityData[mi].temp ? i : mi, 0) },
