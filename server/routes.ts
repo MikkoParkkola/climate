@@ -298,7 +298,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         lng: z.number().min(-180).max(180),
       }),
       year: z.number().int().min(2024).max(2200),
-      apiKey: z.string().min(1).max(500),
+      apiKey: z.string().max(500).optional(),
     });
 
     const parsed = bodySchema.safeParse(req.body);
@@ -306,7 +306,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       return res.status(400).json({ message: "Invalid request parameters" });
     }
 
-    const { coordinates, year, apiKey } = parsed.data;
+    const { coordinates, year, apiKey: clientApiKey } = parsed.data;
+    // Use client-supplied key if provided, otherwise fall back to server env var
+    const apiKey = clientApiKey?.trim() || process.env.NVIDIA_API_KEY || "";
+    if (!apiKey) {
+      return res.status(503).json({ message: "No API key configured. Please set NVIDIA_API_KEY." });
+    }
 
     activePythonProcesses++;
     let killed = false;

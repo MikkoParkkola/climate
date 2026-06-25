@@ -62,18 +62,10 @@ export default function ClimateApp() {
   const [locationSuggestions, setLocationSuggestions] = useState<LocationOption[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [year, setYear] = useState(2050);
-  const [apiKey, setApiKey] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
   const [climateData, setClimateData] = useState<any>(null);
   const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    fetch('/api/config')
-      .then(res => res.json())
-      .then(data => { if (data.nvidiaApiKey) setApiKey(data.nvidiaApiKey); })
-      .catch(err => console.warn("Could not load API config:", err));
-  }, []);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -107,7 +99,6 @@ export default function ClimateApp() {
 
   const handleSubmit = async () => {
     if (!selectedLocation) { setError("Please select a location from the suggestions."); return; }
-    if (!apiKey.trim()) { setError("No API key configured."); return; }
     setError(null);
     setIsLoading(true);
     setClimateData(null);
@@ -117,7 +108,7 @@ export default function ClimateApp() {
       const response = await fetch("/api/climate-projection", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ location: selectedLocation.name, coordinates: { lat: selectedLocation.lat, lng: selectedLocation.lng }, year, apiKey })
+        body: JSON.stringify({ location: selectedLocation.name, coordinates: { lat: selectedLocation.lat, lng: selectedLocation.lng }, year })
       });
       setStatusMessage("Processing climate projection data...");
       const data = await response.json();
