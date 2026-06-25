@@ -35,7 +35,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       const locations = await storage.searchClimateLocations(query);
-      res.json(locations);
+      // Add lat/lng aliases so the client can use either naming convention
+      res.json(locations.map(l => ({ ...l, lat: Number(l.latitude), lng: Number(l.longitude) })));
     } catch (error) {
       console.error("Error searching locations:", error);
       res.status(500).json({ message: "Failed to search locations" });
@@ -294,10 +295,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     const bodySchema = z.object({
       location: z.string().min(1).max(200),
       coordinates: z.object({
-        lat: z.number().min(-90).max(90),
-        lng: z.number().min(-180).max(180),
+        lat: z.coerce.number().min(-90).max(90),
+        lng: z.coerce.number().min(-180).max(180),
       }),
-      year: z.number().int().min(2024).max(2200),
+      year: z.coerce.number().int().min(2024).max(2200),
       apiKey: z.string().max(500).optional(),
     });
 
