@@ -1,5 +1,5 @@
 import {
-  users, climateLocations, climateProjections, locationComparisons,
+  users, climateLocations, climateProjections, locationComparisons, climateModelCache,
   type User, type InsertUser,
   type ClimateLocation, type InsertClimateLocation,
   type ClimateProjection, type InsertClimateProjection,
@@ -41,6 +41,10 @@ export interface IStorage {
   getClimateProjection(locationId: number, year: number): Promise<ClimateProjection | undefined>;
   createClimateProjection(projection: InsertClimateProjection): Promise<ClimateProjection>;
   getClimateProjectionsByLocation(locationId: number): Promise<ClimateProjection[]>;
+
+  // Raw model-output cache (lossless), keyed by rounded coordinate grid + year.
+  getCachedModelProjection(latKey: number, lngKey: number, year: number): Promise<unknown | undefined>;
+  saveModelProjection(latKey: number, lngKey: number, year: number, projection: unknown): Promise<void>;
 
   createLocationComparison(userId: number, name: string, locationIds: number[], year: number): Promise<unknown>;
   getUserComparisons(userId: number): Promise<unknown[]>;
@@ -161,6 +165,31 @@ export class DatabaseStorage implements IStorage {
     return projections
       .sort((a, b) => a.projectionYear - b.projectionYear)
       .map(deserializeProjection);
+  }
+
+  // ── Raw model-output cache ─────────────────────────────────────────────────
+  async getCachedModelProjection(latKey: number, lngKey: number, year: number): Promise<unknown | undefined> {
+    const [row] = await db
+      .select()
+      .from(climateModelCache)
+      .where(
+        and(
+          eq(climateModelCache.latKey, latKey),
+          eq(climateModelCache.lngKey, lngKey),
+          eq(climateModelCache.year, year),
+        )
+      )
+      .limit(1);
+    return row ? safeJsonParse(row.projection) : undefined;
+  }
+
+  async saveModelProjection(latKey: number, lngKey: number, year: number, projection: unknown): Promise<void> {
+    // onConflictDoNothing keeps concurrent identical requests from colliding on
+    // the (lat, lng, year) unique index.
+    await db
+      .insert(climateModelCache)
+      .values({ latKey, lngKey, year, projection: JSON.stringify(projection), createdAt: new Date() })
+      .onConflictDoNothing();
   }
 
   // ── Comparisons ──────────────────────────────────────────────────────────

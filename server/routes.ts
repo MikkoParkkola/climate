@@ -583,18 +583,40 @@ export async function registerRoutes(app: Express): Promise<Server> {
     // De-duplicate and sort the checkpoint years ascending.
     const years = Array.from(new Set(parsed.data.years)).sort((a, b) => a - b);
 
+    // Round to a ~0.01° (~1 km) grid so the same location — or a near-identical
+    // one — reuses a previously cached model run instead of re-spawning Python.
+    //
+    // NOTE ON CACHE INVALIDATION: the cache key is (latKey, lngKey, year) only —
+    // it does NOT encode the climate model/scenario version. Cached projections
+    // are kept indefinitely. If cbottle_runner.py's model, scenario, or output
+    // semantics ever change, the cached rows become stale; invalidate them by
+    // truncating the `climate_model_cache` table (or add a version column to the
+    // key) as part of that change.
+    const round2 = (n: number) => Math.round(n * 100) / 100;
+    const latKey = round2(coordinates.lat);
+    const lngKey = round2(coordinates.lng);
+
     const apiKey = process.env.NVIDIA_API_KEY || "";
-    if (!apiKey) {
-      return res.status(503).json({ message: "No API key configured. Please set NVIDIA_API_KEY." });
-    }
 
     try {
       const points: any[] = [];
+      let cachedCount = 0;
       for (const year of years) {
+        const cached = await storage.getCachedModelProjection(latKey, lngKey, year);
+        if (cached) {
+          cachedCount++;
+          points.push({ year, cached: true, ...(cached as object) });
+          continue;
+        }
+        // Only the model run needs the API key — cached locations work without it.
+        if (!apiKey) {
+          return res.status(503).json({ message: "No API key configured. Please set NVIDIA_API_KEY." });
+        }
         const projection = await runClimateModel(coordinates.lat, coordinates.lng, year, apiKey);
-        points.push({ year, ...projection });
+        await storage.saveModelProjection(latKey, lngKey, year, projection);
+        points.push({ year, cached: false, ...projection });
       }
-      res.json({ success: true, data: { coordinates, points } });
+      res.json({ success: true, data: { coordinates, points, cachedCount } });
     } catch (err) {
       const msg = (err as Error).message;
       if (msg === "timeout") {
@@ -757,6 +779,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
 <link rel="canonical" href="${page.ogUrl}">
 <script type="application/ld+json">${page.jsonLd}</script>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<!-- Vite dev client + @vitejs/plugin-react refresh preamble. Because this HTML
+     is built by hand (not passed through Vite's transformIndexHtml), the React
+     plugin's preamble must be injected manually or React fails to mount with
+     "@vitejs/plugin-react can't detect preamble". -->
+<script type="module" src="/@vite/client"></script>
+<script type="module">
+import RefreshRuntime from "/@react-refresh"
+RefreshRuntime.injectIntoGlobalHook(window)
+window.$RefreshReg$ = () => {}
+window.$RefreshSig$ = () => (type) => type
+window.__vite_plugin_react_preamble_installed__ = true
+</script>
 </head>
 <body>
 <div id="root">${page.bodyHtml}</div>

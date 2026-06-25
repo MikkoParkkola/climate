@@ -1,4 +1,4 @@
-import { pgTable, text, serial, integer, boolean, real, timestamp } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, integer, boolean, real, timestamp, uniqueIndex } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -75,6 +75,25 @@ export const climateProjections = pgTable("climate_projections", {
   fetchedAt: timestamp("fetched_at").defaultNow(),
 });
 
+// Lossless cache of raw climate-model output, keyed by a rounded coordinate
+// grid + year. Lets repeat/near-identical requests reuse a previous model run
+// instead of re-spawning the (slow) Python model. Stores the full projection
+// JSON so no fields are lost vs. the flattened climate_projections table.
+export const climateModelCache = pgTable(
+  "climate_model_cache",
+  {
+    id: serial("id").primaryKey(),
+    latKey: real("lat_key").notNull(),
+    lngKey: real("lng_key").notNull(),
+    year: integer("year").notNull(),
+    projection: text("projection").notNull(), // full model output, JSON-encoded
+    createdAt: timestamp("created_at").defaultNow(),
+  },
+  (t) => ({
+    coordYearIdx: uniqueIndex("cmc_coord_year_idx").on(t.latKey, t.lngKey, t.year),
+  }),
+);
+
 export const insertUserSchema = createInsertSchema(users).pick({
   username: true,
   password: true,
@@ -98,3 +117,5 @@ export type ClimateLocation = typeof climateLocations.$inferSelect;
 
 export type InsertClimateProjection = z.infer<typeof insertClimateProjectionSchema>;
 export type ClimateProjection = typeof climateProjections.$inferSelect;
+
+export type ClimateModelCache = typeof climateModelCache.$inferSelect;

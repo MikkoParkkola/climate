@@ -1,1142 +1,1054 @@
-import { useState, useEffect } from "react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Slider } from "@/components/ui/slider";
-import { Progress } from "@/components/ui/progress";
-import { Badge } from "@/components/ui/badge";
+import { useState, useEffect, useMemo, useRef } from "react";
+import { GitCompare, Loader2, Download, Search, MapPin, ArrowLeft } from "lucide-react";
 import {
-  Thermometer, Droplets, MapPin, TrendingUp, AlertTriangle,
-  Waves, Cloud, FileText, Globe, Award, CheckCircle,
-  GitCompare, Loader2, Wind, BarChart2, Activity
-} from "lucide-react";
-import LivabilityIndexBreakdown from "@/components/livability-index-breakdown";
-import HabitabilityRanking from "@/components/habitability-ranking-refactored";
-import GlobalRankingDisplay from "@/components/global-ranking-display";
+  agriculturalViability, biodiversityLoss, waterStress, projectedAqi, climateTwin,
+  FALLBACK_BASELINE_AQI, type EstimateInputs,
+} from "@/lib/climate-estimates";
 
+// ── Theme ──────────────────────────────────────────────────────────────────
+const BG = "hsl(222,47%,8%)";
+const CARD = "rgba(255,255,255,0.04)";
+const BORDER = "rgba(255,255,255,0.08)";
+const ACCENT = "hsl(192,91%,46%)";
+const MUTED = "hsl(215,20%,65%)";
+const RED = "#ef4444";
+const BLUE = "#3b82f6";
+const ORANGE = "#f97316";
+const GREEN = "#22c55e";
+const AMBER = "#f59e0b";
+const PURPLE = "#a78bfa";
+const CYAN = "hsl(192,91%,46%)";
+const card: React.CSSProperties = { backgroundColor: CARD, border: `1px solid ${BORDER}`, borderRadius: 12, backdropFilter: "blur(12px)" };
+
+const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+const CHECKPOINTS = [2025, 2050, 2075, 2100];
+
+// ── Types ────────────────────────────────────────────────────────────────────
 interface LocationOption {
   name: string;
   lat: number;
   lng: number;
   country: string;
   city: string;
-  state: string;
+  state?: string;
 }
 
-function HabitabilityBadge({ score }: { score: number }) {
-  if (score >= 80) return <Badge className="bg-emerald-500/20 text-emerald-400 border-emerald-500/30 border">Excellent</Badge>;
-  if (score >= 60) return <Badge className="bg-blue-500/20 text-blue-400 border-blue-500/30 border">Good</Badge>;
-  if (score >= 40) return <Badge className="bg-yellow-500/20 text-yellow-400 border-yellow-500/30 border">Fair</Badge>;
-  if (score >= 20) return <Badge className="bg-orange-500/20 text-orange-400 border-orange-500/30 border">Poor</Badge>;
-  return <Badge className="bg-red-500/20 text-red-400 border-red-500/30 border">Severe</Badge>;
+interface ProjectionPoint {
+  year: number;
+  temperature: { annual_mean: number; monthly: number[]; anomaly: number; min: number; max: number };
+  precipitation: { annual_total: number; monthly: number[]; anomaly_percent: number };
+  extremes: { heat_stress_days: number; drought_risk: number; flood_risk: number; sea_level_rise_cm?: number };
+  habitability: { score: number; category?: string; breakdown?: Record<string, number> };
+  atmospheric_physics?: { circulation_pattern?: string; climate_sensitivity?: number; feedback_mechanisms?: string[] };
+  location?: { climate_zone?: string; latitude?: number; longitude?: number };
+  metadata?: { confidence?: string; resolution?: string; model?: string; model_version?: string };
 }
 
-function ScoreRing({ score }: { score: number }) {
-  const color = score >= 80 ? "#34d399" : score >= 60 ? "#60a5fa" : score >= 40 ? "#facc15" : score >= 20 ? "#fb923c" : "#f87171";
-  const r = 42;
-  const circumference = 2 * Math.PI * r;
-  const offset = circumference - (score / 100) * circumference;
+// ── Math helpers ─────────────────────────────────────────────────────────────
+function lerp(a: number, b: number, t: number) {
+  return a + (b - a) * Math.max(0, Math.min(1, t));
+}
+
+function interpScalar(points: ProjectionPoint[], year: number, get: (p: ProjectionPoint) => number): number {
+  if (points.length === 0) return 0;
+  if (year <= points[0].year) return get(points[0]);
+  const last = points[points.length - 1];
+  if (year >= last.year) return get(last);
+  for (let i = 0; i < points.length - 1; i++) {
+    const a = points[i];
+    const b = points[i + 1];
+    if (year >= a.year && year <= b.year) {
+      const t = (year - a.year) / (b.year - a.year || 1);
+      return lerp(get(a), get(b), t);
+    }
+  }
+  return get(last);
+}
+
+// Interpolate parallel year/value arrays at an arbitrary year.
+function interpArr(years: number[], values: number[], year: number): number {
+  if (values.length === 0) return 0;
+  if (year <= years[0]) return values[0];
+  if (year >= years[years.length - 1]) return values[values.length - 1];
+  for (let i = 0; i < years.length - 1; i++) {
+    if (year >= years[i] && year <= years[i + 1]) {
+      const t = (year - years[i]) / (years[i + 1] - years[i] || 1);
+      return lerp(values[i], values[i + 1], t);
+    }
+  }
+  return values[values.length - 1];
+}
+
+function nearestPoint(points: ProjectionPoint[], year: number): ProjectionPoint {
+  return points.reduce((best, p) => (Math.abs(p.year - year) < Math.abs(best.year - year) ? p : best), points[0]);
+}
+
+function categoryFor(score: number) {
+  return score >= 85 ? "Excellent" : score >= 70 ? "Good" : score >= 60 ? "Fair" : score >= 40 ? "Poor" : "Severe";
+}
+
+function scoreColor(s: number) {
+  return s >= 85 ? GREEN : s >= 70 ? "#4ade80" : s >= 60 ? AMBER : s >= 40 ? ORANGE : RED;
+}
+
+function prettify(key: string) {
+  return key.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
+function confidenceColor(c: string) {
+  const v = (c || "").toLowerCase();
+  if (v.includes("low")) return RED;
+  if (v.includes("medium")) return AMBER;
+  return GREEN;
+}
+
+function feedbackTag(text: string): { icon: string; label: string; color: string } {
+  const v = text.toLowerCase();
+  const short = text.split(":")[0].trim();
+  if (v.includes("ice")) return { icon: "❄️", label: short, color: CYAN };
+  if (v.includes("water vapor") || v.includes("moisture")) return { icon: "💧", label: short, color: PURPLE };
+  if (v.includes("cloud")) return { icon: "☁️", label: short, color: BLUE };
+  if (v.includes("vegetation") || v.includes("carbon")) return { icon: "🌱", label: short, color: GREEN };
+  return { icon: "🔁", label: short, color: AMBER };
+}
+
+// First year (2025–2100) at which an interpolated metric crosses a threshold.
+function crossYear(points: ProjectionPoint[], threshold: number, dir: "above" | "below", get: (p: ProjectionPoint) => number): number | null {
+  for (let y = 2025; y <= 2100; y++) {
+    const v = interpScalar(points, y, get);
+    if (dir === "above" ? v >= threshold : v <= threshold) return y;
+  }
+  return null;
+}
+
+// ── Charts ─────────────────────────────────────────────────────────────────
+interface TrendZone { from: number; to: number; color: string }
+
+function TrendChart({
+  years, values, year, label, unit, color, decimals = 0, thresholdY, zones, fillOpacity = 0.1,
+}: {
+  years: number[]; values: number[]; year: number; label: string; unit: string; color: string;
+  decimals?: number; thresholdY?: number; zones?: TrendZone[]; fillOpacity?: number;
+}) {
+  const VW = 100, VH = 56, px = 1, py = 5, bH = 9;
+  const cW = VW - px * 2, cH = VH - py - bH;
+  const mn = Math.min(...values), mx = Math.max(...values), rng = mx - mn || 1;
+  const xOf = (yr: number) => px + ((yr - 2025) / 75) * cW;
+  const yOf = (v: number) => py + cH - ((v - mn) / rng) * cH;
+
+  const curV = interpArr(years, values, year);
+  const mrkX = xOf(year);
+  const mrkY = yOf(curV);
+  const pts = values.map((v, i) => `${xOf(years[i]).toFixed(2)},${yOf(v).toFixed(2)}`).join(" ");
+  const areaD = `M${xOf(years[0]).toFixed(2)},${(py + cH).toFixed(2)}` +
+    values.map((v, i) => ` L${xOf(years[i]).toFixed(2)},${yOf(v).toFixed(2)}`).join("") +
+    ` L${xOf(years[years.length - 1]).toFixed(2)},${(py + cH).toFixed(2)}Z`;
+
+  const callW = 26, callH = 11;
+  const cxPos = mrkX + 2 + callW > VW - px ? mrkX - 2 - callW : mrkX + 2;
+  const cyPos = Math.max(0, Math.min(VH - bH - callH, mrkY - callH / 2));
+  const displayV = decimals > 0 ? curV.toFixed(decimals) : Math.round(curV).toString();
+
   return (
-    <div className="relative inline-flex items-center justify-center">
-      <svg width="110" height="110" className="-rotate-90">
-        <circle cx="55" cy="55" r={r} fill="none" stroke="rgba(255,255,255,0.07)" strokeWidth="8" />
-        <circle
-          cx="55" cy="55" r={r} fill="none"
-          stroke={color} strokeWidth="8"
-          strokeDasharray={circumference}
-          strokeDashoffset={offset}
-          strokeLinecap="round"
-          style={{ transition: "stroke-dashoffset 0.8s ease" }}
-        />
+    <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column" }}>
+      <svg viewBox={`0 0 ${VW} ${VH}`} style={{ width: "100%", height: 80, display: "block" }}>
+        {zones?.map((z, zi) => {
+          const clampedHi = Math.min(z.to, mx), clampedLo = Math.max(z.from, mn);
+          if (clampedHi <= clampedLo) return null;
+          return <rect key={zi} x={px} y={yOf(clampedHi)} width={cW} height={yOf(clampedLo) - yOf(clampedHi)} fill={z.color} opacity="0.14" />;
+        })}
+        <path d={areaD} fill={color} opacity={fillOpacity} />
+        {[0.33, 0.67].map((f) => {
+          const yy = py + f * cH;
+          return <line key={f} x1={px} y1={yy} x2={px + cW} y2={yy} stroke="rgba(255,255,255,0.04)" strokeWidth="0.5" />;
+        })}
+        {thresholdY !== undefined && thresholdY >= mn && thresholdY <= mx && (
+          <line x1={px} y1={yOf(thresholdY)} x2={px + cW} y2={yOf(thresholdY)} stroke={RED} strokeWidth="0.7" strokeDasharray="2 1.5" opacity="0.6" />
+        )}
+        <polyline points={pts} fill="none" stroke={color} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+        <line x1={mrkX} y1={py} x2={mrkX} y2={py + cH} stroke={ACCENT} strokeWidth="0.9" strokeDasharray="2.5 2" opacity="0.85" />
+        <circle cx={mrkX} cy={mrkY} r="2.4" fill={color} stroke="white" strokeWidth="0.9" />
+        <rect x={cxPos} y={cyPos} width={callW} height={callH} rx="2" fill="rgba(6,9,16,0.88)" stroke={color} strokeWidth="0.5" />
+        <text x={cxPos + callW / 2} y={cyPos + callH - 2.5} textAnchor="middle" fill="white" fontSize="5.5" fontWeight="700">{displayV}{unit}</text>
+        {years.map((yr, i) => (
+          <text key={i} x={xOf(yr)} y={VH - 0.5} textAnchor="middle" fill={MUTED} fontSize="4.8">{yr}</text>
+        ))}
       </svg>
-      <div className="absolute flex flex-col items-center">
-        <span className="text-2xl font-bold text-white leading-none">{score.toFixed(0)}</span>
-        <span className="text-xs text-slate-400 mt-0.5">/ 100</span>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 2, padding: "0 1px" }}>
+        <span style={{ fontSize: 9, color: MUTED, textTransform: "uppercase", letterSpacing: "0.05em" }}>{label}</span>
+        <span style={{ fontSize: 10, fontWeight: 700, color, fontFamily: "monospace" }}>{displayV}{unit}</span>
       </div>
     </div>
   );
 }
 
+function MonthlyTempChart({ temps, baseline }: { temps: number[]; baseline: number[] }) {
+  const W = 480, H = 140, px = 24, py = 12;
+  const all = [...temps, ...baseline];
+  const min = Math.floor(Math.min(...all) - 2);
+  const max = Math.ceil(Math.max(...all) + 2);
+  const range = max - min || 1;
+  const cW = W - px * 2, cH = H - py * 2 - 14;
+  const xp = (i: number) => px + (i / 11) * cW;
+  const yp = (v: number) => py + cH - ((Math.max(min, Math.min(max, v)) - min) / range) * cH;
+  const gridVals = Array.from({ length: 5 }, (_, i) => Math.round(min + (range / 4) * i));
+  const pts = temps.map((v, i) => `${xp(i)},${yp(v)}`).join(" ");
+  const bpts = baseline.map((v, i) => `${xp(i)},${yp(v)}`).join(" ");
+  return (
+    <svg viewBox={`0 0 ${W} ${H}`} style={{ width: "100%", height: 140 }}>
+      {gridVals.map((t) => (
+        <g key={t}>
+          <line x1={px} y1={yp(t)} x2={W - px} y2={yp(t)} stroke="rgba(255,255,255,0.05)" strokeWidth="1" />
+          <text x={px - 3} y={yp(t) + 3} textAnchor="end" fill={MUTED} fontSize="8">{t}°</text>
+        </g>
+      ))}
+      <polyline points={bpts} fill="none" stroke="rgba(255,255,255,0.2)" strokeWidth="1.5" strokeDasharray="4 3" />
+      <polyline points={pts} fill="none" stroke={RED} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+      {temps.map((v, i) => <circle key={i} cx={xp(i)} cy={yp(v)} r="2.5" fill={BG} stroke={RED} strokeWidth="1.5" />)}
+      {MONTHS.map((m, i) => <text key={i} x={xp(i)} y={H - 2} textAnchor="middle" fill={MUTED} fontSize="8">{m[0]}</text>)}
+    </svg>
+  );
+}
+
+function PrecipBars({ vals }: { vals: number[] }) {
+  const max = Math.max(...vals, 1);
+  return (
+    <div style={{ display: "flex", alignItems: "flex-end", gap: 3, height: 110, paddingBottom: 16 }}>
+      {vals.map((v, i) => (
+        <div key={i} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "flex-end", height: "100%" }}>
+          <div style={{ width: "100%", background: `linear-gradient(to top, rgba(59,130,246,0.18), ${BLUE})`, borderRadius: "2px 2px 0 0", height: `${(v / max) * 100}%`, transition: "height 0.25s ease", minHeight: 2 }} />
+          <div style={{ fontSize: 8, color: MUTED, marginTop: 2 }}>{MONTHS[i][0]}</div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function ScoreSparkline({ years, data, color, year }: { years: number[]; data: number[]; color: string; year: number }) {
+  const W = 80, H = 22;
+  const mn = Math.min(...data), mx = Math.max(...data), rng = mx - mn || 1;
+  const xOf = (yr: number) => ((yr - 2025) / 75) * W;
+  const yOf = (v: number) => H - ((v - mn) / rng) * H * 0.88 + H * 0.06;
+  const pts = data.map((v, i) => `${xOf(years[i])},${yOf(v)}`).join(" ");
+  const cx = xOf(year);
+  const cy = yOf(interpArr(years, data, year));
+  return (
+    <svg viewBox={`0 0 ${W} ${H}`} style={{ width: W, height: H }}>
+      <polyline points={pts} fill="none" stroke={color} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" opacity="0.7" />
+      <circle cx={cx} cy={cy} r="2.5" fill={color} />
+    </svg>
+  );
+}
+
+// Semicircular gauge for the derived environmental estimates.
+function GaugeMeter({ value, max, color }: { value: number; max: number; color: string }) {
+  const R = 32, cx = 42, cy = 40, sw = 8;
+  const arcLen = Math.PI * R;
+  const pct = Math.max(0, Math.min(1, value / max));
+  const arc = `M ${cx - R} ${cy} A ${R} ${R} 0 0 1 ${cx + R} ${cy}`;
+  return (
+    <svg viewBox="0 0 84 50" style={{ width: 96, height: 56 }}>
+      <path d={arc} fill="none" stroke="rgba(255,255,255,0.08)" strokeWidth={sw} strokeLinecap="round" />
+      <path d={arc} fill="none" stroke={color} strokeWidth={sw} strokeLinecap="round" strokeDasharray={`${pct * arcLen} ${arcLen}`} style={{ transition: "stroke-dasharray 0.35s ease" }} />
+      <text x={cx} y={cy - 4} textAnchor="middle" fontSize="16" fontWeight="800" fill={color}>{Math.round(value)}</text>
+    </svg>
+  );
+}
+
+const ESTIMATE_BADGE: React.CSSProperties = {
+  fontSize: 8.5, fontWeight: 700, letterSpacing: 0.5, color: AMBER,
+  background: "rgba(245,158,11,0.12)", border: "1px solid rgba(245,158,11,0.3)",
+  borderRadius: 4, padding: "2px 6px", marginLeft: "auto",
+};
+
+// ── Main ─────────────────────────────────────────────────────────────────────
 export default function ClimateApp() {
-  const [location, setLocation] = useState("");
+  const [locationText, setLocationText] = useState("");
   const [selectedLocation, setSelectedLocation] = useState<LocationOption | null>(null);
-  const [locationSuggestions, setLocationSuggestions] = useState<LocationOption[]>([]);
+  const [suggestions, setSuggestions] = useState<LocationOption[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [year, setYear] = useState(2050);
+  const [trajectory, setTrajectory] = useState<ProjectionPoint[] | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-  const [statusMessage, setStatusMessage] = useState<string | null>(null);
-  const [climateData, setClimateData] = useState<any>(null);
+  const [loadingStep, setLoadingStep] = useState(0);
   const [error, setError] = useState<string | null>(null);
+  const [exporting, setExporting] = useState(false);
+  // Present-day measured AQI baseline (Open-Meteo, free, no key) for the AQI estimate.
+  const [baselineAqi, setBaselineAqi] = useState<number | null>(null);
+  const [aqiMeasured, setAqiMeasured] = useState(false);
+  const resultsRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     document.title = "ClimateVision — Future Climate Projections for Any Location on Earth";
   }, []);
 
+  // Fetch present-day air quality for the selected location once results load.
+  useEffect(() => {
+    if (!trajectory || !selectedLocation) return;
+    let cancelled = false;
+    setBaselineAqi(null);
+    setAqiMeasured(false);
+    (async () => {
+      try {
+        const r = await fetch(
+          `https://air-quality-api.open-meteo.com/v1/air-quality?latitude=${selectedLocation.lat}&longitude=${selectedLocation.lng}&current=us_aqi`
+        );
+        const j = await r.json();
+        const v = j?.current?.us_aqi;
+        if (cancelled) return;
+        if (typeof v === "number" && isFinite(v)) {
+          setBaselineAqi(v);
+          setAqiMeasured(true);
+        } else {
+          setBaselineAqi(FALLBACK_BASELINE_AQI);
+          setAqiMeasured(false);
+        }
+      } catch {
+        if (!cancelled) {
+          setBaselineAqi(FALLBACK_BASELINE_AQI);
+          setAqiMeasured(false);
+        }
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [trajectory, selectedLocation]);
+
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       const target = event.target as Element;
-      if (!target.closest('.location-input-container')) setShowSuggestions(false);
+      if (!target.closest(".location-input-container")) setShowSuggestions(false);
     };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
   useEffect(() => {
-    if (location.length < 2) { setLocationSuggestions([]); setShowSuggestions(false); return; }
+    if (locationText.length < 2) { setSuggestions([]); setShowSuggestions(false); return; }
     const timeoutId = setTimeout(async () => {
       try {
-        const response = await fetch(`/api/locations/search?q=${encodeURIComponent(location)}`);
-        const suggestions = await response.json();
-        setLocationSuggestions(suggestions);
+        const response = await fetch(`/api/locations/search?q=${encodeURIComponent(locationText)}`);
+        const data = await response.json();
+        setSuggestions(Array.isArray(data) ? data : []);
         setShowSuggestions(true);
       } catch (err) {
         console.warn("Location search failed:", err);
       }
     }, 300);
     return () => clearTimeout(timeoutId);
-  }, [location]);
+  }, [locationText]);
+
+  useEffect(() => {
+    if (!isLoading) { setLoadingStep(0); return; }
+    const id = setInterval(() => setLoadingStep((s) => Math.min(s + 1, CHECKPOINTS.length - 1)), 4000);
+    return () => clearInterval(id);
+  }, [isLoading]);
 
   const selectLocation = (opt: LocationOption) => {
     setSelectedLocation(opt);
-    setLocation(opt.name);
+    setLocationText(opt.name);
     setShowSuggestions(false);
   };
 
-  const handleSubmit = async () => {
+  const generate = async () => {
     if (!selectedLocation) { setError("Please select a location from the suggestions."); return; }
     setError(null);
     setIsLoading(true);
-    setClimateData(null);
-    setStatusMessage("Connecting to climate model...");
+    setTrajectory(null);
     try {
-      setStatusMessage("Running CBottle ICON atmospheric model...");
-      const response = await fetch("/api/climate-projection", {
+      const response = await fetch("/api/climate-trajectory", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ location: selectedLocation.name, coordinates: { lat: selectedLocation.lat, lng: selectedLocation.lng }, year })
+        body: JSON.stringify({ coordinates: { lat: selectedLocation.lat, lng: selectedLocation.lng }, years: CHECKPOINTS }),
       });
-      setStatusMessage("Processing climate projection data...");
+      if (!response.ok) {
+        let detail = response.statusText;
+        try { const e = await response.json(); detail = e.message || detail; } catch { /* ignore */ }
+        throw new Error(detail);
+      }
       const data = await response.json();
-      if (data.success && data.data) {
-        setClimateData(data.data);
-        setStatusMessage(null);
+      if (data.success && data.data?.points?.length) {
+        const points: ProjectionPoint[] = [...data.data.points].sort((a: ProjectionPoint, b: ProjectionPoint) => a.year - b.year);
+        setTrajectory(points);
       } else {
-        setError(data.error || "Projection failed. Please try again.");
+        throw new Error("Invalid response from climate model.");
       }
     } catch (err) {
-      setError("Network error. Please check your connection.");
+      setError(err instanceof Error ? err.message : "Network error. Please check your connection.");
     } finally {
       setIsLoading(false);
-      setStatusMessage(null);
     }
   };
 
-  const exportToPDF = async () => {
-    if (!climateData) return;
+  const newSearch = () => {
+    setTrajectory(null);
+    setError(null);
+  };
+
+  const exportPDF = async () => {
+    if (!resultsRef.current || exporting) return;
+    setExporting(true);
     try {
-      const html2canvas = (await import('html2canvas')).default;
-      const jsPDF = (await import('jspdf')).jsPDF;
-      const pdf = new jsPDF('p', 'mm', 'a4');
-      const pageWidth = pdf.internal.pageSize.getWidth();
-      const margin = 10;
-      let y = margin;
-
-      pdf.setFontSize(20); pdf.setFont('helvetica', 'bold');
-      pdf.text('Climate Projection Report', pageWidth / 2, y + 10, { align: 'center' });
-      y += 20;
-      pdf.setFontSize(14); pdf.setFont('helvetica', 'normal');
-      pdf.text(`Location: ${climateData.location?.name || 'Unknown'}`, pageWidth / 2, y, { align: 'center' });
-      y += 10;
-      pdf.text(`Projection Year: ${climateData.year}`, pageWidth / 2, y, { align: 'center' });
-      y += 10;
-      pdf.text(`Generated: ${new Date().toLocaleString()}`, pageWidth / 2, y, { align: 'center' });
-      y += 20;
-      if (climateData.temperature) {
-        pdf.setFontSize(12);
-        pdf.text(`Annual Mean Temperature: ${climateData.temperature.annual_mean?.toFixed(1)}°C`, margin, y); y += 8;
-        pdf.text(`Temperature Change: +${climateData.temperature.anomaly?.toFixed(1)}°C`, margin, y); y += 8;
-        pdf.text(`Range: ${climateData.temperature.min?.toFixed(1)}°C to ${climateData.temperature.max?.toFixed(1)}°C`, margin, y); y += 12;
+      const html2canvas = (await import("html2canvas")).default;
+      const { jsPDF } = await import("jspdf");
+      const canvas = await html2canvas(resultsRef.current, { backgroundColor: "#0b111e", scale: 2, useCORS: true });
+      const pdf = new jsPDF("p", "mm", "a4");
+      const pageW = pdf.internal.pageSize.getWidth();
+      const pageH = pdf.internal.pageSize.getHeight();
+      const imgW = pageW;
+      const imgH = (canvas.height * imgW) / canvas.width;
+      let heightLeft = imgH;
+      let position = 0;
+      const imgData = canvas.toDataURL("image/png");
+      pdf.addImage(imgData, "PNG", 0, position, imgW, imgH);
+      heightLeft -= pageH;
+      while (heightLeft > 0) {
+        position -= pageH;
+        pdf.addPage();
+        pdf.addImage(imgData, "PNG", 0, position, imgW, imgH);
+        heightLeft -= pageH;
       }
-      if (climateData.precipitation) {
-        pdf.text(`Annual Precipitation: ${climateData.precipitation.annual_total?.toFixed(0)} mm`, margin, y); y += 8;
-        pdf.text(`Precipitation Change: ${climateData.precipitation.anomaly_percent > 0 ? '+' : ''}${climateData.precipitation.anomaly_percent?.toFixed(1)}%`, margin, y); y += 12;
-      }
-      if (climateData.habitability) {
-        pdf.text(`Habitability Score: ${climateData.habitability.score?.toFixed(1)}/100 (${climateData.habitability.category})`, margin, y); y += 12;
-      }
-      const fileName = `Climate_Report_${climateData.location?.name?.replace(/[^a-zA-Z0-9]/g, '_')}_${climateData.year}.pdf`;
-      pdf.save(fileName);
-    } catch {
-      const reportContent = `CLIMATE PROJECTION REPORT\nLocation: ${climateData.location?.name}\nYear: ${climateData.year}\nTemp: ${climateData.temperature?.annual_mean?.toFixed(1)}°C\nPrecip: ${climateData.precipitation?.annual_total?.toFixed(0)}mm\nHabitability: ${climateData.habitability?.score?.toFixed(0)}/100`;
-      const blob = new Blob([reportContent], { type: 'text/plain' });
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url; link.download = `Climate_Report_${climateData.location?.name?.replace(/[^a-zA-Z0-9]/g, '_')}_${climateData.year}.txt`;
-      document.body.appendChild(link); link.click(); document.body.removeChild(link); URL.revokeObjectURL(url);
+      const name = selectedLocation?.city || selectedLocation?.name.split(",")[0] || "location";
+      pdf.save(`climate-projection-${name}-${Math.round(year)}.pdf`);
+    } catch (err) {
+      console.warn("PDF export failed:", err);
+    } finally {
+      setExporting(false);
     }
   };
 
-  const habitScore = climateData?.habitability?.score ?? 0;
-  const tempMean = climateData?.temperature?.annual_mean;
-  const precip = climateData?.precipitation?.annual_total;
+  // Derived trend arrays (stable per trajectory)
+  const traj = useMemo(() => {
+    if (!trajectory) return null;
+    const years = trajectory.map((p) => p.year);
+    return {
+      years,
+      temp: trajectory.map((p) => p.temperature.annual_mean),
+      precip: trajectory.map((p) => p.precipitation.annual_total),
+      heat: trajectory.map((p) => p.extremes.heat_stress_days),
+      score: trajectory.map((p) => p.habitability.score),
+      sea: trajectory.map((p) => p.extremes.sea_level_rise_cm ?? 0),
+      drought: trajectory.map((p) => p.extremes.drought_risk * 100),
+    };
+  }, [trajectory]);
 
-  return (
-    <div className="min-h-screen" style={{ background: "hsl(222, 47%, 8%)" }}>
+  // Snapshot at current slider year
+  const d = useMemo(() => {
+    if (!trajectory) return null;
+    const pts = trajectory;
+    const avgTemp = interpScalar(pts, year, (p) => p.temperature.annual_mean);
+    const tempChange = interpScalar(pts, year, (p) => p.temperature.anomaly);
+    const annualPrecip = Math.max(0, Math.round(interpScalar(pts, year, (p) => p.precipitation.annual_total)));
+    const precipChange = interpScalar(pts, year, (p) => p.precipitation.anomaly_percent);
+    const heatDays = Math.max(0, Math.round(interpScalar(pts, year, (p) => p.extremes.heat_stress_days)));
+    const baseHeatDays = Math.round(pts[0].extremes.heat_stress_days);
+    const drought = Math.max(0, Math.min(100, Math.round(interpScalar(pts, year, (p) => p.extremes.drought_risk * 100))));
+    const flood = Math.max(0, Math.min(100, Math.round(interpScalar(pts, year, (p) => p.extremes.flood_risk * 100))));
+    const seaLevel = Math.max(0, Math.round(interpScalar(pts, year, (p) => p.extremes.sea_level_rise_cm ?? 0)));
+    const score = Math.max(0, Math.min(100, Math.round(interpScalar(pts, year, (p) => p.habitability.score))));
+    const category = categoryFor(score);
+    const monthlyTemps = Array.from({ length: 12 }, (_, m) => interpScalar(pts, year, (p) => p.temperature.monthly?.[m] ?? p.temperature.annual_mean));
+    const rawMonthlyPrecip = Array.from({ length: 12 }, (_, m) => Math.max(0, interpScalar(pts, year, (p) => p.precipitation.monthly?.[m] ?? p.precipitation.annual_total / 12)));
+    const rawSum = rawMonthlyPrecip.reduce((a, b) => a + b, 0) || 1;
+    const monthlyPrecip = rawMonthlyPrecip.map((v) => Math.max(0, Math.round((v / rawSum) * annualPrecip)));
 
-      {/* ── Header ── */}
-      <header className="sticky top-0 z-50 border-b" style={{ background: "hsla(222,47%,8%,0.9)", backdropFilter: "blur(16px)", borderColor: "hsl(217,33%,18%)" }}>
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: "linear-gradient(135deg, hsl(192,91%,36%) 0%, hsl(215,91%,50%) 100%)" }}>
-              <Globe className="w-4 h-4 text-white" />
+    let minIdx = 0, maxIdx = 0;
+    monthlyTemps.forEach((v, i) => { if (v < monthlyTemps[minIdx]) minIdx = i; if (v > monthlyTemps[maxIdx]) maxIdx = i; });
+    let wetIdx = 0, dryIdx = 0;
+    monthlyPrecip.forEach((v, i) => { if (v > monthlyPrecip[wetIdx]) wetIdx = i; if (v < monthlyPrecip[dryIdx]) dryIdx = i; });
+
+    const breakdownKeys = pts[0].habitability.breakdown ? Object.keys(pts[0].habitability.breakdown) : [];
+    const breakdown = breakdownKeys.map((k) => ({
+      key: k,
+      label: prettify(k),
+      neg: k.toLowerCase().includes("penalty"),
+      val: interpScalar(pts, year, (p) => p.habitability.breakdown?.[k] ?? 0),
+    }));
+
+    const np = nearestPoint(pts, year);
+    const sensitivity = np.atmospheric_physics?.climate_sensitivity;
+    const sensLabel = sensitivity == null ? null : sensitivity >= 2.2 ? "High" : sensitivity >= 1.6 ? "Moderate" : "Low";
+    const sensColor = sensLabel === "High" ? ORANGE : sensLabel === "Moderate" ? AMBER : GREEN;
+    const feedbacks = np.atmospheric_physics?.feedback_mechanisms ?? [];
+
+    // Derived estimates (clearly labelled as estimates in the UI) — computed from
+    // the real modeled variables plus published scientific relationships.
+    const estInputs: EstimateInputs = {
+      avgTemp, tempAnomaly: tempChange, annualPrecip, precipChangePct: precipChange,
+      heatDays, baseHeatDays, droughtRisk: drought / 100,
+    };
+    const agri = agriculturalViability(estInputs);
+    const bio = biodiversityLoss(estInputs);
+    const water = waterStress(estInputs);
+    const aqi = projectedAqi(baselineAqi ?? FALLBACK_BASELINE_AQI, estInputs);
+    const twin = climateTwin(avgTemp, annualPrecip, selectedLocation?.name);
+
+    return {
+      avgTemp, tempChange, annualPrecip, precipChange, heatDays, baseHeatDays, drought, flood, seaLevel,
+      score, category, monthlyTemps, monthlyPrecip, minIdx, maxIdx, wetIdx, dryIdx, breakdown,
+      np, sensitivity, sensLabel, sensColor, feedbacks,
+      agri, bio, water, aqi, twin,
+      circulation: np.atmospheric_physics?.circulation_pattern,
+      climateZone: np.location?.climate_zone,
+      confidence: np.metadata?.confidence ?? "medium-high",
+      resolution: np.metadata?.resolution,
+      model: np.metadata?.model ?? "CBottle / ICON",
+      modelVersion: np.metadata?.model_version ?? "",
+    };
+  }, [trajectory, year, baselineAqi, selectedLocation]);
+
+  // Tipping points computed from real interpolated trajectory
+  const tipping = useMemo(() => {
+    if (!trajectory) return [];
+    const items = [
+      { icon: "🌡️", label: "Heat stress exceeds 15 days/yr", year: crossYear(trajectory, 15, "above", (p) => p.extremes.heat_stress_days) },
+      { icon: "⚠️", label: "Habitability drops below 70 (Fair territory)", year: crossYear(trajectory, 70, "below", (p) => p.habitability.score) },
+      { icon: "🌊", label: "Sea level rise exceeds 50 cm", year: crossYear(trajectory, 50, "above", (p) => p.extremes.sea_level_rise_cm ?? 0) },
+      { icon: "💧", label: "Drought risk exceeds 50%", year: crossYear(trajectory, 50, "above", (p) => p.extremes.drought_risk * 100) },
+    ];
+    return items.sort((a, b) => (a.year ?? Infinity) - (b.year ?? Infinity));
+  }, [trajectory]);
+
+  const displayYear = Math.round(year);
+  const sc = d ? scoreColor(d.score) : GREEN;
+  const tPct = ((year - 2025) / 75) * 100;
+  const maxBreakdown = d ? Math.max(...d.breakdown.map((b) => Math.abs(b.val)), 1) : 1;
+
+  // ── Landing ────────────────────────────────────────────────────────────────
+  if (!trajectory) {
+    return (
+      <div style={{ backgroundColor: BG, color: "white", minHeight: "100vh", fontFamily: "Inter, system-ui, sans-serif", display: "flex", flexDirection: "column" }}>
+        <header style={{ background: "rgba(10,13,20,0.90)", borderBottom: `1px solid ${BORDER}`, backdropFilter: "blur(16px)" }}>
+          <div style={{ maxWidth: 1200, margin: "0 auto", padding: "0 20px", height: 56, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+              <div style={{ width: 30, height: 30, borderRadius: 7, background: "linear-gradient(135deg,hsl(192,91%,36%),hsl(215,91%,50%))", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, fontWeight: 800, color: "white" }}>CV</div>
+              <span style={{ fontWeight: 700, fontSize: 17 }}>ClimateVision</span>
             </div>
-            <span className="font-semibold text-white text-lg tracking-tight">ClimateVision</span>
-            <span className="hidden sm:inline text-xs px-2 py-0.5 rounded-full font-medium" style={{ background: "hsla(192,91%,46%,0.15)", color: "hsl(192,91%,60%)", border: "1px solid hsla(192,91%,46%,0.25)" }}>
-              CBottle/ICON Model
-            </span>
+            <button onClick={() => (window.location.href = "/comparison")}
+              style={{ display: "flex", alignItems: "center", gap: 6, padding: "7px 14px", borderRadius: 7, border: `1px solid ${BORDER}`, background: CARD, color: "white", fontSize: 13, cursor: "pointer" }}>
+              <GitCompare style={{ width: 15, height: 15 }} />
+              <span>Compare Locations</span>
+            </button>
           </div>
-          <div className="flex items-center gap-3">
-            {climateData && (
-              <Button onClick={exportToPDF} size="sm" variant="ghost" className="gap-2 text-slate-400 hover:text-white hover:bg-white/5">
-                <FileText className="w-4 h-4" />
-                <span className="hidden sm:inline">Export PDF</span>
-              </Button>
+        </header>
+
+        <main style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "40px 20px" }}>
+          <div style={{ maxWidth: 600, width: "100%", textAlign: "center" }}>
+            <div style={{ display: "inline-block", padding: "4px 12px", borderRadius: 20, border: `1px solid ${BORDER}`, background: CARD, fontSize: 11, color: ACCENT, marginBottom: 20, letterSpacing: "0.05em" }}>
+              CBottle · ICON Atmospheric Physics
+            </div>
+            <h1 style={{ fontSize: 42, fontWeight: 800, lineHeight: 1.1, marginBottom: 14 }}>
+              See the future climate<br />of any place on Earth
+            </h1>
+            <p style={{ fontSize: 15, color: MUTED, marginBottom: 32, lineHeight: 1.6 }}>
+              Search a location, then glide through 2025–2100 to watch temperature, precipitation,
+              risk and habitability evolve — backed by a real atmospheric model.
+            </p>
+
+            <div className="location-input-container" style={{ position: "relative", textAlign: "left" }}>
+              <div style={{ position: "relative" }}>
+                <Search style={{ width: 18, height: 18, color: MUTED, position: "absolute", left: 14, top: "50%", transform: "translateY(-50%)" }} />
+                <input
+                  value={locationText}
+                  onChange={(e) => { setLocationText(e.target.value); setSelectedLocation(null); }}
+                  onFocus={() => { if (suggestions.length) setShowSuggestions(true); }}
+                  placeholder="Search a city or place — e.g. Amsterdam"
+                  style={{ width: "100%", padding: "14px 14px 14px 44px", borderRadius: 10, border: `1px solid ${BORDER}`, background: "rgba(255,255,255,0.05)", color: "white", fontSize: 15, outline: "none", boxSizing: "border-box" }}
+                />
+              </div>
+              {showSuggestions && suggestions.length > 0 && (
+                <div style={{ position: "absolute", top: "calc(100% + 6px)", left: 0, right: 0, background: "rgba(15,20,30,0.98)", border: `1px solid ${BORDER}`, borderRadius: 10, overflow: "hidden", zIndex: 20, backdropFilter: "blur(16px)" }}>
+                  {suggestions.slice(0, 6).map((s, i) => (
+                    <div key={i} onClick={() => selectLocation(s)}
+                      style={{ padding: "11px 14px", display: "flex", alignItems: "center", gap: 10, cursor: "pointer", borderBottom: i < Math.min(suggestions.length, 6) - 1 ? `1px solid ${BORDER}` : "none" }}
+                      onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(255,255,255,0.05)")}
+                      onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}>
+                      <MapPin style={{ width: 15, height: 15, color: ACCENT, flexShrink: 0 }} />
+                      <span style={{ fontSize: 14 }}>{s.name}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <button
+              onClick={generate}
+              disabled={isLoading || !selectedLocation}
+              style={{
+                marginTop: 16, width: "100%", padding: "14px", borderRadius: 10, border: "none", fontSize: 15, fontWeight: 700,
+                cursor: isLoading || !selectedLocation ? "not-allowed" : "pointer",
+                background: isLoading || !selectedLocation ? "hsl(217,33%,22%)" : "linear-gradient(135deg, hsl(192,91%,40%) 0%, hsl(215,91%,55%) 100%)",
+                color: isLoading || !selectedLocation ? "hsl(215,20%,45%)" : "white",
+                display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
+              }}>
+              {isLoading ? <><Loader2 style={{ width: 18, height: 18, animation: "spin 1s linear infinite" }} /> Running model…</> : "Generate Projection"}
+            </button>
+
+            {isLoading && (
+              <div style={{ marginTop: 18, fontSize: 13, color: MUTED }}>
+                Running CBottle ICON model — checkpoint {Math.min(loadingStep + 1, CHECKPOINTS.length)}/{CHECKPOINTS.length} ({CHECKPOINTS[loadingStep]})
+                <div style={{ marginTop: 10, height: 4, background: "rgba(255,255,255,0.08)", borderRadius: 2, overflow: "hidden" }}>
+                  <div style={{ height: "100%", background: ACCENT, borderRadius: 2, width: `${((loadingStep + 1) / CHECKPOINTS.length) * 100}%`, transition: "width 0.4s ease" }} />
+                </div>
+                <div style={{ marginTop: 6, fontSize: 11, color: "rgba(255,255,255,0.35)" }}>Sampling 4 checkpoint years (~15s) so the slider can glide between them.</div>
+              </div>
             )}
-            <Button
-              size="sm" variant="ghost"
-              onClick={() => window.location.href = '/comparison'}
-              className="gap-2 text-slate-400 hover:text-white hover:bg-white/5"
-            >
-              <GitCompare className="w-4 h-4" />
-              <span className="hidden sm:inline">Compare</span>
-            </Button>
+            {error && <div style={{ marginTop: 16, padding: "10px 14px", borderRadius: 8, background: `${RED}14`, border: `1px solid ${RED}30`, color: "#fca5a5", fontSize: 13 }}>{error}</div>}
+          </div>
+        </main>
+        <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
+      </div>
+    );
+  }
+
+  // ── Results ──────────────────────────────────────────────────────────────
+  return (
+    <div style={{ backgroundColor: BG, color: "white", minHeight: "100vh", fontFamily: "Inter, system-ui, sans-serif" }}>
+      {/* Sticky Header */}
+      <header style={{ background: "rgba(10,13,20,0.90)", borderBottom: `1px solid ${BORDER}`, backdropFilter: "blur(16px)", position: "sticky", top: 0, zIndex: 50 }}>
+        <div style={{ maxWidth: 1200, margin: "0 auto", padding: "0 20px", height: 48, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <div style={{ width: 28, height: 28, borderRadius: 6, background: "linear-gradient(135deg,hsl(192,91%,36%),hsl(215,91%,50%))", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 800, color: "white" }}>CV</div>
+            <span style={{ fontWeight: 700, fontSize: 16 }}>ClimateVision</span>
+            <div style={{ width: 1, height: 14, background: BORDER }} />
+            <span style={{ fontSize: 13 }}>{selectedLocation?.name}</span>
+            <span style={{ fontSize: 13, color: MUTED }}>·</span>
+            <span style={{ fontSize: 14, fontWeight: 700, color: ACCENT }}>{displayYear}</span>
+          </div>
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <button onClick={newSearch} style={{ display: "flex", alignItems: "center", gap: 5, padding: "5px 12px", borderRadius: 6, border: `1px solid ${BORDER}`, background: CARD, color: MUTED, fontSize: 12, cursor: "pointer" }}>
+              <ArrowLeft style={{ width: 13, height: 13 }} /> New Search
+            </button>
+            <button onClick={() => (window.location.href = "/comparison")} style={{ display: "flex", alignItems: "center", gap: 5, padding: "5px 12px", borderRadius: 6, border: `1px solid ${BORDER}`, background: CARD, color: "white", fontSize: 12, cursor: "pointer" }}>
+              <GitCompare style={{ width: 13, height: 13 }} /> Compare
+            </button>
+            <button onClick={exportPDF} disabled={exporting} style={{ display: "flex", alignItems: "center", gap: 5, padding: "5px 12px", borderRadius: 6, border: `1px solid ${BORDER}`, background: CARD, color: "white", fontSize: 12, cursor: exporting ? "wait" : "pointer" }}>
+              {exporting ? <Loader2 style={{ width: 13, height: 13, animation: "spin 1s linear infinite" }} /> : <Download style={{ width: 13, height: 13 }} />} Export PDF
+            </button>
           </div>
         </div>
       </header>
 
-      {/* ── Hero / Search ── */}
-      <section className="relative overflow-hidden" style={{ background: "linear-gradient(160deg, hsl(222,47%,9%) 0%, hsl(215,55%,11%) 50%, hsl(192,55%,9%) 100%)" }}>
-        <div className="absolute inset-0 pointer-events-none" style={{ background: "radial-gradient(ellipse 80% 60% at 50% -20%, hsla(192,91%,46%,0.08) 0%, transparent 70%)" }} />
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 py-12 sm:py-16 relative">
-          <div className="text-center mb-8">
-            <h1 className="text-3xl sm:text-4xl font-bold text-white mb-3">
-              Climate Projections
-              <span className="block text-gradient text-2xl sm:text-3xl mt-1">for Any Location on Earth</span>
-            </h1>
-            <p className="text-slate-400 text-sm sm:text-base max-w-xl mx-auto">
-              Explore temperature, precipitation, heat stress, and habitability forecasts powered by the CBottle atmospheric model.
+      {/* Year Slider — sticky */}
+      <div style={{ position: "sticky", top: 48, zIndex: 45, background: "rgba(8,11,18,0.97)", borderBottom: `1px solid ${BORDER}`, backdropFilter: "blur(20px)" }}>
+        <div style={{ maxWidth: 1200, margin: "0 auto", padding: "10px 20px 18px" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+            <div style={{ display: "flex", gap: 4 }}>
+              {[2025, 2030, 2050, 2075, 2100].map((y) => (
+                <button key={y} onClick={() => setYear(y)}
+                  style={{ padding: "3px 8px", borderRadius: 5, border: `1px solid ${displayYear === y ? ACCENT : "rgba(255,255,255,0.12)"}`, background: displayYear === y ? `${ACCENT}18` : "transparent", color: displayYear === y ? ACCENT : MUTED, fontSize: 11, fontWeight: displayYear === y ? 700 : 400, cursor: "pointer" }}>
+                  {y}
+                </button>
+              ))}
+            </div>
+            <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 0 }}>
+              <div style={{ position: "relative" }}>
+                <div style={{ position: "absolute", top: 8, left: 0, right: 0, height: 4, borderRadius: 2, pointerEvents: "none", background: `linear-gradient(to right, ${GREEN} 0%, ${AMBER} 40%, ${ORANGE} 65%, ${RED} 100%)`, opacity: 0.3 }} />
+                <input type="range" min={2025} max={2100} step={0.1} value={year}
+                  onChange={(e) => setYear(Number(e.target.value))}
+                  style={{ width: "100%", cursor: "pointer", accentColor: ACCENT, position: "relative", zIndex: 1, margin: 0, display: "block" }} />
+              </div>
+              <div style={{ display: "flex", justifyContent: "space-between", padding: "0 8px", marginTop: 1 }}>
+                {Array.from({ length: 16 }, (_, i) => 2025 + i * 5).map((y) => (
+                  <div key={y} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 1 }}>
+                    <div style={{ width: 1, height: y % 25 === 0 ? 6 : 3, background: y % 25 === 0 ? MUTED : "rgba(255,255,255,0.18)" }} />
+                    {y % 25 === 0 && <span style={{ fontSize: 8, color: MUTED, whiteSpace: "nowrap" }}>{y}</span>}
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div style={{ display: "flex", gap: 7 }}>
+              {[
+                { v: displayYear.toString(), sub: "year", c: ACCENT },
+                { v: d!.score.toString(), sub: "score", c: sc },
+                { v: `+${d!.tempChange.toFixed(1)}°`, sub: "warming", c: RED },
+              ].map(({ v, sub, c }) => (
+                <div key={sub} style={{ ...card, padding: "4px 11px", textAlign: "center", minWidth: 52 }}>
+                  <div style={{ fontSize: 17, fontWeight: 800, color: c, lineHeight: 1 }}>{v}</div>
+                  <div style={{ fontSize: 8, color: MUTED, marginTop: 1 }}>{sub}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <main ref={resultsRef} style={{ maxWidth: 1200, margin: "0 auto", padding: "18px 20px" }}>
+        {/* Location Banner */}
+        <div style={{ ...card, padding: 18, marginBottom: 14, position: "relative", overflow: "hidden" }}>
+          <div style={{ position: "absolute", inset: 0, backgroundImage: "radial-gradient(circle at 1px 1px,rgba(255,255,255,0.03) 1px,transparent 0)", backgroundSize: "24px 24px", pointerEvents: "none" }} />
+          <div style={{ position: "relative", display: "flex", justifyContent: "space-between", alignItems: "flex-end", gap: 16, flexWrap: "wrap" }}>
+            <div>
+              <h1 style={{ fontSize: 32, fontWeight: 800, lineHeight: 1, marginBottom: 8 }}>{selectedLocation?.name}</h1>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 12, color: MUTED, flexWrap: "wrap" }}>
+                <span>{Math.abs(selectedLocation!.lat).toFixed(4)}° {selectedLocation!.lat >= 0 ? "N" : "S"}, {Math.abs(selectedLocation!.lng).toFixed(4)}° {selectedLocation!.lng >= 0 ? "E" : "W"}</span>
+                {d!.climateZone && <><span>·</span><span style={{ background: "rgba(255,255,255,0.08)", padding: "2px 8px", borderRadius: 10, fontSize: 11 }}>{d!.climateZone}</span></>}
+                {d!.sensLabel && <><span>·</span><span>Sensitivity: <span style={{ color: d!.sensColor, fontWeight: 600 }}>{d!.sensLabel}</span></span></>}
+              </div>
+              <div style={{ marginTop: 8, display: "flex", gap: 6, flexWrap: "wrap" }}>
+                {d!.circulation && (
+                  <span style={{ background: `${BLUE}14`, border: `1px solid ${BLUE}28`, color: BLUE, padding: "2px 8px", borderRadius: 6, fontSize: 10, fontWeight: 500 }}>🔄 {d!.circulation.split(/[-–(]/)[0].trim()}</span>
+                )}
+                {d!.feedbacks.slice(0, 3).map((f, i) => {
+                  const t = feedbackTag(f);
+                  return <span key={i} style={{ background: `${t.color}14`, border: `1px solid ${t.color}28`, color: t.color, padding: "2px 8px", borderRadius: 6, fontSize: 10, fontWeight: 500 }}>{t.icon} {t.label}</span>;
+                })}
+              </div>
+            </div>
+            <div style={{ textAlign: "right" }}>
+              <div style={{ fontSize: 10, color: MUTED, textTransform: "uppercase", marginBottom: 4 }}>Warming Scenario</div>
+              <div style={{ fontSize: 20, fontWeight: 700, color: RED }}>RCP 4.5–8.5 · SSP2</div>
+              <div style={{ fontSize: 26, fontWeight: 800, color: RED, marginTop: 2 }}>+{d!.tempChange.toFixed(1)}°C</div>
+              <div style={{ fontSize: 11, color: MUTED }}>vs baseline</div>
+            </div>
+          </div>
+        </div>
+
+        {/* KPI Strip */}
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 10, marginBottom: 14 }}>
+          <div style={{ ...card, padding: 14 }}>
+            <div style={{ fontSize: 9, textTransform: "uppercase", letterSpacing: "0.08em", color: MUTED, marginBottom: 4 }}>Avg Temperature</div>
+            <div style={{ display: "flex", alignItems: "baseline", gap: 5 }}>
+              <span style={{ fontSize: 24, fontWeight: 700 }}>{d!.avgTemp.toFixed(1)}°C</span>
+              <span style={{ fontSize: 12, fontWeight: 600, color: RED }}>+{d!.tempChange.toFixed(1)}°</span>
+            </div>
+          </div>
+          <div style={{ ...card, padding: 14 }}>
+            <div style={{ fontSize: 9, textTransform: "uppercase", letterSpacing: "0.08em", color: MUTED, marginBottom: 4 }}>Annual Precip</div>
+            <div style={{ display: "flex", alignItems: "baseline", gap: 5 }}>
+              <span style={{ fontSize: 24, fontWeight: 700 }}>{d!.annualPrecip}mm</span>
+              <span style={{ fontSize: 12, fontWeight: 600, color: BLUE }}>{d!.precipChange >= 0 ? "+" : ""}{d!.precipChange.toFixed(1)}%</span>
+            </div>
+          </div>
+          <div style={{ ...card, padding: 14 }}>
+            <div style={{ fontSize: 9, textTransform: "uppercase", letterSpacing: "0.08em", color: MUTED, marginBottom: 4 }}>Heat Stress</div>
+            <div style={{ display: "flex", alignItems: "baseline", gap: 5 }}>
+              <span style={{ fontSize: 24, fontWeight: 700 }}>{d!.heatDays}</span>
+              <span style={{ fontSize: 12, color: MUTED }}>days/yr</span>
+            </div>
+            <div style={{ marginTop: 6, height: 3, background: "rgba(255,255,255,0.08)", borderRadius: 2 }}>
+              <div style={{ height: "100%", borderRadius: 2, background: ORANGE, width: `${Math.min((d!.heatDays / Math.max(...traj!.heat, 1)) * 100, 100)}%`, transition: "width 0.25s ease" }} />
+            </div>
+          </div>
+          <div style={{ ...card, padding: 14, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <div>
+              <div style={{ fontSize: 9, textTransform: "uppercase", letterSpacing: "0.08em", color: MUTED, marginBottom: 4 }}>Habitability</div>
+              <div style={{ fontSize: 24, fontWeight: 700 }}>{d!.score}<span style={{ fontSize: 14, color: MUTED }}>/100</span></div>
+              <div style={{ fontSize: 11, fontWeight: 600, color: sc, marginTop: 2 }}>{d!.category}</div>
+            </div>
+            <div style={{ position: "relative", width: 54, height: 54 }}>
+              <svg viewBox="0 0 36 36" style={{ width: "100%", height: "100%", transform: "rotate(-90deg)" }}>
+                <path d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="rgba(255,255,255,0.08)" strokeWidth="4" />
+                <path d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke={sc} strokeWidth="4" strokeDasharray={`${d!.score}, 100`} strokeLinecap="round" style={{ transition: "stroke-dasharray 0.3s ease" }} />
+              </svg>
+            </div>
+          </div>
+        </div>
+
+        {/* Metric Trajectories */}
+        <div style={{ ...card, padding: 18, marginBottom: 14 }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <span style={{ fontSize: 16 }}>📈</span>
+              <h2 style={{ fontSize: 15, fontWeight: 700 }}>Metric Trajectories</h2>
+              <span style={{ fontSize: 10, color: MUTED, marginLeft: 4 }}>2025 → 2100</span>
+            </div>
+            <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 10, color: MUTED }}>
+              <div style={{ width: 14, height: 1.5, borderTop: `1.5px dashed ${ACCENT}`, opacity: 0.7 }} />
+              <span>= selected year marker (synced with slider above)</span>
+            </div>
+          </div>
+          <div style={{ display: "flex", gap: 12 }}>
+            <TrendChart years={traj!.years} values={traj!.temp} year={year} label="Temperature" unit="°C" color={RED} decimals={1} thresholdY={18} />
+            <div style={{ width: 1, background: BORDER, alignSelf: "stretch", flexShrink: 0 }} />
+            <TrendChart years={traj!.years} values={traj!.precip} year={year} label="Precipitation" unit="mm" color={BLUE} decimals={0} />
+            <div style={{ width: 1, background: BORDER, alignSelf: "stretch", flexShrink: 0 }} />
+            <TrendChart years={traj!.years} values={traj!.heat} year={year} label="Heat Days" unit="d" color={ORANGE} decimals={0} thresholdY={15} />
+            <div style={{ width: 1, background: BORDER, alignSelf: "stretch", flexShrink: 0 }} />
+            <TrendChart years={traj!.years} values={traj!.score} year={year} label="Habitability" unit="" color={sc} decimals={0}
+              zones={[
+                { from: 85, to: 100, color: GREEN }, { from: 70, to: 85, color: "#4ade80" },
+                { from: 60, to: 70, color: AMBER }, { from: 40, to: 60, color: ORANGE }, { from: 0, to: 40, color: RED },
+              ]} />
+            <div style={{ width: 1, background: BORDER, alignSelf: "stretch", flexShrink: 0 }} />
+            <TrendChart years={traj!.years} values={traj!.sea} year={year} label="Sea Level" unit="cm" color={CYAN} decimals={0} thresholdY={50} />
+            <div style={{ width: 1, background: BORDER, alignSelf: "stretch", flexShrink: 0 }} />
+            <TrendChart years={traj!.years} values={traj!.drought} year={year} label="Drought Risk" unit="%" color={AMBER} decimals={0} thresholdY={50} />
+          </div>
+          <div style={{ marginTop: 12, padding: "6px 10px", background: `${ACCENT}07`, border: `1px solid ${ACCENT}18`, borderRadius: 8, fontSize: 10, color: MUTED }}>
+            💡 Drag the year slider to move the marker across all six charts simultaneously and see how each metric evolves. Dashed horizontal lines mark critical thresholds.
+          </div>
+        </div>
+
+        {/* Temperature */}
+        <div style={{ ...card, padding: 18, marginBottom: 14 }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+            <h2 style={{ fontSize: 15, fontWeight: 700 }}>Temperature Projection</h2>
+            <div style={{ display: "flex", gap: 14, fontSize: 10 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                <svg width="20" height="3"><line x1="0" y1="1.5" x2="20" y2="1.5" stroke="rgba(255,255,255,0.3)" strokeWidth="1.5" strokeDasharray="4 3" /></svg>
+                <span style={{ color: MUTED }}>2025 baseline</span>
+              </div>
+              <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                <div style={{ width: 20, height: 2, background: RED, borderRadius: 1 }} />
+                <span style={{ color: MUTED }}>{displayYear}</span>
+              </div>
+            </div>
+          </div>
+          <div style={{ display: "grid", gridTemplateColumns: "160px 1fr 158px", gap: 14, alignItems: "start" }}>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6 }}>
+              {[
+                { label: "Annual Mean", value: `${d!.avgTemp.toFixed(1)}°C` },
+                { label: "Change", value: `+${d!.tempChange.toFixed(1)}°`, color: RED },
+                { label: `Min (${MONTHS[d!.minIdx]})`, value: `${d!.monthlyTemps[d!.minIdx].toFixed(1)}°C` },
+                { label: `Max (${MONTHS[d!.maxIdx]})`, value: `${d!.monthlyTemps[d!.maxIdx].toFixed(1)}°C` },
+              ].map(({ label, value, color }) => (
+                <div key={label} style={{ background: "rgba(255,255,255,0.03)", borderRadius: 7, padding: "8px 9px" }}>
+                  <div style={{ fontSize: 9, textTransform: "uppercase", color: MUTED }}>{label}</div>
+                  <div style={{ fontSize: 14, fontWeight: 700, color: color ?? "white", marginTop: 2 }}>{value}</div>
+                </div>
+              ))}
+            </div>
+            <MonthlyTempChart temps={d!.monthlyTemps} baseline={trajectory![0].temperature.monthly} />
+            <div>
+              <div style={{ fontSize: 10, color: MUTED, marginBottom: 6 }}>Monthly (°C)</div>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "2px 8px" }}>
+                {MONTHS.map((m, i) => (
+                  <div key={m} style={{ display: "flex", justifyContent: "space-between", fontSize: 10, padding: "2px 0", borderBottom: "1px solid rgba(255,255,255,0.04)" }}>
+                    <span style={{ color: MUTED }}>{m}</span>
+                    <span style={{ fontFamily: "monospace" }}>{d!.monthlyTemps[i].toFixed(1)}°</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Precipitation */}
+        <div style={{ ...card, padding: 18, marginBottom: 14 }}>
+          <h2 style={{ fontSize: 15, fontWeight: 700, marginBottom: 12 }}>Precipitation Pattern</h2>
+          <div style={{ display: "grid", gridTemplateColumns: "160px 1fr 158px", gap: 14, alignItems: "start" }}>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6 }}>
+              {[
+                { label: "Annual Total", value: `${d!.annualPrecip}mm` },
+                { label: "Change", value: `${d!.precipChange >= 0 ? "+" : ""}${d!.precipChange.toFixed(1)}%`, color: BLUE },
+                { label: "Wettest", value: `${MONTHS[d!.wetIdx]} ${d!.monthlyPrecip[d!.wetIdx]}mm` },
+                { label: "Driest", value: `${MONTHS[d!.dryIdx]} ${d!.monthlyPrecip[d!.dryIdx]}mm` },
+              ].map(({ label, value, color }) => (
+                <div key={label} style={{ background: "rgba(255,255,255,0.03)", borderRadius: 7, padding: "8px 9px" }}>
+                  <div style={{ fontSize: 9, textTransform: "uppercase", color: MUTED }}>{label}</div>
+                  <div style={{ fontSize: 12, fontWeight: 700, color: color ?? "white", marginTop: 2 }}>{value}</div>
+                </div>
+              ))}
+            </div>
+            <PrecipBars vals={d!.monthlyPrecip} />
+            <div>
+              <div style={{ fontSize: 10, color: MUTED, marginBottom: 6 }}>Monthly (mm)</div>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "2px 8px" }}>
+                {MONTHS.map((m, i) => (
+                  <div key={m} style={{ display: "flex", justifyContent: "space-between", fontSize: 10, padding: "2px 0", borderBottom: "1px solid rgba(255,255,255,0.04)" }}>
+                    <span style={{ color: MUTED }}>{m}</span>
+                    <span style={{ fontFamily: "monospace" }}>{d!.monthlyPrecip[i]}mm</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Risk & Extremes */}
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 10, marginBottom: 14 }}>
+          {[
+            { label: "Heat Stress", value: d!.heatDays, unit: "days/yr", delta: `+${Math.max(0, d!.heatDays - d!.baseHeatDays)}d`, color: RED },
+            { label: "Drought Risk", value: `${d!.drought}%`, sub: d!.drought < 25 ? "Low" : d!.drought < 40 ? "Elevated" : "High", bar: d!.drought / 100, color: AMBER },
+            { label: "Flood Risk", value: `${d!.flood}%`, sub: d!.flood < 30 ? "Low" : d!.flood < 60 ? "Elevated" : "High", bar: d!.flood / 100, color: BLUE },
+            { label: "Sea Level Rise", value: `${d!.seaLevel}cm`, sub: d!.seaLevel < 25 ? "Manageable" : d!.seaLevel < 50 ? "Serious" : "Critical", color: CYAN },
+          ].map(({ label, value, unit, delta, sub, bar, color }) => (
+            <div key={label} style={{ ...card, padding: 14, borderTop: `2px solid ${color}` }}>
+              <div style={{ fontSize: 10, color: MUTED }}>{label}</div>
+              <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", marginTop: 6 }}>
+                <div>
+                  <span style={{ fontSize: 26, fontWeight: 700, color }}>{value}</span>
+                  {unit && <span style={{ fontSize: 10, color: MUTED, display: "block", marginTop: -2 }}>{unit}</span>}
+                </div>
+                {delta && <span style={{ fontSize: 10, padding: "2px 5px", background: `${RED}20`, color: RED, borderRadius: 4 }}>{delta}</span>}
+                {sub && <span style={{ fontSize: 10, fontWeight: 600, color }}>{sub}</span>}
+              </div>
+              {bar !== undefined && (
+                <div style={{ marginTop: 8, height: 3, background: "rgba(255,255,255,0.08)", borderRadius: 2 }}>
+                  <div style={{ height: "100%", borderRadius: 2, background: color, width: `${Math.min(bar * 100, 100)}%`, transition: "width 0.25s ease" }} />
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+
+        {/* Climate Twin + Atmospheric Physics */}
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14, marginBottom: 14 }}>
+          {/* Climate Twin (estimated analog) */}
+          <div style={{ ...card, padding: 18 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
+              <span style={{ fontSize: 18 }}>🌍</span>
+              <h3 style={{ fontSize: 14, fontWeight: 700 }}>Climate Twin</h3>
+              <span style={ESTIMATE_BADGE}>ESTIMATE</span>
+            </div>
+            <p style={{ fontSize: 12, color: MUTED, marginBottom: 10, lineHeight: 1.5 }}>
+              {(selectedLocation?.city || selectedLocation?.name.split(",")[0])} in {Math.round(year)} will feel like today's climate of:
+            </p>
+            <div style={{ fontSize: 22, fontWeight: 800, color: ACCENT, marginBottom: 12, lineHeight: 1.2 }}>{d!.twin}</div>
+            <p style={{ fontSize: 10.5, color: MUTED, lineHeight: 1.5 }}>
+              Nearest present-day climate analog, matched on annual mean temperature and precipitation against a reference set of global city climate normals. Drag the slider to watch the analog migrate as warming progresses.
             </p>
           </div>
 
-          {/* Search card */}
-          <div className="rounded-2xl p-5 sm:p-6 shadow-2xl" style={{ background: "hsl(222,47%,12%)", border: "1px solid hsl(217,33%,22%)" }}>
-            <div className="flex flex-col sm:flex-row gap-4">
-              {/* Location input */}
-              <div className="relative location-input-container flex-1">
-                <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none">
-                  <MapPin className="w-4 h-4 text-slate-500" />
+          {/* Atmospheric Physics (model output) */}
+          <div style={{ ...card, padding: 18 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
+              <span style={{ fontSize: 18 }}>⚛️</span>
+              <h3 style={{ fontSize: 14, fontWeight: 700 }}>Atmospheric Physics</h3>
+            </div>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr" }}>
+              {[
+                { label: "Circulation Pattern", value: d!.circulation ?? "—", color: BLUE },
+                { label: "Climate Sensitivity", value: d!.sensitivity != null ? `${d!.sensitivity.toFixed(1)}°C per CO₂ doubling` : "—", color: ORANGE },
+                { label: "Active Feedbacks", value: d!.feedbacks.length ? d!.feedbacks.map((f) => f.split(":")[0].trim()).join(" · ") : "—", color: PURPLE },
+                { label: "Model Confidence", value: prettify(d!.confidence), color: confidenceColor(d!.confidence) },
+                { label: "Model", value: d!.modelVersion ? `${d!.model} ${d!.modelVersion}` : d!.model, color: MUTED },
+                { label: "Resolution", value: d!.resolution ?? "—", color: MUTED },
+              ].map(({ label, value, color }) => (
+                <div key={label} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, borderBottom: "1px solid rgba(255,255,255,0.04)", paddingBottom: 6, marginBottom: 6, fontSize: 11 }}>
+                  <span style={{ color: MUTED, flexShrink: 0 }}>{label}</span>
+                  <span style={{ fontWeight: 600, color, textAlign: "right" }}>{value}</span>
                 </div>
-                <Input
-                  placeholder="Search for a city or location..."
-                  value={location}
-                  onChange={(e) => { setLocation(e.target.value); setSelectedLocation(null); }}
-                  onFocus={() => { if (locationSuggestions.length > 0) setShowSuggestions(true); }}
-                  className="pl-9 h-11 text-sm rounded-xl"
-                  style={{ background: "hsl(222,47%,9%)", borderColor: "hsl(217,33%,25%)", color: "white" }}
-                />
-                {showSuggestions && locationSuggestions.length > 0 && (
-                  <div className="absolute z-50 left-0 right-0 top-full mt-1 rounded-xl shadow-2xl overflow-hidden max-h-60 overflow-y-auto" style={{ background: "hsl(222,47%,13%)", border: "1px solid hsl(217,33%,25%)" }}>
-                    {locationSuggestions.map((s, i) => (
-                      <div key={i} onClick={() => selectLocation(s)}
-                        className="px-4 py-3 cursor-pointer flex items-start gap-3 hover:bg-white/5 transition-colors border-b last:border-b-0"
-                        style={{ borderColor: "hsl(217,33%,20%)" }}>
-                        <MapPin className="w-3.5 h-3.5 text-cyan-500 mt-0.5 shrink-0" />
-                        <div>
-                          <div className="text-sm font-medium text-white">{s.city || s.name.split(',')[0]}</div>
-                          <div className="text-xs text-slate-500 truncate">{s.name}</div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-                {selectedLocation && (
-                  <div className="absolute -bottom-5 left-0 text-xs text-cyan-500 flex items-center gap-1">
-                    <CheckCircle className="w-3 h-3" />
-                    {selectedLocation.city || selectedLocation.name.split(',')[0]}, {selectedLocation.country}
-                  </div>
-                )}
-              </div>
-
-              {/* Submit */}
-              <Button
-                onClick={handleSubmit}
-                disabled={isLoading || !selectedLocation}
-                className="h-11 px-6 rounded-xl font-semibold text-sm shrink-0"
-                style={{ background: isLoading || !selectedLocation ? "hsl(217,33%,22%)" : "linear-gradient(135deg, hsl(192,91%,40%) 0%, hsl(215,91%,55%) 100%)", color: isLoading || !selectedLocation ? "hsl(215,20%,45%)" : "white", border: "none" }}
-              >
-                {isLoading ? <><Loader2 className="w-4 h-4 mr-2 spin" />Analyzing...</> : "Generate Projection"}
-              </Button>
+              ))}
             </div>
-
-            {/* Year selector */}
-            <div className="mt-5 pt-5" style={{ borderTop: "1px solid hsl(217,33%,20%)" }}>
-              <div className="flex items-center justify-between mb-3">
-                <span className="text-xs font-medium text-slate-400 uppercase tracking-wide">Projection Year</span>
-                <span className="text-lg font-bold text-white">{year}</span>
-              </div>
-              <div className="flex flex-wrap gap-2 mb-3">
-                {[2030, 2040, 2050, 2060, 2070, 2080, 2090, 2100].map((d) => (
-                  <button key={d} onClick={() => setYear(d)}
-                    className="text-xs px-3 py-1.5 rounded-lg font-medium transition-all"
-                    style={{
-                      background: year === d ? "hsla(192,91%,46%,0.2)" : "hsl(222,47%,9%)",
-                      color: year === d ? "hsl(192,91%,60%)" : "hsl(215,20%,55%)",
-                      border: `1px solid ${year === d ? "hsla(192,91%,46%,0.4)" : "hsl(217,33%,22%)"}`
-                    }}>
-                    {d}
-                  </button>
-                ))}
-              </div>
-              <Slider value={[year]} onValueChange={(v) => setYear(v[0])} min={2025} max={2100} step={1} className="w-full" />
-            </div>
-
-            {/* Status / Error */}
-            {error && (
-              <div className="mt-4 flex items-center gap-2 px-4 py-3 rounded-xl text-sm" style={{ background: "hsla(0,84%,60%,0.1)", border: "1px solid hsla(0,84%,60%,0.25)", color: "hsl(0,84%,72%)" }}>
-                <AlertTriangle className="w-4 h-4 shrink-0" />{error}
-              </div>
-            )}
-            {isLoading && statusMessage && (
-              <div className="mt-4 status-bar animate-fade-in">
-                <Loader2 className="w-4 h-4 spin shrink-0" />
-                {statusMessage}
-              </div>
-            )}
           </div>
         </div>
-      </section>
 
-      {/* ── Loading skeleton ── */}
-      {isLoading && (
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8 space-y-6 animate-fade-in">
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-            {[...Array(4)].map((_, i) => <div key={i} className="skeleton h-24 rounded-2xl" />)}
+        {/* Environmental & Agricultural Impact (derived estimates) */}
+        <div style={{ ...card, padding: 18, marginBottom: 14 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
+            <span style={{ fontSize: 18 }}>🌿</span>
+            <h2 style={{ fontSize: 15, fontWeight: 700 }}>Environmental & Agricultural Impact</h2>
+            <span style={ESTIMATE_BADGE}>ESTIMATES</span>
           </div>
-          <div className="skeleton h-48 rounded-2xl" />
-          <div className="grid sm:grid-cols-2 gap-4">
-            <div className="skeleton h-64 rounded-2xl" />
-            <div className="skeleton h-64 rounded-2xl" />
-          </div>
-        </div>
-      )}
-
-      {/* ── Empty state ── */}
-      {!isLoading && !climateData && (
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-16 text-center animate-fade-in">
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl mb-6" style={{ background: "hsl(222,47%,13%)", border: "1px solid hsl(217,33%,22%)" }}>
-            <Globe className="w-8 h-8 text-slate-500" />
-          </div>
-          <h2 className="text-lg font-semibold text-white mb-2">Search for a location to get started</h2>
-          <p className="text-slate-500 text-sm max-w-md mx-auto">
-            Type any city name, select it from the suggestions, choose your target year, and click Generate Projection.
+          <p style={{ fontSize: 10.5, color: MUTED, marginBottom: 16, lineHeight: 1.5 }}>
+            Derived from the modeled climate variables and public datasets (FAO agro-climatic suitability, IPCC AR6 range-loss figures, Open-Meteo air quality) — these are estimates, not direct model outputs.
           </p>
-          <div className="mt-8 grid grid-cols-1 sm:grid-cols-3 gap-4 max-w-2xl mx-auto text-left">
-            {[
-              { icon: Thermometer, title: "Temperature", desc: "Monthly profiles and annual mean temperature projections" },
-              { icon: Droplets, title: "Precipitation", desc: "Rainfall patterns, seasonal distribution and drought risk" },
-              { icon: Award, title: "Habitability", desc: "Comprehensive score combining all climate factors" },
-            ].map(({ icon: Icon, title, desc }) => (
-              <div key={title} className="rounded-xl p-4" style={{ background: "hsl(222,47%,12%)", border: "1px solid hsl(217,33%,20%)" }}>
-                <Icon className="w-5 h-5 mb-2" style={{ color: "hsl(192,91%,50%)" }} />
-                <div className="text-sm font-medium text-white mb-1">{title}</div>
-                <div className="text-xs text-slate-500">{desc}</div>
-              </div>
-            ))}
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 14 }}>
+            {(() => {
+              const aqiColor = d!.aqi < 50 ? GREEN : d!.aqi < 100 ? AMBER : d!.aqi < 150 ? ORANGE : RED;
+              const aqiSub = d!.aqi < 50 ? "Good" : d!.aqi < 100 ? "Moderate" : d!.aqi < 150 ? "Unhealthy (SG)" : "Unhealthy";
+              const agriColor = d!.agri >= 70 ? GREEN : d!.agri >= 45 ? AMBER : ORANGE;
+              const agriSub = d!.agri >= 70 ? "Favorable" : d!.agri >= 45 ? "Reduced" : "Stressed";
+              const waterColor = d!.water < 35 ? GREEN : d!.water < 60 ? AMBER : RED;
+              const waterSub = d!.water < 35 ? "Low stress" : d!.water < 60 ? "Moderate" : "High stress";
+              const bioColor = d!.bio < 10 ? AMBER : d!.bio < 25 ? ORANGE : RED;
+              const bioSub = d!.bio < 10 ? "Mild" : d!.bio < 25 ? "Moderate" : "Severe";
+              const gauges = [
+                { name: "Air Quality", value: d!.aqi, max: 200, color: aqiColor, sub: `US AQI · ${aqiSub}`, note: aqiMeasured ? "Measured baseline + climate ozone penalty" : "Estimated baseline + climate ozone penalty" },
+                { name: "Agricultural Viability", value: d!.agri, max: 100, color: agriColor, sub: agriSub, note: "Agro-climatic suitability (thermal + water)" },
+                { name: "Water Stress", value: d!.water, max: 100, color: waterColor, sub: waterSub, note: "From modeled drought risk + precipitation" },
+                { name: "Biodiversity Loss", value: d!.bio, max: 60, color: bioColor, sub: `${bioSub} · % species`, note: "Range loss calibrated to IPCC AR6" },
+              ];
+              return gauges.map((g) => (
+                <div key={g.name} style={{ textAlign: "center", padding: "14px 8px", borderRadius: 10, background: "rgba(255,255,255,0.02)", border: `1px solid ${BORDER}` }}>
+                  <div style={{ display: "flex", justifyContent: "center" }}><GaugeMeter value={g.value} max={g.max} color={g.color} /></div>
+                  <div style={{ fontSize: 12, fontWeight: 700, marginTop: 6 }}>{g.name}</div>
+                  <div style={{ fontSize: 11, fontWeight: 600, color: g.color, marginTop: 2 }}>{g.sub}</div>
+                  <div style={{ fontSize: 9.5, color: MUTED, marginTop: 6, lineHeight: 1.4 }}>{g.note}</div>
+                </div>
+              ));
+            })()}
           </div>
         </div>
-      )}
 
-      {/* ── Results ── */}
-      {!isLoading && climateData && (
-        <main className="max-w-7xl mx-auto px-4 sm:px-6 py-8 space-y-8 animate-fade-in">
-
-          {/* ── KPI strip ── */}
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-            {/* Temperature */}
-            <div className="stat-card">
-              <div className="flex items-center gap-2 mb-3">
-                <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: "hsla(0,84%,60%,0.15)" }}>
-                  <Thermometer className="w-4 h-4" style={{ color: "hsl(0,84%,65%)" }} />
-                </div>
-                <span className="text-xs text-slate-400 font-medium uppercase tracking-wide">Temperature</span>
-              </div>
-              <div className="text-2xl sm:text-3xl font-bold text-white mb-1">
-                {tempMean?.toFixed(1)}<span className="text-lg text-slate-400">°C</span>
-              </div>
-              <div className="text-xs text-slate-500">
-                {climateData.temperature?.anomaly > 0 ? "+" : ""}{climateData.temperature?.anomaly?.toFixed(1)}°C vs baseline
-              </div>
-            </div>
-
-            {/* Precipitation */}
-            <div className="stat-card">
-              <div className="flex items-center gap-2 mb-3">
-                <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: "hsla(207,90%,54%,0.15)" }}>
-                  <Droplets className="w-4 h-4" style={{ color: "hsl(207,90%,65%)" }} />
-                </div>
-                <span className="text-xs text-slate-400 font-medium uppercase tracking-wide">Precipitation</span>
-              </div>
-              <div className="text-2xl sm:text-3xl font-bold text-white mb-1">
-                {precip?.toFixed(0)}<span className="text-lg text-slate-400"> mm</span>
-              </div>
-              <div className="text-xs text-slate-500">
-                {climateData.precipitation?.anomaly_percent > 0 ? "+" : ""}{climateData.precipitation?.anomaly_percent?.toFixed(1)}% vs baseline
-              </div>
-            </div>
-
-            {/* Heat Stress */}
-            <div className="stat-card">
-              <div className="flex items-center gap-2 mb-3">
-                <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: "hsla(24,92%,60%,0.15)" }}>
-                  <Activity className="w-4 h-4" style={{ color: "hsl(24,92%,65%)" }} />
-                </div>
-                <span className="text-xs text-slate-400 font-medium uppercase tracking-wide">Heat Stress</span>
-              </div>
-              <div className="text-2xl sm:text-3xl font-bold text-white mb-1">
-                {climateData.extremes?.heat_stress_days ?? 0}<span className="text-lg text-slate-400"> days</span>
-              </div>
-              <div className="text-xs text-slate-500">Days above 35°C per year</div>
-            </div>
-
-            {/* Habitability */}
-            <div className="stat-card">
-              <div className="flex items-center gap-2 mb-3">
-                <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: "hsla(142,76%,45%,0.15)" }}>
-                  <Award className="w-4 h-4" style={{ color: "hsl(142,76%,55%)" }} />
-                </div>
-                <span className="text-xs text-slate-400 font-medium uppercase tracking-wide">Habitability</span>
-              </div>
-              <div className="text-2xl sm:text-3xl font-bold text-white mb-1">
-                {habitScore.toFixed(0)}<span className="text-lg text-slate-400">/100</span>
-              </div>
-              <HabitabilityBadge score={habitScore} />
-            </div>
+        {/* Tipping Points */}
+        <div style={{ ...card, padding: 18, marginBottom: 14 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 14 }}>
+            <span style={{ fontSize: 18 }}>⏱️</span>
+            <h2 style={{ fontSize: 15, fontWeight: 700 }}>Tipping Point Timeline</h2>
+            <span style={{ marginLeft: "auto", fontSize: 10, color: MUTED }}>Computed from this location's trajectory</span>
           </div>
-
-          {/* ── Location header ── */}
-          <div className="rounded-2xl p-5 flex flex-col sm:flex-row sm:items-center gap-4" style={{ background: "hsl(222,47%,12%)", border: "1px solid hsl(217,33%,22%)" }}>
-            <div className="flex items-center gap-4 flex-1">
-              <div className="w-12 h-12 rounded-xl flex items-center justify-center shrink-0" style={{ background: "hsla(192,91%,46%,0.12)", border: "1px solid hsla(192,91%,46%,0.2)" }}>
-                <MapPin className="w-6 h-6" style={{ color: "hsl(192,91%,56%)" }} />
-              </div>
-              <div>
-                <h2 className="text-lg font-bold text-white leading-tight">{climateData.location?.name}</h2>
-                <p className="text-sm text-slate-400">
-                  {climateData.location?.latitude?.toFixed(4)}°, {climateData.location?.longitude?.toFixed(4)}° · {climateData.location?.climate_zone} Climate Zone
-                </p>
-              </div>
-            </div>
-            <div className="flex flex-wrap gap-2 sm:justify-end">
-              <span className="text-xs px-3 py-1.5 rounded-lg font-medium" style={{ background: "hsla(192,91%,46%,0.1)", color: "hsl(192,91%,65%)", border: "1px solid hsla(192,91%,46%,0.2)" }}>
-                Projection: {climateData.year}
-              </span>
-              <span className="text-xs px-3 py-1.5 rounded-lg font-medium" style={{ background: "hsl(222,47%,9%)", color: "hsl(215,20%,55%)", border: "1px solid hsl(217,33%,22%)" }}>
-                {climateData.metadata?.model}
-              </span>
-            </div>
+          <div style={{ height: 4, background: BORDER, borderRadius: 2, marginBottom: 16, position: "relative" }}>
+            <div style={{ height: "100%", borderRadius: 2, background: `linear-gradient(to right, ${GREEN}, ${AMBER}, ${RED})`, width: `${tPct}%`, transition: "width 0.25s ease" }} />
+            <div style={{ position: "absolute", top: "50%", left: `${tPct}%`, transform: "translate(-50%,-50%)", width: 10, height: 10, borderRadius: "50%", background: ACCENT, border: "2px solid white", transition: "left 0.25s ease" }} />
           </div>
-
-          {/* ── Satellite Map ── */}
-          <div className="section-card">
-            <div className="section-header">
-              <MapPin className="w-5 h-5" style={{ color: "hsl(192,91%,56%)" }} />
-              <h3 className="font-semibold text-white">Location Overview</h3>
-            </div>
-            <div className="p-5">
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-                <div className="rounded-xl overflow-hidden border aspect-video" style={{ borderColor: "hsl(217,33%,22%)" }}>
-                  <iframe
-                    src={`https://maps.google.com/maps?q=${climateData.location?.latitude},${climateData.location?.longitude}&t=k&z=10&ie=UTF8&iwloc=&output=embed`}
-                    width="100%" height="100%" style={{ border: 0 }} allowFullScreen loading="lazy"
-                    referrerPolicy="no-referrer-when-downgrade" title="Satellite View"
-                  />
-                </div>
-                <div className="space-y-3">
-                  <div className="rounded-xl p-4" style={{ background: "hsl(222,47%,10%)", border: "1px solid hsl(217,33%,20%)" }}>
-                    <h4 className="text-sm font-medium text-slate-300 mb-3">Geographic Details</h4>
-                    <div className="space-y-2 text-sm">
-                      <div className="flex justify-between"><span className="text-slate-500">Location</span><span className="text-white font-medium">{climateData.location?.name}</span></div>
-                      <div className="flex justify-between"><span className="text-slate-500">Coordinates</span><span className="text-white font-mono text-xs">{climateData.location?.latitude?.toFixed(4)}°, {climateData.location?.longitude?.toFixed(4)}°</span></div>
-                      <div className="flex justify-between"><span className="text-slate-500">Climate Zone</span><span className="text-white">{climateData.location?.climate_zone}</span></div>
-                      <div className="flex justify-between"><span className="text-slate-500">Target Year</span><span className="text-white">{climateData.year}</span></div>
-                    </div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 7 }}>
+            {tipping.map((tp) => {
+              const reached = tp.year != null;
+              const passed = reached && year >= tp.year!;
+              const isNext = reached && !passed && tipping.filter((x) => x.year != null && year < x.year!)[0]?.year === tp.year;
+              return (
+                <div key={tp.label} style={{ display: "flex", alignItems: "center", gap: 10, padding: "9px 12px", borderRadius: 8, background: passed ? "rgba(239,68,68,0.07)" : isNext ? "rgba(245,158,11,0.06)" : "rgba(255,255,255,0.02)", border: `1px solid ${passed ? "rgba(239,68,68,0.22)" : isNext ? "rgba(245,158,11,0.22)" : BORDER}`, transition: "all 0.25s ease" }}>
+                  <span style={{ fontSize: 16 }}>{tp.icon}</span>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: 12, fontWeight: 600, color: passed ? RED : isNext ? AMBER : MUTED }}>{tp.label}</div>
+                    <div style={{ fontSize: 9, color: MUTED, marginTop: 1 }}>{reached ? `${tp.year} · ${tp.year! - 2025} years from baseline` : "Not reached by 2100"}</div>
                   </div>
-                  <div className="rounded-xl p-4" style={{ background: "hsl(222,47%,10%)", border: "1px solid hsl(217,33%,20%)" }}>
-                    <h4 className="text-sm font-medium text-slate-300 mb-2">Atmospheric Pattern</h4>
-                    <p className="text-sm text-slate-400">{climateData.atmospheric_physics?.circulation_pattern}</p>
-                    <p className="text-xs mt-1" style={{ color: "hsl(192,91%,60%)" }}>Sensitivity: {climateData.atmospheric_physics?.climate_sensitivity}× global average</p>
-                  </div>
+                  <div style={{ fontSize: 15, fontWeight: 700, color: passed ? RED : MUTED }}>{reached ? tp.year : "—"}</div>
+                  {passed && <span style={{ fontSize: 9, padding: "2px 6px", background: "rgba(239,68,68,0.18)", color: RED, borderRadius: 4, fontWeight: 700 }}>CROSSED</span>}
+                  {isNext && <span style={{ fontSize: 9, padding: "2px 6px", background: "rgba(245,158,11,0.18)", color: AMBER, borderRadius: 4, fontWeight: 700 }}>NEXT</span>}
+                  {!passed && !isNext && reached && <span style={{ fontSize: 9, padding: "2px 6px", background: BORDER, color: MUTED, borderRadius: 4 }}>FUTURE</span>}
+                  {!reached && <span style={{ fontSize: 9, padding: "2px 6px", background: `${GREEN}18`, color: GREEN, borderRadius: 4, fontWeight: 700 }}>STABLE</span>}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Habitability Assessment */}
+        <div style={{ ...card, padding: 18, marginBottom: 14 }}>
+          <h2 style={{ fontSize: 15, fontWeight: 700, marginBottom: 14 }}>Habitability Assessment</h2>
+          <div style={{ display: "flex", gap: 28, alignItems: "flex-start", flexWrap: "wrap" }}>
+            <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 6, minWidth: 110 }}>
+              <div style={{ position: "relative", width: 100, height: 100 }}>
+                <svg viewBox="0 0 36 36" style={{ width: "100%", height: "100%", transform: "rotate(-90deg)" }}>
+                  <path d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="rgba(255,255,255,0.08)" strokeWidth="3" />
+                  <path d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke={sc} strokeWidth="3" strokeDasharray={`${d!.score}, 100`} strokeLinecap="round" style={{ transition: "stroke-dasharray 0.25s ease" }} />
+                </svg>
+                <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
+                  <span style={{ fontSize: 26, fontWeight: 800, color: sc }}>{d!.score}</span>
+                  <span style={{ fontSize: 10, color: MUTED }}>/100</span>
                 </div>
               </div>
-
-              {/* Adaptation analysis */}
-              <div className="mt-5 grid grid-cols-1 lg:grid-cols-2 gap-4">
-                {/* Challenges */}
-                {(() => {
-                  const challenges: any[] = [];
-                  const tempChange = climateData.temperature_change || 0;
-                  const precipChange = climateData.precipitation_change || 0;
-                  const latitude = climateData.location?.latitude || 0;
-                  const coastal = Math.abs(latitude) < 60 && climateData.sea_level_rise > 0;
-                  const habitScore = climateData.habitability?.score || 0;
-
-                  if (tempChange > 3) challenges.push({ issue: "Extreme Heat Stress", description: `${tempChange.toFixed(1)}°C warming creates dangerous heat conditions`, impact: "HIGH", magnitude: "85-95% increase in heat days" });
-                  else if (tempChange > 1.5) challenges.push({ issue: "Rising Temperature Discomfort", description: `${tempChange.toFixed(1)}°C warming affects daily comfort`, impact: "MEDIUM", magnitude: "40-60% increase in uncomfortable days" });
-                  if (precipChange < -20) challenges.push({ issue: "Severe Drought Risk", description: `${Math.abs(precipChange).toFixed(0)}% precipitation decline threatens water security`, impact: "HIGH", magnitude: "60-80% higher drought frequency" });
-                  else if (precipChange > 25) challenges.push({ issue: "Increased Flood Risk", description: `${precipChange.toFixed(0)}% more precipitation increases flooding`, impact: "MEDIUM-HIGH", magnitude: "50-70% more flood events" });
-                  if (latitude > 55) challenges.push({ issue: "Arctic Climate Instability", description: "High-latitude regions face rapid climate shifts", impact: "MEDIUM", magnitude: "2-3x faster warming than global average" });
-                  if (coastal) challenges.push({ issue: "Sea Level Rise Impact", description: `${climateData.sea_level_rise}cm rise threatens coastal infrastructure`, impact: "MEDIUM-HIGH", magnitude: "30-50% of coastal areas at risk" });
-                  if (tempChange > 2 || Math.abs(precipChange) > 20) challenges.push({ issue: "Infrastructure Adaptation Costs", description: "Existing infrastructure needs climate-proofing", impact: "MEDIUM", magnitude: "15-25% increase in maintenance costs" });
-                  if (challenges.length < 2 && latitude > 45 && latitude < 60) {
-                    challenges.push({ issue: "European Climate Transition", description: "Western Europe faces shifting precipitation patterns and increasing weather variability", impact: "MEDIUM", magnitude: "20-30% increase in weather extremes" });
-                    challenges.push({ issue: "Urban Heat Island Effect", description: "Cities experience amplified warming compared to rural areas", impact: "MEDIUM", magnitude: "2-5°C additional warming in urban centers" });
-                  }
-                  challenges.push({ issue: "Economic Adaptation Costs", description: "Regional economy needs investment in climate resilience", impact: "MEDIUM", magnitude: "5-15% of regional GDP for adaptation" });
-
-                  return (
-                    <div className="rounded-xl p-4" style={{ background: "hsla(0,84%,60%,0.06)", border: "1px solid hsla(0,84%,60%,0.2)" }}>
-                      <h5 className="text-sm font-semibold mb-3 flex items-center gap-2" style={{ color: "hsl(0,84%,70%)" }}>
-                        <AlertTriangle className="w-4 h-4" />Key Challenges
-                      </h5>
-                      <div className="space-y-3">
-                        {challenges.slice(0, 4).map((c, i) => (
-                          <div key={i} className="pl-3 border-l-2" style={{ borderColor: c.impact === "HIGH" ? "hsl(0,84%,60%)" : "hsl(24,92%,55%)" }}>
-                            <div className="flex items-center gap-2 mb-0.5">
-                              <span className="text-sm font-medium text-white">{c.issue}</span>
-                              <span className="text-xs px-1.5 py-0.5 rounded font-medium" style={{ background: c.impact === "HIGH" ? "hsla(0,84%,60%,0.2)" : "hsla(24,92%,60%,0.2)", color: c.impact === "HIGH" ? "hsl(0,84%,70%)" : "hsl(24,92%,70%)" }}>{c.impact}</span>
-                            </div>
-                            <p className="text-xs text-slate-500">{c.description}</p>
-                            <p className="text-xs font-medium mt-0.5" style={{ color: "hsl(24,92%,65%)" }}>Impact: {c.magnitude}</p>
-                          </div>
-                        ))}
-                      </div>
+              <span style={{ fontSize: 13, fontWeight: 700, color: sc }}>{d!.category}</span>
+              <ScoreSparkline years={traj!.years} data={traj!.score} color={sc} year={year} />
+              <div style={{ fontSize: 8, color: MUTED }}>2025 → 2100 trajectory</div>
+            </div>
+            {d!.breakdown.length > 0 && (
+              <div style={{ flex: 1, minWidth: 280 }}>
+                {d!.breakdown.map((item) => (
+                  <div key={item.key} style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 7 }}>
+                    <div style={{ fontSize: 11, width: 175, color: MUTED, flexShrink: 0 }}>{item.label}</div>
+                    <div style={{ flex: 1, height: 6, background: "rgba(255,255,255,0.05)", borderRadius: 3, overflow: "hidden" }}>
+                      <div style={{ height: "100%", borderRadius: 3, width: `${(Math.abs(item.val) / maxBreakdown) * 100}%`, background: item.neg ? RED : "rgba(255,255,255,0.28)", transition: "width 0.25s ease" }} />
                     </div>
-                  );
-                })()}
-
-                {/* Opportunities */}
-                {(() => {
-                  const opps: any[] = [];
-                  const tempChange = climateData.temperature_change || 0;
-                  const precipChange = climateData.precipitation_change || 0;
-                  const latitude = climateData.location?.latitude || 0;
-                  const habitScore = climateData.habitability?.score || 0;
-                  if (latitude > 55) opps.push({ advantage: "Climate Refuge Potential", description: "High-latitude location offers relative climate stability", impact: "HIGH", magnitude: "2-3x better than equatorial regions" });
-                  if (tempChange > 0 && tempChange < 3 && latitude > 50) opps.push({ advantage: "Extended Growing Season", description: `${tempChange.toFixed(1)}°C warming extends agricultural potential`, impact: "MEDIUM", magnitude: "20-40% longer growing season" });
-                  if (precipChange > -10 && precipChange < 15) opps.push({ advantage: "Stable Water Resources", description: "Minimal precipitation change maintains water security", impact: "MEDIUM-HIGH", magnitude: "90%+ water availability maintained" });
-                  if (habitScore > 45) opps.push({ advantage: "Climate Migration Destination", description: "Above-average habitability attracts climate migrants", impact: "MEDIUM", magnitude: "25-40% economic growth potential" });
-                  if (latitude > 50) opps.push({ advantage: "Reduced Cooling Costs", description: "Northern location requires less air conditioning", impact: "LOW-MEDIUM", magnitude: "30-50% lower cooling energy needs" });
-                  opps.push({ advantage: "Green Technology Leadership", description: "Early adaptation creates competitive advantage", impact: "MEDIUM", magnitude: "15-30% innovation economy growth" });
-                  return (
-                    <div className="rounded-xl p-4" style={{ background: "hsla(142,76%,45%,0.06)", border: "1px solid hsla(142,76%,45%,0.2)" }}>
-                      <h5 className="text-sm font-semibold mb-3 flex items-center gap-2" style={{ color: "hsl(142,76%,55%)" }}>
-                        <CheckCircle className="w-4 h-4" />Adaptation Opportunities
-                      </h5>
-                      <div className="space-y-3">
-                        {opps.slice(0, 4).map((o, i) => (
-                          <div key={i} className="pl-3 border-l-2" style={{ borderColor: "hsl(142,76%,40%)" }}>
-                            <div className="flex items-center gap-2 mb-0.5">
-                              <span className="text-sm font-medium text-white">{o.advantage}</span>
-                              <span className="text-xs px-1.5 py-0.5 rounded font-medium" style={{ background: "hsla(142,76%,45%,0.2)", color: "hsl(142,76%,65%)" }}>{o.impact}</span>
-                            </div>
-                            <p className="text-xs text-slate-500">{o.description}</p>
-                            <p className="text-xs font-medium mt-0.5" style={{ color: "hsl(142,76%,55%)" }}>Benefit: {o.magnitude}</p>
-                          </div>
-                        ))}
-                      </div>
+                    <div style={{ fontSize: 11, fontFamily: "monospace", color: item.neg ? RED : "white", width: 40, textAlign: "right" }}>
+                      {item.neg ? "−" : "+"}{Math.abs(item.val).toFixed(1)}
                     </div>
-                  );
-                })()}
-              </div>
-
-              <div className="mt-4 rounded-xl p-4" style={{ background: "hsla(207,90%,54%,0.06)", border: "1px solid hsla(207,90%,54%,0.2)" }}>
-                <h5 className="text-sm font-semibold mb-1" style={{ color: "hsl(207,90%,65%)" }}>Comparative Global Position</h5>
-                <p className="text-sm text-slate-400">
-                  {(() => {
-                    const score = climateData.habitability?.score || 0;
-                    const latitude = climateData.location?.latitude || 0;
-                    const tempChange = climateData.temperature_change || 0;
-                    if (score > 60 && latitude > 50) return `This location offers significant climate advantages compared to lower-latitude regions, with ${tempChange > 0 && tempChange < 3 ? 'moderate warming that may extend growing seasons' : 'relatively stable temperature conditions'} and ${latitude > 55 ? 'potential as a climate refuge destination' : 'good adaptation prospects'}.`;
-                    else if (score > 45) return `This location maintains moderate habitability compared to global averages, with ${tempChange < 2 ? 'manageable temperature changes' : 'adaptation challenges that are still addressable'} and opportunities for ${latitude > 50 ? 'northern climate advantages' : 'strategic climate planning'}.`;
-                    return `This location faces significant climate adaptation challenges compared to more favorable regions, requiring ${tempChange > 3 ? 'major heat management strategies' : 'comprehensive climate resilience planning'} and ${Math.abs(climateData.precipitation_change || 0) > 20 ? 'water resource adaptation' : 'infrastructure hardening'}.`;
-                  })()}
-                </p>
-              </div>
-            </div>
-          </div>
-
-          {/* ── Location & Year cards ── */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <div className="rounded-xl p-4" style={{ background: "hsl(222,47%,12%)", border: "1px solid hsla(192,91%,46%,0.2)" }}>
-              <div className="flex items-center gap-2 mb-2"><MapPin className="w-4 h-4" style={{ color: "hsl(192,91%,56%)" }} /><span className="text-xs font-medium text-slate-400 uppercase tracking-wide">Location</span></div>
-              <p className="text-base font-semibold text-white">{climateData.location?.name}</p>
-              <p className="text-xs text-slate-500 mt-0.5">{climateData.location?.latitude?.toFixed(4)}°, {climateData.location?.longitude?.toFixed(4)}°</p>
-              <p className="text-xs mt-1 font-medium" style={{ color: "hsl(192,91%,60%)" }}>{climateData.location?.climate_zone} Climate Zone</p>
-            </div>
-            <div className="rounded-xl p-4" style={{ background: "hsl(222,47%,12%)", border: "1px solid hsla(142,76%,45%,0.2)" }}>
-              <div className="flex items-center gap-2 mb-2"><TrendingUp className="w-4 h-4" style={{ color: "hsl(142,76%,55%)" }} /><span className="text-xs font-medium text-slate-400 uppercase tracking-wide">Target Year</span></div>
-              <p className="text-base font-semibold text-white">{climateData.year}</p>
-              <p className="text-xs text-slate-500 mt-0.5">{climateData.year - new Date().getFullYear()} years from now</p>
-            </div>
-            <div className="rounded-xl p-4" style={{ background: "hsl(222,47%,12%)", border: "1px solid hsla(280,87%,65%,0.2)" }}>
-              <div className="flex items-center gap-2 mb-2"><Cloud className="w-4 h-4" style={{ color: "hsl(280,87%,70%)" }} /><span className="text-xs font-medium text-slate-400 uppercase tracking-wide">Model</span></div>
-              <p className="text-sm font-semibold text-white">{climateData.metadata?.model}</p>
-              <p className="text-xs text-slate-500 mt-0.5">Resolution: {climateData.metadata?.resolution}</p>
-            </div>
-          </div>
-
-          {/* ── Temperature Analysis ── */}
-          <div className="section-card">
-            <div className="section-header">
-              <Thermometer className="w-5 h-5" style={{ color: "hsl(0,84%,65%)" }} />
-              <h3 className="font-semibold text-white">Temperature Analysis</h3>
-            </div>
-            <div className="p-5 space-y-5">
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                {[
-                  { label: "Annual Mean", value: `${climateData.temperature?.annual_mean?.toFixed(1)}°C`, color: "hsl(0,84%,65%)", note: "[1]" },
-                  { label: "Temp Change", value: `+${climateData.temperature?.anomaly?.toFixed(1)}°C`, color: "hsl(24,92%,65%)", note: "[2]" },
-                  { label: "Minimum", value: `${climateData.temperature?.min?.toFixed(1)}°C`, color: "hsl(207,90%,65%)", note: "[3]" },
-                  { label: "Maximum", value: `${climateData.temperature?.max?.toFixed(1)}°C`, color: "hsl(0,84%,65%)", note: "[3]" },
-                ].map(({ label, value, color, note }) => (
-                  <div key={label} className="rounded-xl p-3 text-center" style={{ background: "hsl(222,47%,10%)", border: "1px solid hsl(217,33%,20%)" }}>
-                    <p className="text-xs text-slate-500 mb-1">{label}<sup className="text-slate-600">{note}</sup></p>
-                    <p className="text-xl font-bold" style={{ color }}>{value}</p>
                   </div>
                 ))}
-              </div>
-
-              <div>
-                <h4 className="text-sm font-medium text-slate-300 mb-3">Monthly Temperature Distribution</h4>
-                <div className="rounded-xl p-4" style={{ background: "hsl(222,47%,10%)", border: "1px solid hsl(217,33%,20%)" }}>
-                  {(() => {
-                    const monthlyTemps = climateData.temperature?.monthly || [];
-                    const minTemp = Math.min(...monthlyTemps);
-                    const maxTemp = Math.max(...monthlyTemps);
-                    const range = maxTemp - minTemp;
-                    const pad = range * 0.1;
-                    const scaleMin = minTemp - pad;
-                    const scaleMax = maxTemp + pad;
-                    const scaleRange = scaleMax - scaleMin;
-                    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-                    return (
-                      <div className="relative" style={{ height: "220px" }}>
-                        <div className="absolute left-0 top-0 bottom-10 w-10 flex flex-col justify-between text-right">
-                          {[scaleMax, scaleMax * 0.75 + scaleMin * 0.25, (scaleMax + scaleMin) / 2, scaleMax * 0.25 + scaleMin * 0.75, scaleMin].map((t, i) => (
-                            <span key={i} className="text-xs leading-none" style={{ color: "hsl(215,20%,45%)" }}>{t.toFixed(0)}°</span>
-                          ))}
-                        </div>
-                        <div className="absolute left-12 right-0 top-0 bottom-10">
-                          <svg className="w-full h-full" viewBox="0 0 100 100" preserveAspectRatio="none">
-                            <defs>
-                              <linearGradient id="tempGrad" x1="0" y1="0" x2="0" y2="1">
-                                <stop offset="0%" stopColor="hsl(0,84%,65%)" stopOpacity="0.3" />
-                                <stop offset="100%" stopColor="hsl(0,84%,65%)" stopOpacity="0" />
-                              </linearGradient>
-                            </defs>
-                            <polygon
-                              fill="url(#tempGrad)"
-                              points={[
-                                ...monthlyTemps.map((t: number, i: number) => `${(i / 11) * 100},${100 - ((t - scaleMin) / scaleRange) * 100}`),
-                                `100,100`, `0,100`
-                              ].join(' ')}
-                            />
-                            <polyline
-                              fill="none" stroke="hsl(0,84%,65%)" strokeWidth="2.5"
-                              vectorEffect="non-scaling-stroke"
-                              points={monthlyTemps.map((t: number, i: number) => `${(i / 11) * 100},${100 - ((t - scaleMin) / scaleRange) * 100}`).join(' ')}
-                            />
-                            {monthlyTemps.map((t: number, i: number) => (
-                              <circle key={i} cx={(i / 11) * 100} cy={100 - ((t - scaleMin) / scaleRange) * 100} r="1.5" fill="hsl(0,84%,65%)" vectorEffect="non-scaling-stroke" />
-                            ))}
-                          </svg>
-                        </div>
-                        <div className="absolute left-12 right-0 bottom-0 h-8 flex justify-between items-end">
-                          {months.map((m, i) => (
-                            <div key={i} className="text-center flex-1">
-                              <div className="text-xs leading-none" style={{ color: "hsl(215,20%,45%)" }}>{m}</div>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    );
-                  })()}
-                </div>
-                <div className="mt-3 grid grid-cols-2 sm:grid-cols-4 gap-2">
-                  {climateData.temperature?.monthly?.map((temp: number, i: number) => {
-                    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-                    return (
-                      <div key={i} className="flex justify-between text-xs px-2 py-1 rounded" style={{ background: "hsl(222,47%,10%)", border: "1px solid hsl(217,33%,18%)" }}>
-                        <span className="text-slate-500">{months[i]}</span>
-                        <span className="font-mono font-medium" style={{ color: temp >= 0 ? "hsl(0,84%,65%)" : "hsl(207,90%,65%)" }}>{temp?.toFixed(1)}°C</span>
-                      </div>
-                    );
-                  })}
-                </div>
-                <div className="mt-2 text-xs text-slate-500 px-1">
-                  Seasonal amplitude: {climateData.temperature?.seasonal_amplitude?.toFixed(1)}°C · Range: {climateData.temperature?.min?.toFixed(1)}°C to {climateData.temperature?.max?.toFixed(1)}°C
+                <div style={{ display: "flex", justifyContent: "flex-end", paddingTop: 8, borderTop: "1px solid rgba(255,255,255,0.08)", fontSize: 13, fontWeight: 700, color: sc }}>
+                  Total: {d!.score}
                 </div>
               </div>
-            </div>
+            )}
           </div>
-
-          {/* ── Precipitation Analysis ── */}
-          <div className="section-card">
-            <div className="section-header">
-              <Droplets className="w-5 h-5" style={{ color: "hsl(207,90%,65%)" }} />
-              <h3 className="font-semibold text-white">Precipitation Analysis</h3>
-            </div>
-            <div className="p-5 space-y-5">
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                {[
-                  { label: "Annual Total", value: `${climateData.precipitation?.annual_total?.toFixed(0)} mm`, sub: (() => { const a = climateData.precipitation?.annual_total || 0; return a > 1200 ? "Very wet" : a > 800 ? "Wet" : a > 500 ? "Moderate" : a > 200 ? "Dry" : "Very dry (arid)"; })(), color: "hsl(207,90%,65%)" },
-                  { label: "Change", value: `${climateData.precipitation?.anomaly_percent > 0 ? '+' : ''}${climateData.precipitation?.anomaly_percent?.toFixed(1)}%`, sub: "vs baseline", color: "hsl(142,76%,55%)" },
-                  { label: "Wettest Month", value: `${climateData.precipitation?.wettest_month?.toFixed(0)} mm`, sub: climateData.precipitation?.wettest_month_name, color: "hsl(207,90%,65%)" },
-                  { label: "Driest Month", value: `${climateData.precipitation?.driest_month?.toFixed(0)} mm`, sub: climateData.precipitation?.driest_month_name, color: "hsl(42,87%,60%)" },
-                ].map(({ label, value, sub, color }) => (
-                  <div key={label} className="rounded-xl p-3 text-center" style={{ background: "hsl(222,47%,10%)", border: "1px solid hsl(217,33%,20%)" }}>
-                    <p className="text-xs text-slate-500 mb-1">{label}</p>
-                    <p className="text-xl font-bold" style={{ color }}>{value}</p>
-                    <p className="text-xs text-slate-600 mt-0.5">{sub}</p>
-                  </div>
-                ))}
-              </div>
-
-              <div>
-                <h4 className="text-sm font-medium text-slate-300 mb-3">Monthly Precipitation Distribution</h4>
-                <div className="rounded-xl p-4" style={{ background: "hsl(222,47%,10%)", border: "1px solid hsl(217,33%,20%)" }}>
-                  <div className="grid grid-cols-12 gap-1 items-end" style={{ height: "120px" }}>
-                    {climateData.precipitation?.monthly?.map((p: number, i: number) => {
-                      const maxP = Math.max(...climateData.precipitation.monthly);
-                      const pct = Math.max(8, (p / maxP) * 100);
-                      const months = ['J','F','M','A','M','J','J','A','S','O','N','D'];
-                      return (
-                        <div key={i} className="flex flex-col items-center justify-end h-full gap-1">
-                          <div className="w-full rounded-t transition-all" style={{ height: `${pct}%`, background: "linear-gradient(to top, hsl(207,90%,50%), hsl(207,90%,75%))", minHeight: "4px" }} title={`${months[i]}: ${p.toFixed(0)}mm`} />
-                          <span className="text-xs leading-none" style={{ color: "hsl(215,20%,40%)" }}>{months[i]}</span>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-                <div className="mt-3 grid grid-cols-2 sm:grid-cols-4 gap-2">
-                  {climateData.precipitation?.monthly?.map((p: number, i: number) => {
-                    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-                    return (
-                      <div key={i} className="flex justify-between text-xs px-2 py-1 rounded" style={{ background: "hsl(222,47%,10%)", border: "1px solid hsl(217,33%,18%)" }}>
-                        <span className="text-slate-500">{months[i]}</span>
-                        <span className="font-mono font-medium" style={{ color: "hsl(207,90%,65%)" }}>{p.toFixed(0)} mm</span>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            </div>
+          <div style={{ marginTop: 14, paddingTop: 12, borderTop: "1px solid rgba(255,255,255,0.06)", display: "flex", gap: 6, flexWrap: "wrap" }}>
+            {[{ r: "0–39", l: "Severe", c: RED }, { r: "40–59", l: "Poor", c: ORANGE }, { r: "60–69", l: "Fair", c: AMBER }, { r: "70–84", l: "Good", c: GREEN }, { r: "85–100", l: "Excellent", c: "#4ade80" }].map((b) => {
+              const active = b.l === d!.category;
+              return <div key={b.r} style={{ padding: "3px 10px", borderRadius: 10, fontSize: 10, background: active ? `${b.c}18` : "rgba(255,255,255,0.04)", color: active ? b.c : MUTED, fontWeight: active ? 700 : 400, border: active ? `1px solid ${b.c}35` : "none" }}>{b.l} ({b.r})</div>;
+            })}
           </div>
+        </div>
+      </main>
 
-          {/* ── Extreme Weather ── */}
-          <div className="section-card">
-            <div className="section-header">
-              <AlertTriangle className="w-5 h-5" style={{ color: "hsl(24,92%,65%)" }} />
-              <h3 className="font-semibold text-white">Extreme Weather & Risk Assessment</h3>
-            </div>
-            <div className="p-5 space-y-5">
-              <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                <div className="rounded-xl p-4 text-center" style={{ background: "hsla(0,84%,60%,0.08)", border: "1px solid hsla(0,84%,60%,0.25)" }}>
-                  <p className="text-xs text-slate-500 mb-2">Heat Stress Days<sup className="text-slate-600">[8]</sup></p>
-                  <p className="text-3xl font-bold" style={{ color: "hsl(0,84%,65%)" }}>{climateData.extremes?.heat_stress_days || 0}</p>
-                  <p className="text-xs text-slate-500 mt-1">days &gt; 35°C</p>
-                </div>
-                <div className="rounded-xl p-4" style={{ background: "hsla(42,87%,55%,0.08)", border: "1px solid hsla(42,87%,55%,0.25)" }}>
-                  <p className="text-xs text-slate-500 mb-2">Drought Risk<sup className="text-slate-600">[9]</sup></p>
-                  <div className="flex items-end gap-2 mb-2">
-                    <p className="text-3xl font-bold" style={{ color: "hsl(42,87%,65%)" }}>{((climateData.extremes?.drought_risk || 0) * 100).toFixed(0)}%</p>
-                  </div>
-                  <div className="h-2 rounded-full overflow-hidden" style={{ background: "hsl(217,33%,20%)" }}>
-                    <div className="h-full rounded-full" style={{ width: `${(climateData.extremes?.drought_risk || 0) * 100}%`, background: "hsl(42,87%,55%)" }} />
-                  </div>
-                </div>
-                <div className="rounded-xl p-4" style={{ background: "hsla(207,90%,54%,0.08)", border: "1px solid hsla(207,90%,54%,0.25)" }}>
-                  <p className="text-xs text-slate-500 mb-2">Flood Risk<sup className="text-slate-600">[10]</sup></p>
-                  <p className="text-3xl font-bold mb-2" style={{ color: "hsl(207,90%,65%)" }}>{((climateData.extremes?.flood_risk || 0) * 100).toFixed(0)}%</p>
-                  <div className="h-2 rounded-full overflow-hidden" style={{ background: "hsl(217,33%,20%)" }}>
-                    <div className="h-full rounded-full" style={{ width: `${(climateData.extremes?.flood_risk || 0) * 100}%`, background: "hsl(207,90%,54%)" }} />
-                  </div>
-                </div>
-                <div className="rounded-xl p-4 text-center" style={{ background: "hsla(192,91%,46%,0.08)", border: "1px solid hsla(192,91%,46%,0.25)" }}>
-                  <p className="text-xs text-slate-500 mb-2">Sea Level Rise<sup className="text-slate-600">[11]</sup></p>
-                  <p className="text-3xl font-bold" style={{ color: "hsl(192,91%,60%)" }}>{climateData.extremes?.sea_level_rise_cm?.toFixed(1)}<span className="text-lg"> cm</span></p>
-                  <p className="text-xs text-slate-500 mt-1">by {climateData.year}</p>
-                </div>
-              </div>
-              <div className="rounded-xl p-4 text-sm" style={{ background: "hsl(222,47%,10%)", border: "1px solid hsl(217,33%,20%)" }}>
-                <ul className="space-y-1.5 text-slate-400">
-                  <li><span className="text-white font-medium">Heat Stress Days:</span> Days exceeding 35°C WHO threshold — dangerous for human health and agriculture</li>
-                  <li><span className="text-white font-medium">Drought Risk:</span> Probability of water scarcity based on precipitation deficits and evapotranspiration</li>
-                  <li><span className="text-white font-medium">Flood Risk:</span> Likelihood of flooding from extreme precipitation events and soil saturation</li>
-                  <li><span className="text-white font-medium">Sea Level Rise:</span> Projected coastal sea level increase by the target year</li>
-                </ul>
-              </div>
-            </div>
-          </div>
-
-          {/* ── Habitability ── */}
-          <div className="section-card">
-            <div className="section-header">
-              <Award className="w-5 h-5" style={{ color: "hsl(142,76%,55%)" }} />
-              <h3 className="font-semibold text-white">Habitability Assessment</h3>
-            </div>
-            <div className="p-5 space-y-5">
-              <div className="rounded-xl p-6 flex flex-col sm:flex-row items-center gap-6" style={{ background: "hsl(222,47%,10%)", border: "1px solid hsl(217,33%,20%)" }}>
-                <ScoreRing score={habitScore} />
-                <div className="flex-1 text-center sm:text-left">
-                  <div className="flex items-center gap-3 justify-center sm:justify-start mb-2">
-                    <span className="text-2xl font-bold text-white">Overall Habitability</span>
-                    <HabitabilityBadge score={habitScore} />
-                  </div>
-                  <p className="text-sm text-slate-400 mb-4">Based on temperature comfort, precipitation adequacy, and extreme weather risks</p>
-                  <GlobalRankingDisplay
-                    currentScore={climateData.habitability?.score || 0}
-                    targetYear={climateData.year}
-                    latitude={climateData.location?.latitude || 0}
-                    longitude={climateData.location?.longitude || 0}
-                  />
-                </div>
-              </div>
-
-              {/* Score scale */}
-              <div className="grid grid-cols-5 gap-2">
-                {[
-                  { range: "80-100", label: "Excellent", color: "hsla(142,76%,45%,0.15)", border: "hsla(142,76%,45%,0.35)", text: "hsl(142,76%,55%)" },
-                  { range: "60-79", label: "Good", color: "hsla(207,90%,54%,0.15)", border: "hsla(207,90%,54%,0.35)", text: "hsl(207,90%,65%)" },
-                  { range: "40-59", label: "Fair", color: "hsla(42,87%,55%,0.15)", border: "hsla(42,87%,55%,0.35)", text: "hsl(42,87%,65%)" },
-                  { range: "20-39", label: "Poor", color: "hsla(24,92%,60%,0.15)", border: "hsla(24,92%,60%,0.35)", text: "hsl(24,92%,65%)" },
-                  { range: "0-19", label: "Severe", color: "hsla(0,84%,60%,0.15)", border: "hsla(0,84%,60%,0.35)", text: "hsl(0,84%,65%)" },
-                ].map(({ range, label, color, border, text }) => (
-                  <div key={range} className="rounded-lg p-2 text-center border" style={{ background: color, borderColor: border }}>
-                    <div className="text-xs font-bold" style={{ color: text }}>{range}</div>
-                    <div className="text-xs" style={{ color: text }}>{label}</div>
-                  </div>
-                ))}
-              </div>
-
-              {/* Score breakdown waterfall */}
-              {climateData.habitability?.breakdown && (
-                <div>
-                  <h4 className="text-sm font-medium text-slate-300 mb-3">Score Breakdown</h4>
-                  <div className="rounded-xl p-4" style={{ background: "hsl(222,47%,10%)", border: "1px solid hsl(217,33%,20%)" }}>
-                    {(() => {
-                      const b = climateData.habitability.breakdown;
-                      const items = [
-                        { name: "Temp Comfort", value: b.temperature_comfort, color: "hsl(0,84%,60%)", positive: true },
-                        { name: "Precipitation", value: b.precipitation_adequacy, color: "hsl(207,90%,55%)", positive: true },
-                        { name: "Infrastructure", value: b.infrastructure_adaptation, color: "hsl(142,76%,45%)", positive: true },
-                        { name: "Heat Penalty", value: -b.heat_stress_penalty, color: "hsl(24,92%,55%)", positive: false },
-                        { name: "Drought Risk", value: -b.drought_risk_penalty, color: "hsl(42,87%,55%)", positive: false },
-                        { name: "Flood Risk", value: -b.flood_risk_penalty, color: "hsl(192,91%,46%)", positive: false },
-                      ];
-                      return (
-                        <div className="space-y-2">
-                          {items.map(({ name, value, color, positive }) => (
-                            <div key={name} className="flex items-center gap-3">
-                              <div className="text-xs text-slate-500 w-24 shrink-0">{name}</div>
-                              <div className="flex-1 flex items-center gap-2">
-                                <div className="flex-1 h-5 rounded overflow-hidden relative" style={{ background: "hsl(217,33%,18%)" }}>
-                                  <div className="h-full rounded transition-all duration-500" style={{ width: `${Math.min(100, Math.abs(value) / 35 * 100)}%`, background: color, opacity: positive ? 1 : 0.7 }} />
-                                </div>
-                                <span className="text-xs font-mono w-12 text-right" style={{ color: positive ? "hsl(142,76%,55%)" : "hsl(0,84%,65%)" }}>
-                                  {positive ? "+" : ""}{value.toFixed(1)}
-                                </span>
-                              </div>
-                            </div>
-                          ))}
-                          <div className="pt-2 mt-2 flex items-center gap-3" style={{ borderTop: "1px solid hsl(217,33%,22%)" }}>
-                            <div className="text-xs font-semibold text-white w-24 shrink-0">Final Score</div>
-                            <div className="flex-1 flex items-center gap-2">
-                              <div className="flex-1 h-5 rounded overflow-hidden" style={{ background: "hsl(217,33%,18%)" }}>
-                                <div className="h-full rounded" style={{ width: `${habitScore}%`, background: "linear-gradient(90deg, hsl(142,76%,40%), hsl(192,91%,46%))" }} />
-                              </div>
-                              <span className="text-xs font-mono font-bold w-12 text-right text-white">{habitScore.toFixed(1)}</span>
-                            </div>
-                          </div>
-                        </div>
-                      );
-                    })()}
-                  </div>
-                </div>
-              )}
-
-              {/* Livability breakdown */}
-              <LivabilityIndexBreakdown
-                score={climateData.habitability?.score || 0}
-                breakdown={climateData.habitability?.breakdown}
-                location={climateData.location?.name}
-                year={climateData.year}
-              />
-            </div>
-          </div>
-
-          {/* ── Climate Time Series ── */}
-          {climateData.time_series && (
-            <div className="section-card">
-              <div className="section-header">
-                <TrendingUp className="w-5 h-5" style={{ color: "hsl(192,91%,56%)" }} />
-                <h3 className="font-semibold text-white">Climate Trends Over Time</h3>
-              </div>
-              <div className="p-5 space-y-6">
-                {/* Temperature table */}
-                <div>
-                  <h4 className="text-sm font-medium mb-2" style={{ color: "hsl(0,84%,65%)" }}>Monthly Temperature Projections (°C)<sup className="text-slate-600">[3]</sup></h4>
-                  <p className="text-xs text-slate-500 mb-2">Baseline: {climateData.time_series.temperature_baseline?.toFixed(1)}°C</p>
-                  <div className="overflow-x-auto rounded-xl" style={{ border: "1px solid hsl(217,33%,20%)" }}>
-                    <table className="climate-table w-full text-xs">
-                      <thead>
-                        <tr>
-                          <th className="px-2 py-2 text-left sticky left-0" style={{ background: "hsl(222,47%,10%)", color: "hsl(215,20%,55%)" }}>Year</th>
-                          {['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'].map(m => (
-                            <th key={m} className="px-1.5 py-2 text-center min-w-[42px]" style={{ background: "hsl(222,47%,10%)", color: "hsl(215,20%,55%)" }}>{m}</th>
-                          ))}
-                          <th className="px-2 py-2 text-center min-w-[52px]" style={{ background: "hsl(222,47%,10%)", color: "hsl(215,20%,55%)" }}>Annual</th>
-                          <th className="px-2 py-2 text-center min-w-[52px]" style={{ background: "hsl(222,47%,10%)", color: "hsl(215,20%,55%)" }}>Δ</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {climateData.time_series.years?.map((yr: number, idx: number) => {
-                          const mTemps = climateData.time_series.monthly_temperature_series?.[idx] || [];
-                          const annual = climateData.time_series.temperature_trend?.[idx];
-                          const diff = climateData.time_series.temperature_differences?.[idx];
-                          const isTarget = yr === climateData.year;
-                          return (
-                            <tr key={yr} style={{ background: isTarget ? "hsla(192,91%,46%,0.07)" : "transparent" }}>
-                              <td className="px-2 py-1.5 font-semibold text-white sticky left-0" style={{ background: isTarget ? "hsla(192,91%,46%,0.12)" : "hsl(222,47%,11%)" }}>{yr}{isTarget && <span className="ml-1 text-cyan-500">★</span>}</td>
-                              {mTemps.map((t: number, mi: number) => (
-                                <td key={mi} className="px-1.5 py-1.5 text-center font-mono" style={{ color: t >= 0 ? "hsl(0,84%,65%)" : "hsl(207,90%,65%)" }}>{t?.toFixed(1)}</td>
-                              ))}
-                              <td className="px-2 py-1.5 text-center font-mono font-semibold text-white">{annual?.toFixed(1)}</td>
-                              <td className="px-2 py-1.5 text-center font-mono font-semibold" style={{ color: diff >= 0 ? "hsl(0,84%,65%)" : "hsl(207,90%,65%)" }}>{diff >= 0 ? "+" : ""}{diff?.toFixed(1)}°</td>
-                            </tr>
-                          );
-                        })}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-
-                {/* Precipitation table */}
-                <div>
-                  <h4 className="text-sm font-medium mb-2" style={{ color: "hsl(207,90%,65%)" }}>Monthly Precipitation Projections (mm)<sup className="text-slate-600">[6]</sup></h4>
-                  <p className="text-xs text-slate-500 mb-2">Baseline: {climateData.time_series.precipitation_baseline?.toFixed(0)} mm</p>
-                  <div className="overflow-x-auto rounded-xl" style={{ border: "1px solid hsl(217,33%,20%)" }}>
-                    <table className="climate-table w-full text-xs">
-                      <thead>
-                        <tr>
-                          <th className="px-2 py-2 text-left sticky left-0" style={{ background: "hsl(222,47%,10%)", color: "hsl(215,20%,55%)" }}>Year</th>
-                          {['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'].map(m => (
-                            <th key={m} className="px-1.5 py-2 text-center min-w-[42px]" style={{ background: "hsl(222,47%,10%)", color: "hsl(215,20%,55%)" }}>{m}</th>
-                          ))}
-                          <th className="px-2 py-2 text-center" style={{ background: "hsl(222,47%,10%)", color: "hsl(215,20%,55%)" }}>Annual</th>
-                          <th className="px-2 py-2 text-center" style={{ background: "hsl(222,47%,10%)", color: "hsl(215,20%,55%)" }}>Δ</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {climateData.time_series.years?.map((yr: number, idx: number) => {
-                          const mP = climateData.time_series.monthly_precipitation_series?.[idx] || [];
-                          const annual = climateData.time_series.precipitation_trend?.[idx];
-                          const diff = climateData.time_series.precipitation_differences?.[idx];
-                          const isTarget = yr === climateData.year;
-                          return (
-                            <tr key={yr} style={{ background: isTarget ? "hsla(207,90%,54%,0.07)" : "transparent" }}>
-                              <td className="px-2 py-1.5 font-semibold text-white sticky left-0" style={{ background: isTarget ? "hsla(207,90%,54%,0.12)" : "hsl(222,47%,11%)" }}>{yr}{isTarget && <span className="ml-1 text-blue-400">★</span>}</td>
-                              {mP.map((p: number, mi: number) => (
-                                <td key={mi} className="px-1.5 py-1.5 text-center font-mono" style={{ color: "hsl(207,90%,65%)" }}>{p?.toFixed(0)}</td>
-                              ))}
-                              <td className="px-2 py-1.5 text-center font-mono font-semibold text-white">{annual?.toFixed(0)}</td>
-                              <td className="px-2 py-1.5 text-center font-mono font-semibold" style={{ color: diff >= 0 ? "hsl(142,76%,55%)" : "hsl(24,92%,65%)" }}>{diff >= 0 ? "+" : ""}{diff?.toFixed(0)} mm</td>
-                            </tr>
-                          );
-                        })}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-
-                {/* Habitability trend */}
-                <div>
-                  <h4 className="text-sm font-medium text-slate-300 mb-3">Habitability Trend</h4>
-                  <div className="space-y-2">
-                    {climateData.time_series.years?.map((yr: number, idx: number) => {
-                      const h = climateData.time_series.habitability_trend[idx];
-                      const prev = idx > 0 ? climateData.time_series.habitability_trend[idx - 1] : null;
-                      const change = prev ? h - prev : 0;
-                      const isTarget = yr === climateData.year;
-                      const barColor = h >= 80 ? "hsl(142,76%,45%)" : h >= 60 ? "hsl(207,90%,54%)" : h >= 40 ? "hsl(42,87%,55%)" : h >= 20 ? "hsl(24,92%,55%)" : "hsl(0,84%,55%)";
-                      return (
-                        <div key={yr} className="rounded-xl p-3 flex items-center gap-3" style={{ background: isTarget ? "hsla(192,91%,46%,0.07)" : "hsl(222,47%,10%)", border: `1px solid ${isTarget ? "hsla(192,91%,46%,0.25)" : "hsl(217,33%,20%)"}` }}>
-                          <span className="text-sm font-medium text-white w-12 shrink-0">{yr}</span>
-                          <div className="flex-1 h-6 rounded-lg overflow-hidden relative" style={{ background: "hsl(217,33%,18%)" }}>
-                            <div className="h-full rounded-lg transition-all" style={{ width: `${h}%`, background: barColor }} />
-                            <span className="absolute inset-0 flex items-center justify-center text-xs font-bold" style={{ color: h > 50 ? "white" : "hsl(215,20%,65%)" }}>{h?.toFixed(1)}/100</span>
-                          </div>
-                          <span className="text-xs text-slate-500 w-16 shrink-0 text-right">{h >= 80 ? "Excellent" : h >= 60 ? "Good" : h >= 40 ? "Fair" : h >= 20 ? "Poor" : "Severe"}</span>
-                          <span className="text-xs font-medium w-12 text-right shrink-0" style={{ color: change > 0 ? "hsl(142,76%,55%)" : change < 0 ? "hsl(0,84%,65%)" : "hsl(215,20%,50%)" }}>
-                            {change === 0 ? "±0.0" : change > 0 ? `+${change.toFixed(1)}` : change.toFixed(1)}
-                          </span>
-                        </div>
-                      );
-                    })}
-                  </div>
-                  <div className="mt-3 text-xs text-slate-500 px-1">
-                    ★ marks the target year. Δ shows change from prior 5-year interval.
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* ── Atmospheric Physics ── */}
-          {climateData.atmospheric_physics && (
-            <div className="section-card">
-              <div className="section-header">
-                <Wind className="w-5 h-5" style={{ color: "hsl(280,87%,70%)" }} />
-                <h3 className="font-semibold text-white">Atmospheric Physics & Climate Dynamics</h3>
-              </div>
-              <div className="p-5">
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
-                  <div className="rounded-xl p-4" style={{ background: "hsl(222,47%,10%)", border: "1px solid hsl(217,33%,20%)" }}>
-                    <h4 className="text-sm font-medium mb-2" style={{ color: "hsl(280,87%,70%)" }}>Circulation Pattern</h4>
-                    <p className="text-sm text-slate-400">{climateData.atmospheric_physics.circulation_pattern}</p>
-                  </div>
-                  <div className="rounded-xl p-4" style={{ background: "hsl(222,47%,10%)", border: "1px solid hsl(217,33%,20%)" }}>
-                    <h4 className="text-sm font-medium mb-2" style={{ color: "hsl(192,91%,60%)" }}>Climate Sensitivity</h4>
-                    <p className="text-sm text-slate-400">Regional factor: <span className="text-white font-semibold">{climateData.atmospheric_physics.climate_sensitivity}×</span> global average</p>
-                    <p className="text-xs text-slate-600 mt-1">Higher values indicate greater temperature response to radiative forcing</p>
-                  </div>
-                </div>
-                <div>
-                  <h4 className="text-sm font-medium text-slate-300 mb-3">Feedback Mechanisms</h4>
-                  <div className="space-y-2">
-                    {climateData.atmospheric_physics.feedback_mechanisms?.map((fb: string, i: number) => (
-                      <div key={i} className="rounded-lg px-4 py-2.5 text-sm text-slate-400 border-l-2" style={{ background: "hsl(222,47%,10%)", borderColor: "hsl(280,87%,55%)" }}>
-                        {fb}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* ── Global Rankings ── */}
-          <HabitabilityRanking
-            selectedYear={climateData.year}
-            onLocationSelect={(lat, lng) => {
-              setSelectedLocation({ name: `Location ${lat.toFixed(2)}, ${lng.toFixed(2)}`, lat, lng, country: '', city: '', state: '' });
-              setLocation(`${lat.toFixed(4)}, ${lng.toFixed(4)}`);
-            }}
-          />
-
-          {/* ── Methodology ── */}
-          <div className="section-card">
-            <div className="section-header">
-              <BarChart2 className="w-5 h-5" style={{ color: "hsl(215,20%,55%)" }} />
-              <h3 className="font-semibold text-white">Data Quality & Methodology</h3>
-            </div>
-            <div className="p-5 space-y-4">
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-sm">
-                <div className="rounded-xl p-4" style={{ background: "hsl(222,47%,10%)", border: "1px solid hsl(217,33%,20%)" }}>
-                  <h4 className="font-medium text-slate-300 mb-3">Model Information</h4>
-                  <div className="space-y-1.5">
-                    {[["Model", climateData.metadata?.model], ["Version", climateData.metadata?.model_version], ["Resolution", climateData.metadata?.resolution], ["Confidence", climateData.metadata?.confidence]].map(([k, v]) => (
-                      <div key={k} className="flex justify-between text-xs">
-                        <span className="text-slate-500">{k}</span>
-                        <span className="text-slate-300 font-medium">{v}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-                <div className="rounded-xl p-4" style={{ background: "hsl(222,47%,10%)", border: "1px solid hsl(217,33%,20%)" }}>
-                  <h4 className="font-medium text-slate-300 mb-3">Temporal Coverage</h4>
-                  <div className="space-y-1.5">
-                    {[["Base Year", new Date().getFullYear()], ["Target Year", climateData.year], ["Projection Period", `${climateData.year - new Date().getFullYear()} years`], ["Time Series", "5-year intervals"]].map(([k, v]) => (
-                      <div key={k} className="flex justify-between text-xs">
-                        <span className="text-slate-500">{k}</span>
-                        <span className="text-slate-300 font-medium">{v}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-                <div className="rounded-xl p-4" style={{ background: "hsl(222,47%,10%)", border: "1px solid hsl(217,33%,20%)" }}>
-                  <h4 className="font-medium text-slate-300 mb-3">Generation</h4>
-                  <div className="space-y-1.5">
-                    {[["Method", climateData.metadata?.projection_method], ["Source", climateData.metadata?.data_source]].map(([k, v]) => (
-                      <div key={k} className="flex justify-between gap-2 text-xs">
-                        <span className="text-slate-500 shrink-0">{k}</span>
-                        <span className="text-slate-300 font-medium text-right">{v}</span>
-                      </div>
-                    ))}
-                    <div className="flex justify-between text-xs">
-                      <span className="text-slate-500">Generated</span>
-                      <span className="text-slate-300 font-medium">{new Date(climateData.metadata?.generated_at).toLocaleString()}</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <div className="rounded-xl p-4 text-xs text-slate-500" style={{ background: "hsl(222,47%,10%)", border: "1px solid hsl(217,33%,20%)" }}>
-                <p className="font-medium text-slate-300 mb-2">Methodology Note</p>
-                <p>This implementation uses atmospheric physics patterns from NVIDIA's CBottle project, employing the ICON atmospheric model framework. Climate projections incorporate realistic seasonal patterns, atmospheric circulation dynamics, regional climate sensitivity factors, and physical feedback mechanisms.</p>
-              </div>
-
-              {/* Scientific references — collapsible */}
-              <details className="rounded-xl overflow-hidden" style={{ background: "hsl(222,47%,10%)", border: "1px solid hsl(217,33%,20%)" }}>
-                <summary className="px-4 py-3 cursor-pointer text-sm font-medium text-slate-300 hover:text-white transition-colors select-none">
-                  Scientific References & Data Sources [1–26]
-                </summary>
-                <div className="px-4 pb-4 text-xs text-slate-500 space-y-2 max-h-80 overflow-y-auto">
-                  {[
-                    ["[1] Annual Mean Temperature", "CBottle atmospheric physics calculation using ICON model baseline meteorological data."],
-                    ["[2] Temperature Change (Anomaly)", "CBottle climate sensitivity analysis incorporating greenhouse gas forcing and regional feedback mechanisms."],
-                    ["[3] Monthly Temperature Extremes", "CBottle seasonal temperature distribution modeling based on atmospheric physics constraints."],
-                    ["[4] Annual Precipitation Total", "CBottle precipitation model using ICON atmospheric moisture transport calculations."],
-                    ["[5] Precipitation Change", "CBottle hydrological cycle modeling incorporating temperature-driven evaporation changes."],
-                    ["[6] Monthly Precipitation", "CBottle seasonal precipitation distribution with realistic wet/dry season patterns."],
-                    ["[7] Habitability Score", "Multi-factor assessment: temperature comfort (30%), precipitation adequacy (30%), infrastructure adaptation (40%), minus risk penalties."],
-                    ["[8] Heat Stress Days", "Annual days exceeding 35°C threshold using extreme value analysis."],
-                    ["[9] Drought Risk", "Palmer Drought Severity Index methodology with precipitation deficit analysis."],
-                    ["[10] Flood Risk", "Extreme precipitation analysis and hydrological runoff calculations."],
-                    ["[11] Sea Level Rise", "Global mean sea level rise projections with regional adjustment factors."],
-                    ["[12] Seasonal Amplitude", "max(monthly temperature) − min(monthly temperature)."],
-                    ["[13] Temperature Comfort Score", "Optimal range 15-25°C, steep penalties for heat above 25°C, graduated penalties for cold."],
-                    ["[14] Precipitation Adequacy Score", "Optimal annual range 600-1200mm for human settlement."],
-                    ["[15] Infrastructure Adaptation Score", "Latitude-based development potential, coastal proximity, regional economic capacity."],
-                    ["[16-18] Risk Penalties", "Heat stress, drought, and flood penalties applied proportionally to projection values."],
-                    ["[19-26] Global Rankings", "CBottle habitability scores sorted globally by category (best overall, worst, biggest decline, temperature, humidity, infrastructure)."],
-                  ].map(([ref, desc]) => (
-                    <div key={ref}>
-                      <span className="font-medium text-slate-400">{ref}:</span> {desc}
-                    </div>
-                  ))}
-                </div>
-              </details>
-            </div>
-          </div>
-
-        </main>
-      )}
-
-      <footer className="mt-8 py-6 text-center text-xs text-slate-600" style={{ borderTop: "1px solid hsl(217,33%,15%)" }}>
-        <p>© {new Date().getFullYear()} <a href="https://github.com/MikkoParkkola" target="_blank" rel="noopener noreferrer" className="hover:text-slate-400 underline underline-offset-2 transition-colors">Mikko Parkkola</a> · ClimateVision</p>
-        <p className="mt-1">Powered by CBottle/ICON Atmospheric Physics · For research and planning purposes only</p>
+      <footer style={{ borderTop: `1px solid ${BORDER}`, padding: "16px 20px", textAlign: "center" }}>
+        <p style={{ color: MUTED, fontSize: 10 }}>
+          ClimateVision · {d!.model}{d!.modelVersion ? ` ${d!.modelVersion}` : ""} · Confidence: {prettify(d!.confidence)} · RCP 4.5–8.5 / SSP2 · For research &amp; planning
+        </p>
       </footer>
+      <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
     </div>
   );
 }
