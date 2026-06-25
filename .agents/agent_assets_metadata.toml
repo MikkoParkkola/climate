@@ -1,0 +1,8 @@
+uploads = []
+outputs = []
+
+[[generated]]
+id = "xmbz8xUvPVADpqCUjNLR5"
+uri = "file://client/public/og-image.png"
+type = "image"
+title = "climatevision og card"

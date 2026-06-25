@@ -68,6 +68,10 @@ export default function ClimateApp() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    document.title = "ClimateVision — Future Climate Projections for Any Location on Earth";
+  }, []);
+
+  useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       const target = event.target as Element;
       if (!target.closest('.location-input-container')) setShowSuggestions(false);

@@ -1,1 +1,2 @@
-- [Express 5 + vite.ts wildcards](express5-vite-wildcards.md) — upgrading to Express 5 requires `"/{*any}"` instead of `"*"` in app.use() wildcard routes
+- [SPA per-route SEO injection](spa-seo-injection.md) — how `/` and `/comparison` get distinct crawler-visible head tags without SSR, and why it must be prod-only.
+- [Real-model e2e timeouts](e2e-real-model-timeout.md) — runTest via code_execution hits the 10-min sandbox cap on flows that wait on the slow climate model; prefer layered verification.

@@ -1,6 +1,8 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { spawn } from "child_process";
+import path from "path";
+import fs from "fs";
 import { storage } from "./storage";
 import { insertClimateLocationSchema, insertClimateProjectionSchema } from "@shared/schema";
 import { z } from "zod";
@@ -23,6 +25,168 @@ function checkRateLimit(ip: string): boolean {
   if (entry.count >= RATE_LIMIT_MAX_PER_WINDOW) return false;
   entry.count++;
   return true;
+}
+
+// Bounded concurrency for the Python climate model. Callers acquire a slot
+// before spawning and release it when the process settles. Waiters queue
+// (instead of failing) so multi-year trajectory requests glide to completion.
+const pythonQueue: Array<() => void> = [];
+
+function acquirePythonSlot(): Promise<void> {
+  return new Promise((resolve) => {
+    if (activePythonProcesses < MAX_PYTHON_CONCURRENT) {
+      activePythonProcesses++;
+      resolve();
+    } else {
+      pythonQueue.push(resolve);
+    }
+  });
+}
+
+function releasePythonSlot(): void {
+  const next = pythonQueue.shift();
+  if (next) {
+    // Hand the slot directly to the next waiter; count stays unchanged.
+    next();
+  } else {
+    activePythonProcesses = Math.max(0, activePythonProcesses - 1);
+  }
+}
+
+// Runs the climate model for a single (lat, lng, year), respecting the
+// concurrency limit. Resolves with the parsed projection JSON.
+async function runClimateModel(
+  lat: number,
+  lng: number,
+  year: number,
+  apiKey: string,
+): Promise<any> {
+  await acquirePythonSlot();
+  return new Promise((resolve, reject) => {
+    let killed = false;
+    let settled = false;
+    const python = spawn("python", [
+      "cbottle_runner.py",
+      lat.toString(),
+      lng.toString(),
+      year.toString(),
+      apiKey,
+    ]);
+
+    const killTimer = setTimeout(() => {
+      killed = true;
+      python.kill("SIGKILL");
+    }, PYTHON_TIMEOUT_MS);
+
+    let output = "";
+    python.stdout.on("data", (data: Buffer) => {
+      output += data.toString();
+    });
+    python.stderr.on("data", (_data: Buffer) => {
+      // Intentionally discarded — stderr may contain internal paths or secrets
+    });
+
+    python.on("close", (code: number | null) => {
+      clearTimeout(killTimer);
+      releasePythonSlot();
+      if (settled) return;
+      settled = true;
+      if (killed) return reject(new Error("timeout"));
+      if (code !== 0) return reject(new Error("model_failed"));
+      try {
+        resolve(JSON.parse(output));
+      } catch {
+        reject(new Error("parse_error"));
+      }
+    });
+
+    python.on("error", (err: Error) => {
+      clearTimeout(killTimer);
+      releasePythonSlot();
+      if (settled) return;
+      settled = true;
+      console.error("Failed to start cbottle_runner.py:", err.message);
+      reject(new Error("spawn_error"));
+    });
+  });
+}
+
+// ── SEO: per-route HTML head injection (production only) ────────────────────
+// Social crawlers and search engines do not run the React app, so each public
+// route needs distinct head tags in the initial HTML response.
+const SEO_BASE = "https://global-geo-selector-mikkoparkkola.replit.app";
+
+interface SeoPage {
+  path: string;
+  title: string;
+  description: string;
+}
+
+const SEO_PAGES: Record<string, SeoPage> = {
+  home: {
+    path: "/",
+    title: "ClimateVision — Future Climate Projections for Any Location on Earth",
+    description:
+      "Explore future climate projections for any location on Earth: temperature, precipitation, extreme-risk indicators, and habitability scores from advanced atmospheric modeling.",
+  },
+  comparison: {
+    path: "/comparison",
+    title: "Climate Comparison Tool | Compare Future Climate by Location",
+    description:
+      "Compare side-by-side climate projections for up to 10 locations. Slide through 2025–2100 to watch temperature, precipitation, risk, and habitability diverge in real time.",
+  },
+};
+
+function makeSeoHandler(page: SeoPage) {
+  return (req: any, res: any, next: any) => {
+    try {
+      const file = path.resolve(import.meta.dirname, "public", "index.html");
+      let html = fs.readFileSync(file, "utf-8");
+      // Sanitize the Host header before reflecting it into HTML: only allow a
+      // valid hostname[:port] shape, otherwise fall back to the known base.
+      // Prevents Host-header injection; `Vary: Host` blocks cross-host caching.
+      const rawHost = (req.get("host") || "").toString();
+      const host = /^[a-z0-9.-]+(:\d+)?$/i.test(rawHost) ? rawHost : new URL(SEO_BASE).host;
+      const base = `https://${host}`;
+      const url = base + page.path;
+      const ogImage = `${base}/og-image.png`;
+      // Align every absolute URL (canonical, OG, schema graph) with the live host.
+      html = html.split(SEO_BASE).join(base);
+      const pageSchema = {
+        "@context": "https://schema.org",
+        "@type": "WebPage",
+        name: page.title,
+        description: page.description,
+        url,
+        isPartOf: { "@id": `${base}/#website` },
+      };
+      html = html
+        .replace(/<title>[\s\S]*?<\/title>/, `<title>${page.title}</title>`)
+        .replace(/<meta name="description" content="[^"]*"\s*\/?>/, `<meta name="description" content="${page.description}" />`)
+        .replace(/<meta property="og:title" content="[^"]*"\s*\/?>/, `<meta property="og:title" content="${page.title}" />`)
+        .replace(/<meta property="og:description" content="[^"]*"\s*\/?>/, `<meta property="og:description" content="${page.description}" />`)
+        .replace(/<meta property="og:url" content="[^"]*"\s*\/?>/, `<meta property="og:url" content="${url}" />`)
+        .replace(/<meta property="og:image" content="[^"]*"\s*\/?>/, `<meta property="og:image" content="${ogImage}" />`)
+        .replace(/<meta name="twitter:title" content="[^"]*"\s*\/?>/, `<meta name="twitter:title" content="${page.title}" />`)
+        .replace(/<meta name="twitter:description" content="[^"]*"\s*\/?>/, `<meta name="twitter:description" content="${page.description}" />`)
+        .replace(/<meta name="twitter:image" content="[^"]*"\s*\/?>/, `<meta name="twitter:image" content="${ogImage}" />`)
+        .replace(/<link rel="canonical" href="[^"]*"\s*\/?>/, `<link rel="canonical" href="${url}" />`)
+        .replace(
+          /<script type="application\/ld\+json" id="page-schema">[\s\S]*?<\/script>/,
+          `<script type="application/ld+json" id="page-schema">${JSON.stringify(pageSchema)}</script>`,
+        );
+      res
+        .status(200)
+        .set({
+          "Content-Type": "text/html; charset=utf-8",
+          "Cache-Control": "public, max-age=300",
+          Vary: "Host",
+        })
+        .send(html);
+    } catch {
+      next();
+    }
+  };
 }
 
 export async function registerRoutes(app: Express): Promise<Server> {
@@ -344,7 +508,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
     python.on("close", (code: number | null) => {
       clearTimeout(killTimer);
-      activePythonProcesses--;
+      releasePythonSlot();
       if (responded) return;
       responded = true;
       if (killed) {
@@ -365,12 +529,62 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
     python.on("error", (err: Error) => {
       clearTimeout(killTimer);
-      activePythonProcesses--;
+      releasePythonSlot();
       if (responded) return;
       responded = true;
       console.error("Failed to start cbottle_runner.py:", err.message);
       res.status(500).json({ message: "Climate model unavailable." });
     });
+  });
+
+  // POST /api/climate-trajectory — runs the model at multiple checkpoint years
+  // for a single location (sequentially) so the client can interpolate between
+  // real data points as the year slider moves. One request per location keeps
+  // client calls within the per-IP rate limit.
+  app.post("/api/climate-trajectory", async (req, res) => {
+    const clientIp = ((req.ip ?? "") || (req.socket?.remoteAddress ?? "unknown")).replace(/^::ffff:/, "");
+    if (!checkRateLimit(clientIp)) {
+      return res.status(429).json({ message: "Too many requests. Please try again later." });
+    }
+
+    const bodySchema = z.object({
+      coordinates: z.object({
+        lat: z.coerce.number().min(-90).max(90),
+        lng: z.coerce.number().min(-180).max(180),
+      }),
+      years: z.array(z.coerce.number().int().min(2024).max(2200)).min(1).max(5),
+    });
+
+    const parsed = bodySchema.safeParse(req.body);
+    if (!parsed.success) {
+      console.warn("climate-trajectory 400 — field errors:", JSON.stringify(parsed.error.issues));
+      return res.status(400).json({ message: "Invalid request parameters" });
+    }
+
+    const { coordinates } = parsed.data;
+    // De-duplicate and sort the checkpoint years ascending.
+    const years = Array.from(new Set(parsed.data.years)).sort((a, b) => a - b);
+
+    const apiKey = process.env.NVIDIA_API_KEY || "";
+    if (!apiKey) {
+      return res.status(503).json({ message: "No API key configured. Please set NVIDIA_API_KEY." });
+    }
+
+    try {
+      const points: any[] = [];
+      for (const year of years) {
+        const projection = await runClimateModel(coordinates.lat, coordinates.lng, year, apiKey);
+        points.push({ year, ...projection });
+      }
+      res.json({ success: true, data: { coordinates, points } });
+    } catch (err) {
+      const msg = (err as Error).message;
+      if (msg === "timeout") {
+        return res.status(504).json({ message: "Climate model timed out. Please try again." });
+      }
+      console.error("climate-trajectory failed:", msg);
+      res.status(500).json({ message: "Climate model failed. Please try again." });
+    }
   });
 
   // Global habitability rankings endpoint
@@ -409,7 +623,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
     python.on("close", (code: number | null) => {
       clearTimeout(killTimer);
-      activePythonProcesses--;
+      releasePythonSlot();
       if (responded) return;
       responded = true;
       if (killed) {
@@ -430,13 +644,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
     python.on("error", (err: Error) => {
       clearTimeout(killTimer);
-      activePythonProcesses--;
+      releasePythonSlot();
       if (responded) return;
       responded = true;
       console.error("Failed to start cbottle_runner.py --rankings:", err.message);
       res.status(500).json({ message: "Rankings service unavailable." });
     });
   });
+
+  // Serve route-specific SEO head tags in production. In development, Vite's
+  // own middleware owns the catch-all and transforms index.html for HMR.
+  if (app.get("env") !== "development") {
+    app.get("/", makeSeoHandler(SEO_PAGES.home));
+    app.get("/comparison", makeSeoHandler(SEO_PAGES.comparison));
+  }
 
   const httpServer = createServer(app);
   return httpServer;

@@ -3,24 +3,76 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1" />
-    <title>Climate Projections Explorer - Earth Climate Data</title>
-    <meta name="description" content="Explore future climate projections for any location on Earth. View temperature, precipitation, and risk assessments using advanced climate modeling data.">
-    
-    <!-- Open Graph tags -->
-    <meta property="og:title" content="Climate Projections Explorer - Earth Climate Data">
-    <meta property="og:description" content="Explore future climate projections for any location on Earth using advanced climate modeling data.">
-    <meta property="og:type" content="website">
-    
+    <meta name="theme-color" content="#0b1220" />
+    <meta name="robots" content="index, follow" />
+
+    <title>ClimateVision — Future Climate Projections for Any Location on Earth</title>
+    <meta name="description" content="Explore future climate projections for any location on Earth: temperature, precipitation, extreme-risk indicators, and habitability scores from advanced atmospheric modeling." />
+    <link rel="canonical" href="https://global-geo-selector-mikkoparkkola.replit.app/" />
+
+    <!-- Icons -->
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="apple-touch-icon" href="/favicon.svg" />
+
+    <!-- Open Graph -->
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="ClimateVision" />
+    <meta property="og:title" content="ClimateVision — Future Climate Projections for Any Location on Earth" />
+    <meta property="og:description" content="Explore future climate projections for any location on Earth: temperature, precipitation, extreme-risk indicators, and habitability scores from advanced atmospheric modeling." />
+    <meta property="og:url" content="https://global-geo-selector-mikkoparkkola.replit.app/" />
+    <meta property="og:image" content="https://global-geo-selector-mikkoparkkola.replit.app/og-image.png" />
+    <meta property="og:image:alt" content="ClimateVision — future climate projections visualized on planet Earth" />
+
+    <!-- Twitter -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="ClimateVision — Future Climate Projections for Any Location on Earth" />
+    <meta name="twitter:description" content="Explore future climate projections for any location on Earth: temperature, precipitation, extreme-risk indicators, and habitability scores from advanced atmospheric modeling." />
+    <meta name="twitter:image" content="https://global-geo-selector-mikkoparkkola.replit.app/og-image.png" />
+
     <!-- Fonts -->
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-    
-    <!-- Leaflet CSS -->
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+
+    <!-- Structured data (site-wide) -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "WebSite",
+          "@id": "https://global-geo-selector-mikkoparkkola.replit.app/#website",
+          "name": "ClimateVision",
+          "url": "https://global-geo-selector-mikkoparkkola.replit.app/",
+          "description": "Future climate projections, risk indicators, and habitability forecasts for locations around the world."
+        },
+        {
+          "@type": "Organization",
+          "@id": "https://global-geo-selector-mikkoparkkola.replit.app/#org",
+          "name": "ClimateVision",
+          "url": "https://global-geo-selector-mikkoparkkola.replit.app/",
+          "logo": "https://global-geo-selector-mikkoparkkola.replit.app/favicon.svg"
+        },
+        {
+          "@type": "WebApplication",
+          "name": "ClimateVision",
+          "url": "https://global-geo-selector-mikkoparkkola.replit.app/",
+          "applicationCategory": "EducationalApplication",
+          "operatingSystem": "All",
+          "browserRequirements": "Requires JavaScript",
+          "description": "Explore and compare future climate projections, extreme-risk indicators, and habitability forecasts for any location on Earth, powered by advanced atmospheric modeling.",
+          "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
+          "publisher": { "@id": "https://global-geo-selector-mikkoparkkola.replit.app/#org" }
+        }
+      ]
+    }
+    </script>
+
+    <!-- Structured data (per-page; rewritten per route in production) -->
+    <script type="application/ld+json" id="page-schema">{"@context":"https://schema.org","@type":"WebPage","name":"ClimateVision — Future Climate Projections for Any Location on Earth","description":"Explore future climate projections for any location on Earth: temperature, precipitation, extreme-risk indicators, and habitability scores from advanced atmospheric modeling.","url":"https://global-geo-selector-mikkoparkkola.replit.app/","isPartOf":{"@id":"https://global-geo-selector-mikkoparkkola.replit.app/#website"}}</script>
   </head>
   <body>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
-    <!-- This is a replit script which adds a banner on the top of the page when opened in development mode outside the replit environment -->
-    <script type="text/javascript" src="https://replit.com/public/js/replit-dev-banner.js"></script>
   </body>
 </html>
