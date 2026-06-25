@@ -46,6 +46,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // ── Shared helper: cache-first projection with API fallback ────────────────
+  async function resolveProjection(locationId: number, year: number) {
+    // 1. Return cached result if available (avoids redundant API calls)
+    const cached = await storage.getClimateProjection(locationId, year);
+    if (cached) {
+      return { ...cached, dataSource: "CACHED" };
+    }
+    // 2. Fetch from NVIDIA API
+    console.log(`🌐 Fetching from NVIDIA API: location ${locationId}, year ${year}`);
+    const fresh = await fetchClimateProjectionFromAPI(locationId, year);
+    if (fresh) {
+      fresh.dataSource = "NVIDIA_API";
+      fresh.fetchedAt = new Date();
+      await storage.createClimateProjection(fresh);
+      console.log(`✅ NVIDIA API success: ${locationId}/${year}`);
+      return fresh;
+    }
+    console.warn(`⚠️  NVIDIA API unavailable for ${locationId}/${year}`);
+    return null;
+  }
+
   // Climate projection routes
   app.get("/api/projections", async (req, res) => {
     try {
@@ -55,31 +76,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (isNaN(locationId) || isNaN(year)) {
         return res.status(400).json({ message: "Invalid location ID or year" });
       }
-      
-      console.log(`🔥 FORCING FRESH NVIDIA API CALL for location ${locationId}, year ${year}`);
-      
-      // Always fetch fresh data from NVIDIA API
-      let projection = await fetchClimateProjectionFromAPI(locationId, year);
-      
-      if (projection) {
-        projection.dataSource = "NVIDIA_API";
-        projection.fetchedAt = new Date();
-        console.log(`✅ SUCCESS: NVIDIA API returned data for ${locationId}/${year}`);
-        
-        // Save to database but with fresh timestamp
-        await storage.createClimateProjection(projection);
-      } else {
-        console.log(`❌ NVIDIA API FAILED for ${locationId}/${year} - using fallback algorithms`);
-        projection = await storage.getClimateProjection(locationId, year);
-        if (projection) {
-          projection.dataSource = "CACHED_FALLBACK";
-        }
-      }
-      
+
+      const projection = await resolveProjection(locationId, year);
       if (!projection) {
         return res.status(404).json({ message: "Climate projection not found" });
       }
-      
       res.json(projection);
     } catch (error) {
       console.error("Error fetching climate projection:", error);
@@ -95,27 +96,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (isNaN(locationId) || isNaN(year)) {
         return res.status(400).json({ message: "Invalid location ID or year" });
       }
-      
-      console.log(`🔥 FORCING FRESH NVIDIA API CALL for location ${locationId}, year ${year}`);
-      
-      // Always fetch fresh data from NVIDIA API
-      let projection = await fetchClimateProjectionFromAPI(locationId, year);
-      
-      if (projection) {
-        projection.dataSource = "NVIDIA_API";
-        projection.fetchedAt = new Date();
-        console.log(`✅ SUCCESS: NVIDIA API returned data for ${locationId}/${year}`);
-        
-        // Save to database but with fresh timestamp
-        await storage.createClimateProjection(projection);
-      } else {
-        console.log(`❌ NVIDIA API FAILED for ${locationId}/${year} - using fallback algorithms`);
-        projection = await storage.getClimateProjection(locationId, year);
-        if (projection) {
-          projection.dataSource = "CACHED_FALLBACK";
-        }
-      }
-      
+
+      const projection = await resolveProjection(locationId, year);
       if (!projection) {
         return res.status(404).json({ message: "Climate projection not found" });
       }
@@ -215,40 +197,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Invalid parameters" });
       }
 
-      const ids = locationIds.split(',').map(id => parseInt(id));
-      const comparisonData = [];
+      const ids = locationIds.split(',').map(id => parseInt(id)).filter(id => !isNaN(id));
 
-      for (const locationId of ids) {
-        const location = await storage.getClimateLocation(locationId);
-        if (!location) continue;
+      // Fetch all locations + projections in parallel (eliminates N+1 sequential awaits)
+      const results = await Promise.all(
+        ids.map(async (locationId) => {
+          const [location, projection, currentProjection] = await Promise.all([
+            storage.getClimateLocation(locationId),
+            resolveProjection(locationId, year),
+            resolveProjection(locationId, 2024),
+          ]);
+          if (!location || !projection || !currentProjection) return null;
+          return { location, projection, currentProjection };
+        })
+      );
 
-        let projection = await storage.getClimateProjection(locationId, year);
-        let currentProjection = await storage.getClimateProjection(locationId, 2024);
-
-        if (!projection) {
-          const projectionData = await fetchClimateProjectionFromAPI(locationId, year);
-          if (projectionData) {
-            projection = await storage.createClimateProjection(projectionData);
-          }
-        }
-
-        if (!currentProjection) {
-          const currentData = await fetchClimateProjectionFromAPI(locationId, 2024);
-          if (currentData) {
-            currentProjection = await storage.createClimateProjection(currentData);
-          }
-        }
-
-        if (projection && currentProjection) {
-          comparisonData.push({
-            location,
-            projection,
-            currentProjection,
-          });
-        }
-      }
-
-      res.json(comparisonData);
+      res.json(results.filter(Boolean));
     } catch (error) {
       console.error("Error fetching multi-comparison data:", error);
       res.status(500).json({ message: "Failed to fetch comparison data" });

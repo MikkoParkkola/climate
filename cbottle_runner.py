@@ -135,7 +135,9 @@ def fetch_external_temperature_baseline(latitude, longitude):
     # NOAA Climate Data Online API for authentic 30-year climate normals
     try:
         # Try NOAA Climate Data Online (requires API key)
-        noaa_api_key = "YOUR_NOAA_API_KEY"  # User should provide this
+        noaa_api_key = os.environ.get("NOAA_API_KEY", "")
+        if not noaa_api_key:
+            raise ValueError("NOAA_API_KEY not set")
         headers = {'token': noaa_api_key}
         
         # Get nearest climate station data

@@ -72,7 +72,7 @@ export default function ClimateApp() {
     fetch('/api/config')
       .then(res => res.json())
       .then(data => { if (data.nvidiaApiKey) setApiKey(data.nvidiaApiKey); })
-      .catch(() => {});
+      .catch(err => console.warn("Could not load API config:", err));
   }, []);
 
   useEffect(() => {
@@ -92,7 +92,9 @@ export default function ClimateApp() {
         const suggestions = await response.json();
         setLocationSuggestions(suggestions);
         setShowSuggestions(true);
-      } catch {}
+      } catch (err) {
+        console.warn("Location search failed:", err);
+      }
     }, 300);
     return () => clearTimeout(timeoutId);
   }, [location]);
