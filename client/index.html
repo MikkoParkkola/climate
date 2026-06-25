@@ -34,6 +34,9 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
 
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+
     <!-- Structured data (site-wide) -->
     <script type="application/ld+json">
     {
@@ -62,7 +65,15 @@
           "browserRequirements": "Requires JavaScript",
           "description": "Explore and compare future climate projections, extreme-risk indicators, and habitability forecasts for any location on Earth, powered by advanced atmospheric modeling.",
           "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
-          "publisher": { "@id": "https://global-geo-selector-mikkoparkkola.replit.app/#org" }
+          "publisher": { "@id": "https://global-geo-selector-mikkoparkkola.replit.app/#org" },
+          "featureList": [
+            "Search any location worldwide by city name or coordinates",
+            "View projected average temperature and temperature change",
+            "Explore annual precipitation and humidity forecasts",
+            "Assess heat stress, drought, and flooding risk scores",
+            "Compare habitability rankings across global cities",
+            "Download climate projection reports as CSV or PDF"
+          ]
         }
       ]
     }
@@ -73,6 +84,32 @@
   </head>
   <body>
     <div id="root"></div>
+    <noscript>
+      <style>
+        body { font-family: sans-serif; max-width: 800px; margin: 2rem auto; padding: 0 1rem; color: #1a1a1a; }
+        h1 { font-size: 2rem; }
+        h2 { font-size: 1.25rem; margin-top: 1.5rem; }
+        ul { line-height: 1.8; }
+        a { color: #2563eb; }
+      </style>
+      <main>
+        <h1>Climate Projections Explorer</h1>
+        <p>Explore future climate projections for any location on Earth. Search for a city or enter coordinates to see temperature, precipitation, humidity, sea level, and habitability risk assessments modeled through 2100.</p>
+        <h2>Features</h2>
+        <ul>
+          <li>Search any location worldwide by city name or coordinates</li>
+          <li>View projected average temperature and temperature change</li>
+          <li>Explore annual precipitation and humidity forecasts</li>
+          <li>Assess heat stress, drought, and flooding risk scores</li>
+          <li>Compare habitability rankings across global cities</li>
+          <li>Download climate projection reports as CSV or PDF</li>
+        </ul>
+        <h2>How It Works</h2>
+        <p>Our climate model integrates advanced scientific datasets to project future conditions at any point on Earth. Select a target year between now and 2100, enter a location, and receive detailed projections with a Livability Index score from 0 to 100.</p>
+        <p><a href="/comparison">Compare multiple locations side-by-side</a> to evaluate how different cities or regions are expected to change over time.</p>
+        <p><strong>Note:</strong> This application requires JavaScript to run. Please enable JavaScript in your browser.</p>
+      </main>
+    </noscript>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

@@ -1,8 +1,8 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { spawn } from "child_process";
-import path from "path";
 import fs from "fs";
+import path from "path";
 import { storage } from "./storage";
 import { insertClimateLocationSchema, insertClimateProjectionSchema } from "@shared/schema";
 import { z } from "zod";
@@ -652,12 +652,182 @@ export async function registerRoutes(app: Express): Promise<Server> {
     });
   });
 
-  // Serve route-specific SEO head tags in production. In development, Vite's
-  // own middleware owns the catch-all and transforms index.html for HMR.
-  if (app.get("env") !== "development") {
-    app.get("/", makeSeoHandler(SEO_PAGES.home));
-    app.get("/comparison", makeSeoHandler(SEO_PAGES.comparison));
+    // Serve route-specific SEO head tags in production via makeSeoHandler.
+    if (app.get("env") !== "development") {
+      app.get("/", makeSeoHandler(SEO_PAGES.home));
+      app.get("/comparison", makeSeoHandler(SEO_PAGES.comparison));
+    }
+
+  // Semantic content for each known public route.
+  // This is injected into the HTML served to all clients so that crawlers and
+  // social preview bots see real page content on the first byte, before any
+  // JavaScript executes, regardless of whether the client renders JS.
+  const PAGE_SEMANTIC: Record<string, { title: string; description: string; ogUrl: string; jsonLd: string; bodyHtml: string }> = {
+    "/": {
+      title: "Climate Projections Explorer - Earth Climate Data",
+      description: "Explore future climate projections for any location on Earth. View temperature, precipitation, and risk assessments using advanced climate modeling data.",
+      ogUrl: "https://climate-projections.replit.app/",
+      jsonLd: JSON.stringify({
+        "@context": "https://schema.org",
+        "@type": "WebApplication",
+        "name": "Climate Projections Explorer",
+        "url": "https://climate-projections.replit.app/",
+        "description": "Explore future climate projections for any location on Earth. View temperature, precipitation, humidity, sea level, and risk assessments using advanced climate modeling data.",
+        "applicationCategory": "UtilityApplication",
+        "operatingSystem": "Any",
+        "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
+      }),
+      bodyHtml: `<main aria-label="Page introduction">
+  <h1>Climate Projections Explorer</h1>
+  <p>Explore future climate projections for any location on Earth. Search for a city or coordinates to see temperature, precipitation, humidity, sea level, and habitability risk assessments modeled through 2100.</p>
+  <h2>Features</h2>
+  <ul>
+    <li>Search any location worldwide by city name or coordinates</li>
+    <li>View projected average temperature and temperature change</li>
+    <li>Explore annual precipitation and humidity forecasts</li>
+    <li>Assess heat stress, drought, and flooding risk scores</li>
+    <li>Compare habitability rankings across global cities</li>
+    <li>Download climate projection reports as CSV or PDF</li>
+  </ul>
+  <h2>How It Works</h2>
+  <p>Our climate model integrates advanced scientific datasets to project future conditions at any point on Earth. Select a target year between now and 2100, enter a location, and receive detailed projections with a Livability Index score from 0 to 100.</p>
+  <p><a href="/comparison">Compare multiple locations side-by-side</a> to evaluate how different cities or regions are expected to change over time.</p>
+</main>`,
+    },
+    "/comparison": {
+      title: "Climate Comparison - Compare Locations | Climate Projections Explorer",
+      description: "Compare future climate projections for multiple locations side by side. Evaluate temperature, precipitation, and habitability scores across cities through 2100.",
+      ogUrl: "https://climate-projections.replit.app/comparison",
+      jsonLd: JSON.stringify({
+        "@context": "https://schema.org",
+        "@type": "WebPage",
+        "name": "Climate Comparison Tool",
+        "url": "https://climate-projections.replit.app/comparison",
+        "description": "Compare future climate projections for multiple locations side by side. Evaluate temperature, precipitation, and habitability scores across cities through 2100.",
+        "isPartOf": {
+          "@type": "WebSite",
+          "name": "Climate Projections Explorer",
+          "url": "https://climate-projections.replit.app/",
+        },
+      }),
+      bodyHtml: `<main aria-label="Page introduction">
+  <h1>Climate Comparison Tool</h1>
+  <p>Compare future climate projections for multiple locations side by side. Add cities or coordinates to compare how each region is expected to change through 2100 based on advanced climate modeling data.</p>
+  <h2>What You Can Compare</h2>
+  <ul>
+    <li>Average temperature and temperature change across locations</li>
+    <li>Annual precipitation and precipitation trends</li>
+    <li>Humidity forecasts and changes over time</li>
+    <li>Sea level projections for coastal locations</li>
+    <li>Heat stress, drought, and flooding risk scores</li>
+    <li>Overall Livability Index scores from 0 to 100</li>
+  </ul>
+  <p><a href="/">Go back to the Climate Projections Explorer</a> to explore individual locations in detail.</p>
+</main>`,
+    },
+  };
+
+  // In development there is no built index.html; serve a self-contained page
+  // that includes Vite's dev entry point so the interactive React app still
+  // loads and hydrates after the initial server-rendered content.
+  function buildDevHtml(page: typeof PAGE_SEMANTIC[string]): string {
+    return `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>${page.title}</title>
+<meta name="description" content="${page.description}">
+<meta property="og:title" content="${page.title}">
+<meta property="og:description" content="${page.description}">
+<meta property="og:type" content="website">
+<meta property="og:url" content="${page.ogUrl}">
+<link rel="canonical" href="${page.ogUrl}">
+<script type="application/ld+json">${page.jsonLd}</script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+</head>
+<body>
+<div id="root">${page.bodyHtml}</div>
+<script type="module" src="/src/main.tsx"></script>
+</body>
+</html>`;
   }
+
+  // Pre-render middleware: intercepts GET requests for known public routes and
+  // serves HTML with real page content embedded in <div id="root"> on the first
+  // response. In production the built index.html (with hashed bundle scripts) is
+  // read from disk and the semantic body is injected before the app mounts; in
+  // development a self-contained page with the Vite dev entry is used instead.
+  // This ensures ALL clients — browsers, crawlers, and AI agents — receive
+  // crawlable content on the first byte without requiring JavaScript execution.
+  const distIndexPath = path.resolve(import.meta.dirname, "public", "index.html");
+
+  app.use(async (req, res, next) => {
+    if (req.method !== "GET") return next();
+    const page = PAGE_SEMANTIC[req.path];
+    if (!page) return next();
+
+    try {
+      if (fs.existsSync(distIndexPath)) {
+        // Production: inject semantic content into the built index.html so the
+        // correct hashed bundle scripts are preserved.
+        const template = await fs.promises.readFile(distIndexPath, "utf-8");
+        const html = template
+          .replace(/<title>[^<]*<\/title>/, `<title>${page.title}</title>`)
+          .replace(/<div id="root"><\/div>/, `<div id="root">${page.bodyHtml}</div>`);
+        return res.status(200).set("Content-Type", "text/html; charset=utf-8").end(html);
+      }
+      // Development: serve self-contained HTML with Vite dev entry point.
+      return res.status(200).set("Content-Type", "text/html; charset=utf-8").end(buildDevHtml(page));
+    } catch (err) {
+      next(err);
+    }
+  });
+
+  // 404 guard — registered in routes.ts so it runs BEFORE vite.middlewares and
+  // express.static, ensuring unknown paths return a genuine 404 rather than the
+  // SPA shell (soft 404). Known SPA routes and Vite-internal prefixes pass
+  // through; in development all file-extension requests also pass through so
+  // Vite can serve its own assets; in production file-extension paths pass
+  // through to express.static, and any that are not found on disk then fall
+  // through to the narrowed /{*any} fallback in server/vite.ts which also
+  // returns 404 for non-SPA paths.
+  const KNOWN_SPA_ROUTES_404 = new Set(["/", "/comparison"]);
+  const VITE_INTERNAL_PREFIXES = ["/api/", "/@", "/src/", "/node_modules/", "/__mockup", "/__vite"];
+  const isDev = process.env.NODE_ENV !== "production";
+  const NOT_FOUND_HTML_404 = `<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"><title>404 Not Found</title></head>
+<body><h1>404 – Page Not Found</h1><p><a href="/">Go to Climate Projections Explorer</a></p></body></html>`;
+
+  app.use((req, res, next) => {
+    if (req.method !== "GET" && req.method !== "HEAD") return next();
+    const p = req.path;
+
+    // Always pass through: known SPA routes (served by pre-render middleware above)
+    // and Vite / API path prefixes.
+    if (KNOWN_SPA_ROUTES_404.has(p) || VITE_INTERNAL_PREFIXES.some(pfx => p.startsWith(pfx))) {
+      return next();
+    }
+
+    // In development, pass through file-extension paths so Vite dev server can
+    // serve its own compiled assets (e.g. /src/main.tsx, /@vite/client, etc.).
+    // In production, pass through too — express.static will serve them if they
+    // exist; the vite.ts fallback returns 404 for any that don't.
+    if (p.includes(".")) {
+      // In development, only Vite-served files have extensions we should honour.
+      // Unknown dotted paths that Vite can't serve still hit /{*any} in vite.ts
+      // which is narrowed to return 404 for non-SPA paths.
+      return next();
+    }
+
+    // Unknown page-like path (no extension, not a known SPA route, not an API
+    // or Vite internal path) — return a real 404.
+    res.status(404).set("Content-Type", "text/html; charset=utf-8").end(NOT_FOUND_HTML_404);
+  });
+
+  // Suppress unused variable warning — isDev is available for future use.
+  void isDev;
 
   const httpServer = createServer(app);
   return httpServer;

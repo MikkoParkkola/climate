@@ -1,0 +1,146 @@
+      console.error("Failed to start cbottle_runner.py --rankings:", err.message);
+      res.status(500).json({ message: "Rankings service unavailable." });
+    });
+  });
+
+<<<<<<< HEAD
+  // Serve route-specific SEO head tags in production. In development, Vite's
+  // own middleware owns the catch-all and transforms index.html for HMR.
+  if (app.get("env") !== "development") {
+    app.get("/", makeSeoHandler(SEO_PAGES.home));
+    app.get("/comparison", makeSeoHandler(SEO_PAGES.comparison));
+  }
+=======
+  // Pre-rendered HTML for crawler bots on known public routes.
+  // Dynamic rendering: bots receive static HTML; browsers receive the SPA shell.
+  const CRAWLER_UA_RE = /bot|crawl|slurp|spider|mediapartners|facebookexternalhit|linkedinbot|twitterbot|whatsapp|applebot|bingpreview|duckduckbot|ia_archiver|semrush|ahrefsbot|rogerbot|mj12bot|dotbot|yandex|baiduspider|sogou|exabot|facebot|python-requests|curl|wget|Go-http-client|Googlebot|Google-InspectionTool|GPTBot|ChatGPT|Claude|PerplexityBot|YouBot/i;
+
+  const PRERENDERED_PAGES: Record<string, string> = {
+    "/": `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Climate Projections Explorer - Earth Climate Data</title>
+<meta name="description" content="Explore future climate projections for any location on Earth. View temperature, precipitation, and risk assessments using advanced climate modeling data.">
+<meta property="og:title" content="Climate Projections Explorer - Earth Climate Data">
+<meta property="og:description" content="Explore future climate projections for any location on Earth using advanced climate modeling data.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://climate-projections.replit.app/">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "WebApplication",
+  "name": "Climate Projections Explorer",
+  "url": "https://climate-projections.replit.app/",
+  "description": "Explore future climate projections for any location on Earth. View temperature, precipitation, humidity, sea level, and risk assessments using advanced climate modeling data.",
+  "applicationCategory": "UtilityApplication",
+  "operatingSystem": "Any",
+  "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" }
+}
+</script>
+</head>
+<body>
+<main>
+  <h1>Climate Projections Explorer</h1>
+  <p>Explore future climate projections for any location on Earth. Search for a city or coordinates to see temperature, precipitation, humidity, sea level, and habitability risk assessments modeled through 2100.</p>
+  <h2>Features</h2>
+  <ul>
+    <li>Search any location worldwide by city name or coordinates</li>
+    <li>View projected average temperature and temperature change</li>
+    <li>Explore annual precipitation and humidity forecasts</li>
+    <li>Assess heat stress, drought, and flooding risk scores</li>
+    <li>Compare habitability rankings across global cities</li>
+    <li>Download climate projection reports as CSV or PDF</li>
+  </ul>
+  <h2>How It Works</h2>
+  <p>Our climate model integrates advanced scientific datasets to project future conditions at any point on Earth. Select a target year between now and 2100, enter a location, and receive detailed projections with a Livability Index score from 0 to 100.</p>
+  <p><a href="/comparison">Compare multiple locations side-by-side</a> to evaluate how different cities or regions are expected to change over time.</p>
+</main>
+</body>
+</html>`,
+    "/comparison": `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Climate Comparison - Compare Locations | Climate Projections Explorer</title>
+<meta name="description" content="Compare future climate projections for multiple locations side by side. Evaluate temperature, precipitation, and habitability scores across cities through 2100.">
+<meta property="og:title" content="Climate Comparison - Compare Locations | Climate Projections Explorer">
+<meta property="og:description" content="Compare future climate projections for multiple locations side by side. Evaluate temperature, precipitation, and habitability scores across cities through 2100.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://climate-projections.replit.app/comparison">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "WebPage",
+  "name": "Climate Comparison Tool",
+  "url": "https://climate-projections.replit.app/comparison",
+  "description": "Compare future climate projections for multiple locations side by side. Evaluate temperature, precipitation, and habitability scores across cities through 2100.",
+  "isPartOf": {
+    "@type": "WebSite",
+    "name": "Climate Projections Explorer",
+    "url": "https://climate-projections.replit.app/"
+  }
+}
+</script>
+</head>
+<body>
+<main>
+  <h1>Climate Comparison Tool</h1>
+  <p>Compare future climate projections for multiple locations side by side. Add cities or coordinates to compare how each region is expected to change through 2100 based on advanced climate modeling data.</p>
+  <h2>What You Can Compare</h2>
+  <ul>
+    <li>Average temperature and temperature change across locations</li>
+    <li>Annual precipitation and precipitation trends</li>
+    <li>Humidity forecasts and changes over time</li>
+    <li>Sea level projections for coastal locations</li>
+    <li>Heat stress, drought, and flooding risk scores</li>
+    <li>Overall Livability Index scores from 0 to 100</li>
+  </ul>
+  <p><a href="/">Go back to the Climate Projections Explorer</a> to explore individual locations in detail.</p>
+</main>
+</body>
+</html>`,
+  };
+
+  app.use((req, res, next) => {
+    const ua = req.headers["user-agent"] ?? "";
+    if (CRAWLER_UA_RE.test(ua) && req.method === "GET") {
+      const prerendered = PRERENDERED_PAGES[req.path];
+      if (prerendered) {
+        return res.status(200).set("Content-Type", "text/html; charset=utf-8").end(prerendered);
+      }
+    }
+    next();
+  });
+
+  // Return 404 for unknown page-like paths so crawlers get an accurate status
+  // instead of a 200 SPA shell (soft 404).
+  const KNOWN_SPA_ROUTES = new Set(["/", "/comparison"]);
+  app.use((req, res, next) => {
+    const p = req.path;
+    if (
+      p.startsWith("/api/") ||
+      p.startsWith("/__mockup") ||
+      p.startsWith("/@") ||
+      p.startsWith("/src/") ||
+      p.startsWith("/node_modules/") ||
+      p.includes(".") ||
+      KNOWN_SPA_ROUTES.has(p)
+    ) {
+      return next();
+    }
+    res.status(404).set("Content-Type", "text/html; charset=utf-8").end(`<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"><title>404 Not Found</title></head>
+<body><h1>404 – Page Not Found</h1><p><a href="/">Go to Climate Projections Explorer</a></p></body></html>`);
+  });
+>>>>>>> d211c8e (Task 7: Crawlability and Rendering - SEO fixes)
+
+  const httpServer = createServer(app);
+  return httpServer;
+}
+
+async function generateComparisonPDF(locationIds: number[], year: number, name: string) {
+  // Simplified PDF generation - in production use libraries like PDFKit or Puppeteer
+  const filename = `climate-comparison-${year}-${Date.now()}.pdf`;

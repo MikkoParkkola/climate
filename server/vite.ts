@@ -8,6 +8,17 @@ import { nanoid } from "nanoid";
 
 const viteLogger = createLogger();
 
+const KNOWN_SPA_ROUTES = new Set(["/", "/comparison"]);
+
+const NOT_FOUND_HTML = `<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="UTF-8"><title>404 Not Found</title></head>
+<body>
+<h1>404 – Page Not Found</h1>
+<p><a href="/">Go to Climate Projections Explorer</a></p>
+</body>
+</html>`;
+
 export function log(message: string, source = "express") {
   const formattedTime = new Date().toLocaleTimeString("en-US", {
     hour: "numeric",
@@ -44,6 +55,12 @@ export async function setupVite(app: Express, server: Server) {
   app.use("/{*any}", async (req, res, next) => {
     const url = req.originalUrl;
 
+    // Only serve the SPA shell for known client routes; 404 everything else.
+    if (!KNOWN_SPA_ROUTES.has(req.path)) {
+      res.status(404).set({ "Content-Type": "text/html; charset=utf-8" }).end(NOT_FOUND_HTML);
+      return;
+    }
+
     try {
       const clientTemplate = path.resolve(
         import.meta.dirname,
@@ -78,8 +95,14 @@ export function serveStatic(app: Express) {
 
   app.use(express.static(distPath));
 
-  // fall through to index.html if the file doesn't exist
-  app.use("/{*any}", (_req, res) => {
+  // Only serve index.html for known SPA routes; return a real 404 for everything
+  // else so crawlers and search engines receive an accurate HTTP status code
+  // instead of treating a missing page as soft-404 content.
+  app.use("/{*any}", (req, res) => {
+    if (!KNOWN_SPA_ROUTES.has(req.path)) {
+      res.status(404).set({ "Content-Type": "text/html; charset=utf-8" }).end(NOT_FOUND_HTML);
+      return;
+    }
     res.sendFile(path.resolve(distPath, "index.html"));
   });
 }

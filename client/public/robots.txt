@@ -1,0 +1,6 @@
+User-agent: *
+Allow: /
+Allow: /comparison
+Disallow: /api/
+
+Sitemap: https://climate-projections.replit.app/sitemap.xml
