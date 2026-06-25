@@ -190,6 +190,24 @@ function makeSeoHandler(page: SeoPage) {
 }
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // ── Per-route SEO head injection ─────────────────────────────────────────────
+  // Social crawlers and search engines do not execute JavaScript, so each public
+  // route must receive distinct <title>, <meta description>, <link canonical>,
+  // Open Graph, Twitter Card, and JSON-LD tags in the FIRST HTTP response byte.
+  //
+  // In production, app.get() handlers below are registered BEFORE serveStatic()
+  // (see server/index.ts), so they intercept /  and /comparison before
+  // express.static can serve the shared index.html.  Each handler reads the
+  // built dist/public/index.html and rewrites every head tag for that route.
+  //
+  // In development, the PAGE_SEMANTIC middleware further down serves a
+  // self-contained HTML document (with the Vite dev entry point) for each route,
+  // providing the same per-route tags to crawlers without interfering with HMR.
+  if (app.get("env") !== "development") {
+    app.get("/", makeSeoHandler(SEO_PAGES.home));
+    app.get("/comparison", makeSeoHandler(SEO_PAGES.comparison));
+  }
+
   // Climate location routes
   app.get("/api/locations/search", async (req, res) => {
     try {
@@ -652,12 +670,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     });
   });
 
-    // Serve route-specific SEO head tags in production via makeSeoHandler.
-    if (app.get("env") !== "development") {
-      app.get("/", makeSeoHandler(SEO_PAGES.home));
-      app.get("/comparison", makeSeoHandler(SEO_PAGES.comparison));
-    }
-
   // Semantic content for each known public route.
   // This is injected into the HTML served to all clients so that crawlers and
   // social preview bots see real page content on the first byte, before any
@@ -745,7 +757,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
 <link rel="canonical" href="${page.ogUrl}">
 <script type="application/ld+json">${page.jsonLd}</script>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 </head>
 <body>
 <div id="root">${page.bodyHtml}</div>

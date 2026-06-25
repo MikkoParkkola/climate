@@ -34,9 +34,6 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
 
-    <!-- Leaflet CSS -->
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-
     <!-- Structured data (site-wide) -->
     <script type="application/ld+json">
     {
@@ -79,7 +76,13 @@
     }
     </script>
 
-    <!-- Structured data (per-page; rewritten per route in production) -->
+    <!-- Per-route WebPage schema (id="page-schema").
+         In production, the Express server (server/routes.ts → makeSeoHandler)
+         registers app.get("/") and app.get("/comparison") handlers BEFORE
+         express.static runs. Each handler reads this built file and rewrites
+         the title, meta description, canonical, OG, Twitter, and this script
+         tag for the requested route, so social crawlers and search engines
+         receive route-specific head tags on the first HTTP byte. -->
     <script type="application/ld+json" id="page-schema">{"@context":"https://schema.org","@type":"WebPage","name":"ClimateVision — Future Climate Projections for Any Location on Earth","description":"Explore future climate projections for any location on Earth: temperature, precipitation, extreme-risk indicators, and habitability scores from advanced atmospheric modeling.","url":"https://global-geo-selector-mikkoparkkola.replit.app/","isPartOf":{"@id":"https://global-geo-selector-mikkoparkkola.replit.app/#website"}}</script>
   </head>
   <body>
