@@ -1,8 +1,29 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
+import { spawn } from "child_process";
 import { storage } from "./storage";
 import { insertClimateLocationSchema, insertClimateProjectionSchema } from "@shared/schema";
 import { z } from "zod";
+
+const MAX_PYTHON_CONCURRENT = 2;
+const PYTHON_TIMEOUT_MS = 60_000;
+let activePythonProcesses = 0;
+
+const RATE_LIMIT_WINDOW_MS = 60_000;
+const RATE_LIMIT_MAX_PER_WINDOW = 10;
+const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
+
+function checkRateLimit(ip: string): boolean {
+  const now = Date.now();
+  const entry = rateLimitMap.get(ip);
+  if (!entry || now > entry.resetAt) {
+    rateLimitMap.set(ip, { count: 1, resetAt: now + RATE_LIMIT_WINDOW_MS });
+    return true;
+  }
+  if (entry.count >= RATE_LIMIT_MAX_PER_WINDOW) return false;
+  entry.count++;
+  return true;
+}
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Climate location routes
@@ -262,48 +283,154 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // POST /api/climate-projection — securely spawns Python runner with validated args
+  app.post("/api/climate-projection", async (req, res) => {
+    const clientIp = ((req.ip ?? "") || (req.socket?.remoteAddress ?? "unknown")).replace(/^::ffff:/, "");
+    if (!checkRateLimit(clientIp)) {
+      return res.status(429).json({ message: "Too many requests. Please try again later." });
+    }
+    if (activePythonProcesses >= MAX_PYTHON_CONCURRENT) {
+      return res.status(503).json({ message: "Server busy. Please try again shortly." });
+    }
+
+    const bodySchema = z.object({
+      location: z.string().min(1).max(200),
+      coordinates: z.object({
+        lat: z.number().min(-90).max(90),
+        lng: z.number().min(-180).max(180),
+      }),
+      year: z.number().int().min(2024).max(2200),
+      apiKey: z.string().min(1).max(500),
+    });
+
+    const parsed = bodySchema.safeParse(req.body);
+    if (!parsed.success) {
+      return res.status(400).json({ message: "Invalid request parameters" });
+    }
+
+    const { coordinates, year, apiKey } = parsed.data;
+
+    activePythonProcesses++;
+    let killed = false;
+    let responded = false;
+
+    const python = spawn("python", [
+      "cbottle_runner.py",
+      coordinates.lat.toString(),
+      coordinates.lng.toString(),
+      year.toString(),
+      apiKey,
+    ]);
+
+    const killTimer = setTimeout(() => {
+      killed = true;
+      python.kill("SIGKILL");
+    }, PYTHON_TIMEOUT_MS);
+
+    let output = "";
+
+    python.stdout.on("data", (data: Buffer) => {
+      output += data.toString();
+    });
+
+    python.stderr.on("data", (_data: Buffer) => {
+      // Intentionally discarded — stderr may contain internal paths or secrets
+    });
+
+    python.on("close", (code: number | null) => {
+      clearTimeout(killTimer);
+      activePythonProcesses--;
+      if (responded) return;
+      responded = true;
+      if (killed) {
+        return res.status(504).json({ message: "Climate model timed out. Please try again." });
+      }
+      if (code !== 0) {
+        console.error("cbottle_runner.py exited with non-zero code:", code);
+        return res.status(500).json({ message: "Climate model failed. Please try again." });
+      }
+      try {
+        const result = JSON.parse(output);
+        res.json({ success: true, data: result });
+      } catch {
+        console.error("Failed to parse cbottle_runner.py output");
+        res.status(500).json({ message: "Failed to parse climate model output." });
+      }
+    });
+
+    python.on("error", (err: Error) => {
+      clearTimeout(killTimer);
+      activePythonProcesses--;
+      if (responded) return;
+      responded = true;
+      console.error("Failed to start cbottle_runner.py:", err.message);
+      res.status(500).json({ message: "Climate model unavailable." });
+    });
+  });
+
   // Global habitability rankings endpoint
   app.get("/api/climate/global-rankings", async (req, res) => {
-    try {
-      const year = parseInt(req.query.year as string) || 2050;
-      
-      // Call Python script to generate global rankings
-      const { spawn } = require('child_process');
-      const python = spawn('python', ['cbottle_runner.py', '--rankings', year.toString()]);
-      
-      let output = '';
-      let errorOutput = '';
-      
-      python.stdout.on('data', (data: Buffer) => {
-        output += data.toString();
-      });
-      
-      python.stderr.on('data', (data: Buffer) => {
-        errorOutput += data.toString();
-      });
-      
-      python.on('close', (code: number) => {
-        if (code !== 0) {
-          console.error("Python script error:", errorOutput);
-          return res.status(500).json({ 
-            message: "Failed to generate global rankings",
-            error: errorOutput 
-          });
-        }
-        
-        try {
-          const rankings = JSON.parse(output);
-          res.json(rankings);
-        } catch (parseError) {
-          console.error("Failed to parse rankings output:", parseError);
-          res.status(500).json({ message: "Failed to parse rankings data" });
-        }
-      });
-      
-    } catch (error) {
-      console.error("Error generating global rankings:", error);
-      res.status(500).json({ message: "Failed to generate global rankings" });
+    const clientIp = ((req.ip ?? "") || (req.socket?.remoteAddress ?? "unknown")).replace(/^::ffff:/, "");
+    if (!checkRateLimit(clientIp)) {
+      return res.status(429).json({ message: "Too many requests. Please try again later." });
     }
+    if (activePythonProcesses >= MAX_PYTHON_CONCURRENT) {
+      return res.status(503).json({ message: "Server busy. Please try again shortly." });
+    }
+
+    const rawYear = parseInt(req.query.year as string);
+    const year = Number.isInteger(rawYear) && rawYear >= 2024 && rawYear <= 2200 ? rawYear : 2050;
+
+    activePythonProcesses++;
+    let killed = false;
+    let responded = false;
+
+    const python = spawn("python", ["cbottle_runner.py", "--rankings", year.toString()]);
+
+    const killTimer = setTimeout(() => {
+      killed = true;
+      python.kill("SIGKILL");
+    }, PYTHON_TIMEOUT_MS);
+
+    let output = "";
+
+    python.stdout.on("data", (data: Buffer) => {
+      output += data.toString();
+    });
+
+    python.stderr.on("data", (_data: Buffer) => {
+      // Intentionally discarded — do not expose internal diagnostics to callers
+    });
+
+    python.on("close", (code: number | null) => {
+      clearTimeout(killTimer);
+      activePythonProcesses--;
+      if (responded) return;
+      responded = true;
+      if (killed) {
+        return res.status(504).json({ message: "Rankings computation timed out. Please try again." });
+      }
+      if (code !== 0) {
+        console.error("cbottle_runner.py --rankings exited with code:", code);
+        return res.status(500).json({ message: "Failed to generate global rankings." });
+      }
+      try {
+        const rankings = JSON.parse(output);
+        res.json(rankings);
+      } catch {
+        console.error("Failed to parse global rankings output");
+        res.status(500).json({ message: "Failed to parse rankings data." });
+      }
+    });
+
+    python.on("error", (err: Error) => {
+      clearTimeout(killTimer);
+      activePythonProcesses--;
+      if (responded) return;
+      responded = true;
+      console.error("Failed to start cbottle_runner.py --rankings:", err.message);
+      res.status(500).json({ message: "Rankings service unavailable." });
+    });
   });
 
   const httpServer = createServer(app);
