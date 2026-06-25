@@ -4,7 +4,7 @@ hidden = [".config", ".git", "generated-icon.png", "node_modules", "dist"]
 
 [nix]
 channel = "stable-24_05"
-packages = ["cairo", "curl", "ffmpeg-full", "freetype", "ghostscript", "gobject-introspection", "gtk3", "hdf5", "libjpeg", "netcdf", "pkg-config", "qhull", "tcl", "tk", "zlib"]
+packages = ["cairo", "curl", "ffmpeg-full", "freetype", "ghostscript", "gobject-introspection", "gtk3", "hdf5", "lcms2", "libimagequant", "libjpeg", "libtiff", "libwebp", "libxcrypt", "netcdf", "openjpeg", "pkg-config", "qhull", "tcl", "tk", "zlib"]
 
 [deployment]
 deploymentTarget = "autoscale"

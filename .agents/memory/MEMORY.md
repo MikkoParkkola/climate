@@ -1,0 +1,1 @@
+- [Express 5 + vite.ts wildcards](express5-vite-wildcards.md) — upgrading to Express 5 requires `"/{*any}"` instead of `"*"` in app.use() wildcard routes
