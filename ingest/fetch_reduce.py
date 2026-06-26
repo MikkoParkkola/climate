@@ -66,6 +66,12 @@ def client():
 # (model, variable) — fetch once, reuse. Saves ~120 redundant CDS requests.
 _baseline_cache = {}
 _baseline_lock = threading.Lock()
+
+# HDF5/netCDF4 (the C library xarray reads NetCDF through) is NOT thread-safe
+# unless built with --enable-threadsafe. Concurrent open/load from worker threads
+# segfaults (EXIT=139). Serialize only the fast native read+regrid under this lock;
+# the slow part (the CDS download) stays concurrent, so throughput is unaffected.
+_hdf5_lock = threading.Lock()
 def get_baseline(model, variable):
     key = (model, variable)
     with _baseline_lock:
@@ -119,14 +125,15 @@ def fetch_climatology(model, experiment, variable, years):
         ncs = glob.glob(os.path.join(tmp, "*.nc"))
         if not ncs:
             return None
-        ds = xr.open_mfdataset(ncs, combine="by_coords") if len(ncs) > 1 else xr.open_dataset(ncs[0])
-        da = ds[_main_var(ds)].mean("time")
-        # normalize longitude 0..360 -> -180..180 then regrid to common grid
-        if float(da.lon.max()) > 180:
-            da = da.assign_coords(lon=(((da.lon + 180) % 360) - 180)).sortby("lon")
-        lat, lon = target_grid()
-        out = da.interp(lat=lat, lon=lon).load()
-        ds.close()
+        with _hdf5_lock:   # HDF5/netCDF4 is not thread-safe — serialize the read+regrid
+            ds = xr.open_mfdataset(ncs, combine="by_coords") if len(ncs) > 1 else xr.open_dataset(ncs[0])
+            da = ds[_main_var(ds)].mean("time")
+            # normalize longitude 0..360 -> -180..180 then regrid to common grid
+            if float(da.lon.max()) > 180:
+                da = da.assign_coords(lon=(((da.lon + 180) % 360) - 180)).sortby("lon")
+            lat, lon = target_grid()
+            out = da.interp(lat=lat, lon=lon).load()
+            ds.close()
         return out
     finally:
         shutil.rmtree(tmp, ignore_errors=True)   # discard raw, always
