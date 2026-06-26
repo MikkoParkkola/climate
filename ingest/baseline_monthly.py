@@ -123,7 +123,11 @@ def reduce_variable(variable, short, models=None):
 
 
 def save(ds, path):
-    enc = {"clim": {"dtype": "int16", "scale_factor": 0.01, "_FillValue": -32768,
+    # float32, NOT int16+scale 0.01: absolute monthly precip in monsoon regions exceeds
+    # 327 mm/month, which overflows int16 at 0.01 scale and wraps to NEGATIVE precip
+    # (bug caught at Mumbai: Jul = -267 mm). float32 is lossless across the full range;
+    # build_export.py re-quantizes with an adaptive per-array scale for the compact blob.
+    enc = {"clim": {"dtype": "float32", "_FillValue": float("nan"),
                     "zlib": True, "complevel": 5}}
     tmp = path + ".tmp"
     ds.to_netcdf(tmp, encoding=enc)

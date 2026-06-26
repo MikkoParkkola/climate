@@ -67,11 +67,18 @@ def unshuffle_i16(buf):
     return pairs.reshape(-1).view("<i2")
 
 
-# Fixed quantization scale per layer kind (units in comments).
-def scale_for(layer, unit):
+# Quantization scale per layer kind. Deltas/percent are small -> fixed 0.01 (good
+# compression). Absolute baselines can be large (monsoon precip >320 mm/month, dry
+# spells 365 d, Rx5day >320 mm) and would CLIP at 32000*0.01=320, so they get an
+# adaptive per-array scale = max(abs)/32000 (lossless to int16 across their range).
+def scale_for(layer, unit, arr=None):
     if layer == "sealevel":
         return 0.001          # metres -> 1 mm precision
-    return 0.01               # degC / percent / days / mm -> 0.01-unit precision
+    if layer in ("baseline", "baseline-extreme") and arr is not None:
+        finite = np.isfinite(arr)
+        m = float(np.nanmax(np.abs(arr[finite]))) if finite.any() else 0.0
+        return max(m / 32000.0, 1e-6) if m > 0 else 0.01
+    return 0.01               # degC / percent / days / mm delta -> 0.01-unit precision
 
 
 def file_arrays(path):
@@ -80,7 +87,18 @@ def file_arrays(path):
     (baseline climatology)."""
     base = os.path.basename(path)[:-3]
     ds = xr.open_dataset(path)
-    # baseline climatology files: baseline-<var>.nc, dims (month,lat,lon), var 'clim'
+    # baseline-extreme-<idx>.nc: absolute ETCCDI baseline, dims (lat,lon), var 'clim'.
+    # Single-axis layer -> key (layer='baseline-extreme', scenario=<idx>, var='clim'),
+    # reshaped to (1,lat,lon) so encode + self-check treat it 3D like every other layer.
+    if base.startswith("baseline-extreme-"):
+        idx = base[len("baseline-extreme-"):]
+        unit = str(ds.attrs.get("index", ds.attrs.get("unit", "index")))
+        src = str(ds.attrs.get("source", ""))
+        arr3d = ds["clim"].values[None, :, :]
+        yield "baseline-extreme", idx, "clim", unit, src, "single", [0], arr3d
+        ds.close()
+        return
+    # baseline-<var>.nc: monthly climatology, dims (month,lat,lon), var 'clim'.
     if base.startswith("baseline-"):
         short = base[len("baseline-"):]
         months = [int(m) for m in ds.month.values]
@@ -127,7 +145,7 @@ def main():
     chunks = []
     for path in paths:
         for layer, scenario, role, unit, src, axis_key, axis_vals, arr in file_arrays(path):
-            scale = scale_for(layer, unit)
+            scale = scale_for(layer, unit, arr)
             buf = encode(arr, scale)
             chunks.append(buf)
             layers.append({

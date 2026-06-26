@@ -57,7 +57,10 @@ def reduce_index(index, short, models=None):
 
 
 def save(ds, path):
-    enc = {"clim": {"dtype": "int16", "scale_factor": 0.01, "_FillValue": -32768,
+    # float32, NOT int16+scale 0.01: absolute ETCCDI indices exceed 327 (CDD/TR up to 365
+    # days; Rx5day >327 mm in the wet tropics), overflowing int16 at 0.01 scale and wrapping
+    # negative. float32 is lossless; build_export.py re-quantizes adaptively for the blob.
+    enc = {"clim": {"dtype": "float32", "_FillValue": float("nan"),
                     "zlib": True, "complevel": 5}}
     tmp = path + ".tmp"
     ds.to_netcdf(tmp, encoding=enc)
