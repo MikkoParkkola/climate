@@ -39,6 +39,37 @@ Product supports **all five** scenarios (operator decision 2026-06-26).
 
 (Subtract ~0.85 °C to express vs a present-day baseline. Source: AR6 WGI SPM Table SPM.1.)
 
+## Model consensus vs IPCC-assessed — make the adjustment visible (operator decision 2026-06-26)
+
+**The "hot model problem"** (Hausfather et al., *Nature* 2022): a subset of CMIP6 models have
+higher climate sensitivity than the observed warming record and paleoclimate evidence support.
+The IPCC did **not** simply average CMIP6; AR6 assessed warming is constrained toward
+observations, so it runs **below the raw multi-model mean**. Our raw 8-model ensemble confirms
+this — global-mean ΔT at 2100 (vs 1995–2014, validated 2026-06-26):
+
+| Scenario | Raw ensemble mean | AR6 assessed (~vs 1995–2014) | Gap |
+|---|---|---|---|
+| SSP1-2.6 | +1.37 °C | ~+0.95 °C | ~+0.4 °C |
+| SSP2-4.5 | +2.42 °C | ~+1.85 °C | ~+0.6 °C |
+| SSP3-7.0 | +3.70 °C | ~+2.75 °C | ~+0.9 °C |
+| SSP5-8.5 | +4.77 °C | ~+3.55 °C | ~+1.2 °C |
+
+**Product decision: surface both numbers and the gap; default to the IPCC-calibrated value.**
+This is the honesty thesis made literal — show the model consensus, the IPCC correction, and
+how much the models are tuned down, so users understand the two are not the same.
+
+**Method (Phase 4/5):**
+- The ingest batch stores the **raw ensemble mean + spread** per cell (no change — it already does).
+- A thin **calibration layer** computes a per-(scenario, decade) scaling factor
+  `k = AR6_assessed_global / raw_ensemble_global` (area-weighted, using the anchor table above
+  expressed vs 1995–2014) and stores it. `calibrated_delta = k × raw_delta`.
+- Serve `{ modelConsensus, ipccCalibrated, adjustment, adjustmentPct, modelSpread, method, source }`.
+- **Scope honesty:** temperature has clean AR6 assessed anchors → calibrate it. Precipitation /
+  humidity have **no** comparable single assessed anchor → show as "model consensus + spread,"
+  labeled as such; do **not** fabricate a calibration we cannot ground (cardinal rule).
+- The exact assessed-vs-1995–2014 reference values (not the −0.85 °C approximation) are pinned
+  in the Phase 5 validation step before these numbers are served.
+
 ## Global mean sea-level rise (m, *likely* range vs 1995–2014) — AR6 SPM B.5.3
 
 | Scenario | by 2100 | by 2150 |
