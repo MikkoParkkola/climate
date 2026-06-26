@@ -91,7 +91,7 @@ how much the models are tuned down, so users understand the two are not the same
 | Precipitation / change | CMIP6 regional precip change %, per SSP. |
 | Humidity / change | CMIP6 near-surface relative/specific humidity, per SSP (if available; else mark estimate). |
 | Sea level / coastal flooding | NASA AR6 Sea Level tool, per-location, per-SSP. |
-| Heat-stress / drought / flood risk | Derived indices from CMIP6 fields with **documented formulas** (e.g. days over threshold). Each formula cited; no magic constants. |
+| Heat-stress / drought / flood risk | Derived from CMIP6 ETCCDI extreme indices (`ingest/fetch_extremes.py`) — **not** from mean fields. Scored at **serve time** against absolute cited thresholds. **See "Risk index grounding (serve-time)" below.** |
 | Habitability score & breakdown | Transparent weighted composite of the above — weights documented and shown to the user. Not a hidden black box. |
 | Comparable location | Nearest present-day analog by multivariate climate distance over the grounded fields. |
 | Uncertainty | Carried end-to-end as the AR6/CMIP6 model spread (range), shown in UI — never collapsed to false precision. |
@@ -102,3 +102,53 @@ how much the models are tuned down, so users understand the two are not the same
 2. Any value not yet grounded is labeled "estimate — method X" or withheld.
 3. A public `/methodology` page documents this stack; `client/public/llms.txt` stays accurate for AI crawlers.
 4. No formula ships without a citation in this doc.
+
+## Risk index grounding (serve-time)
+
+**Decision (2026-06-26):** the three risk scores (heat / drought / flood) are computed
+at **serve time**, not baked into the cache. The cache carries only the raw ETCCDI
+extreme-index *change* (vs 1995–2014) + uncertainty; the serving layer reconstructs the
+**absolute** future value and scores it against a documented absolute threshold.
+
+**Why serve-time + absolute:** a precomputed 0–100 needs normalization constants, and an
+invented constant presented as science is exactly the failure this product exists to kill.
+An absolute threshold (e.g. "days above 35 °C") is citable, stable, and shown to the user
+alongside the raw number. The 0–100 is a *transparent presentation* of a cited quantity,
+never a hidden black box.
+
+### Data → score pipeline (per hazard)
+
+```
+absolute_future(cell, scenario, decade)
+    = observed_baseline(cell)            # NOAA/ERA5 1995–2014 climatology (baseline.py)
+    + ensemble_delta(cell, scenario, decade)   # ingest/extreme-<idx>__<scenario>.nc
+score_0_100 = piecewise_linear(absolute_future, threshold_band)   # cited band, below
+shown_to_user = { raw_value, unit, threshold_cited, scenario, uncertainty_range }
+```
+
+The uncertainty range = the ensemble spread (`delta_std`, `n_models`) carried end-to-end.
+Where a cell lacks an observed baseline, the score is withheld (NaN), not guessed.
+
+### Indices fetched and their risk mapping
+
+| Hazard | ETCCDI index (file) | What it is | Absolute threshold (cited) |
+|---|---|---|---|
+| **Heat** | TXx (`extreme-txx`) | annual hottest-day max temperature, °C | 35 °C heat-stress / 40 °C extreme danger — WHO heat–health guidance; WMO/ETCCDI |
+| **Heat** | Tropical nights TR (`extreme-tr`) | nights with Tmin > 20 °C, count/yr | 20 °C night threshold (no physiological recovery) — ETCCDI / WMO; WHO heat–health |
+| **Drought** | CDD (`extreme-cdd`) | longest consecutive-dry-day spell (<1 mm), days | ETCCDI CDD; meteorological-drought spell length (UNCCD/WMO drought indicators) |
+| **Flood** | Rx5day (`extreme-rx5day`) | max 5-day precipitation total, mm | ETCCDI Rx5day; pluvial-flood proxy (IPCC AR6 WGI Ch.11 heavy-precip assessment) |
+| **Flood** | R20mm (`extreme-r20mm`) | days with ≥ 20 mm precipitation, count/yr | ETCCDI R20mm heavy-precip-day count |
+
+Source dataset for all five: **CDS `sis-extreme-indices-cmip6`** (ETCCDI indices derived
+from CMIP6, base-independent, annual), 10-model ensemble, SSP1-2.6/2-4.5/3-7.0/5-8.5.
+Citation: Sillmann et al. 2013 (ETCCDI index definitions, JGR-Atmospheres); CMIP6
+(Eyring et al. 2016). **Provenance caveat:** CDS marks this dataset *"no longer supported
+by the data providers… provided as is"* — the index definitions are the published ETCCDI
+standard, but the product is frozen; cite as such.
+
+### Honesty constraints specific to risk
+
+1. **No SSP1-1.9** in this dataset — risk is shown for the other four scenarios only; SSP1-1.9 risk is withheld, not interpolated.
+2. The score's **scenario, decade, raw index value, unit, threshold, and uncertainty range** are all surfaced — never a bare "78/100".
+3. The threshold bands (mapping raw value → 0–100) are documented here before they ship; each band anchors to a cited threshold, and the page `/methodology` reproduces them.
+4. Composite habitability never hides a risk component; the breakdown shows each hazard's raw value + score.
