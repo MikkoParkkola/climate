@@ -280,7 +280,7 @@ export default function ClimateApp() {
   const resultsRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    document.title = "ClimateVision — Future Climate Projections for Any Location on Earth";
+    document.title = "fupit — see where the climate is still livable";
   }, []);
 
   // Fetch present-day air quality for the selected location once results load.
@@ -551,8 +551,8 @@ export default function ClimateApp() {
         <header style={{ background: "rgba(10,13,20,0.90)", borderBottom: `1px solid ${BORDER}`, backdropFilter: "blur(16px)" }}>
           <div style={{ maxWidth: 1200, margin: "0 auto", padding: "0 20px", height: 56, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
             <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-              <div style={{ width: 30, height: 30, borderRadius: 7, background: "linear-gradient(135deg,hsl(192,91%,36%),hsl(215,91%,50%))", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, fontWeight: 800, color: "white" }}>CV</div>
-              <span style={{ fontWeight: 700, fontSize: 17 }}>ClimateVision</span>
+              <div style={{ width: 30, height: 30, borderRadius: 7, background: "linear-gradient(135deg,hsl(192,91%,36%),hsl(215,91%,50%))", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, fontWeight: 800, color: "white" }}>f</div>
+              <span style={{ fontWeight: 700, fontSize: 17 }}>fupit</span>
             </div>
             <button onClick={() => (window.location.href = "/comparison")}
               style={{ display: "flex", alignItems: "center", gap: 6, padding: "7px 14px", borderRadius: 7, border: `1px solid ${BORDER}`, background: CARD, color: "white", fontSize: 13, cursor: "pointer" }}>
@@ -568,11 +568,10 @@ export default function ClimateApp() {
               CBottle · ICON Atmospheric Physics
             </div>
             <h1 style={{ fontSize: 42, fontWeight: 800, lineHeight: 1.1, marginBottom: 14 }}>
-              See the future climate<br />of any place on Earth
+              Everywhere's getting worse.<br />Just not equally.
             </h1>
             <p style={{ fontSize: 15, color: MUTED, marginBottom: 32, lineHeight: 1.6 }}>
-              Search a location, then glide through 2025–2100 to watch temperature, precipitation,
-              risk and habitability evolve — backed by a real atmospheric model.
+              Watch any place on Earth heat up, year by year from now to 2100 — and compare them side by side to find where stays livable long enough to matter. Where do you want to grow old? Where will your kids?
             </p>
 
             <div className="location-input-container" style={{ position: "relative", textAlign: "left" }}>
@@ -602,16 +601,15 @@ export default function ClimateApp() {
             </div>
 
             <button
-              onClick={generate}
-              disabled={isLoading || !selectedLocation}
+              onClick={() => (window.location.href = "/comparison")}
               style={{
                 marginTop: 16, width: "100%", padding: "14px", borderRadius: 10, border: "none", fontSize: 15, fontWeight: 700,
-                cursor: isLoading || !selectedLocation ? "not-allowed" : "pointer",
-                background: isLoading || !selectedLocation ? "hsl(217,33%,22%)" : "linear-gradient(135deg, hsl(192,91%,40%) 0%, hsl(215,91%,55%) 100%)",
-                color: isLoading || !selectedLocation ? "hsl(215,20%,45%)" : "white",
+                cursor: "pointer",
+                background: "linear-gradient(135deg, hsl(192,91%,40%) 0%, hsl(215,91%,55%) 100%)",
+                color: "white",
                 display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
               }}>
-              {isLoading ? <><Loader2 style={{ width: 18, height: 18, animation: "spin 1s linear infinite" }} /> Running model…</> : "Generate Projection"}
+              Compare locations →
             </button>
 
             {isLoading && (
@@ -632,7 +630,7 @@ export default function ClimateApp() {
             <a href="https://github.com/MikkoParkkola" target="_blank" rel="noopener noreferrer" style={{ color: MUTED, textDecoration: "underline", textUnderlineOffset: 2 }}>
               Mikko Parkkola
             </a>{" "}
-            · ClimateVision
+            · fupit
           </p>
         </footer>
         <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
@@ -653,8 +651,8 @@ export default function ClimateApp() {
       <header style={{ background: "rgba(10,13,20,0.90)", borderBottom: `1px solid ${BORDER}`, backdropFilter: "blur(16px)", position: "sticky", top: 0, zIndex: 50 }}>
         <div style={{ maxWidth: 1200, margin: "0 auto", padding: "0 20px", height: 48, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            <div style={{ width: 28, height: 28, borderRadius: 6, background: "linear-gradient(135deg,hsl(192,91%,36%),hsl(215,91%,50%))", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 800, color: "white" }}>CV</div>
-            <span style={{ fontWeight: 700, fontSize: 16 }}>ClimateVision</span>
+            <div style={{ width: 28, height: 28, borderRadius: 6, background: "linear-gradient(135deg,hsl(192,91%,36%),hsl(215,91%,50%))", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 800, color: "white" }}>f</div>
+            <span style={{ fontWeight: 700, fontSize: 16 }}>fupit</span>
             <div style={{ width: 1, height: 14, background: BORDER }} />
             <span style={{ fontSize: 13 }}>{selectedLocation?.name}</span>
             <span style={{ fontSize: 13, color: MUTED }}>·</span>
@@ -1128,9 +1126,23 @@ export default function ClimateApp() {
         </div>
       </main>
 
+      {/* Activism Section */}
+      <section style={{ background: "rgba(255,255,255,0.015)", borderTop: `1px solid ${BORDER}`, borderBottom: `1px solid ${BORDER}`, padding: "56px 20px", textAlign: "center" }}>
+        <div style={{ maxWidth: 560, margin: "0 auto" }}>
+          <h2 style={{ fontSize: 22, fontWeight: 800, marginBottom: 16, letterSpacing: "-0.01em" }}>A forecast isn't a fate.</h2>
+          <p style={{ fontSize: 15, color: MUTED, lineHeight: 1.75, marginBottom: 28 }}>
+            Everything you just saw is a dare. Back the policies and the action that bend the line back up — cut emissions, vote it, fund it, build it — and watch a livable future redraw itself on the map. That's the whole point.
+          </p>
+          <p style={{ fontSize: 24, fontWeight: 800, lineHeight: 1.3, marginBottom: 16, letterSpacing: "-0.02em" }}>
+            Don't just find a better spot. F*** up the forecast.
+          </p>
+          <p style={{ fontSize: 12, color: MUTED, letterSpacing: "0.03em" }}>→ fupit.com</p>
+        </div>
+      </section>
+
       <footer style={{ borderTop: `1px solid ${BORDER}`, padding: "16px 20px", textAlign: "center" }}>
         <p style={{ color: MUTED, fontSize: 10 }}>
-          ClimateVision · {d!.model}{d!.modelVersion ? ` ${d!.modelVersion}` : ""} · Confidence: {prettify(d!.confidence)} · RCP 4.5–8.5 / SSP2 · For research &amp; planning
+          fupit · {d!.model}{d!.modelVersion ? ` ${d!.modelVersion}` : ""} · Confidence: {prettify(d!.confidence)} · RCP 4.5–8.5 / SSP2 · For research &amp; planning
         </p>
         <p style={{ color: MUTED, fontSize: 10, marginTop: 6 }}>
           © {new Date().getFullYear()}{" "}

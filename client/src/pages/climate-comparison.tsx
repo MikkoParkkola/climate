@@ -889,7 +889,7 @@ export default function ClimateComparison({ onBack }: ClimateComparisonProps) {
           <a href="https://github.com/MikkoParkkola" target="_blank" rel="noopener noreferrer" className="hover:text-slate-400 underline underline-offset-2 transition-colors">
             Mikko Parkkola
           </a>{" "}
-          · ClimateVision
+          · fupit
         </p>
         <p className="mt-1">Powered by CBottle/ICON Atmospheric Physics · For research and planning purposes only</p>
       </footer>

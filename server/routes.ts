@@ -125,13 +125,13 @@ interface SeoPage {
 const SEO_PAGES: Record<string, SeoPage> = {
   home: {
     path: "/",
-    title: "ClimateVision — Future Climate Projections for Any Location on Earth",
+    title: "fupit — see where the climate is still livable",
     description:
-      "Explore future climate projections for any location on Earth: temperature, precipitation, extreme-risk indicators, and habitability scores from advanced atmospheric modeling.",
+      "Climate projections for any place on Earth, year by year to 2100. Compare locations to find where stays livable — then help f*** up the forecast.",
   },
   comparison: {
     path: "/comparison",
-    title: "Climate Comparison Tool | Compare Future Climate by Location",
+    title: "fupit — compare climate by location",
     description:
       "Compare side-by-side climate projections for up to 10 locations. Slide through 2025–2100 to watch temperature, precipitation, risk, and habitability diverge in real time.",
   },
@@ -698,22 +698,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // JavaScript executes, regardless of whether the client renders JS.
   const PAGE_SEMANTIC: Record<string, { title: string; description: string; ogUrl: string; jsonLd: string; bodyHtml: string }> = {
     "/": {
-      title: "Climate Projections Explorer - Earth Climate Data",
-      description: "Explore future climate projections for any location on Earth. View temperature, precipitation, and risk assessments using advanced climate modeling data.",
+      title: "fupit — see where the climate is still livable",
+      description: "Climate projections for any place on Earth, year by year to 2100. Compare locations to find where stays livable — then help f*** up the forecast.",
       ogUrl: "https://climate-projections.replit.app/",
       jsonLd: JSON.stringify({
         "@context": "https://schema.org",
         "@type": "WebApplication",
-        "name": "Climate Projections Explorer",
+        "name": "fupit",
         "url": "https://climate-projections.replit.app/",
-        "description": "Explore future climate projections for any location on Earth. View temperature, precipitation, humidity, sea level, and risk assessments using advanced climate modeling data.",
+        "description": "Climate projections for any place on Earth, year by year to 2100. Compare locations to find where stays livable — then help f*** up the forecast.",
         "applicationCategory": "UtilityApplication",
         "operatingSystem": "Any",
         "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
       }),
       bodyHtml: `<main aria-label="Page introduction">
-  <h1>Climate Projections Explorer</h1>
-  <p>Explore future climate projections for any location on Earth. Search for a city or coordinates to see temperature, precipitation, humidity, sea level, and habitability risk assessments modeled through 2100.</p>
+  <h1>fupit — see where the climate is still livable</h1>
+  <p>Climate projections for any place on Earth, year by year to 2100. Compare locations to find where stays livable — then help f*** up the forecast.</p>
   <h2>Features</h2>
   <ul>
     <li>Search any location worldwide by city name or coordinates</li>
@@ -725,28 +725,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
   </ul>
   <h2>How It Works</h2>
   <p>Our climate model integrates advanced scientific datasets to project future conditions at any point on Earth. Select a target year between now and 2100, enter a location, and receive detailed projections with a Livability Index score from 0 to 100.</p>
-  <p><a href="/comparison">Compare multiple locations side-by-side</a> to evaluate how different cities or regions are expected to change over time.</p>
+  <p><a href="/comparison">Compare multiple locations side-by-side</a> to find where stays livable longest.</p>
 </main>`,
     },
     "/comparison": {
-      title: "Climate Comparison - Compare Locations | Climate Projections Explorer",
-      description: "Compare future climate projections for multiple locations side by side. Evaluate temperature, precipitation, and habitability scores across cities through 2100.",
+      title: "fupit — compare climate by location",
+      description: "Compare side-by-side climate projections for up to 10 locations. Slide through 2025–2100 to watch temperature, precipitation, risk, and habitability diverge in real time.",
       ogUrl: "https://climate-projections.replit.app/comparison",
       jsonLd: JSON.stringify({
         "@context": "https://schema.org",
         "@type": "WebPage",
-        "name": "Climate Comparison Tool",
+        "name": "fupit — compare climate by location",
         "url": "https://climate-projections.replit.app/comparison",
-        "description": "Compare future climate projections for multiple locations side by side. Evaluate temperature, precipitation, and habitability scores across cities through 2100.",
+        "description": "Compare side-by-side climate projections for up to 10 locations. Slide through 2025–2100 to watch temperature, precipitation, risk, and habitability diverge in real time.",
         "isPartOf": {
           "@type": "WebSite",
-          "name": "Climate Projections Explorer",
+          "name": "fupit",
           "url": "https://climate-projections.replit.app/",
         },
       }),
       bodyHtml: `<main aria-label="Page introduction">
-  <h1>Climate Comparison Tool</h1>
-  <p>Compare future climate projections for multiple locations side by side. Add cities or coordinates to compare how each region is expected to change through 2100 based on advanced climate modeling data.</p>
+  <h1>fupit — compare climate by location</h1>
+  <p>Compare side-by-side climate projections for up to 10 locations. Slide through 2025–2100 to watch temperature, precipitation, risk, and habitability diverge in real time.</p>
   <h2>What You Can Compare</h2>
   <ul>
     <li>Average temperature and temperature change across locations</li>
@@ -756,7 +756,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     <li>Heat stress, drought, and flooding risk scores</li>
     <li>Overall Livability Index scores from 0 to 100</li>
   </ul>
-  <p><a href="/">Go back to the Climate Projections Explorer</a> to explore individual locations in detail.</p>
+  <p><a href="/">Go back to fupit</a> to explore individual locations in detail.</p>
 </main>`,
     },
   };
