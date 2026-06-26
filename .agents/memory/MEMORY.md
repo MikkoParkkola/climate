@@ -1,2 +1,3 @@
 - [SPA per-route SEO injection](spa-seo-injection.md) — how `/` and `/comparison` get distinct crawler-visible head tags without SSR, and why it must be prod-only.
+- [Push to private GitHub repo](github-push-private-repo.md) — use the Replit GitHub connector token (not a user PAT) to create/push private repos; bash blocks `.git` writes.
 - [Real-model e2e timeouts](e2e-real-model-timeout.md) — runTest via code_execution hits the 10-min sandbox cap on flows that wait on the slow climate model; prefer layered verification.
