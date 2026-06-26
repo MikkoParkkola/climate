@@ -4,3 +4,8 @@ dist
 server/public
 vite.config.ts.*
 *.tar.gz
+# Ingest pipeline grids (raw NetCDF staging; serving uses the compact export)
+ingest/out/
+ingest/sealevel_raw/
+ingest/export/grid.i16.gz
+ingest/export/manifest.json
