@@ -59,4 +59,5 @@ Research verdict: **cBottle cannot be the forecast engine.** It is a present-cli
 - [x] `SCIENTIFIC_GROUNDING.md`
 - [x] Operator decisions (above)
 - [x] Phase 0 — preview labeling (global non-dismissible banner, `client/src/components/preview-banner.tsx`, mounted in `App.tsx`; build green)
-- [ ] Phase 1 — grounding spec finalize (5 scenarios)
+- [x] Phase 1 — grounding spec locked (`architecture/SCIENTIFIC_GROUNDING.md`, 5 scenarios, per-variable source/method/citation map)
+- [ ] Phase 2 — ingest pipeline. Contract laid down (`ingest/README.md`). **Blocked on operator: Copernicus CDS account + API key, and confirm Spark as run host.**
