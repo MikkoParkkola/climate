@@ -17,7 +17,10 @@ produced a 95 KB global grid with scientifically-correct patterns: +1.56 °C glo
 mean (AR6 band), Arctic amplification (+3.15 °C Svalbard), land–sea contrast.
 
 Remaining: run the full batch (all variables × 5 scenarios × 8 decades × 10 models),
-add sea level (NASA AR6), risk indices, and the Postgres loader.
+add risk indices, and the Postgres loader. Sea level (NASA/IPCC AR6) is **done +
+validated** (`fetch_sealevel.py`): regional relative sea level with land motion,
+median + likely range, scientifically correct fingerprints (Baltic uplift low,
+subsiding Pacific/US-East coasts high).
 
 ## Method: delta / change-factor (no cBottle in v1)
 
@@ -55,7 +58,7 @@ after each reduce). The only "a lot" is wall-clock: ~1,230 CDS requests, each qu
 | `fetch_cmip6.py` | Copernicus CDS API → CMIP6 NetCDF per SSP (temp, precip, humidity) |
 | `fetch_atlas.py` | IPCC-WG1/Atlas CSV → region-aggregated anomalies (validation anchors) |
 | `calibrate.py` | temperature grids + AR6 SPM.1 anchors → `out/calibration.json` (per-scenario/decade scaling k = assessed/raw for the model-consensus-vs-IPCC display). **Built + validated 2026-06-26.** Temperature only. |
-| `fetch_sealevel.py` | NASA AR6 archive (Zenodo) → per-location sea-level rise per SSP |
+| `fetch_sealevel.py` | IPCC AR6 regional sea level (Zenodo 5914710, FACTS, total RSL incl. land motion) → `out/sealevel__<scenario>.nc` (median + 17th/83rd percentile, regridded to 1°, inland cells masked). **Built + validated 2026-06-26.** |
 | `baseline.py` | NOAA climatology → present-day anchor (reuse existing logic) |
 | `build_grid.py` | regrid → global lat/lng grid × {2030..2100 by decade} × 5 SSPs; derive risk indices via documented formulas; attach provenance + uncertainty range |
 | `load_cache.py` | upsert → Postgres cache table (schema extension below) |
