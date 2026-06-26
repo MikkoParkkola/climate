@@ -8,18 +8,36 @@ Engine: IPCC AR6 / CMIP6 + NASA AR6 sea level. NOT cBottle (see
 `../docs/architecture/SCIENTIFIC_GROUNDING.md` for why). No invented numbers —
 every output value carries a source + method + uncertainty range.
 
-## Status: contract only (not yet implemented)
+## Status: core pipeline implemented + validated (2026-06-26)
 
-Blocked on one external dependency the operator must provide:
+`fetch_reduce.py` works end-to-end on Spark. Environment + credentials are set up
+(CDS token in `~/.cdsapirc`, venv at `~/climate-ingest/.venv` with cdsapi/xarray/
+netCDF4/scipy; dataset licences accepted). Smoke test (2 models, SSP2-4.5, 2050)
+produced a 95 KB global grid with scientifically-correct patterns: +1.56 °C global
+mean (AR6 band), Arctic amplification (+3.15 °C Svalbard), land–sea contrast.
 
-1. **Copernicus Climate Data Store (CDS) account + API key** — free, required to
-   download CMIP6 / Climate Atlas data. Sign up: https://cds.climate.copernicus.eu
-   → put the key in `~/.cdsapirc` on the compute box. (HUMAN INPUT REQUIRED)
-2. **Compute target** — confirm Spark (Amsterdam) as the run host. No GPU is
-   strictly needed for the AR6/CMIP6 path (it's data processing, not model
-   inference); a normal Linux box with disk + bandwidth suffices.
+Remaining: run the full batch (all variables × 5 scenarios × 8 decades × 10 models),
+add sea level (NASA AR6), risk indices, and the Postgres loader.
 
-Once (1) is in place, implement the components below.
+## Method: delta / change-factor (no cBottle in v1)
+
+Engine = IPCC AR6 / CMIP6 ensemble (10 models). We store only the modeled CHANGE vs
+the 1995–2014 baseline; the app adds it to real observed local climate at query time
+(see `../docs/architecture/ARCHITECTURE.md`). cBottle is a deferred, license-gated,
+unvalidated future enhancement for per-location high-res sharpening — not in v1.
+
+## Model ensemble (10, operator decision)
+
+`access_cm2, cesm2, cmcc_esm2, cnrm_cm6_1, ec_earth3, gfdl_esm4, miroc6, mri_esm2_0,
+noresm2_lm, ukesm1_0_ll`. Per-(model,scenario,variable) gaps are skipped and logged
+(SSP1-1.9 has sparser coverage) — no silent caps.
+
+## Disk efficiency (hard constraint)
+
+Juicer model: download one slice → reduce to a change field → DELETE raw → next.
+Store deltas only (not raw, not full time series), decade anchors, int16-quantized +
+zlib. Whole-planet product ≈ 20–40 MB. See ARCHITECTURE.md "Storage & disk efficiency".
+
 
 ## Planned components (see ../docs/architecture/ARCHITECTURE.md)
 

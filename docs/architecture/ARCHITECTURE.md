@@ -42,12 +42,38 @@
 
 ## Grid & cadence (tunable — accuracy vs precompute cost)
 
+- **Model ensemble:** blend ~8–10 established CMIP6 models (operator decision 2026-06-26) → central estimate = ensemble mean; uncertainty = ensemble spread. Not one model (single opinion), not all (diminishing returns, huge download).
+
 - **Spatial:** start coarse (e.g. 1°×1° ≈ 64,800 land+ocean cells; or land-only to cut ~70%). Interpolate between cells at query time.
 - **Temporal:** decade anchors 2030, 2040, …, 2100 (7 steps). Linear-interpolate intermediate years (reuse the legacy interpolation logic — it was the one sound part).
 - **Scenarios:** 3 (low/mid/high) → multiply grid by 3.
 - Total cache rows ≈ cells × 7 decades × 3 scenarios. At 1° land-only ≈ ~19k × 21 ≈ ~400k rows — trivial for Postgres.
 
-## Schema changes (`shared/schema.ts`)
+## Storage & disk efficiency (hard constraint — limited disk)
+
+Raw CMIP6 is bulky; the derived product is tiny. The pipeline is a juicer: ingest raw,
+keep only the reduced signal, discard raw immediately.
+
+1. **Stream-and-discard:** process one `(model, scenario, variable, period)` at a time —
+   download → reduce to a climatology field → **delete the raw NetCDF** before the next.
+   Peak transient disk = a few GB, never accumulating. No raw archive kept.
+2. **Store change-factors, not state:** persist only the *anomaly* (delta vs the
+   1995–2014 baseline) per cell — not full time series, not absolute fields. Local
+   absolute values are reconstructed at query time from the observed baseline (delta
+   method above), so stored maps can be coarse + small.
+3. **Decade anchors + interpolation:** store 2030…2100 by decade; interpolate in-between
+   years on read. ~8 time slices, not 75.
+4. **Quantize:** encode as scaled int16 with per-variable scale/offset (e.g. temp ×10).
+   ~2× shrink over float32, lossless to 0.1° precision.
+5. **Compress:** delta fields are spatially smooth → high zstd/gzip ratios.
+6. **Coarse stored grid (1–2°):** delta fields are smooth; sharpness comes from the
+   query-time observed baseline, not stored resolution. Land-first option drops ~60–70%
+   of cells if ocean isn't needed.
+
+**Budget estimate (1° global, 5 scenarios, 8 decades, 6 vars, mean+lo+hi):**
+~47M values → 187 MB float32 → **~20–40 MB** quantized+compressed. Fits in Postgres/Neon
+trivially. (2° or land-only ⇒ single-digit MB.)
+
 
 Extend `climate_model_cache` (or a new `climate_grid` table):
 - `scenario text not null` (e.g. `ssp245`)
@@ -69,9 +95,33 @@ Extend `climate_model_cache` (or a new `climate_grid` table):
 - **Provenance line** on every projection: "cBottle/CMIP6 + IPCC AR6 SSP2-4.5; sea level from NASA AR6."
 - Public `/methodology` page rendering `SCIENTIFIC_GROUNDING.md`.
 
-## cBottle (deferred, optional)
+## Local accuracy: the delta / change-factor method (primary)
 
-If ever revisited as a high-res spatial-texture/sampling layer: self-hosted GPU only, driven by scenario-derived SST, clearly labeled as enhancement, and **only after** the weights license is cleared for production. Not on the critical path. Tracked, not scheduled.
+Global models work on ~100 km cells — too blurry for a single searched point. The
+scientifically standard fix is **delta downscaling**, not a generative model:
+
+1. Take the **real observed present-day climate** for the exact point (NOAA station/
+   climatology — already wired, high local fidelity).
+2. Take the **change signal** from the CMIP6 ensemble for that region (e.g. +3.1 °C,
+   +8% precip by 2100 under a scenario). Models are blurry on *absolute* values but
+   reliable on the *anomaly* (the change).
+3. Local future = observed present + modeled change. Carry the ensemble spread as the
+   uncertainty range.
+
+Cheap, license-free, proven, and directly addresses the "coarse cell over varied
+terrain" problem. This is what we ship.
+
+## cBottle — deferred local high-res pass (operator idea, parked)
+
+Operator's idea (2026-06-26): when the ensemble is too coarse for a specific location
+search, run a final sharpening pass with cBottle. Good instinct — kept as a **future
+enhancement**, NOT in v1, gated on two conditions:
+- **License cleared** for production (currently research/eval-only).
+- **Validated** that conditioning cBottle on a scenario-derived sea-surface-temperature
+  field actually improves a *future* local estimate (NVIDIA never tested this; cBottle
+  adds present-climate-shaped texture by default).
+If both clear: self-hosted GPU, per-search, clearly labeled, behind a flag. Until then
+the delta method above is the accuracy mechanism. Not on the v1 critical path.
 
 ## Validation (Phase 5)
 

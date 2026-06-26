@@ -60,4 +60,4 @@ Research verdict: **cBottle cannot be the forecast engine.** It is a present-cli
 - [x] Operator decisions (above)
 - [x] Phase 0 — preview labeling (global non-dismissible banner, `client/src/components/preview-banner.tsx`, mounted in `App.tsx`; build green)
 - [x] Phase 1 — grounding spec locked (`architecture/SCIENTIFIC_GROUNDING.md`, 5 scenarios, per-variable source/method/citation map)
-- [ ] Phase 2 — ingest pipeline. Contract laid down (`ingest/README.md`). **Blocked on operator: Copernicus CDS account + API key, and confirm Spark as run host.**
+- [ ] Phase 2 — ingest pipeline. Core `fetch_reduce.py` implemented + validated on Spark (2-model smoke: +1.56 °C global 2050, Arctic amplification correct). Remaining: full batch (10 models × 5 SSP × 8 decades × vars), sea level, risk indices, Postgres loader.
