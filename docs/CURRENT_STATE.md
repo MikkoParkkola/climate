@@ -44,3 +44,5 @@ Confirmed by inspection:
 - `threat_model.md` cites `server/routes-simple.ts` as production — file does not exist; live routes are `server/routes.ts`. Stale.
 - `conflict_area.txt` (root, ~7KB) — leftover merge-conflict artifact.
 - README absent at repo root.
+- **`npm run check` (tsc) does NOT pass on a clean checkout** — pre-existing, not introduced by current work. Errors are confined to **unrouted orphan pages** and loose types: `climate-dashboard.tsx` / `comprehensive-climate-report.tsx` / `enhanced-climate-dashboard.tsx` import a non-existent `@/components/habitability-ranking` (the real file is `habitability-ranking-refactored.tsx`); `sea-level-map.tsx` imports missing `react-leaflet`; `multi-location-comparison.tsx` + `api-key-manager.tsx` use loose `{}` types; `server/routes.ts:264` Date→string; `server/vite.ts:50` ServerOptions. **`npm run build` (Vite) is green** because only `/` and `/comparison` (→ `climate-app`, `climate-comparison`) reach the bundle. Treat build as the ship gate until tsc is cleaned up (own ticket; likely Phase 6).
+

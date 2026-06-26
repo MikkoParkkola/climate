@@ -58,5 +58,5 @@ Research verdict: **cBottle cannot be the forecast engine.** It is a present-cli
 - [x] `ARCHITECTURE.md`
 - [x] `SCIENTIFIC_GROUNDING.md`
 - [x] Operator decisions (above)
-- [ ] Phase 0 — preview labeling
+- [x] Phase 0 — preview labeling (global non-dismissible banner, `client/src/components/preview-banner.tsx`, mounted in `App.tsx`; build green)
 - [ ] Phase 1 — grounding spec finalize (5 scenarios)

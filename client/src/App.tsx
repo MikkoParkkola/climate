@@ -6,6 +6,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import ClimateApp from "@/pages/climate-app";
 import ClimateComparison from "@/pages/climate-comparison";
 import NotFound from "@/pages/not-found";
+import PreviewBanner from "@/components/preview-banner";
 
 function Router() {
   return (
@@ -22,6 +23,7 @@ function App() {
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
         <Toaster />
+        <PreviewBanner />
         <Router />
       </TooltipProvider>
     </QueryClientProvider>
