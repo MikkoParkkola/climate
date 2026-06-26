@@ -38,6 +38,15 @@ Juicer model: download one slice → reduce to a change field → DELETE raw →
 Store deltas only (not raw, not full time series), decade anchors, int16-quantized +
 zlib. Whole-planet product ≈ 20–40 MB. See ARCHITECTURE.md "Storage & disk efficiency".
 
+## Compute profile (full batch)
+
+I/O-bound on the CDS queue, **not** CPU/GPU/RAM-bound. No GPU (pure numpy/xarray/
+scipy). Peak RAM ~1–2 GB per slice, released immediately. Disk transient (raw deleted
+after each reduce). The only "a lot" is wall-clock: ~1,230 CDS requests, each queued
+1–3 min server-side. CDS retrievals run in a thread pool — tune with
+`CDS_CONCURRENCY` (default 6). The historical baseline is fetched once per
+(model, variable) and reused across all 5 scenarios.
+
 
 ## Planned components (see ../docs/architecture/ARCHITECTURE.md)
 

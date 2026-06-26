@@ -17,9 +17,13 @@ at query time. Coarse stored grid is fine because local sharpness comes from the
 observed baseline, not from here.
 
 Checkpointed: an existing complete output file is skipped, so the batch resumes.
+Concurrent: CDS retrievals run in a thread pool (CDS_CONCURRENCY, default 6); the
+historical baseline is fetched once per (model, variable) and reused across all
+scenarios. The job is I/O-bound on the CDS queue, not CPU/GPU/RAM-bound.
 Heavy job — run detached on Spark, never Replit/Mac.
 """
-import os, sys, glob, json, zipfile, tempfile, shutil, traceback
+import os, sys, glob, json, zipfile, tempfile, shutil, traceback, threading
+from concurrent.futures import ThreadPoolExecutor, as_completed
 import numpy as np
 import xarray as xr
 import cdsapi
@@ -45,13 +49,32 @@ ALL_MONTHS = [f"{m:02d}" for m in range(1, 13)]
 
 OUT = os.path.join(os.path.dirname(__file__), "out")
 GRID_RES = 1.0                               # stored grid resolution (degrees)
+# Concurrent CDS retrievals. CDS throttles active requests per user; 6 is a safe
+# default that cuts a sequential ~40h run to several hours. Override via env.
+MAX_CONCURRENT = int(os.environ.get("CDS_CONCURRENCY", "6"))
 
-_client = None
+# One cdsapi client per thread — the client holds session state, so sharing a
+# single instance across threads is not safe.
+_local = threading.local()
 def client():
-    global _client
-    if _client is None:
-        _client = cdsapi.Client()
-    return _client
+    c = getattr(_local, "client", None)
+    if c is None:
+        c = _local.client = cdsapi.Client()
+    return c
+
+# The historical baseline is identical across all 5 scenarios for a given
+# (model, variable) — fetch once, reuse. Saves ~120 redundant CDS requests.
+_baseline_cache = {}
+_baseline_lock = threading.Lock()
+def get_baseline(model, variable):
+    key = (model, variable)
+    with _baseline_lock:
+        if key in _baseline_cache:
+            return _baseline_cache[key]
+    base = fetch_climatology(model, "historical", variable, BASELINE)
+    with _baseline_lock:
+        _baseline_cache[key] = base
+    return base
 
 
 def target_grid():
@@ -112,22 +135,43 @@ def fetch_climatology(model, experiment, variable, years):
 def reduce_scenario(variable, scenario, models=ENSEMBLE, decades=DECADES):
     lat, lon = target_grid()
     is_ratio = variable in RATIO_VARS
-    # accumulate per-decade stacks of model deltas
+
+    # 1. Baselines (cached across scenarios), fetched concurrently.
+    bases = {}
+    with ThreadPoolExecutor(max_workers=MAX_CONCURRENT) as ex:
+        futs = {ex.submit(get_baseline, m, variable): m for m in models}
+        for f in as_completed(futs):
+            m = futs[f]
+            try:
+                bases[m] = f.result()
+            except Exception:
+                print(f"  [skip] {m}: baseline error\n{traceback.format_exc()}", flush=True)
+                bases[m] = None
+    for m in models:
+        if bases.get(m) is None:
+            print(f"  [skip] {m}: no historical baseline", flush=True)
+    usable = [m for m in models if bases.get(m) is not None]
+
+    # 2. Future decade slices, fetched concurrently across (model, decade).
     stacks = {d: [] for d in decades}
-    for model in models:
-        base = fetch_climatology(model, "historical", variable, BASELINE)
-        if base is None:
-            print(f"  [skip] {model}: no historical baseline", flush=True)
-            continue
-        for d in decades:
-            yrs = [y for y in range(d - WINDOW, d + WINDOW + 1) if 2015 <= y <= 2100]
-            fut = fetch_climatology(model, scenario, variable, yrs)
+    with ThreadPoolExecutor(max_workers=MAX_CONCURRENT) as ex:
+        fut_map = {}
+        for model in usable:
+            for d in decades:
+                yrs = [y for y in range(d - WINDOW, d + WINDOW + 1) if 2015 <= y <= 2100]
+                fut_map[ex.submit(fetch_climatology, model, scenario, variable, yrs)] = (model, d)
+        for f in as_completed(fut_map):
+            model, d = fut_map[f]
+            try:
+                fut = f.result()
+            except Exception:
+                print(f"  [gap] {model} {scenario} {d}: error", flush=True)
+                continue
             if fut is None:
                 print(f"  [gap] {model} {scenario} {d}: no data", flush=True)
                 continue
-            delta = (fut / base - 1.0) * 100.0 if is_ratio else (fut - base)
+            delta = (fut / bases[model] - 1.0) * 100.0 if is_ratio else (fut - bases[model])
             stacks[d].append(delta.values.astype("float32"))
-        print(f"  [ok] {model}", flush=True)
 
     decs, means, stds, ns = [], [], [], []
     for d in decades:
