@@ -61,4 +61,22 @@ Research verdict: **cBottle cannot be the forecast engine.** It is a present-cli
 - [x] Operator decisions (above)
 - [x] Phase 0 — preview labeling (global non-dismissible banner, `client/src/components/preview-banner.tsx`, mounted in `App.tsx`; build green)
 - [x] Phase 1 — grounding spec locked (`architecture/SCIENTIFIC_GROUNDING.md`, 5 scenarios, per-variable source/method/citation map)
-- [ ] Phase 2 — ingest pipeline. Core `fetch_reduce.py` implemented + validated on Spark (2-model smoke: +1.56 °C global 2050, Arctic amplification correct). Remaining: full batch (10 models × 5 SSP × 8 decades × vars), sea level, risk indices, Postgres loader.
+- [x] Phase 2 — ingest pipeline COMPLETE. `fetch_reduce.py` (CMIP6 temp/precip/humidity deltas), `fetch_sealevel.py` (AR6 sea level), `fetch_extremes.py` (5 ETCCDI risk indices), `baseline_monthly.py` (1995–2014 monthly climatology), `baseline_extremes.py` (absolute ETCCDI baselines). Calibration layer (`calibration.json`, IPCC hot-model k). Validated on Spark. ~42 grids in `ingest/out/`.
+- [x] Phase 3 — global grid (Option C, NOT Postgres). Operator chose to serve a compact binary export instead of loading 7.8M rows into Postgres. `build_export.py` packs all grids → `ingest/export/grid.i16.gz` (~34MB) + `manifest.json` (int16 + byte-shuffle + gzip; numpy-only decode). Self-check: 16600 cells re-decoded vs source NetCDF, 0 mismatches.
+- [~] Phase 4 — serving layer refactor. **Engine swapped:** `grounded_model.py` replaces `cbottle_runner.py` at all 3 spawn sites in `server/routes.ts`; API-key gates removed (engine is offline). Reads `data/grid.i16.gz` with numpy+gzip only — no xarray/netcdf at serve time, no NVIDIA API. Build green. **Remaining:** copy final export to `data/` after baseline-extremes finish; live endpoint smoke; scenario selector + uncertainty UI (deferred to v1.1); purge stale `climate_model_cache` on deploy (BLOCKING — old rows are fabricated cbottle output).
+- [x] Phase 5 (partial) — `/methodology` public page shipped (`client/src/pages/methodology.tsx`, route in `App.tsx`), documents full grounding stack + exact risk threshold bands. **Remaining:** hindcast validation report; `llms.txt` refresh.
+- [ ] Phase 6 — cleanup. Delete `cbottle_runner.py` AFTER live smoke proves the swap; fix `threat_model.md` (`routes-simple.ts`→`routes.ts`); remove `conflict_area.txt`.
+
+## Phase 4 handoff (2026-06-27) — pick up here
+
+**Branch:** `docs/grounded-forecast-plan`. **Done this session:** grounded engine written + wired, methodology page, ranking-cities list, prod-dep verified (numpy in `pyproject.toml`), gitnexus re-indexed (3,635 nodes).
+
+**Blocking before deploy, in order:**
+1. Wait for `baseline_extremes.py` on Spark (`~/climate-ingest`, CDS-queue-bound; 5 ETCCDI absolute baselines). Check: `ssh spark 'cd ~/climate-ingest && ls out/baseline-extreme-*.nc | wc -l'` (want 5).
+2. Re-run `python ingest/build_export.py` on Spark → fresh `export/grid.i16.gz` + `manifest.json` (now with baseline + baseline-extreme layers). Self-check must print `0 mismatches`.
+3. Copy `export/grid.i16.gz` + `export/manifest.json` → repo `data/` (alongside `data/ranking_cities.json`).
+4. Smoke `grounded_model.py` on Spark: `python grounded_model.py 60.17 24.94 2050` (Helsinki) → expect annual_mean ~6–9°C, seasonal monthly cycle, non-null habitability. Repeat Singapore (1.35 103.82), Cairo (30.04 31.24). Fix any contract gaps.
+5. Local: `npm run build`, start, then `curl -s -XPOST localhost:5000/api/climate-trajectory -d '{"coordinates":{"lat":60.17,"lng":24.94},"years":[2050]}' -H 'content-type: application/json'` → assert JSON has `data.points[0].habitability.score`, `.temperature.monthly` (12), `.extremes.drought_risk`.
+6. Deploy (Replit autoscale) + **purge `climate_model_cache`** (stale fabricated rows) — `TRUNCATE climate_model_cache;` or add a model-version column to the cache key.
+
+**Known risks:** (a) contract drift — `grounded_model.py` output must match what the React client reads (`habitability.breakdown` keys, `monthly[12]`); mapped from client but first wire-up may surface one mismatch. (b) a few CMIP6 models skip with server-side `RoocsValueError` (handled — ensemble drops them).

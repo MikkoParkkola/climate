@@ -5,6 +5,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import ClimateApp from "@/pages/climate-app";
 import ClimateComparison from "@/pages/climate-comparison";
+import Methodology from "@/pages/methodology";
 import NotFound from "@/pages/not-found";
 import PreviewBanner from "@/components/preview-banner";
 
@@ -13,6 +14,7 @@ function Router() {
     <Switch>
       <Route path="/" component={ClimateApp} />
       <Route path="/comparison" component={() => <ClimateComparison onBack={() => window.location.href = '/'} />} />
+      <Route path="/methodology" component={Methodology} />
       <Route component={NotFound} />
     </Switch>
   );

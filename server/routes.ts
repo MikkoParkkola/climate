@@ -65,12 +65,14 @@ async function runClimateModel(
   return new Promise((resolve, reject) => {
     let killed = false;
     let settled = false;
+    // grounded_model.py is offline (reads the compact CMIP6/IPCC grid in data/);
+    // it needs no API key. apiKey kept in the signature for caller compatibility.
+    void apiKey;
     const python = spawn("python", [
-      "cbottle_runner.py",
+      "grounded_model.py",
       lat.toString(),
       lng.toString(),
       year.toString(),
-      apiKey,
     ]);
 
     const killTimer = setTimeout(() => {
@@ -491,22 +493,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
 
     const { coordinates, year, apiKey: clientApiKey } = parsed.data;
-    // Use client-supplied key if provided, otherwise fall back to server env var
-    const apiKey = clientApiKey?.trim() || process.env.NVIDIA_API_KEY || "";
-    if (!apiKey) {
-      return res.status(503).json({ message: "No API key configured. Please set NVIDIA_API_KEY." });
-    }
+    // grounded_model.py is offline (reads the compact CMIP6/IPCC grid in data/)
+    // and needs no API key. clientApiKey is accepted but ignored for compatibility.
+    void clientApiKey;
 
     activePythonProcesses++;
     let killed = false;
     let responded = false;
 
     const python = spawn("python", [
-      "cbottle_runner.py",
+      "grounded_model.py",
       coordinates.lat.toString(),
       coordinates.lng.toString(),
       year.toString(),
-      apiKey,
     ]);
 
     const killTimer = setTimeout(() => {
@@ -608,10 +607,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           points.push({ year, cached: true, ...(cached as object) });
           continue;
         }
-        // Only the model run needs the API key — cached locations work without it.
-        if (!apiKey) {
-          return res.status(503).json({ message: "No API key configured. Please set NVIDIA_API_KEY." });
-        }
+        // grounded_model.py is offline — no API key needed for any location.
         const projection = await runClimateModel(coordinates.lat, coordinates.lng, year, apiKey);
         await storage.saveModelProjection(latKey, lngKey, year, projection);
         points.push({ year, cached: false, ...projection });
@@ -644,7 +640,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     let killed = false;
     let responded = false;
 
-    const python = spawn("python", ["cbottle_runner.py", "--rankings", year.toString()]);
+    const python = spawn("python", ["grounded_model.py", "--rankings", year.toString()]);
 
     const killTimer = setTimeout(() => {
       killed = true;

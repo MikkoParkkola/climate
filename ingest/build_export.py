@@ -75,11 +75,22 @@ def scale_for(layer, unit):
 
 
 def file_arrays(path):
-    """Yield (var_role, decades, float_array) for the data vars of one grid file."""
+    """Yield (layer, scenario, role, unit, src, axis_key, axis_vals, float_array) for
+    the data vars of one grid file. axis_key is 'decades' (projections) or 'months'
+    (baseline climatology)."""
     base = os.path.basename(path)[:-3]
+    ds = xr.open_dataset(path)
+    # baseline climatology files: baseline-<var>.nc, dims (month,lat,lon), var 'clim'
+    if base.startswith("baseline-"):
+        short = base[len("baseline-"):]
+        months = [int(m) for m in ds.month.values]
+        unit = str(ds.attrs.get("unit", "absolute"))
+        src = str(ds.attrs.get("source", ""))
+        yield "baseline", short, "clim", unit, src, "months", months, ds["clim"].values
+        ds.close()
+        return
     short, cds_scn = base.split("__")
     scenario = SCENARIO_ID.get(cds_scn, cds_scn)
-    ds = xr.open_dataset(path)
     decades = [int(d) for d in ds.decade.values]
     if short == "sealevel":
         layer, varmap, unit = "sealevel", SEALEVEL_VARS, "m"
@@ -92,17 +103,19 @@ def file_arrays(path):
     src = str(ds.attrs.get("source", ds.attrs.get("method", "")))
     for ncvar, role in varmap.items():
         if ncvar in ds.variables:
-            yield layer, scenario, role, unit, src, decades, ds[ncvar].values
+            yield layer, scenario, role, unit, src, "decades", decades, ds[ncvar].values
     ds.close()
 
 
 def main():
     os.makedirs(EXP, exist_ok=True)
-    paths = sorted(glob.glob(os.path.join(OUT, "*__*.nc")))
+    paths = sorted(glob.glob(os.path.join(OUT, "*__*.nc")) +
+                   glob.glob(os.path.join(OUT, "baseline-*.nc")))
     if not paths:
         sys.exit(f"no grids in {OUT}")
-    # grid meta from the first file (identical across all)
-    ds0 = xr.open_dataset(paths[0])
+    # grid meta from the first projection file (identical across all)
+    proj0 = next(p for p in paths if "__" in os.path.basename(p))
+    ds0 = xr.open_dataset(proj0)
     lat = ds0.lat.values; lon = ds0.lon.values
     grid = {"nlat": int(lat.size), "nlon": int(lon.size),
             "lat0": float(lat[0]), "lon0": float(lon[0]),
@@ -111,18 +124,16 @@ def main():
 
     bin_path = os.path.join(EXP, "grid.i16.gz")
     layers, offset = [], 0
-    # Build the full uncompressed byte stream first (offsets are into the *decoded*
-    # stream), then gzip once. Node gunzips at startup into one ArrayBuffer.
     chunks = []
     for path in paths:
-        for layer, scenario, role, unit, src, decades, arr in file_arrays(path):
+        for layer, scenario, role, unit, src, axis_key, axis_vals, arr in file_arrays(path):
             scale = scale_for(layer, unit)
             buf = encode(arr, scale)
             chunks.append(buf)
             layers.append({
                 "layer": layer, "scenario": scenario, "var": role, "unit": unit,
-                "decades": decades, "scale": scale, "fill": FILL,
-                "shape": [len(decades), grid["nlat"], grid["nlon"]],
+                axis_key: axis_vals, "scale": scale, "fill": FILL,
+                "shape": [len(axis_vals), grid["nlat"], grid["nlon"]],
                 "offset": offset, "bytes": len(buf), "source": src,
             })
             offset += len(buf)
@@ -156,7 +167,7 @@ def main():
     assert len(blob) == len(raw), "decoded size mismatch"
     checked = bad = 0
     for path in paths:
-        for layer, scenario, role, unit, src, decades, arr in file_arrays(path):
+        for layer, scenario, role, unit, src, axis_key, axis_vals, arr in file_arrays(path):
             ent = next(l for l in layers if l["layer"] == layer
                        and l["scenario"] == scenario and l["var"] == role)
             q = unshuffle_i16(blob[ent["offset"]:ent["offset"] + ent["bytes"]]
