@@ -4,6 +4,30 @@
 Read this top to bottom once, then execute the checklist. Everything you need is here;
 deeper context is in `docs/PLAN.md` ("Phase 4 handoff") and `docs/architecture/`.
 
+## ✅ UPDATE (end of session) — data steps DONE, only deploy seam left
+
+Since first writing this, the data pipeline FINISHED and was validated. Concretely:
+- Both baselines re-fetched with the float32 fix; all 8 baseline layers correct.
+- Export rebuilt (`build_export.py`, 91 arrays, self-check 0 mismatches) and **already
+  copied into the repo at `data/grid.i16.gz` (35 MB) + `data/manifest.json`** (committed).
+- Engine re-smoked on 5 cities — all sane, **zero nulls**. Mumbai now 1222 mm with
+  wettest=July (monsoon correct); Singapore 365 tropical nights (correct, was a corrupted 0).
+- Local engine + contract verified: `python3 grounded_model.py 60.17 24.94 2050` returns the
+  full contract reading from repo `data/`.
+
+**What is left = Steps 5b, 6, 7 only:**
+- **5b. HTTP endpoint test** — I could NOT run it locally: the server requires
+  `DATABASE_URL` (Postgres) to boot and I have no local DB. The spawn→stdout→JSON.parse
+  path is UNCHANGED plumbing from the old runner (only the script name changed), and the
+  engine's JSON is verified, so risk is low. On any host with `DATABASE_URL` set (Replit, or
+  a local Neon/Postgres), run the curl in Step 5 and confirm the response shape.
+- **6. Deploy + purge cache** (BLOCKING). **7. Cleanup.**
+
+Steps 1–4 below are DONE; keep them for reference / if you ever re-fetch.
+
+---
+
+
 ---
 
 ## TL;DR of where things stand
