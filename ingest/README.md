@@ -54,6 +54,7 @@ after each reduce). The only "a lot" is wall-clock: ~1,230 CDS requests, each qu
 |---|---|
 | `fetch_cmip6.py` | Copernicus CDS API → CMIP6 NetCDF per SSP (temp, precip, humidity) |
 | `fetch_atlas.py` | IPCC-WG1/Atlas CSV → region-aggregated anomalies (validation anchors) |
+| `calibrate.py` | temperature grids + AR6 SPM.1 anchors → `out/calibration.json` (per-scenario/decade scaling k = assessed/raw for the model-consensus-vs-IPCC display). **Built + validated 2026-06-26.** Temperature only. |
 | `fetch_sealevel.py` | NASA AR6 archive (Zenodo) → per-location sea-level rise per SSP |
 | `baseline.py` | NOAA climatology → present-day anchor (reuse existing logic) |
 | `build_grid.py` | regrid → global lat/lng grid × {2030..2100 by decade} × 5 SSPs; derive risk indices via documented formulas; attach provenance + uncertainty range |
