@@ -94,6 +94,58 @@ export const climateModelCache = pgTable(
   }),
 );
 
+// ── Grounded forecast grid (Phase 2/3) ──────────────────────────────────────
+// The real, scientifically-grounded layer: CMIP6 ensemble change-factors vs the
+// 1995-2014 baseline, per variable/scenario/decade, on a coarse grid. Stores the
+// RAW ensemble delta + spread; the IPCC-calibrated value is derived at serve time
+// by multiplying by k from climate_calibration. Distinct from the legacy
+// climate_model_cache (JSON blobs) on purpose — different data, different truth.
+export const climateGrid = pgTable(
+  "climate_grid",
+  {
+    id: serial("id").primaryKey(),
+    variable: text("variable").notNull(),   // temperature | precipitation | humidity
+    scenario: text("scenario").notNull(),   // ssp119 | ssp126 | ssp245 | ssp370 | ssp585
+    decade: integer("decade").notNull(),    // 2030..2100
+    latKey: real("lat_key").notNull(),
+    lngKey: real("lng_key").notNull(),
+    deltaMean: real("delta_mean").notNull(),  // raw ensemble-mean change vs 1995-2014
+    deltaStd: real("delta_std"),              // ensemble spread (uncertainty)
+    nModels: integer("n_models"),             // models contributing (coverage varies)
+    unit: text("unit").notNull(),             // "absolute" (°C) | "percent" (precip)
+    source: text("source").notNull(),         // provenance, e.g. "CMIP6/ScenarioMIP + AR6"
+    methodVersion: text("method_version").notNull(), // cache invalidation
+    createdAt: timestamp("created_at").defaultNow(),
+  },
+  (t) => ({
+    gridKeyIdx: uniqueIndex("cg_key_idx").on(
+      t.variable, t.scenario, t.decade, t.latKey, t.lngKey,
+    ),
+  }),
+);
+
+// Per-(variable, scenario, decade) "hot model" scaling factor: the raw CMIP6
+// multi-model mean runs warmer than the IPCC AR6 assessed best estimate
+// (Hausfather et al. 2022). Serve both numbers + the gap; default to calibrated.
+// ~40 rows — kept out of climate_grid to avoid duplicating k across 400k cells.
+export const climateCalibration = pgTable(
+  "climate_calibration",
+  {
+    id: serial("id").primaryKey(),
+    variable: text("variable").notNull(),
+    scenario: text("scenario").notNull(),
+    decade: integer("decade").notNull(),
+    k: real("k").notNull(),                       // calibrated = raw * k
+    rawGlobal: real("raw_global").notNull(),      // raw ensemble global-mean
+    assessedGlobal: real("assessed_global").notNull(), // AR6 assessed global-mean
+    source: text("source").notNull(),
+    createdAt: timestamp("created_at").defaultNow(),
+  },
+  (t) => ({
+    calKeyIdx: uniqueIndex("cc_key_idx").on(t.variable, t.scenario, t.decade),
+  }),
+);
+
 export const insertUserSchema = createInsertSchema(users).pick({
   username: true,
   password: true,
@@ -119,3 +171,6 @@ export type InsertClimateProjection = z.infer<typeof insertClimateProjectionSche
 export type ClimateProjection = typeof climateProjections.$inferSelect;
 
 export type ClimateModelCache = typeof climateModelCache.$inferSelect;
+
+export type ClimateGrid = typeof climateGrid.$inferSelect;
+export type ClimateCalibration = typeof climateCalibration.$inferSelect;
