@@ -8,7 +8,7 @@ deeper context is in `docs/PLAN.md` ("Phase 4 handoff") and `docs/architecture/`
 
 Supersedes the older "not merged" and "cleanup pending" notes below where they conflict.
 
-- `main` includes the grounded engine/cache/SEO work through `e25bd8d`.
+- `main` includes the grounded engine/cache/SEO/health work through `e59ee80`.
 - Cleanup is done: `cbottle_runner.py` and `conflict_area.txt` are deleted, `threat_model.md`
   points at `server/routes.ts`, and the root `README.md` exists.
 - New cache guard added after `7dbc5ed`: `climate_model_cache` payloads are wrapped with
@@ -27,9 +27,14 @@ Supersedes the older "not merged" and "cleanup pending" notes below where they c
 - Local production validation after `e25bd8d`: `npm run check`, `npm run build`, and
   `GET /methodology` on the built server returned 200 with
   `https://fupit.com/methodology` canonical plus visible methodology content.
-- Last public checks after pushing `e25bd8d` still showed stale Replit code:
-  `GET /methodology` returned 404, `robots.txt`/`sitemap.xml` still used
-  `climate-projections.replit.app`, and
+- `e59ee80` adds `GET /api/health`, a DB-independent deployment truth endpoint. After
+  republish it must return JSON with `engine: "grounded_model.py"`,
+  `modelCacheVersion: "grounded-grid-i16-v1:0dc3f9d188e4d757"`,
+  `cachePurge: "startup-incompatible-delete-enabled"`, and
+  `legacyProjectionEndpoints: "410-gone"`.
+- Last public checks after pushing `e59ee80` still showed stale Replit code:
+  `GET /api/health` returned the old SPA HTML shell, `GET /methodology` returned 404,
+  `robots.txt`/`sitemap.xml` still used `climate-projections.replit.app`, and
   `GET /api/projections?locationId=1&year=2050` returned HTTP 200 with old fabricated
   legacy fields. The Replit connector resolved app `Climate`
   (`ca8b5a3c-22fd-42ca-93bd-08c367a8c1dc`) but its Agent paused without deploying or
