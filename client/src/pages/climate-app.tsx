@@ -194,8 +194,16 @@ function forecastUrl(location: LocationOption, year: number, scenario: ScenarioI
 
 function linkLocationFromParams(): { location: LocationOption; year?: number; scenario: ScenarioId; autoRun: boolean } | null {
   const params = new URLSearchParams(window.location.search);
-  const lat = Number(params.get("lat"));
-  const lng = Number(params.get("lng"));
+  const latRaw = params.get("lat");
+  const lngRaw = params.get("lng");
+  // No coordinates in the URL → fresh visit. Leave the search box empty so the
+  // placeholder can guide the user to type a place name. (Number(null) === 0,
+  // which would otherwise fabricate a bogus "0.0000, 0.0000" location at sea.)
+  if (latRaw === null || lngRaw === null || latRaw.trim() === "" || lngRaw.trim() === "") {
+    return null;
+  }
+  const lat = Number(latRaw);
+  const lng = Number(lngRaw);
   if (!Number.isFinite(lat) || !Number.isFinite(lng) || lat < -90 || lat > 90 || lng < -180 || lng > 180) {
     return null;
   }

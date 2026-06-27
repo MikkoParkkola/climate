@@ -33,6 +33,55 @@ function checkRateLimit(ip: string): boolean {
   return true;
 }
 
+// Resolves any place on Earth by English name via the Open-Meteo geocoding API
+// (free, key-less, global). Replaces the old seeded-city DB lookup so cities like
+// Prague or Kyiv resolve too. Returns a shape the client expects: { name, lat,
+// lng, latitude, longitude, country, city, state }.
+interface GeocodeResult {
+  name: string;
+  lat: number;
+  lng: number;
+  latitude: number;
+  longitude: number;
+  country: string;
+  city: string;
+  state?: string;
+}
+
+async function geocodePlaces(query: string): Promise<GeocodeResult[]> {
+  const url =
+    "https://geocoding-api.open-meteo.com/v1/search" +
+    `?name=${encodeURIComponent(query)}&count=10&language=en&format=json`;
+
+  const response = await fetch(url, { signal: AbortSignal.timeout(8000) });
+  if (!response.ok) {
+    throw new Error(`Geocoding upstream returned ${response.status}`);
+  }
+  const data = (await response.json()) as { results?: any[] };
+  const results = Array.isArray(data.results) ? data.results : [];
+
+  return results
+    .filter((r) => Number.isFinite(r?.latitude) && Number.isFinite(r?.longitude))
+    .map((r) => {
+      // Build "City, Region, Country", dropping blanks and consecutive dupes
+      // (e.g. avoids "Prague, Prague, Czechia" → "Prague, Czechia").
+      const parts = [r.name, r.admin1, r.country].filter(
+        (p): p is string => typeof p === "string" && p.trim().length > 0,
+      );
+      const display = parts.filter((p, i) => i === 0 || p !== parts[i - 1]);
+      return {
+        name: display.join(", "),
+        lat: r.latitude,
+        lng: r.longitude,
+        latitude: r.latitude,
+        longitude: r.longitude,
+        country: r.country || "",
+        city: r.name || "",
+        state: r.admin1 || undefined,
+      };
+    });
+}
+
 // Bounded concurrency for the Python climate model. Callers acquire a slot
 // before spawning and release it when the process settles. Waiters queue
 // (instead of failing) so multi-year trajectory requests glide to completion.
@@ -381,17 +430,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Climate location routes
   app.get("/api/locations/search", async (req, res) => {
     try {
-      const query = req.query.q as string;
-      if (!query || query.length < 2) {
+      const query = (typeof req.query.q === "string" ? req.query.q : "").trim();
+      if (query.length < 2) {
         return res.json([]);
       }
-      
-      const locations = await storage.searchClimateLocations(query);
-      // Add lat/lng aliases so the client can use either naming convention
-      res.json(locations.map(l => ({ ...l, lat: Number(l.latitude), lng: Number(l.longitude) })));
+
+      const results = await geocodePlaces(query);
+      res.json(results);
     } catch (error) {
       console.error("Error searching locations:", error);
-      res.status(500).json({ message: "Failed to search locations" });
+      res.status(502).json({ message: "Failed to search locations" });
     }
   });
 
