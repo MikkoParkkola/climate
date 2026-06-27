@@ -306,6 +306,10 @@ function scenarioInfo(id?: string): { id: ScenarioId; label: string; caption: st
   return SCENARIOS.find((s) => s.id === id) ?? SCENARIOS.find((s) => s.id === DEFAULT_SCENARIO)!;
 }
 
+function jsonFileSlug(value: string): string {
+  return value.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 72) || "location";
+}
+
 function parseScenario(id: string | null): ScenarioId {
   return (SCENARIOS.some((s) => s.id === id) ? id : DEFAULT_SCENARIO) as ScenarioId;
 }
@@ -503,6 +507,7 @@ export default function ClimateApp() {
   const [exporting, setExporting] = useState(false);
   const [playing, setPlaying] = useState(false);
   const [shareCopied, setShareCopied] = useState(false);
+  const [rawJsonCopied, setRawJsonCopied] = useState(false);
   const [analogCatalog, setAnalogCatalog] = useState<AnalogCatalog | null>(null);
   const [analogError, setAnalogError] = useState<string | null>(null);
   const resultsRef = useRef<HTMLDivElement>(null);
@@ -655,6 +660,7 @@ export default function ClimateApp() {
     setTrajectory(null);
     setError(null);
     setShareCopied(false);
+    setRawJsonCopied(false);
     window.history.replaceState(null, "", "/");
   };
 
@@ -821,6 +827,53 @@ export default function ClimateApp() {
       setShareCopied(true);
       window.setTimeout(() => setShareCopied(false), 1800);
     }
+  };
+
+  const buildRawForecastJson = () => {
+    if (!selectedLocation || !trajectory || !d) return "";
+    return JSON.stringify({
+      schema: "fupit.forecast.raw.v1",
+      exported_at: new Date().toISOString(),
+      location: {
+        name: selectedLocation.name,
+        latitude: selectedLocation.lat,
+        longitude: selectedLocation.lng,
+        country: selectedLocation.country,
+      },
+      selected_year: displayYear,
+      scenario: shownScenario,
+      share_url: shareUrl,
+      model: {
+        name: d.model,
+        version: d.modelVersion,
+        resolution: d.resolution,
+        confidence: d.confidence,
+      },
+      selected_point: d.np,
+      trajectory,
+    }, null, 2);
+  };
+
+  const copyRawForecastJson = async () => {
+    const rawJson = buildRawForecastJson();
+    if (!rawJson) return;
+    await copyToClipboard(rawJson);
+    setRawJsonCopied(true);
+    window.setTimeout(() => setRawJsonCopied(false), 1800);
+  };
+
+  const downloadRawForecastJson = () => {
+    const rawJson = buildRawForecastJson();
+    if (!rawJson || !selectedLocation) return;
+    const blob = new Blob([rawJson], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `fupit-forecast-${jsonFileSlug(selectedLocation.city || selectedLocation.name)}-${displayYear}-${scenario}.json`;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
   };
 
   const sc = d ? scoreColor(d.score) : GREEN;
@@ -1365,6 +1418,12 @@ export default function ClimateApp() {
             <a href="/methodology" style={{ display: "inline-flex", alignItems: "center", gap: 4, fontSize: 10, color: ACCENT, textDecoration: "none" }}>
               Methodology <ExternalLink size={11} />
             </a>
+            <button onClick={copyRawForecastJson} style={{ display: "inline-flex", alignItems: "center", gap: 4, padding: "4px 8px", borderRadius: 6, border: `1px solid ${rawJsonCopied ? GREEN : BORDER}`, background: rawJsonCopied ? `${GREEN}18` : "rgba(255,255,255,0.025)", color: rawJsonCopied ? GREEN : "white", fontSize: 10, cursor: "pointer" }}>
+              {rawJsonCopied ? <Check size={11} /> : <ShieldCheck size={11} />} {rawJsonCopied ? "Copied JSON" : "Copy raw JSON"}
+            </button>
+            <button onClick={downloadRawForecastJson} style={{ display: "inline-flex", alignItems: "center", gap: 4, padding: "4px 8px", borderRadius: 6, border: `1px solid ${BORDER}`, background: "rgba(255,255,255,0.025)", color: "white", fontSize: 10, cursor: "pointer" }}>
+              <Download size={11} /> Download JSON
+            </button>
           </div>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(145px,1fr))", gap: 10, marginBottom: 12 }}>
             {[
@@ -1411,6 +1470,9 @@ export default function ClimateApp() {
               Baseline note: {d!.baselineSource.delta_reference_period}.
             </p>
           )}
+          <p style={{ color: MUTED, fontSize: 9.5, lineHeight: 1.45, marginTop: 8, marginBottom: 12 }}>
+            Raw JSON export includes the selected-year projection, the full annual trajectory, scenario, model version, uncertainty fields, and source trail returned by the grounded API.
+          </p>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(220px,1fr))", gap: 8 }}>
             {d!.sourceTrail.slice(0, 4).map((entry) => (
               <div key={entry.label} style={{ padding: "9px 10px", borderRadius: 8, background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.055)" }}>
