@@ -17,7 +17,10 @@ assert.match(source, /const roadmapItems = useMemo/, "result page derives a livi
 assert.match(source, /ROADMAP_YEARS/, "roadmap includes the current year and decade waypoints through 2100");
 assert.match(source, /Roadmap · current year to 2100/, "result page renders the required roadmap section");
 assert.match(source, /5-year checkpoints through 2100 and linearly interpolates intermediate years/, "roadmap method receipt discloses checkpoint cadence and interpolation");
-assert.match(source, /Sea level/, "roadmap includes sea-level relevance as a visible metric");
+assert.match(source, /Sea-level context/, "roadmap includes sea-level context as a visible metric");
+assert.match(source, /not as a claim that this exact point is coastal or exposed/, "sea-level copy must not imply local coastal exposure");
+assert.match(source, /no coastal-exposure\/elevation gate/, "sea-level receipt must disclose missing coastal-exposure gate");
+assert.match(source, /regional context, not parcel exposure/, "projection receipt must caveat sea-level range");
 assert.match(source, /SSP3-7\.0 vs SSP1-2\.6/, "roadmap can show lower-vs-higher pathway deltas after scenario contrast loads");
 assert.match(source, /Load pathway contrast to add lower-vs-higher scenario deltas/, "roadmap discloses missing scenario deltas before contrast is loaded");
 assert.match(source, /Why this changed/, "result page renders the required why-this-changed section");

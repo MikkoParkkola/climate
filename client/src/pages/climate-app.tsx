@@ -1157,11 +1157,11 @@ export default function ClimateApp() {
         receipt: "Uses CMIP6-derived dry-spell and heavy-precipitation risk layers; local drainage, rivers, soils, and defenses are outside the current score.",
       },
       {
-        label: "Coasts, infrastructure, and ecosystems",
-        value: `${d.seaLevel} cm sea`,
+        label: "Sea-level context, infrastructure, and ecosystems",
+        value: `${d.seaLevel} cm context`,
         color: CYAN,
-        text: `Sea-level rise is shown as ${d.seaLevel} cm at this horizon, but local exposure depends on elevation, tides, subsidence, defenses, and storm surge. Climate-zone movement can pressure biodiversity, pests, and ecosystem services, but species-specific outcomes are not modeled yet.`,
-        receipt: "Sea-level data comes through the registered AR6/NASA source trail. Biodiversity and infrastructure text is educational context, not a quantified impact model.",
+        text: `Sea-level rise is shown as regional context (${d.seaLevel} cm at this horizon), not as a claim that this exact point is coastal or exposed. Local exposure depends on elevation, distance to coast, tides, subsidence, defenses, and storm surge. Climate-zone movement can pressure biodiversity, pests, and ecosystem services, but species-specific outcomes are not modeled yet.`,
+        receipt: "Sea-level data comes through the registered AR6/NASA source trail. This build has no coastal-exposure/elevation gate, so inland users should treat the number as regional context. Biodiversity and infrastructure text is educational context, not a quantified impact model.",
       },
     ];
   }, [d, scoreStory]);
@@ -1172,7 +1172,7 @@ export default function ClimateApp() {
     const items = [
       { icon: "🌡️", label: "Heat stress exceeds 15 days/yr", year: crossYear(trajectory, 15, "above", (p) => p.extremes.heat_stress_days) },
       { icon: "⚠️", label: "Habitability drops below 70 (Fair territory)", year: crossYear(trajectory, 70, "below", (p) => p.habitability.score) },
-      { icon: "🌊", label: "Sea level rise exceeds 50 cm", year: crossYear(trajectory, 50, "above", (p) => p.extremes.sea_level_rise_cm ?? 0) },
+      { icon: "🌊", label: "Regional sea-level context exceeds 50 cm", year: crossYear(trajectory, 50, "above", (p) => p.extremes.sea_level_rise_cm ?? 0) },
       { icon: "💧", label: "Drought risk exceeds 50%", year: crossYear(trajectory, 50, "above", (p) => riskScore(p.extremes.drought_risk)) },
     ];
     return items.sort((a, b) => (a.year ?? Infinity) - (b.year ?? Infinity));
@@ -1557,7 +1557,7 @@ export default function ClimateApp() {
                     <div style={{ flex: "1 1 82px" }}><div style={{ fontSize: 9, color: MUTED }}>Raw warming</div><div style={{ fontSize: 12.5, fontWeight: 800, color: RED }}>{signedNumber(item.tempChange, 1)}°C</div></div>
                     <div style={{ flex: "1 1 72px" }}><div style={{ fontSize: 9, color: MUTED }}>Heat days</div><div style={{ fontSize: 12.5, fontWeight: 800, color: ORANGE }}>{item.heatDays}</div></div>
                     <div style={{ flex: "1 1 82px" }}><div style={{ fontSize: 9, color: MUTED }}>Water signal</div><div style={{ fontSize: 12.5, fontWeight: 800, color: BLUE }}>{signedNumber(item.precipChange, 1)}%</div></div>
-                    <div style={{ flex: "1 1 74px" }}><div style={{ fontSize: 9, color: MUTED }}>Sea level</div><div style={{ fontSize: 12.5, fontWeight: 800, color: CYAN }}>{item.seaLevel} cm</div></div>
+                    <div style={{ flex: "1 1 90px" }}><div style={{ fontSize: 9, color: MUTED }}>Sea-level context</div><div style={{ fontSize: 12.5, fontWeight: 800, color: CYAN }}>{item.seaLevel} cm</div></div>
                     <div style={{ flex: "1 1 70px" }}><div style={{ fontSize: 9, color: MUTED }}>Score</div><div style={{ fontSize: 12.5, fontWeight: 800, color: scoreColor(item.score) }}>{item.score}/100</div></div>
                   </div>
                 );
@@ -1842,7 +1842,7 @@ export default function ClimateApp() {
                 { from: 60, to: 70, color: AMBER }, { from: 40, to: 60, color: ORANGE }, { from: 0, to: 40, color: RED },
               ]} />
             <div style={{ width: 1, background: BORDER, alignSelf: "stretch", flexShrink: 0 }} />
-            <TrendChart years={traj!.years} values={traj!.sea} year={year} label="Sea Level" unit="cm" color={CYAN} decimals={0} thresholdY={50} />
+            <TrendChart years={traj!.years} values={traj!.sea} year={year} label="Sea-level context" unit="cm" color={CYAN} decimals={0} thresholdY={50} />
             <div style={{ width: 1, background: BORDER, alignSelf: "stretch", flexShrink: 0 }} />
             <TrendChart years={traj!.years} values={traj!.drought} year={year} label="Drought Risk" unit="%" color={AMBER} decimals={0} thresholdY={50} />
           </div>
@@ -1933,7 +1933,7 @@ export default function ClimateApp() {
             { label: "Heat Stress", value: d!.heatDays, unit: "days/yr", delta: `+${Math.max(0, d!.heatDays - d!.baseHeatDays)}d`, color: RED },
             { label: "Drought Risk", value: `${d!.drought}%`, sub: d!.drought < 25 ? "Low" : d!.drought < 40 ? "Elevated" : "High", bar: d!.drought / 100, color: AMBER },
             { label: "Flood Risk", value: `${d!.flood}%`, sub: d!.flood < 30 ? "Low" : d!.flood < 60 ? "Elevated" : "High", bar: d!.flood / 100, color: BLUE },
-            { label: "Sea Level Rise", value: `${d!.seaLevel}cm`, sub: d!.seaLevel < 25 ? "Manageable" : d!.seaLevel < 50 ? "Serious" : "Critical", color: CYAN },
+            { label: "Sea-level context", value: `${d!.seaLevel}cm`, sub: "Regional AR6", color: CYAN },
           ].map(({ label, value, unit, delta, sub, bar, color }) => (
             <div key={label} style={{ ...card, padding: 14, borderTop: `2px solid ${color}` }}>
               <div style={{ fontSize: 10, color: MUTED }}>{label}</div>
@@ -2018,7 +2018,7 @@ export default function ClimateApp() {
               {
                 label: "Sea-level range",
                 value: d!.seaLow != null && d!.seaHigh != null ? `${Math.round(d!.seaLow)}–${Math.round(d!.seaHigh)}cm` : "—",
-                sub: "IPCC AR6 low to high",
+                sub: "IPCC AR6 low to high; regional context, not parcel exposure",
                 color: CYAN,
               },
               {
