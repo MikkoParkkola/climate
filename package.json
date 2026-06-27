@@ -16,6 +16,7 @@
     "smoke:comparison-layout": "node scripts/smoke-comparison-layout.mjs",
     "smoke:projection-route": "node scripts/smoke-climate-projection-route.mjs",
     "smoke:raw-json": "node scripts/smoke-raw-json-export.mjs",
+    "smoke:storyline": "node scripts/smoke-storyline.mjs",
     "smoke:grid-reader": "tsx scripts/smoke-node-grid-reader.ts",
     "smoke:node-model": "tsx scripts/smoke-node-grounded-model.ts",
     "smoke:data-quality": "tsx scripts/smoke-data-quality.ts",
@@ -23,7 +24,7 @@
     "audit:trajectories": "node scripts/audit-trajectories.mjs",
     "screenshots:capture": "node scripts/capture-screenshots.mjs",
     "verify:live": "node scripts/verify-live-release.mjs",
-    "ci": "npm run check && npm run build && npm run smoke:cache && npm run smoke:rankings && npm run smoke:twin && npm run smoke:comparison-layout && npm run smoke:projection-route && npm run smoke:raw-json && npm run smoke:grid-reader && npm run smoke:node-model && npm run smoke:data-quality && npm run smoke:model && npm run audit:trajectories",
+    "ci": "npm run check && npm run build && npm run smoke:cache && npm run smoke:rankings && npm run smoke:twin && npm run smoke:comparison-layout && npm run smoke:projection-route && npm run smoke:raw-json && npm run smoke:storyline && npm run smoke:grid-reader && npm run smoke:node-model && npm run smoke:data-quality && npm run smoke:model && npm run audit:trajectories",
     "db:push": "drizzle-kit push"
   },
   "dependencies": {

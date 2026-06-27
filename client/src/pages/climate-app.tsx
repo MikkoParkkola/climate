@@ -302,6 +302,58 @@ function feedbackTag(text: string): { icon: string; label: string; color: string
   return { icon: "🔁", label: short, color: AMBER };
 }
 
+function componentScoreEffect(key: string, delta: number): number {
+  return key.toLowerCase().includes("penalty") ? -delta : delta;
+}
+
+function isDriverComponent(key: string): boolean {
+  const normalized = key.toLowerCase();
+  if (["base_score", "final_score", "infrastructure_adaptation"].includes(normalized)) return false;
+  if (["drought_risk_penalty", "flood_risk_penalty"].includes(normalized)) return false;
+  return true;
+}
+
+function perDecade(current: number, baseline: number, currentYear: number, baselineYear = BASELINE_YEAR): number {
+  const years = Math.max(1, currentYear - baselineYear);
+  return ((current - baseline) / years) * 10;
+}
+
+function describeSignalLevel(score: number): string {
+  if (score >= 70) return "high";
+  if (score >= 40) return "moderate";
+  if (score >= 15) return "emerging";
+  return "low";
+}
+
+function heatLifeText(days: number, delta: number): string {
+  if (days >= 120) {
+    return `Heat stress is modeled for ${days} days per year, making cooling demand, outdoor work, sport, and sleep disruption persistent warm-season issues.`;
+  }
+  if (days >= 30) {
+    return `Heat stress is modeled for ${days} days per year, so the change is likely felt as a recurring seasonal constraint on outdoor activity and cooling needs.`;
+  }
+  if (days > 0) {
+    return `Heat stress remains occasional at ${days} days per year, but the direction matters: ${delta >= 0 ? "the modeled burden rises from baseline" : "the modeled burden eases from baseline"}.`;
+  }
+  return "Heat stress is not a prominent modeled signal here; precipitation, flood, drought, or cold-season effects may matter more locally.";
+}
+
+function precipitationLifeText(percent: number): string {
+  if (percent <= -15) {
+    return "The annual precipitation signal is substantially drier, which can pressure freshwater reliability where storage, groundwater, snowpack, or demand are already limiting.";
+  }
+  if (percent < -5) {
+    return "The annual precipitation signal trends drier; local freshwater risk still depends on seasonality, infrastructure, groundwater, and demand that this page does not fully model.";
+  }
+  if (percent >= 15) {
+    return "The annual precipitation signal is substantially wetter; more water does not automatically mean more usable freshwater, and drainage or heavy-rain disruption can become more important.";
+  }
+  if (percent > 5) {
+    return "The annual precipitation signal trends wetter; the practical effect depends on whether extra rain arrives in useful seasons or as disruptive heavy-rain events.";
+  }
+  return "The annual precipitation signal is weak at this horizon, so year-to-year variability and local water management may dominate lived experience.";
+}
+
 function scenarioInfo(id?: string): { id: ScenarioId; label: string; caption: string } {
   return SCENARIOS.find((s) => s.id === id) ?? SCENARIOS.find((s) => s.id === DEFAULT_SCENARIO)!;
 }
@@ -787,6 +839,94 @@ export default function ClimateApp() {
     return findClimateAnalog(analogCatalog, selectedLocation, displayYear, d);
   }, [analogCatalog, selectedLocation, d, displayYear]);
 
+  const scoreStory = useMemo(() => {
+    if (!trajectory || !d) return null;
+    const baseline = trajectory[0];
+    const baselineBreakdown = baseline.habitability.breakdown ?? {};
+    const baselineScore = Math.round(baseline.habitability.score);
+    const baselineHeat = Math.max(0, Math.round(baseline.extremes.heat_stress_days));
+    const baselineDrought = Math.round(riskScore(baseline.extremes.drought_risk));
+    const baselineFlood = Math.round(riskScore(baseline.extremes.flood_risk));
+    const baselineSea = Math.max(0, Math.round(baseline.extremes.sea_level_rise_cm ?? 0));
+    const scoreDrivers = d.breakdown
+      .filter((item) => isDriverComponent(item.key))
+      .map((item) => {
+        const baselineValue = baselineBreakdown[item.key] ?? 0;
+        const delta = item.val - baselineValue;
+        const effect = componentScoreEffect(item.key, delta);
+        return {
+          ...item,
+          baselineValue,
+          delta,
+          effect,
+          movement: item.neg
+            ? delta >= 0 ? "penalty increased" : "penalty eased"
+            : delta >= 0 ? "contribution increased" : "contribution decreased",
+        };
+      })
+      .sort((a, b) => Math.abs(b.effect) - Math.abs(a.effect))
+      .filter((driver) => Math.abs(driver.effect) >= 0.05 || Math.abs(driver.delta) >= 0.05)
+      .slice(0, 4);
+
+    const tempPerDecade = perDecade(d.tempChange, baseline.temperature.anomaly, displayYear, baseline.year);
+    const heatPerDecade = perDecade(d.heatDays, baselineHeat, displayYear, baseline.year);
+    const precipPerDecade = perDecade(d.precipChange, baseline.precipitation.anomaly_percent, displayYear, baseline.year);
+    const scorePerDecade = perDecade(d.score, baselineScore, displayYear, baseline.year);
+
+    return {
+      baselineYear: baseline.year,
+      baselineScore,
+      scoreDelta: d.score - baselineScore,
+      scoreDrivers,
+      trendRates: [
+        { label: "Temperature", value: `${signedNumber(tempPerDecade, 2)}°C/decade`, color: RED },
+        { label: "Heat stress", value: `${signedNumber(heatPerDecade, 1)} days/decade`, color: ORANGE },
+        { label: "Rainfall", value: `${signedNumber(precipPerDecade, 1)}%/decade`, color: BLUE },
+        { label: "Habitability", value: `${signedNumber(scorePerDecade, 1)} pts/decade`, color: scorePerDecade < 0 ? RED : GREEN },
+      ],
+      deltas: {
+        heat: d.heatDays - baselineHeat,
+        drought: d.drought - baselineDrought,
+        flood: d.flood - baselineFlood,
+        sea: d.seaLevel - baselineSea,
+      },
+    };
+  }, [trajectory, d, displayYear]);
+
+  const dailyLifeSignals = useMemo(() => {
+    if (!d || !scoreStory) return [];
+    return [
+      {
+        label: "Heat, sleep, and cooling",
+        value: `${d.heatDays}/yr`,
+        color: ORANGE,
+        text: heatLifeText(d.heatDays, scoreStory.deltas.heat),
+        receipt: "Uses the grounded heat_stress_days trajectory; it is not personal medical or occupational-safety advice.",
+      },
+      {
+        label: "Water reliability",
+        value: `${signedNumber(d.precipChange, 1)}%`,
+        color: BLUE,
+        text: precipitationLifeText(d.precipChange),
+        receipt: "Uses annual and monthly precipitation projections. Groundwater, storage, demand, and snowpack are not fully modeled here.",
+      },
+      {
+        label: "Drought and flood pressure",
+        value: `${describeSignalLevel(Math.max(d.drought, d.flood))}`,
+        color: Math.max(d.drought, d.flood) >= 70 ? RED : Math.max(d.drought, d.flood) >= 40 ? AMBER : GREEN,
+        text: `The drought index is ${d.drought}/100 and the flood/heavy-rain index is ${d.flood}/100. Treat these as screening indicators for planning questions, not site-level engineering conclusions.`,
+        receipt: "Uses CMIP6-derived dry-spell and heavy-precipitation risk layers; local drainage, rivers, soils, and defenses are outside the current score.",
+      },
+      {
+        label: "Coasts, infrastructure, and ecosystems",
+        value: `${d.seaLevel} cm sea`,
+        color: CYAN,
+        text: `Sea-level rise is shown as ${d.seaLevel} cm at this horizon, but local exposure depends on elevation, tides, subsidence, defenses, and storm surge. Climate-zone movement can pressure biodiversity, pests, and ecosystem services, but species-specific outcomes are not modeled yet.`,
+        receipt: "Sea-level data comes through the registered AR6/NASA source trail. Biodiversity and infrastructure text is educational context, not a quantified impact model.",
+      },
+    ];
+  }, [d, scoreStory]);
+
   // Tipping points computed from real interpolated trajectory
   const tipping = useMemo(() => {
     if (!trajectory) return [];
@@ -1142,6 +1282,74 @@ export default function ClimateApp() {
               : <> No modeled tipping points are crossed at this horizon.</>}
           </p>
         </div>
+
+        {scoreStory && (
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: 14, marginBottom: 14 }}>
+            <div style={{ ...card, padding: 18, borderLeft: `3px solid ${AMBER}` }}>
+              <div style={{ display: "flex", justifyContent: "space-between", gap: 12, alignItems: "flex-start", marginBottom: 12, flexWrap: "wrap" }}>
+                <div>
+                  <h2 style={{ fontSize: 12, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.07em", color: MUTED }}>Why this changed</h2>
+                  <p style={{ fontSize: 12, color: "rgba(255,255,255,0.62)", lineHeight: 1.55, margin: "6px 0 0" }}>
+                    Ranked by score-component movement from {scoreStory.baselineYear} to {displayYear}; this is not a full causal attribution model.
+                  </p>
+                </div>
+                <div style={{ textAlign: "right" }}>
+                  <div style={{ fontSize: 10, color: MUTED, textTransform: "uppercase" }}>Score movement</div>
+                  <div style={{ color: scoreStory.scoreDelta < 0 ? RED : GREEN, fontSize: 18, fontWeight: 800 }}>{signedNumber(scoreStory.scoreDelta, 0)} pts</div>
+                  <div style={{ fontSize: 10, color: MUTED }}>{scoreStory.baselineScore} → {d!.score}</div>
+                </div>
+              </div>
+
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(116px, 1fr))", gap: 8, marginBottom: 12 }}>
+                {scoreStory.trendRates.map((rate) => (
+                  <div key={rate.label} title="Per-decade slope from the baseline point to the selected year." style={{ background: "rgba(255,255,255,0.045)", border: `1px solid ${BORDER}`, borderRadius: 8, padding: "8px 9px" }}>
+                    <div style={{ fontSize: 10, color: MUTED, marginBottom: 3 }}>{rate.label}</div>
+                    <div style={{ fontSize: 13, fontWeight: 800, color: rate.color }}>{rate.value}</div>
+                  </div>
+                ))}
+              </div>
+
+              <div style={{ display: "flex", flexDirection: "column", gap: 9 }}>
+                {scoreStory.scoreDrivers.length > 0 ? scoreStory.scoreDrivers.map((driver, index) => {
+                  const helps = driver.effect >= 0;
+                  return (
+                    <div key={driver.key} title={`Baseline ${driver.baselineValue.toFixed(1)}; selected year ${driver.val.toFixed(1)}. Effect sign is adjusted so positive means helping the score.`} style={{ display: "grid", gridTemplateColumns: "24px minmax(0, 1fr) auto", gap: 9, alignItems: "center" }}>
+                      <div style={{ width: 24, height: 24, borderRadius: 6, display: "flex", alignItems: "center", justifyContent: "center", background: helps ? `${GREEN}16` : `${RED}16`, color: helps ? GREEN : RED, fontSize: 11, fontWeight: 800 }}>{index + 1}</div>
+                      <div style={{ minWidth: 0 }}>
+                        <div style={{ fontSize: 12.5, fontWeight: 700, color: "rgba(255,255,255,0.92)" }}>{driver.label}</div>
+                        <div style={{ fontSize: 10.5, color: MUTED }}>{driver.movement} · raw component {signedNumber(driver.delta, 1)}</div>
+                      </div>
+                      <div style={{ fontSize: 12, fontWeight: 800, color: helps ? GREEN : RED }}>{signedNumber(driver.effect, 1)} pts</div>
+                    </div>
+                  );
+                }) : (
+                  <p style={{ margin: 0, fontSize: 12, color: MUTED, lineHeight: 1.6 }}>No score component moved enough to rank; the modeled score is broadly stable at this horizon.</p>
+                )}
+              </div>
+            </div>
+
+            <div style={{ ...card, padding: 18, borderLeft: `3px solid ${GREEN}` }}>
+              <h2 style={{ fontSize: 12, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.07em", color: MUTED, marginBottom: 12 }}>What this means for daily life</h2>
+              <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                {dailyLifeSignals.map((signal) => (
+                  <div key={signal.label} title={signal.receipt} style={{ display: "grid", gridTemplateColumns: "minmax(0, 1fr) auto", gap: 12, paddingBottom: 11, borderBottom: "1px solid rgba(255,255,255,0.07)" }}>
+                    <div style={{ minWidth: 0 }}>
+                      <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap", marginBottom: 4 }}>
+                        <span style={{ fontSize: 12.5, fontWeight: 800, color: "rgba(255,255,255,0.92)" }}>{signal.label}</span>
+                        <span title={signal.receipt} style={{ fontSize: 9, textTransform: "uppercase", letterSpacing: "0.06em", color: MUTED, border: `1px solid ${BORDER}`, borderRadius: 999, padding: "2px 6px" }}>source</span>
+                      </div>
+                      <p style={{ margin: 0, fontSize: 12.5, color: "rgba(255,255,255,0.78)", lineHeight: 1.58 }}>{signal.text}</p>
+                    </div>
+                    <div style={{ fontSize: 12, fontWeight: 800, color: signal.color, whiteSpace: "nowrap" }}>{signal.value}</div>
+                  </div>
+                ))}
+              </div>
+              <p style={{ margin: "12px 0 0", fontSize: 10.5, lineHeight: 1.55, color: MUTED }}>
+                Not yet included in the score: cold-stress days, crop yields, wildfire weather, biodiversity species ranges, local freshwater infrastructure, or parcel-level flood exposure.
+              </p>
+            </div>
+          </div>
+        )}
 
         {/* Climate Twin — nearest present-day analog from the grounded catalog */}
         <div style={{ ...card, padding: 18, marginBottom: 14, borderLeft: `3px solid ${PURPLE}` }}>
