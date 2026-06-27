@@ -37,6 +37,14 @@ const FIVE_YEAR_CHECKPOINTS = Array.from({ length: 15 }, (_, i) => 2030 + i * 5)
 const CHECKPOINTS = Array.from(new Set([BASELINE_YEAR, CURRENT_FORECAST_YEAR, ...FIVE_YEAR_CHECKPOINTS])).sort((a, b) => a - b);
 const YEAR_TICKS = CHECKPOINTS;
 const QUICK_YEAR_BUTTONS = Array.from(new Set([CURRENT_FORECAST_YEAR, 2030, 2050, 2075, 2100].filter((year) => year >= CURRENT_FORECAST_YEAR)));
+const SCENARIOS = [
+  { id: "ssp126", label: "SSP1-2.6", caption: "low emissions; strong mitigation" },
+  { id: "ssp245", label: "SSP2-4.5", caption: "middle path; current-policy-adjacent reference" },
+  { id: "ssp370", label: "SSP3-7.0", caption: "high emissions; weak mitigation stress case" },
+  { id: "ssp585", label: "SSP5-8.5", caption: "very high emissions; low-likelihood stress test" },
+] as const;
+type ScenarioId = (typeof SCENARIOS)[number]["id"];
+const DEFAULT_SCENARIO: ScenarioId = "ssp245";
 
 // ── Types ────────────────────────────────────────────────────────────────────
 interface ClimateLocation {
@@ -160,6 +168,14 @@ function computeSnapshot(traj: Trajectory, year: number): Snapshot {
 
 function shortName(loc: ClimateLocation) {
   return loc.city || loc.name.split(",")[0];
+}
+
+function scenarioInfo(id: ScenarioId) {
+  return SCENARIOS.find((scenario) => scenario.id === id) ?? SCENARIOS.find((scenario) => scenario.id === DEFAULT_SCENARIO)!;
+}
+
+function parseScenario(id: string): ScenarioId {
+  return (SCENARIOS.some((scenario) => scenario.id === id) ? id : DEFAULT_SCENARIO) as ScenarioId;
 }
 
 // ── Mini components ────────────────────────────────────────────────────────
@@ -391,6 +407,7 @@ export default function ClimateComparison({ onBack }: ClimateComparisonProps) {
   const [selectedLocations, setSelectedLocations] = useState<ClimateLocation[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [year, setYear] = useState(CURRENT_FORECAST_YEAR);
+  const [scenario, setScenario] = useState<ScenarioId>(DEFAULT_SCENARIO);
   const [trajectories, setTrajectories] = useState<Trajectory[]>([]);
   const [isComparing, setIsComparing] = useState(false);
   const [logs, setLogs] = useState<string[]>([]);
@@ -401,6 +418,12 @@ export default function ClimateComparison({ onBack }: ClimateComparisonProps) {
 
   const addLog = (message: string) => {
     setLogs((prev) => [...prev, `${new Date().toLocaleTimeString()}: ${message}`]);
+  };
+
+  const changeScenario = (nextScenario: ScenarioId) => {
+    setScenario(nextScenario);
+    setTrajectories([]);
+    addLog(`Scenario changed to ${scenarioInfo(nextScenario).label}; run comparison again`);
   };
 
   // Search for locations
@@ -429,6 +452,7 @@ export default function ClimateComparison({ onBack }: ClimateComparisonProps) {
           body: JSON.stringify({
             coordinates: { lat: location.lat, lng: location.lng },
             years: CHECKPOINTS,
+            scenario,
           }),
         });
         if (!response.ok) {
@@ -495,7 +519,7 @@ export default function ClimateComparison({ onBack }: ClimateComparisonProps) {
     }
     setIsComparing(true);
     setTrajectories([]);
-    addLog(`Starting comparison for ${selectedLocations.length} locations (real model, ${CHECKPOINTS.length} checkpoints each)`);
+    addLog(`Starting ${scenarioInfo(scenario).label} comparison for ${selectedLocations.length} locations (real model, ${CHECKPOINTS.length} checkpoints each)`);
     compareLocationsMutation.mutate();
   };
 
@@ -507,6 +531,7 @@ export default function ClimateComparison({ onBack }: ClimateComparisonProps) {
   );
   const colors = trajectories.map((t) => t.color);
   const names = trajectories.map((t) => shortName(t.location));
+  const selectedScenario = scenarioInfo(scenario);
 
   const ranked = useMemo(
     () => snapshots.map((s, i) => ({ s, i })).sort((a, b) => b.s.score - a.s.score),
@@ -591,9 +616,25 @@ export default function ClimateComparison({ onBack }: ClimateComparisonProps) {
                   </p>
                 </div>
               </div>
-              <Badge variant="outline" className="text-lg px-3 py-1">
-                {selectedLocations.length}/10 locations
-              </Badge>
+              <div className="flex items-center gap-3 flex-wrap justify-end">
+                <div className="flex flex-col gap-1 min-w-[220px]">
+                  <Label htmlFor="comparison-scenario" className="text-xs text-gray-400">Scenario</Label>
+                  <select
+                    id="comparison-scenario"
+                    value={scenario}
+                    onChange={(e) => changeScenario(parseScenario(e.target.value))}
+                    disabled={isComparing}
+                    className="h-9 rounded-md border border-slate-700 bg-slate-950 px-3 text-sm font-semibold text-white"
+                    aria-label="Climate comparison scenario"
+                  >
+                    {SCENARIOS.map((s) => <option key={s.id} value={s.id}>{s.label}</option>)}
+                  </select>
+                  <span className="text-xs text-gray-400">{selectedScenario.caption}</span>
+                </div>
+                <Badge variant="outline" className="text-lg px-3 py-1">
+                  {selectedLocations.length}/10 locations
+                </Badge>
+              </div>
             </div>
           </CardHeader>
         </Card>
@@ -717,7 +758,7 @@ export default function ClimateComparison({ onBack }: ClimateComparisonProps) {
       {hasResults && (
         <>
           {/* Sticky Year Slider */}
-          <div style={{ position: "sticky", top: "48px", zIndex: 45, background: "rgba(8,11,18,0.97)", borderBottom: `1px solid ${BORDER}`, backdropFilter: "blur(20px)", marginTop: 24 }}>
+          <div style={{ position: "sticky", top: 0, zIndex: 45, background: "rgba(8,11,18,0.97)", borderBottom: `1px solid ${BORDER}`, backdropFilter: "blur(20px)", marginTop: 24 }}>
             <div style={{ maxWidth: 1280, margin: "0 auto", padding: "10px 20px 20px" }}>
               <div style={{ display: "flex", alignItems: "center", gap: 14, flexWrap: "wrap" }}>
                 <div style={{ display: "flex", gap: 4 }}>

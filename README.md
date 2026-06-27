@@ -31,8 +31,15 @@ npm run verify:live
 ## Key docs
 
 - `AGENTS.md` - contributor and agent operating guide
+- `CONTRIBUTING.md` - contribution rules and validation checklist
 - `docs/PLAN.md` - current delivery plan and handoff status
 - `docs/PRODUCT_REQUIREMENTS.md` - educational/research product requirements and public-launch criteria
 - `docs/architecture/TECHNICAL_DESIGN.md` - Replit-scale serving architecture and performance targets
 - `docs/architecture/SCIENTIFIC_GROUNDING.md` - source and method map
 - `CODEX_HANDOVER.md` - latest operational handoff notes
+
+## License
+
+Code is released under the MIT License. Source datasets may have separate
+licenses and attribution requirements; see `data/source-registry.json` and
+`docs/architecture/SCIENTIFIC_GROUNDING.md` before redistributing derived data.
