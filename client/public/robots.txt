@@ -1,6 +1,7 @@
 User-agent: *
 Allow: /
 Allow: /comparison
+Allow: /methodology
 Disallow: /api/
 
-Sitemap: https://climate-projections.replit.app/sitemap.xml
+Sitemap: https://fupit.com/sitemap.xml

@@ -1,0 +1,92 @@
+{
+  "format": "fupit-worldclim-observed-baseline-v1",
+  "encoding": "int16",
+  "shuffle": "low-bytes-then-high-bytes",
+  "grid": {
+    "lat0": 89.91666666666667,
+    "lon0": -179.91666666666666,
+    "dlat": -0.16666666666666666,
+    "dlon": 0.16666666666666666,
+    "nlat": 1080,
+    "nlon": 2160
+  },
+  "fill": -32768,
+  "binary": "worldclim10m.i16.gz",
+  "decoded_bytes": 111974400,
+  "layers": [
+    {
+      "layer": "observed-baseline",
+      "scenario": "temperature",
+      "var": "clim",
+      "unit": "degC",
+      "months": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12
+      ],
+      "scale": 0.01,
+      "fill": -32768,
+      "shape": [
+        12,
+        1080,
+        2160
+      ],
+      "offset": 0,
+      "bytes": 55987200,
+      "source": "WorldClim v2.1 current conditions, 10 arc-minute monthly climatology (1970-2000); Fick & Hijmans 2017"
+    },
+    {
+      "layer": "observed-baseline",
+      "scenario": "precipitation",
+      "var": "clim",
+      "unit": "mm/month",
+      "months": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12
+      ],
+      "scale": 0.1,
+      "fill": -32768,
+      "shape": [
+        12,
+        1080,
+        2160
+      ],
+      "offset": 55987200,
+      "bytes": 55987200,
+      "source": "WorldClim v2.1 current conditions, 10 arc-minute monthly climatology (1970-2000); Fick & Hijmans 2017"
+    }
+  ],
+  "source": {
+    "name": "WorldClim v2.1 current conditions",
+    "period": "1970-2000",
+    "resolution": "10 arc-minutes",
+    "variables": [
+      "monthly average temperature",
+      "monthly precipitation"
+    ],
+    "urls": {
+      "temperature": "https://geodata.ucdavis.edu/climate/worldclim/2_1/base/wc2.1_10m_tavg.zip",
+      "precipitation": "https://geodata.ucdavis.edu/climate/worldclim/2_1/base/wc2.1_10m_prec.zip"
+    },
+    "citation": "Fick, S.E. and Hijmans, R.J. (2017), International Journal of Climatology"
+  }
+}

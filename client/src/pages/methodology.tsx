@@ -20,20 +20,20 @@ export default function Methodology() {
           </p>
         </header>
 
-        <Card>
-          <CardContent className="prose prose-sm max-w-none pt-6">
+        <Card className="bg-white text-gray-900">
+          <CardContent className="prose prose-sm prose-slate max-w-none pt-6">
             <h2>What the forecast is built from</h2>
             <ul>
               <li>
-                <strong>Temperature, precipitation, humidity change</strong> — CMIP6, the
+                <strong>Temperature and precipitation change</strong> — CMIP6, the
                 model ensemble behind the IPCC Sixth Assessment Report. We take the
                 multi-model average change for each scenario, decade by decade to 2100.
               </li>
               <li>
-                <strong>Present-day baseline</strong> — the CMIP6 historical average for
-                1995 to 2014, by calendar month. Future absolute values are this baseline
-                plus the modeled change. (This baseline is from models, not direct
-                observations; see the honesty note below.)
+                <strong>Present-day baseline</strong> — WorldClim v2.1 observed monthly
+                climatology at 10 arc-minutes for 1970 to 2000 where land data is
+                available, with CMIP6 historical monthly climatology as the fallback.
+                Future absolute values are this baseline plus the modeled change.
               </li>
               <li>
                 <strong>Sea-level rise</strong> — IPCC AR6 regional projections, per
@@ -52,8 +52,8 @@ export default function Methodology() {
               evidence support. The IPCC did not simply average the raw models; it adjusted
               its assessed warming toward observations. We do the same: for temperature we
               show both the raw model average and the IPCC-calibrated value, and default to
-              the calibrated one. Precipitation and humidity have no comparable single
-              assessed anchor, so we show them as model average plus spread, labeled as such.
+              the calibrated one. Precipitation has no comparable single assessed anchor,
+              so we show it as model average plus spread, labeled as such.
               We do not fabricate a calibration we cannot ground.
             </p>
 
@@ -101,10 +101,10 @@ export default function Methodology() {
             <h2>Honesty notes</h2>
             <ul>
               <li>
-                The present-day baseline comes from climate models, which carry local biases
-                of a few degrees. The <em>change</em> signal — the product's actual claim — is
-                kept observation-constrained through the IPCC calibration. Replacing the
-                baseline with a direct-observation product is a planned upgrade.
+                The observed baseline uses WorldClim's 1970 to 2000 climatology, while
+                CMIP6 deltas are referenced to 1995 to 2014. We disclose that period
+                mismatch in the projection receipt instead of hiding it. The <em>change</em>
+                signal is kept observation-constrained through the IPCC calibration.
               </li>
               <li>
                 The extreme-index dataset is marked by its providers as no longer actively
@@ -118,8 +118,9 @@ export default function Methodology() {
             </ul>
 
             <p className="text-gray-500">
-              Sources: IPCC AR6 Working Group I; CMIP6 (Eyring et al. 2016); ETCCDI indices
-              (Sillmann et al. 2013); IPCC AR6 sea-level projections.
+              Sources: WorldClim v2.1 (Fick & Hijmans 2017); IPCC AR6 Working Group I;
+              CMIP6 (Eyring et al. 2016); ETCCDI indices (Sillmann et al. 2013); IPCC
+              AR6 sea-level projections.
             </p>
           </CardContent>
         </Card>

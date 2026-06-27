@@ -1,13 +1,19 @@
-# Climate Projections Explorer
-> Public tool for exploring future climate projections and comparing locations worldwide.
+# fupit
+> Public climate and habitability projection app for any location worldwide, built from grounded climate datasets.
 
 ## About
-Climate Projections Explorer is a free, public web application that lets anyone search for any location on Earth and view projected climate data — including temperature trends, precipitation changes, and risk assessments — using advanced climate modeling data. No account required.
+fupit is a free public web application that lets anyone search for a location on Earth and view future climate and habitability projections to 2100. The serving engine uses an offline CMIP6/IPCC grid, NASA/IPCC sea-level projections, and ETCCDI extreme-climate indices. No account required.
+
+Numbers must be traceable to source data and documented methods. If a value cannot be grounded, fupit should omit it rather than fabricate it.
+
+Source repository: https://github.com/MikkoParkkola/climate
+Builder profile: https://github.com/MikkoParkkola
 
 ## Priority Pages
 
 / : Single-location climate projection tool — search for a city or place and explore its projected future climate across multiple decades and emissions scenarios.
 /comparison : Multi-location climate comparison page — compare climate projections side-by-side for two or more locations to understand regional differences.
+/methodology : Methodology and source page — explains CMIP6/IPCC data, IPCC calibration, sea-level inputs, ETCCDI extremes, risk thresholds, habitability scoring, and known limitations.
 
 ## Audience
-General public, researchers, journalists, educators, and policymakers interested in understanding how climate change may affect specific locations.
+General public, researchers, journalists, educators, planners, and policymakers interested in how climate change may affect specific locations.

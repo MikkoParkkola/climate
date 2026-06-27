@@ -75,10 +75,9 @@ export const climateProjections = pgTable("climate_projections", {
   fetchedAt: timestamp("fetched_at").defaultNow(),
 });
 
-// Lossless cache of raw climate-model output, keyed by a rounded coordinate
-// grid + year. Lets repeat/near-identical requests reuse a previous model run
-// instead of re-spawning the (slow) Python model. Stores the full projection
-// JSON so no fields are lost vs. the flattened climate_projections table.
+// Lossless cache of raw climate-model output, keyed by rounded coordinate grid
+// + year at the DB index, and versioned inside the JSON payload. Old payloads
+// from previous model/data versions are ignored and overwritten on recompute.
 export const climateModelCache = pgTable(
   "climate_model_cache",
   {
@@ -86,7 +85,7 @@ export const climateModelCache = pgTable(
     latKey: real("lat_key").notNull(),
     lngKey: real("lng_key").notNull(),
     year: integer("year").notNull(),
-    projection: text("projection").notNull(), // full model output, JSON-encoded
+    projection: text("projection").notNull(), // version envelope + full model output
     createdAt: timestamp("created_at").defaultNow(),
   },
   (t) => ({

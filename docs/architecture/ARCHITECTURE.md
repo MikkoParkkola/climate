@@ -19,7 +19,8 @@
   │   ├─ fetch_cmip6.py      Copernicus CDS API → NetCDF (per SSP)   │
   │   ├─ fetch_sealevel.py   NASA AR6 archive (Zenodo) → per-point   │
   │   ├─ fetch_atlas.py      IPCC-WG1/Atlas CSV (region aggregates)  │
-  │   ├─ baseline.py         NOAA climatology (present-day anchor)   │
+  │   ├─ build_worldclim_baseline.py  WorldClim observed baseline    │
+  │   ├─ baseline_monthly.py CMIP6 historical fallback baseline      │
   │   ├─ build_grid.py       regrid → global lat/lng grid ×          │
   │   │                      {decade 2030..2100} × {SSP1-2.6,        │
   │   │                      SSP2-4.5, SSP5-8.5}; derive risk        │
@@ -59,8 +60,9 @@ keep only the reduced signal, discard raw immediately.
    Peak transient disk = a few GB, never accumulating. No raw archive kept.
 2. **Store change-factors, not state:** persist only the *anomaly* (delta vs the
    1995–2014 baseline) per cell — not full time series, not absolute fields. Local
-   absolute values are reconstructed at query time from the observed baseline (delta
-   method above), so stored maps can be coarse + small.
+   absolute values are reconstructed at query time from the WorldClim observed
+   baseline where available, with CMIP6 historical climatology as fallback, so
+   stored maps can be coarse + small.
 3. **Decade anchors + interpolation:** store 2030…2100 by decade; interpolate in-between
    years on read. ~8 time slices, not 75.
 4. **Quantize:** encode as scaled int16 with per-variable scale/offset (e.g. temp ×10).
@@ -100,8 +102,8 @@ Extend `climate_model_cache` (or a new `climate_grid` table):
 Global models work on ~100 km cells — too blurry for a single searched point. The
 scientifically standard fix is **delta downscaling**, not a generative model:
 
-1. Take the **real observed present-day climate** for the exact point (NOAA station/
-   climatology — already wired, high local fidelity).
+1. Take the **real observed present-day climate** for the exact point (WorldClim
+   v2.1 10 arc-minute monthly climatology, 1970-2000, where land baseline exists).
 2. Take the **change signal** from the CMIP6 ensemble for that region (e.g. +3.1 °C,
    +8% precip by 2100 under a scenario). Models are blurry on *absolute* values but
    reliable on the *anomaly* (the change).
@@ -125,6 +127,6 @@ the delta method above is the accuracy mechanism. Not on the v1 critical path.
 
 ## Validation (Phase 5)
 
-- **Hindcast:** generate present-day (2020s) values from the pipeline, compare to NOAA/ERA5 observations; publish error stats.
+- **Hindcast:** generate present-day (2020s) values from the pipeline, compare to independent NOAA/ERA5 observations; publish error stats.
 - **Anchor check:** global-mean of the grid under each SSP at 2100 must match AR6 Table SPM.1 within range.
 - Layered verification per `.agents/memory/e2e-real-model-timeout.md` — endpoint JSON asserts + build + screenshot, not one giant e2e.

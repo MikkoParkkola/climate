@@ -13,30 +13,31 @@ interface ApiKeyManagerProps {
   className?: string;
 }
 
+interface ApiKeyStatus {
+  nvidiaApiKey: boolean;
+  cbottleApiKey: boolean;
+}
+
 export default function ApiKeyManager({ className = "" }: ApiKeyManagerProps) {
   const [showNvidiaKey, setShowNvidiaKey] = useState(false);
-  const [showCBottleKey, setShowCBottleKey] = useState(false);
+  const [showSecondaryKey, setShowSecondaryKey] = useState(false);
   const [nvidiaKey, setNvidiaKey] = useState("");
-  const [cbottleKey, setCBottleKey] = useState("");
+  const [secondaryKey, setSecondaryKey] = useState("");
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  const { data: currentKeys, isLoading } = useQuery({
+  const { data: currentKeys, isLoading } = useQuery<ApiKeyStatus>({
     queryKey: ['/api/user/keys'],
   });
 
   const saveKeysMutation = useMutation({
     mutationFn: async (keys: { nvidiaApiKey?: string; cbottleApiKey?: string }) => {
-      return await apiRequest('/api/user/keys', {
-        method: 'PUT',
-        body: JSON.stringify(keys),
-        headers: { 'Content-Type': 'application/json' },
-      });
+      return await apiRequest("PUT", "/api/user/keys", keys);
     },
     onSuccess: () => {
       toast({
-        title: "API Keys Saved",
-        description: "Your API keys have been securely saved and will be used for climate projections.",
+        title: "Settings Saved",
+        description: "External API keys are retired for grounded projections; saved values are ignored by the current model.",
       });
       queryClient.invalidateQueries({ queryKey: ['/api/user/keys'] });
     },
@@ -50,7 +51,7 @@ export default function ApiKeyManager({ className = "" }: ApiKeyManagerProps) {
   });
 
   const handleSave = () => {
-    if (!nvidiaKey && !cbottleKey) {
+    if (!nvidiaKey && !secondaryKey) {
       toast({
         title: "No Keys Provided",
         description: "Please enter at least one API key to save.",
@@ -61,7 +62,7 @@ export default function ApiKeyManager({ className = "" }: ApiKeyManagerProps) {
 
     saveKeysMutation.mutate({
       nvidiaApiKey: nvidiaKey || undefined,
-      cbottleApiKey: cbottleKey || undefined,
+      cbottleApiKey: secondaryKey || undefined,
     });
   };
 
@@ -81,29 +82,29 @@ export default function ApiKeyManager({ className = "" }: ApiKeyManagerProps) {
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <AlertCircle className="h-5 w-5" />
-          API Key Management
+          Retired API Key Settings
         </CardTitle>
         <CardDescription>
-          Securely manage your climate API keys for enhanced projections
+          External model keys are no longer used for grounded projections
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
         <Alert>
           <AlertCircle className="h-4 w-4" />
           <AlertDescription>
-            Your API keys are encrypted and stored securely. They enable access to advanced climate models 
-            including NVIDIA Earth-2 Studio and CBottle for authentic climate projections.
+            fupit now serves projections from the offline CMIP6/IPCC grid. This legacy panel remains for old
+            saved settings only; new forecasts do not call external climate APIs.
           </AlertDescription>
         </Alert>
 
         <div className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="nvidia-key">NVIDIA Earth-2 Studio API Key</Label>
+            <Label htmlFor="nvidia-key">Retired external model key</Label>
             <div className="relative">
               <Input
                 id="nvidia-key"
                 type={showNvidiaKey ? "text" : "password"}
-                placeholder={currentKeys?.nvidiaApiKey ? "••••••••••••••••" : "Enter your NVIDIA API key"}
+                placeholder={currentKeys?.nvidiaApiKey ? "Saved legacy key" : "Not used by grounded model"}
                 value={nvidiaKey}
                 onChange={(e) => setNvidiaKey(e.target.value)}
                 className="pr-10"
@@ -119,19 +120,19 @@ export default function ApiKeyManager({ className = "" }: ApiKeyManagerProps) {
               </Button>
             </div>
             <p className="text-sm text-muted-foreground">
-              Get your key from NVIDIA's Earth-2 Studio platform
+              This key is ignored by the current grounded model.
             </p>
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="cbottle-key">CBottle Climate API Key</Label>
+            <Label htmlFor="cbottle-key">Retired secondary model key</Label>
             <div className="relative">
               <Input
                 id="cbottle-key"
-                type={showCBottleKey ? "text" : "password"}
-                placeholder={currentKeys?.cbottleApiKey ? "••••••••••••••••" : "Enter your CBottle API key"}
-                value={cbottleKey}
-                onChange={(e) => setCBottleKey(e.target.value)}
+                type={showSecondaryKey ? "text" : "password"}
+                placeholder={currentKeys?.cbottleApiKey ? "Saved legacy key" : "Not used by grounded model"}
+                value={secondaryKey}
+                onChange={(e) => setSecondaryKey(e.target.value)}
                 className="pr-10"
               />
               <Button
@@ -139,13 +140,13 @@ export default function ApiKeyManager({ className = "" }: ApiKeyManagerProps) {
                 variant="ghost"
                 size="sm"
                 className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
-                onClick={() => setShowCBottleKey(!showCBottleKey)}
+                onClick={() => setShowSecondaryKey(!showSecondaryKey)}
               >
-                {showCBottleKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                {showSecondaryKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
               </Button>
             </div>
             <p className="text-sm text-muted-foreground">
-              Get your key from CBottle's climate modeling service
+              This key is ignored by the current grounded model.
             </p>
           </div>
         </div>
@@ -169,14 +170,14 @@ export default function ApiKeyManager({ className = "" }: ApiKeyManagerProps) {
           {currentKeys?.nvidiaApiKey && (
             <div className="flex items-center gap-1 text-sm text-green-600">
               <Check className="h-4 w-4" />
-              NVIDIA key saved
+              Legacy key saved
             </div>
           )}
           
           {currentKeys?.cbottleApiKey && (
             <div className="flex items-center gap-1 text-sm text-green-600">
               <Check className="h-4 w-4" />
-              CBottle key saved
+              Legacy secondary key saved
             </div>
           )}
         </div>

@@ -8,7 +8,7 @@
 
     <title>fupit — see where the climate is still livable</title>
     <meta name="description" content="Climate projections for any place on Earth, year by year to 2100. Compare locations to find where stays livable — then help f*** up the forecast." />
-    <link rel="canonical" href="https://global-geo-selector-mikkoparkkola.replit.app/" />
+    <link rel="canonical" href="https://fupit.com/" />
 
     <!-- Icons -->
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
@@ -19,15 +19,15 @@
     <meta property="og:site_name" content="fupit" />
     <meta property="og:title" content="fupit — see where the climate is still livable" />
     <meta property="og:description" content="Climate projections for any place on Earth, year by year to 2100. Compare locations to find where stays livable — then help f*** up the forecast." />
-    <meta property="og:url" content="https://global-geo-selector-mikkoparkkola.replit.app/" />
-    <meta property="og:image" content="https://global-geo-selector-mikkoparkkola.replit.app/og-image.png" />
+    <meta property="og:url" content="https://fupit.com/" />
+    <meta property="og:image" content="https://fupit.com/og-image.png" />
     <meta property="og:image:alt" content="fupit — climate projections to 2100, find where stays livable" />
 
     <!-- Twitter -->
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:title" content="fupit — see where the climate is still livable" />
     <meta name="twitter:description" content="Climate projections for any place on Earth, year by year to 2100. Compare locations to find where stays livable — then help f*** up the forecast." />
-    <meta name="twitter:image" content="https://global-geo-selector-mikkoparkkola.replit.app/og-image.png" />
+    <meta name="twitter:image" content="https://fupit.com/og-image.png" />
 
     <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -41,32 +41,37 @@
       "@graph": [
         {
           "@type": "WebSite",
-          "@id": "https://global-geo-selector-mikkoparkkola.replit.app/#website",
+          "@id": "https://fupit.com/#website",
           "name": "fupit",
-          "url": "https://global-geo-selector-mikkoparkkola.replit.app/",
-          "description": "Climate projections for any place on Earth, year by year to 2100. Compare locations to find where stays livable."
+          "url": "https://fupit.com/",
+          "description": "Climate projections for any place on Earth, year by year to 2100. Compare locations to find where stays livable.",
+          "sameAs": ["https://github.com/MikkoParkkola/climate"]
         },
         {
           "@type": "Organization",
-          "@id": "https://global-geo-selector-mikkoparkkola.replit.app/#org",
+          "@id": "https://fupit.com/#org",
           "name": "fupit",
-          "url": "https://global-geo-selector-mikkoparkkola.replit.app/",
-          "logo": "https://global-geo-selector-mikkoparkkola.replit.app/favicon.svg"
+          "url": "https://fupit.com/",
+          "logo": "https://fupit.com/favicon.svg",
+          "sameAs": ["https://github.com/MikkoParkkola/climate", "https://github.com/MikkoParkkola"]
         },
         {
           "@type": "WebApplication",
           "name": "fupit",
-          "url": "https://global-geo-selector-mikkoparkkola.replit.app/",
+          "url": "https://fupit.com/",
           "applicationCategory": "EducationalApplication",
           "operatingSystem": "All",
           "browserRequirements": "Requires JavaScript",
           "description": "Climate projections for any place on Earth, year by year to 2100. Compare locations to find where stays livable — then help f*** up the forecast.",
           "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
-          "publisher": { "@id": "https://global-geo-selector-mikkoparkkola.replit.app/#org" },
+          "publisher": { "@id": "https://fupit.com/#org" },
+          "creator": { "@type": "Person", "name": "Mikko Parkkola", "url": "https://github.com/MikkoParkkola" },
+          "sameAs": ["https://github.com/MikkoParkkola/climate", "https://github.com/MikkoParkkola"],
+          "codeRepository": "https://github.com/MikkoParkkola/climate",
           "featureList": [
             "Search any location worldwide by city name or coordinates",
             "View projected average temperature and temperature change",
-            "Explore annual precipitation and humidity forecasts",
+            "Explore annual precipitation forecasts and model-spread ranges",
             "Assess heat stress, drought, and flooding risk scores",
             "Compare habitability rankings across global cities",
             "Download climate projection reports as CSV or PDF"
@@ -78,12 +83,12 @@
 
     <!-- Per-route WebPage schema (id="page-schema").
          In production, the Express server (server/routes.ts → makeSeoHandler)
-         registers app.get("/") and app.get("/comparison") handlers BEFORE
+         registers public route handlers BEFORE
          express.static runs. Each handler reads this built file and rewrites
-         the title, meta description, canonical, OG, Twitter, and this script
-         tag for the requested route, so social crawlers and search engines
-         receive route-specific head tags on the first HTTP byte. -->
-    <script type="application/ld+json" id="page-schema">{"@context":"https://schema.org","@type":"WebPage","name":"fupit — see where the climate is still livable","description":"Climate projections for any place on Earth, year by year to 2100. Compare locations to find where stays livable — then help f*** up the forecast.","url":"https://global-geo-selector-mikkoparkkola.replit.app/","isPartOf":{"@id":"https://global-geo-selector-mikkoparkkola.replit.app/#website"}}</script>
+         the title, meta description, canonical, OG, Twitter, this script tag,
+         and semantic root body for the requested route, so social crawlers and
+         search engines receive route-specific content on the first HTTP byte. -->
+    <script type="application/ld+json" id="page-schema">{"@context":"https://schema.org","@type":"WebPage","name":"fupit — see where the climate is still livable","description":"Climate projections for any place on Earth, year by year to 2100. Compare locations to find where stays livable — then help f*** up the forecast.","url":"https://fupit.com/","isPartOf":{"@id":"https://fupit.com/#website"},"author":{"@type":"Person","name":"Mikko Parkkola","url":"https://github.com/MikkoParkkola"},"sameAs":["https://github.com/MikkoParkkola/climate"]}</script>
   </head>
   <body>
     <div id="root"></div>
@@ -102,14 +107,14 @@
         <ul>
           <li>Search any location worldwide by city name or coordinates</li>
           <li>View projected average temperature and temperature change</li>
-          <li>Explore annual precipitation and humidity forecasts</li>
+          <li>Explore annual precipitation forecasts and model-spread ranges</li>
           <li>Assess heat stress, drought, and flooding risk scores</li>
           <li>Compare habitability rankings across global cities</li>
           <li>Download climate projection reports as CSV or PDF</li>
         </ul>
         <h2>How It Works</h2>
-        <p>Our climate model integrates advanced scientific datasets to project future conditions at any point on Earth. Select a target year between now and 2100, enter a location, and receive detailed projections with a Livability Index score from 0 to 100.</p>
-        <p><a href="/comparison">Compare multiple locations side-by-side</a> to evaluate how different cities or regions are expected to change over time.</p>
+        <p>fupit serves projections from a grounded CMIP6/IPCC grid, with NASA/IPCC sea-level data and ETCCDI extreme-climate indices. Select a target year between now and 2100, enter a location, and receive detailed projections with a habitability score from 0 to 100.</p>
+        <p><a href="/comparison">Compare multiple locations side-by-side</a>, read <a href="/methodology">the full methodology</a>, or inspect <a href="https://github.com/MikkoParkkola/climate">the source on GitHub</a>.</p>
         <p><strong>Note:</strong> This application requires JavaScript to run. Please enable JavaScript in your browser.</p>
       </main>
     </noscript>

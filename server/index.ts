@@ -1,5 +1,6 @@
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
+import { storage } from "./storage";
 import { setupVite, serveStatic, log } from "./vite";
 
 const app = express();
@@ -37,6 +38,15 @@ app.use((req, res, next) => {
 });
 
 (async () => {
+  try {
+    const purgedRows = await storage.purgeIncompatibleModelCache();
+    if (purgedRows > 0) {
+      log(`purged ${purgedRows} incompatible climate_model_cache rows`);
+    }
+  } catch (err) {
+    log(`failed to purge incompatible climate_model_cache rows: ${(err as Error).message}`);
+  }
+
   const server = await registerRoutes(app);
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
@@ -56,14 +66,12 @@ app.use((req, res, next) => {
     serveStatic(app);
   }
 
-  // ALWAYS serve the app on port 5000
-  // this serves both the API and the client.
-  // It is the only port that is not firewalled.
-  const port = 5000;
+  // Replit expects port 5000 by default; PORT lets local/prod smoke tests avoid
+  // host-level conflicts without changing the deployment contract.
+  const port = Number(process.env.PORT || 5000);
   server.listen({
     port,
     host: "0.0.0.0",
-    reusePort: true,
   }, () => {
     log(`serving on port ${port}`);
   });

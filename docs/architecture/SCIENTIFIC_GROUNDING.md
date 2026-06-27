@@ -22,7 +22,8 @@ NVIDIA cBottle ("Climate in a Bottle") is a diffusion-based generative emulator 
 | **Copernicus CDS — Climate Atlas** | Regional/gridded temperature & precipitation by SSP and warming level | NetCDF via `cdsapi`; tidy CSV via [IPCC-WG1/Atlas](https://github.com/IPCC-WG1/Atlas) | Free (CDS account) |
 | **Copernicus CDS — CMIP6 / ScenarioMIP** | Raw model projections 2015–2100, all variables, per SSP | NetCDF via `cdsapi`; raw on [ESGF](https://esgf-node.llnl.gov) | Free (CDS account) |
 | **NASA AR6 Sea Level Projection Tool** | Per-location sea-level rise, per scenario, 2020–2150, per-process | Per-point download; archive on Zenodo ([5914710](https://zenodo.org/records/5914710), [6382554](https://zenodo.org/records/6382554)) | Open, DOI-cited |
-| **NOAA / observational climatology** | Present-day baseline (already used) | NOAA CDO API | Public |
+| **WorldClim v2.1 observed climatology** | Present-day monthly land baseline (10 arc-minutes, 1970-2000) | WorldClim GeoTIFFs | Public, citable |
+| **CMIP6 historical climatology** | Fallback baseline where observed land baseline is unavailable | Copernicus CDS / CMIP6 | Public |
 | **cBottle** (optional, later) | High-res spatial texture / present-climate sampling — **only** if driven by scenario SST; unvalidated; license-gated | HF `nvidia/cbottle` (14.4 GB), self-hosted GPU | **eval/R&D-only** |
 
 ## IPCC AR6 anchor numbers (best estimate; very-likely range, °C vs 1850–1900)
@@ -65,8 +66,9 @@ how much the models are tuned down, so users understand the two are not the same
   expressed vs 1995–2014) and stores it. `calibrated_delta = k × raw_delta`.
 - Serve `{ modelConsensus, ipccCalibrated, adjustment, adjustmentPct, modelSpread, method, source }`.
 - **Scope honesty:** temperature has clean AR6 assessed anchors → calibrate it. Precipitation /
-  humidity have **no** comparable single assessed anchor → show as "model consensus + spread,"
-  labeled as such; do **not** fabricate a calibration we cannot ground (cardinal rule).
+  other variables have **no** comparable single assessed anchor → show as "model consensus
+  + spread," labeled as such; do **not** fabricate a calibration we cannot ground
+  (cardinal rule).
 - The exact assessed-vs-1995–2014 reference values (not the −0.85 °C approximation) are pinned
   in the Phase 5 validation step before these numbers are served.
 
@@ -87,9 +89,9 @@ how much the models are tuned down, so users understand the two are not the same
 
 | Served variable | Source + method |
 |---|---|
-| Avg temperature / change | CMIP6 multi-model regional anomaly under chosen SSP, added to NOAA baseline. Atlas for region aggregation. |
-| Precipitation / change | CMIP6 regional precip change %, per SSP. |
-| Humidity / change | CMIP6 near-surface relative/specific humidity, per SSP (if available; else mark estimate). |
+| Avg temperature / change | CMIP6 multi-model regional anomaly under chosen SSP, added to WorldClim observed monthly baseline where available; CMIP6 historical fallback otherwise. |
+| Precipitation / change | CMIP6 regional precip change %, per SSP, applied to WorldClim observed monthly precipitation where available; CMIP6 historical fallback otherwise. |
+| Humidity / change | **Not currently served.** If added, use CMIP6 near-surface relative/specific humidity per SSP and label it as model consensus + spread; do not fabricate an assessed calibration. |
 | Sea level / coastal flooding | NASA AR6 Sea Level tool, per-location, per-SSP. |
 | Heat-stress / drought / flood risk | Derived from CMIP6 ETCCDI extreme indices (`ingest/fetch_extremes.py`) — **not** from mean fields. Scored at **serve time** against absolute cited thresholds. **See "Risk index grounding (serve-time)" below.** |
 | Habitability score & breakdown | Transparent weighted composite of the above — weights documented and shown to the user. Not a hidden black box. |
@@ -120,7 +122,8 @@ never a hidden black box.
 
 ```
 absolute_future(cell, scenario, decade)
-    = observed_baseline(cell)            # NOAA/ERA5 1995–2014 climatology (baseline.py)
+    = observed_baseline(cell)            # WorldClim v2.1 1970-2000 climatology where available
+      or cmip6_model_baseline(cell)      # 1995-2014 fallback where observed land data is absent
     + ensemble_delta(cell, scenario, decade)   # ingest/extreme-<idx>__<scenario>.nc
 score_0_100 = piecewise_linear(absolute_future, threshold_band)   # cited band, below
 shown_to_user = { raw_value, unit, threshold_cited, scenario, uncertainty_range }

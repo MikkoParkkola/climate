@@ -1,9 +1,5 @@
 import { useState, useEffect, useMemo, useRef } from "react";
-import { GitCompare, Loader2, Download, Search, MapPin, ArrowLeft, Play, Pause } from "lucide-react";
-import {
-  agriculturalViability, biodiversityLoss, waterStress, projectedAqi, climateTwin,
-  FALLBACK_BASELINE_AQI, type EstimateInputs,
-} from "@/lib/climate-estimates";
+import { GitCompare, Loader2, Download, Search, MapPin, ArrowLeft, Play, Pause, ShieldCheck, ExternalLink, Share2, Check } from "lucide-react";
 
 // ── Theme ──────────────────────────────────────────────────────────────────
 const BG = "hsl(222,47%,8%)";
@@ -22,6 +18,15 @@ const card: React.CSSProperties = { backgroundColor: CARD, border: `1px solid ${
 
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 const CHECKPOINTS = [2025, 2050, 2075, 2100];
+const SCENARIOS = [
+  { id: "ssp119", label: "SSP1-1.9", caption: "very low emissions" },
+  { id: "ssp126", label: "SSP1-2.6", caption: "low emissions" },
+  { id: "ssp245", label: "SSP2-4.5", caption: "middle of the road" },
+  { id: "ssp370", label: "SSP3-7.0", caption: "high emissions" },
+  { id: "ssp585", label: "SSP5-8.5", caption: "very high emissions" },
+] as const;
+type ScenarioId = (typeof SCENARIOS)[number]["id"];
+const DEFAULT_SCENARIO: ScenarioId = "ssp245";
 
 // ── Types ────────────────────────────────────────────────────────────────────
 interface LocationOption {
@@ -35,13 +40,64 @@ interface LocationOption {
 
 interface ProjectionPoint {
   year: number;
-  temperature: { annual_mean: number; monthly: number[]; anomaly: number; min: number; max: number };
-  precipitation: { annual_total: number; monthly: number[]; anomaly_percent: number };
-  extremes: { heat_stress_days: number; drought_risk: number; flood_risk: number; sea_level_rise_cm?: number };
+  scenario?: string;
+  temperature: {
+    annual_mean: number;
+    monthly: number[];
+    anomaly: number;
+    min: number;
+    max: number;
+    uncertainty?: { annual_mean_low?: number; annual_mean_high?: number; anomaly_spread?: number; method?: string };
+  };
+  precipitation: {
+    annual_total: number;
+    monthly: number[];
+    anomaly_percent: number;
+    uncertainty?: { annual_total_low?: number; annual_total_high?: number; anomaly_percent_spread?: number; method?: string };
+  };
+  extremes: {
+    heat_stress_days: number;
+    drought_risk: number;
+    flood_risk: number;
+    sea_level_rise_cm?: number;
+    detail?: {
+      uncertainty?: {
+        tropical_nights_spread_days?: number;
+        consecutive_dry_days_spread?: number;
+        max_5day_precip_spread_mm?: number;
+        sea_level_low_cm?: number;
+        sea_level_high_cm?: number;
+        method?: string;
+      };
+    };
+  };
   habitability: { score: number; category?: string; breakdown?: Record<string, number> };
   atmospheric_physics?: { circulation_pattern?: string; climate_sensitivity?: number; feedback_mechanisms?: string[] };
   location?: { climate_zone?: string; latitude?: number; longitude?: number };
-  metadata?: { confidence?: string; resolution?: string; model?: string; model_version?: string };
+  metadata?: {
+    confidence?: string;
+    resolution?: string;
+    model?: string;
+    model_version?: string;
+    scenario?: string;
+    baseline?: string;
+    baseline_source?: {
+      temperature?: string;
+      precipitation?: string;
+      observed_period?: string;
+      observed_resolution?: string;
+      observed_citation?: string;
+      delta_reference_period?: string;
+    };
+    projection_method?: string;
+    uncertainty?: {
+      temperature_anomaly_spread_c?: number;
+      precipitation_anomaly_spread_pct?: number;
+      sea_level_low_cm?: number;
+      sea_level_high_cm?: number;
+    };
+    source_trail?: Array<{ label: string; source: string; method: string; citation: string }>;
+  };
 }
 
 // ── Math helpers ─────────────────────────────────────────────────────────────
@@ -63,6 +119,10 @@ function interpScalar(points: ProjectionPoint[], year: number, get: (p: Projecti
     }
   }
   return get(last);
+}
+
+function riskScore(value: number): number {
+  return Math.max(0, Math.min(100, value));
 }
 
 // Interpolate parallel year/value arrays at an arbitrary year.
@@ -110,6 +170,64 @@ function feedbackTag(text: string): { icon: string; label: string; color: string
   if (v.includes("cloud")) return { icon: "☁️", label: short, color: BLUE };
   if (v.includes("vegetation") || v.includes("carbon")) return { icon: "🌱", label: short, color: GREEN };
   return { icon: "🔁", label: short, color: AMBER };
+}
+
+function scenarioInfo(id?: string): { id: ScenarioId; label: string; caption: string } {
+  return SCENARIOS.find((s) => s.id === id) ?? SCENARIOS.find((s) => s.id === DEFAULT_SCENARIO)!;
+}
+
+function parseScenario(id: string | null): ScenarioId {
+  return (SCENARIOS.some((s) => s.id === id) ? id : DEFAULT_SCENARIO) as ScenarioId;
+}
+
+function forecastUrl(location: LocationOption, year: number, scenario: ScenarioId, autoRun = true): string {
+  const url = new URL("/", window.location.origin);
+  url.searchParams.set("lat", location.lat.toFixed(4));
+  url.searchParams.set("lng", location.lng.toFixed(4));
+  url.searchParams.set("place", location.name);
+  if (location.country) url.searchParams.set("country", location.country);
+  url.searchParams.set("year", Math.round(year).toString());
+  url.searchParams.set("scenario", scenario);
+  if (autoRun) url.searchParams.set("run", "1");
+  return url.toString();
+}
+
+function linkLocationFromParams(): { location: LocationOption; year?: number; scenario: ScenarioId; autoRun: boolean } | null {
+  const params = new URLSearchParams(window.location.search);
+  const lat = Number(params.get("lat"));
+  const lng = Number(params.get("lng"));
+  if (!Number.isFinite(lat) || !Number.isFinite(lng) || lat < -90 || lat > 90 || lng < -180 || lng > 180) {
+    return null;
+  }
+  const name = params.get("place") || params.get("location") || `${lat.toFixed(4)}, ${lng.toFixed(4)}`;
+  const year = Number(params.get("year"));
+  return {
+    location: {
+      name,
+      lat,
+      lng,
+      country: params.get("country") || "",
+      city: name.split(",")[0] || name,
+    },
+    year: Number.isInteger(year) && year >= 2025 && year <= 2100 ? year : undefined,
+    scenario: parseScenario(params.get("scenario")),
+    autoRun: params.get("run") === "1",
+  };
+}
+
+async function copyToClipboard(text: string): Promise<void> {
+  if (navigator.clipboard?.writeText) {
+    await navigator.clipboard.writeText(text);
+    return;
+  }
+  const el = document.createElement("textarea");
+  el.value = text;
+  el.style.position = "fixed";
+  el.style.opacity = "0";
+  document.body.appendChild(el);
+  el.select();
+  document.execCommand("copy");
+  document.body.removeChild(el);
 }
 
 // First year (2025–2100) at which an interpolated metric crosses a threshold.
@@ -240,27 +358,6 @@ function ScoreSparkline({ years, data, color, year }: { years: number[]; data: n
   );
 }
 
-// Semicircular gauge for the derived environmental estimates.
-function GaugeMeter({ value, max, color }: { value: number; max: number; color: string }) {
-  const R = 32, cx = 42, cy = 40, sw = 8;
-  const arcLen = Math.PI * R;
-  const pct = Math.max(0, Math.min(1, value / max));
-  const arc = `M ${cx - R} ${cy} A ${R} ${R} 0 0 1 ${cx + R} ${cy}`;
-  return (
-    <svg viewBox="0 0 84 50" style={{ width: 96, height: 56 }}>
-      <path d={arc} fill="none" stroke="rgba(255,255,255,0.08)" strokeWidth={sw} strokeLinecap="round" />
-      <path d={arc} fill="none" stroke={color} strokeWidth={sw} strokeLinecap="round" strokeDasharray={`${pct * arcLen} ${arcLen}`} style={{ transition: "stroke-dasharray 0.35s ease" }} />
-      <text x={cx} y={cy - 4} textAnchor="middle" fontSize="16" fontWeight="800" fill={color}>{Math.round(value)}</text>
-    </svg>
-  );
-}
-
-const ESTIMATE_BADGE: React.CSSProperties = {
-  fontSize: 8.5, fontWeight: 700, letterSpacing: 0.5, color: AMBER,
-  background: "rgba(245,158,11,0.12)", border: "1px solid rgba(245,158,11,0.3)",
-  borderRadius: 4, padding: "2px 6px", marginLeft: "auto",
-};
-
 // ── Main ─────────────────────────────────────────────────────────────────────
 export default function ClimateApp() {
   const [locationText, setLocationText] = useState("");
@@ -268,51 +365,31 @@ export default function ClimateApp() {
   const [suggestions, setSuggestions] = useState<LocationOption[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [year, setYear] = useState(2050);
+  const [scenario, setScenario] = useState<ScenarioId>(DEFAULT_SCENARIO);
   const [trajectory, setTrajectory] = useState<ProjectionPoint[] | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [loadingStep, setLoadingStep] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [exporting, setExporting] = useState(false);
   const [playing, setPlaying] = useState(false);
-  // Present-day measured AQI baseline (Open-Meteo, free, no key) for the AQI estimate.
-  const [baselineAqi, setBaselineAqi] = useState<number | null>(null);
-  const [aqiMeasured, setAqiMeasured] = useState(false);
+  const [shareCopied, setShareCopied] = useState(false);
   const resultsRef = useRef<HTMLDivElement>(null);
+  const deepLinkRunRef = useRef(false);
 
   useEffect(() => {
     document.title = "fupit — see where the climate is still livable";
   }, []);
 
-  // Fetch present-day air quality for the selected location once results load.
   useEffect(() => {
-    if (!trajectory || !selectedLocation) return;
-    let cancelled = false;
-    setBaselineAqi(null);
-    setAqiMeasured(false);
-    (async () => {
-      try {
-        const r = await fetch(
-          `https://air-quality-api.open-meteo.com/v1/air-quality?latitude=${selectedLocation.lat}&longitude=${selectedLocation.lng}&current=us_aqi`
-        );
-        const j = await r.json();
-        const v = j?.current?.us_aqi;
-        if (cancelled) return;
-        if (typeof v === "number" && isFinite(v)) {
-          setBaselineAqi(v);
-          setAqiMeasured(true);
-        } else {
-          setBaselineAqi(FALLBACK_BASELINE_AQI);
-          setAqiMeasured(false);
-        }
-      } catch {
-        if (!cancelled) {
-          setBaselineAqi(FALLBACK_BASELINE_AQI);
-          setAqiMeasured(false);
-        }
-      }
-    })();
-    return () => { cancelled = true; };
-  }, [trajectory, selectedLocation]);
+    const linked = linkLocationFromParams();
+    if (!linked) return;
+    setSelectedLocation(linked.location);
+    setLocationText(linked.location.name);
+    setShowSuggestions(false);
+    if (linked.year) setYear(linked.year);
+    setScenario(linked.scenario);
+    deepLinkRunRef.current = linked.autoRun;
+  }, []);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -379,8 +456,9 @@ export default function ClimateApp() {
     setShowSuggestions(false);
   };
 
-  const generate = async () => {
-    if (!selectedLocation) { setError("Please select a location from the suggestions."); return; }
+  const generate = async (locationOverride?: LocationOption, scenarioOverride: ScenarioId = scenario) => {
+    const targetLocation = locationOverride ?? selectedLocation;
+    if (!targetLocation) { setError("Please select a location from the suggestions."); return; }
     setError(null);
     setIsLoading(true);
     setTrajectory(null);
@@ -388,7 +466,7 @@ export default function ClimateApp() {
       const response = await fetch("/api/climate-trajectory", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ coordinates: { lat: selectedLocation.lat, lng: selectedLocation.lng }, years: CHECKPOINTS }),
+        body: JSON.stringify({ coordinates: { lat: targetLocation.lat, lng: targetLocation.lng }, years: CHECKPOINTS, scenario: scenarioOverride }),
       });
       if (!response.ok) {
         let detail = response.statusText;
@@ -409,10 +487,27 @@ export default function ClimateApp() {
     }
   };
 
+  const changeScenario = (next: ScenarioId) => {
+    setScenario(next);
+    setShareCopied(false);
+    setPlaying(false);
+    if (trajectory && selectedLocation) {
+      void generate(selectedLocation, next);
+    }
+  };
+
+  useEffect(() => {
+    if (!selectedLocation || !deepLinkRunRef.current || isLoading || trajectory) return;
+    deepLinkRunRef.current = false;
+    void generate(selectedLocation, scenario);
+  }, [selectedLocation, isLoading, trajectory, scenario]);
+
   const newSearch = () => {
     setPlaying(false);
     setTrajectory(null);
     setError(null);
+    setShareCopied(false);
+    window.history.replaceState(null, "", "/");
   };
 
   const exportPDF = async () => {
@@ -439,7 +534,7 @@ export default function ClimateApp() {
         heightLeft -= pageH;
       }
       const name = selectedLocation?.city || selectedLocation?.name.split(",")[0] || "location";
-      pdf.save(`climate-projection-${name}-${Math.round(year)}.pdf`);
+      pdf.save(`climate-projection-${name}-${Math.round(year)}-${scenario}.pdf`);
     } catch (err) {
       console.warn("PDF export failed:", err);
     } finally {
@@ -458,7 +553,7 @@ export default function ClimateApp() {
       heat: trajectory.map((p) => p.extremes.heat_stress_days),
       score: trajectory.map((p) => p.habitability.score),
       sea: trajectory.map((p) => p.extremes.sea_level_rise_cm ?? 0),
-      drought: trajectory.map((p) => p.extremes.drought_risk * 100),
+      drought: trajectory.map((p) => riskScore(p.extremes.drought_risk)),
     };
   }, [trajectory]);
 
@@ -472,8 +567,8 @@ export default function ClimateApp() {
     const precipChange = interpScalar(pts, year, (p) => p.precipitation.anomaly_percent);
     const heatDays = Math.max(0, Math.round(interpScalar(pts, year, (p) => p.extremes.heat_stress_days)));
     const baseHeatDays = Math.round(pts[0].extremes.heat_stress_days);
-    const drought = Math.max(0, Math.min(100, Math.round(interpScalar(pts, year, (p) => p.extremes.drought_risk * 100))));
-    const flood = Math.max(0, Math.min(100, Math.round(interpScalar(pts, year, (p) => p.extremes.flood_risk * 100))));
+    const drought = Math.round(riskScore(interpScalar(pts, year, (p) => p.extremes.drought_risk)));
+    const flood = Math.round(riskScore(interpScalar(pts, year, (p) => p.extremes.flood_risk)));
     const seaLevel = Math.max(0, Math.round(interpScalar(pts, year, (p) => p.extremes.sea_level_rise_cm ?? 0)));
     const score = Math.max(0, Math.min(100, Math.round(interpScalar(pts, year, (p) => p.habitability.score))));
     const category = categoryFor(score);
@@ -501,31 +596,31 @@ export default function ClimateApp() {
     const sensColor = sensLabel === "High" ? ORANGE : sensLabel === "Moderate" ? AMBER : GREEN;
     const feedbacks = np.atmospheric_physics?.feedback_mechanisms ?? [];
 
-    // Derived estimates (clearly labelled as estimates in the UI) — computed from
-    // the real modeled variables plus published scientific relationships.
-    const estInputs: EstimateInputs = {
-      avgTemp, tempAnomaly: tempChange, annualPrecip, precipChangePct: precipChange,
-      heatDays, baseHeatDays, droughtRisk: drought / 100,
-    };
-    const agri = agriculturalViability(estInputs);
-    const bio = biodiversityLoss(estInputs);
-    const water = waterStress(estInputs);
-    const aqi = projectedAqi(baselineAqi ?? FALLBACK_BASELINE_AQI, estInputs);
-    const twin = climateTwin(avgTemp, annualPrecip, selectedLocation?.name);
-
     return {
       avgTemp, tempChange, annualPrecip, precipChange, heatDays, baseHeatDays, drought, flood, seaLevel,
       score, category, monthlyTemps, monthlyPrecip, minIdx, maxIdx, wetIdx, dryIdx, breakdown,
       np, sensitivity, sensLabel, sensColor, feedbacks,
-      agri, bio, water, aqi, twin,
       circulation: np.atmospheric_physics?.circulation_pattern,
       climateZone: np.location?.climate_zone,
       confidence: np.metadata?.confidence ?? "medium-high",
       resolution: np.metadata?.resolution,
-      model: np.metadata?.model ?? "CBottle / ICON",
+      model: np.metadata?.model ?? "CMIP6 / IPCC AR6",
       modelVersion: np.metadata?.model_version ?? "",
+      scenario: np.metadata?.scenario ?? np.scenario,
+      baseline: np.metadata?.baseline,
+      baselineSource: np.metadata?.baseline_source,
+      projectionMethod: np.metadata?.projection_method,
+      tempSpread: np.temperature.uncertainty?.anomaly_spread,
+      tempLow: np.temperature.uncertainty?.annual_mean_low,
+      tempHigh: np.temperature.uncertainty?.annual_mean_high,
+      precipSpreadPct: np.precipitation.uncertainty?.anomaly_percent_spread,
+      precipLow: np.precipitation.uncertainty?.annual_total_low,
+      precipHigh: np.precipitation.uncertainty?.annual_total_high,
+      seaLow: np.extremes.detail?.uncertainty?.sea_level_low_cm ?? np.metadata?.uncertainty?.sea_level_low_cm,
+      seaHigh: np.extremes.detail?.uncertainty?.sea_level_high_cm ?? np.metadata?.uncertainty?.sea_level_high_cm,
+      sourceTrail: np.metadata?.source_trail ?? [],
     };
-  }, [trajectory, year, baselineAqi, selectedLocation]);
+  }, [trajectory, year]);
 
   // Tipping points computed from real interpolated trajectory
   const tipping = useMemo(() => {
@@ -534,12 +629,42 @@ export default function ClimateApp() {
       { icon: "🌡️", label: "Heat stress exceeds 15 days/yr", year: crossYear(trajectory, 15, "above", (p) => p.extremes.heat_stress_days) },
       { icon: "⚠️", label: "Habitability drops below 70 (Fair territory)", year: crossYear(trajectory, 70, "below", (p) => p.habitability.score) },
       { icon: "🌊", label: "Sea level rise exceeds 50 cm", year: crossYear(trajectory, 50, "above", (p) => p.extremes.sea_level_rise_cm ?? 0) },
-      { icon: "💧", label: "Drought risk exceeds 50%", year: crossYear(trajectory, 50, "above", (p) => p.extremes.drought_risk * 100) },
+      { icon: "💧", label: "Drought risk exceeds 50%", year: crossYear(trajectory, 50, "above", (p) => riskScore(p.extremes.drought_risk)) },
     ];
     return items.sort((a, b) => (a.year ?? Infinity) - (b.year ?? Infinity));
   }, [trajectory]);
 
   const displayYear = Math.round(year);
+  const selectedScenario = scenarioInfo(scenario);
+  const shownScenario = scenarioInfo(d?.scenario ?? scenario);
+  const shareUrl = useMemo(() => selectedLocation ? forecastUrl(selectedLocation, displayYear, scenario, true) : "", [selectedLocation, displayYear, scenario]);
+
+  useEffect(() => {
+    if (!trajectory || !selectedLocation) return;
+    window.history.replaceState(null, "", forecastUrl(selectedLocation, displayYear, scenario, true));
+  }, [trajectory, selectedLocation, displayYear, scenario]);
+
+  const shareForecast = async () => {
+    if (!selectedLocation || !shareUrl) return;
+    const title = `${selectedLocation.name} climate forecast to ${displayYear}`;
+    const text = d
+      ? `${selectedLocation.name} in ${displayYear} under ${shownScenario.label}: ${d.avgTemp.toFixed(1)}°C average, ${d.score}/100 habitability, grounded by fupit.`
+      : `Explore ${selectedLocation.name}'s grounded climate forecast to 2100 on fupit.`;
+    try {
+      if (navigator.share) {
+        await navigator.share({ title, text, url: shareUrl });
+      } else {
+        await copyToClipboard(shareUrl);
+        setShareCopied(true);
+        window.setTimeout(() => setShareCopied(false), 1800);
+      }
+    } catch {
+      await copyToClipboard(shareUrl);
+      setShareCopied(true);
+      window.setTimeout(() => setShareCopied(false), 1800);
+    }
+  };
+
   const sc = d ? scoreColor(d.score) : GREEN;
   const tPct = ((year - 2025) / 75) * 100;
   const maxBreakdown = d ? Math.max(...d.breakdown.map((b) => Math.abs(b.val)), 1) : 1;
@@ -565,7 +690,7 @@ export default function ClimateApp() {
         <main style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "40px 20px" }}>
           <div style={{ maxWidth: 600, width: "100%", textAlign: "center" }}>
             <div style={{ display: "inline-block", padding: "4px 12px", borderRadius: 20, border: `1px solid ${BORDER}`, background: CARD, fontSize: 11, color: ACCENT, marginBottom: 20, letterSpacing: "0.05em" }}>
-              CBottle · ICON Atmospheric Physics
+              CMIP6 · IPCC AR6 · NASA Sea Level
             </div>
             <h1 style={{ fontSize: 42, fontWeight: 800, lineHeight: 1.1, marginBottom: 14 }}>
               Everywhere's getting worse.<br />Just not equally.
@@ -600,21 +725,40 @@ export default function ClimateApp() {
               )}
             </div>
 
+            <div style={{ marginTop: 12, display: "flex", alignItems: "center", gap: 10, textAlign: "left", padding: 10, borderRadius: 10, border: `1px solid ${BORDER}`, background: "rgba(255,255,255,0.035)" }}>
+              <label htmlFor="scenario-select" style={{ fontSize: 11, color: MUTED, textTransform: "uppercase", letterSpacing: "0.05em", flexShrink: 0 }}>Scenario</label>
+              <select
+                id="scenario-select"
+                value={scenario}
+                onChange={(e) => changeScenario(parseScenario(e.target.value))}
+                disabled={isLoading}
+                style={{ flex: "0 0 132px", border: `1px solid ${BORDER}`, borderRadius: 7, background: "rgba(8,11,18,0.94)", color: "white", padding: "7px 9px", fontSize: 13, fontWeight: 700, outline: "none" }}
+              >
+                {SCENARIOS.map((s) => <option key={s.id} value={s.id}>{s.label}</option>)}
+              </select>
+              <span style={{ color: MUTED, fontSize: 12, lineHeight: 1.35 }}>
+                {selectedScenario.caption}. The shared forecast URL keeps this scenario.
+              </span>
+            </div>
+
             <button
-              onClick={() => (window.location.href = "/comparison")}
+              onClick={() => generate()}
+              disabled={isLoading}
               style={{
                 marginTop: 16, width: "100%", padding: "14px", borderRadius: 10, border: "none", fontSize: 15, fontWeight: 700,
-                cursor: "pointer",
+                cursor: isLoading ? "wait" : "pointer",
                 background: "linear-gradient(135deg, hsl(192,91%,40%) 0%, hsl(215,91%,55%) 100%)",
                 color: "white",
+                opacity: isLoading ? 0.72 : 1,
                 display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
               }}>
-              Compare locations →
+              {isLoading ? <Loader2 style={{ width: 16, height: 16, animation: "spin 1s linear infinite" }} /> : null}
+              {isLoading ? "Generating forecast" : "See climate forecast →"}
             </button>
 
             {isLoading && (
               <div style={{ marginTop: 18, fontSize: 13, color: MUTED }}>
-                Running CBottle ICON model — checkpoint {Math.min(loadingStep + 1, CHECKPOINTS.length)}/{CHECKPOINTS.length} ({CHECKPOINTS[loadingStep]})
+                Sampling grounded CMIP6/IPCC grid — checkpoint {Math.min(loadingStep + 1, CHECKPOINTS.length)}/{CHECKPOINTS.length} ({CHECKPOINTS[loadingStep]})
                 <div style={{ marginTop: 10, height: 4, background: "rgba(255,255,255,0.08)", borderRadius: 2, overflow: "hidden" }}>
                   <div style={{ height: "100%", background: ACCENT, borderRadius: 2, width: `${((loadingStep + 1) / CHECKPOINTS.length) * 100}%`, transition: "width 0.4s ease" }} />
                 </div>
@@ -657,13 +801,28 @@ export default function ClimateApp() {
             <span style={{ fontSize: 13 }}>{selectedLocation?.name}</span>
             <span style={{ fontSize: 13, color: MUTED }}>·</span>
             <span style={{ fontSize: 14, fontWeight: 700, color: ACCENT }}>{displayYear}</span>
+            <span style={{ fontSize: 13, color: MUTED }}>·</span>
+            <span style={{ fontSize: 13, fontWeight: 700, color: RED }}>{shownScenario.label}</span>
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <select
+              value={scenario}
+              onChange={(e) => changeScenario(parseScenario(e.target.value))}
+              disabled={isLoading}
+              title="Climate scenario"
+              aria-label="Climate scenario"
+              style={{ height: 29, borderRadius: 6, border: `1px solid ${BORDER}`, background: CARD, color: "white", fontSize: 12, fontWeight: 700, padding: "0 8px", cursor: isLoading ? "wait" : "pointer" }}
+            >
+              {SCENARIOS.map((s) => <option key={s.id} value={s.id}>{s.label}</option>)}
+            </select>
             <button onClick={newSearch} style={{ display: "flex", alignItems: "center", gap: 5, padding: "5px 12px", borderRadius: 6, border: `1px solid ${BORDER}`, background: CARD, color: MUTED, fontSize: 12, cursor: "pointer" }}>
               <ArrowLeft style={{ width: 13, height: 13 }} /> New Search
             </button>
             <button onClick={() => (window.location.href = "/comparison")} style={{ display: "flex", alignItems: "center", gap: 5, padding: "5px 12px", borderRadius: 6, border: `1px solid ${BORDER}`, background: CARD, color: "white", fontSize: 12, cursor: "pointer" }}>
               <GitCompare style={{ width: 13, height: 13 }} /> Compare
+            </button>
+            <button onClick={shareForecast} style={{ display: "flex", alignItems: "center", gap: 5, padding: "5px 12px", borderRadius: 6, border: `1px solid ${shareCopied ? GREEN : BORDER}`, background: shareCopied ? `${GREEN}18` : CARD, color: shareCopied ? GREEN : "white", fontSize: 12, cursor: "pointer" }}>
+              {shareCopied ? <Check style={{ width: 13, height: 13 }} /> : <Share2 style={{ width: 13, height: 13 }} />} {shareCopied ? "Copied" : "Share"}
             </button>
             <button onClick={exportPDF} disabled={exporting} style={{ display: "flex", alignItems: "center", gap: 5, padding: "5px 12px", borderRadius: 6, border: `1px solid ${BORDER}`, background: CARD, color: "white", fontSize: 12, cursor: exporting ? "wait" : "pointer" }}>
               {exporting ? <Loader2 style={{ width: 13, height: 13, animation: "spin 1s linear infinite" }} /> : <Download style={{ width: 13, height: 13 }} />} Export PDF
@@ -744,7 +903,8 @@ export default function ClimateApp() {
             </div>
             <div style={{ textAlign: "right" }}>
               <div style={{ fontSize: 10, color: MUTED, textTransform: "uppercase", marginBottom: 4 }}>Warming Scenario</div>
-              <div style={{ fontSize: 20, fontWeight: 700, color: RED }}>RCP 4.5–8.5 · SSP2</div>
+              <div style={{ fontSize: 20, fontWeight: 700, color: RED }}>{shownScenario.label}</div>
+              <div style={{ fontSize: 10, color: MUTED, marginTop: 2 }}>{shownScenario.caption}</div>
               <div style={{ fontSize: 26, fontWeight: 800, color: RED, marginTop: 2 }}>+{d!.tempChange.toFixed(1)}°C</div>
               <div style={{ fontSize: 11, color: MUTED }}>vs baseline</div>
             </div>
@@ -759,8 +919,7 @@ export default function ClimateApp() {
           </div>
           <p style={{ fontSize: 14.5, lineHeight: 1.75, color: "rgba(255,255,255,0.9)", margin: 0 }}>
             By <strong style={{ color: "white" }}>{displayYear}</strong>, {placeName} is projected to be{" "}
-            <strong style={{ color: RED }}>+{d!.tempChange.toFixed(1)}°C warmer</strong> than its baseline — close to today's climate in{" "}
-            <strong style={{ color: ACCENT }}>{d!.twin}</strong>. Heat-stress days{" "}
+            <strong style={{ color: RED }}>+{d!.tempChange.toFixed(1)}°C warmer</strong> than its baseline. Heat-stress days{" "}
             <strong style={{ color: ORANGE }}>{heatDelta >= 0 ? "rise" : "fall"} from {d!.baseHeatDays} to {d!.heatDays}/yr</strong>, annual rainfall shifts{" "}
             <strong style={{ color: BLUE }}>{d!.precipChange >= 0 ? "+" : ""}{d!.precipChange.toFixed(1)}%</strong>, and overall habitability sits at{" "}
             <strong style={{ color: sc }}>{d!.score}/100 ({d!.category})</strong>.
@@ -951,83 +1110,91 @@ export default function ClimateApp() {
           ))}
         </div>
 
-        {/* Climate Twin + Atmospheric Physics */}
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14, marginBottom: 14 }}>
-          {/* Climate Twin (estimated analog) */}
-          <div style={{ ...card, padding: 18 }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
-              <span style={{ fontSize: 18 }}>🌍</span>
-              <h3 style={{ fontSize: 14, fontWeight: 700 }}>Climate Twin</h3>
-              <span style={ESTIMATE_BADGE}>ESTIMATE</span>
-            </div>
-            <p style={{ fontSize: 12, color: MUTED, marginBottom: 10, lineHeight: 1.5 }}>
-              {(selectedLocation?.city || selectedLocation?.name.split(",")[0])} in {Math.round(year)} will feel like today's climate of:
-            </p>
-            <div style={{ fontSize: 22, fontWeight: 800, color: ACCENT, marginBottom: 12, lineHeight: 1.2 }}>{d!.twin}</div>
-            <p style={{ fontSize: 10.5, color: MUTED, lineHeight: 1.5 }}>
-              Nearest present-day climate analog, matched on annual mean temperature and precipitation against a reference set of global city climate normals. Drag the slider to watch the analog migrate as warming progresses.
-            </p>
+        {/* Atmospheric Physics */}
+        <div style={{ ...card, padding: 18, marginBottom: 14 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
+            <span style={{ fontSize: 18 }}>⚛️</span>
+            <h3 style={{ fontSize: 14, fontWeight: 700 }}>Atmospheric Physics</h3>
           </div>
-
-          {/* Atmospheric Physics (model output) */}
-          <div style={{ ...card, padding: 18 }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
-              <span style={{ fontSize: 18 }}>⚛️</span>
-              <h3 style={{ fontSize: 14, fontWeight: 700 }}>Atmospheric Physics</h3>
-            </div>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr" }}>
-              {[
-                { label: "Circulation Pattern", value: d!.circulation ?? "—", color: BLUE },
-                { label: "Climate Sensitivity", value: d!.sensitivity != null ? `${d!.sensitivity.toFixed(1)}°C per CO₂ doubling` : "—", color: ORANGE },
-                { label: "Active Feedbacks", value: d!.feedbacks.length ? d!.feedbacks.map((f) => f.split(":")[0].trim()).join(" · ") : "—", color: PURPLE },
-                { label: "Model Confidence", value: prettify(d!.confidence), color: confidenceColor(d!.confidence) },
-                { label: "Model", value: d!.modelVersion ? `${d!.model} ${d!.modelVersion}` : d!.model, color: MUTED },
-                { label: "Resolution", value: d!.resolution ?? "—", color: MUTED },
-              ].map(({ label, value, color }) => (
-                <div key={label} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, borderBottom: "1px solid rgba(255,255,255,0.04)", paddingBottom: 6, marginBottom: 6, fontSize: 11 }}>
-                  <span style={{ color: MUTED, flexShrink: 0 }}>{label}</span>
-                  <span style={{ fontWeight: 600, color, textAlign: "right" }}>{value}</span>
-                </div>
-              ))}
-            </div>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(220px,1fr))", gap: "2px 18px" }}>
+            {[
+              { label: "Circulation Pattern", value: d!.circulation ?? "—", color: BLUE },
+              { label: "Climate Sensitivity", value: d!.sensitivity != null ? `${d!.sensitivity.toFixed(1)}°C per CO₂ doubling` : "—", color: ORANGE },
+              { label: "Active Feedbacks", value: d!.feedbacks.length ? d!.feedbacks.map((f) => f.split(":")[0].trim()).join(" · ") : "—", color: PURPLE },
+              { label: "Model Confidence", value: prettify(d!.confidence), color: confidenceColor(d!.confidence) },
+              { label: "Model", value: d!.modelVersion ? `${d!.model} ${d!.modelVersion}` : d!.model, color: MUTED },
+              { label: "Resolution", value: d!.resolution ?? "—", color: MUTED },
+            ].map(({ label, value, color }) => (
+              <div key={label} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, borderBottom: "1px solid rgba(255,255,255,0.04)", paddingBottom: 6, marginBottom: 6, fontSize: 11 }}>
+                <span style={{ color: MUTED, flexShrink: 0 }}>{label}</span>
+                <span style={{ fontWeight: 600, color, textAlign: "right" }}>{value}</span>
+              </div>
+            ))}
           </div>
         </div>
 
-        {/* Environmental & Agricultural Impact (derived estimates) */}
+        {/* Projection Receipt */}
         <div style={{ ...card, padding: 18, marginBottom: 14 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
-            <span style={{ fontSize: 18 }}>🌿</span>
-            <h2 style={{ fontSize: 15, fontWeight: 700 }}>Environmental & Agricultural Impact</h2>
-            <span style={ESTIMATE_BADGE}>ESTIMATES</span>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 14, flexWrap: "wrap" }}>
+            <ShieldCheck size={17} color={ACCENT} />
+            <h2 style={{ fontSize: 15, fontWeight: 700 }}>Projection Receipt</h2>
+            <span style={{ marginLeft: "auto", fontSize: 10, color: MUTED }}>
+              {shownScenario.label} · {d!.resolution ?? "1.0 degree"} grid · {Math.round(year)}
+            </span>
+            <a href="/methodology" style={{ display: "inline-flex", alignItems: "center", gap: 4, fontSize: 10, color: ACCENT, textDecoration: "none" }}>
+              Methodology <ExternalLink size={11} />
+            </a>
           </div>
-          <p style={{ fontSize: 10.5, color: MUTED, marginBottom: 16, lineHeight: 1.5 }}>
-            Derived from the modeled climate variables and public datasets (FAO agro-climatic suitability, IPCC AR6 range-loss figures, Open-Meteo air quality) — these are estimates, not direct model outputs.
-          </p>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 14 }}>
-            {(() => {
-              const aqiColor = d!.aqi < 50 ? GREEN : d!.aqi < 100 ? AMBER : d!.aqi < 150 ? ORANGE : RED;
-              const aqiSub = d!.aqi < 50 ? "Good" : d!.aqi < 100 ? "Moderate" : d!.aqi < 150 ? "Unhealthy (SG)" : "Unhealthy";
-              const agriColor = d!.agri >= 70 ? GREEN : d!.agri >= 45 ? AMBER : ORANGE;
-              const agriSub = d!.agri >= 70 ? "Favorable" : d!.agri >= 45 ? "Reduced" : "Stressed";
-              const waterColor = d!.water < 35 ? GREEN : d!.water < 60 ? AMBER : RED;
-              const waterSub = d!.water < 35 ? "Low stress" : d!.water < 60 ? "Moderate" : "High stress";
-              const bioColor = d!.bio < 10 ? AMBER : d!.bio < 25 ? ORANGE : RED;
-              const bioSub = d!.bio < 10 ? "Mild" : d!.bio < 25 ? "Moderate" : "Severe";
-              const gauges = [
-                { name: "Air Quality", value: d!.aqi, max: 200, color: aqiColor, sub: `US AQI · ${aqiSub}`, note: aqiMeasured ? "Measured baseline + climate ozone penalty" : "Estimated baseline + climate ozone penalty" },
-                { name: "Agricultural Viability", value: d!.agri, max: 100, color: agriColor, sub: agriSub, note: "Agro-climatic suitability (thermal + water)" },
-                { name: "Water Stress", value: d!.water, max: 100, color: waterColor, sub: waterSub, note: "From modeled drought risk + precipitation" },
-                { name: "Biodiversity Loss", value: d!.bio, max: 60, color: bioColor, sub: `${bioSub} · % species`, note: "Range loss calibrated to IPCC AR6" },
-              ];
-              return gauges.map((g) => (
-                <div key={g.name} style={{ textAlign: "center", padding: "14px 8px", borderRadius: 10, background: "rgba(255,255,255,0.02)", border: `1px solid ${BORDER}` }}>
-                  <div style={{ display: "flex", justifyContent: "center" }}><GaugeMeter value={g.value} max={g.max} color={g.color} /></div>
-                  <div style={{ fontSize: 12, fontWeight: 700, marginTop: 6 }}>{g.name}</div>
-                  <div style={{ fontSize: 11, fontWeight: 600, color: g.color, marginTop: 2 }}>{g.sub}</div>
-                  <div style={{ fontSize: 9.5, color: MUTED, marginTop: 6, lineHeight: 1.4 }}>{g.note}</div>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(145px,1fr))", gap: 10, marginBottom: 12 }}>
+            {[
+              {
+                label: "Temperature range",
+                value: d!.tempLow != null && d!.tempHigh != null ? `${d!.tempLow.toFixed(1)}–${d!.tempHigh.toFixed(1)}°C` : "—",
+                sub: d!.tempSpread != null ? `±${d!.tempSpread.toFixed(1)}°C ensemble spread` : "spread unavailable",
+                color: RED,
+              },
+              {
+                label: "Precipitation range",
+                value: d!.precipLow != null && d!.precipHigh != null ? `${Math.round(d!.precipLow)}–${Math.round(d!.precipHigh)}mm` : "—",
+                sub: d!.precipSpreadPct != null ? `±${d!.precipSpreadPct.toFixed(1)}% model spread` : "spread unavailable",
+                color: BLUE,
+              },
+              {
+                label: "Sea-level range",
+                value: d!.seaLow != null && d!.seaHigh != null ? `${Math.round(d!.seaLow)}–${Math.round(d!.seaHigh)}cm` : "—",
+                sub: "IPCC AR6 low to high",
+                color: CYAN,
+              },
+              {
+                label: "Baseline",
+                value: d!.baselineSource?.observed_resolution ?? "1.0 degree",
+                sub: d!.baselineSource?.temperature ?? d!.baseline ?? "CMIP6 historical monthly climatology",
+                color: GREEN,
+              },
+            ].map((item) => (
+              <div key={item.label} style={{ background: "rgba(255,255,255,0.025)", border: `1px solid ${BORDER}`, borderRadius: 8, padding: "10px 11px" }}>
+                <div style={{ fontSize: 9, color: MUTED, textTransform: "uppercase", letterSpacing: 0.4 }}>{item.label}</div>
+                <div style={{ fontSize: 16, fontWeight: 800, color: item.color, marginTop: 5 }}>{item.value}</div>
+                <div style={{ fontSize: 9.5, color: MUTED, lineHeight: 1.35, marginTop: 4 }}>{item.sub}</div>
+              </div>
+            ))}
+          </div>
+          {d!.baselineSource?.delta_reference_period && (
+            <p style={{ color: MUTED, fontSize: 9.5, lineHeight: 1.45, marginTop: 10 }}>
+              Baseline note: {d!.baselineSource.delta_reference_period}.
+            </p>
+          )}
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(220px,1fr))", gap: 8 }}>
+            {d!.sourceTrail.slice(0, 4).map((entry) => (
+              <div key={entry.label} style={{ padding: "9px 10px", borderRadius: 8, background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.055)" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", gap: 8, marginBottom: 3 }}>
+                  <span style={{ fontSize: 11, fontWeight: 700, color: "white" }}>{entry.label}</span>
+                  <span style={{ fontSize: 9, color: ACCENT, textAlign: "right" }}>{entry.source}</span>
                 </div>
-              ));
-            })()}
+                <div style={{ fontSize: 9.5, color: MUTED, lineHeight: 1.35 }}>{entry.method}</div>
+                <div style={{ fontSize: 9, color: "rgba(255,255,255,0.42)", marginTop: 4 }}>{entry.citation}</div>
+              </div>
+            ))}
           </div>
         </div>
 
@@ -1142,7 +1309,7 @@ export default function ClimateApp() {
 
       <footer style={{ borderTop: `1px solid ${BORDER}`, padding: "16px 20px", textAlign: "center" }}>
         <p style={{ color: MUTED, fontSize: 10 }}>
-          fupit · {d!.model}{d!.modelVersion ? ` ${d!.modelVersion}` : ""} · Confidence: {prettify(d!.confidence)} · RCP 4.5–8.5 / SSP2 · For research &amp; planning
+          fupit · {d!.model}{d!.modelVersion ? ` ${d!.modelVersion}` : ""} · {shownScenario.label} · Uncertainty shown from ensemble spread / AR6 ranges · For research &amp; planning
         </p>
         <p style={{ color: MUTED, fontSize: 10, marginTop: 6 }}>
           © {new Date().getFullYear()}{" "}
