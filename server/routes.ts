@@ -113,12 +113,13 @@ async function runClimateModel(
 // ── SEO: per-route HTML head injection (production only) ────────────────────
 // Social crawlers and search engines do not run the React app, so each public
 // route needs distinct head tags in the initial HTML response.
-const SEO_BASE = "https://global-geo-selector-mikkoparkkola.replit.app";
+const SEO_BASE = "https://fupit.com";
 
 interface SeoPage {
   path: string;
   title: string;
   description: string;
+  bodyHtml: string;
 }
 
 const SEO_PAGES: Record<string, SeoPage> = {
@@ -127,59 +128,138 @@ const SEO_PAGES: Record<string, SeoPage> = {
     title: "fupit — see where the climate is still livable",
     description:
       "Climate projections for any place on Earth, year by year to 2100. Compare locations to find where stays livable — then help f*** up the forecast.",
+    bodyHtml: `<main aria-label="Page introduction">
+  <h1>fupit — see where the climate is still livable</h1>
+  <p>Climate projections for any place on Earth, year by year to 2100. Compare locations to find where stays livable — then help f*** up the forecast.</p>
+  <h2>Features</h2>
+  <ul>
+    <li>Search any location worldwide by city name or coordinates</li>
+    <li>View projected average temperature and temperature change</li>
+    <li>Explore annual precipitation and humidity forecasts</li>
+    <li>Assess heat stress, drought, and flooding risk scores</li>
+    <li>Compare habitability rankings across global cities</li>
+  </ul>
+  <h2>How it works</h2>
+  <p>fupit serves projections from a grounded CMIP6/IPCC grid, with NASA/IPCC sea-level data and ETCCDI extreme-climate indices. The method is public so every served number can be traced to a source.</p>
+  <p><a href="/comparison">Compare multiple locations side by side</a> or read <a href="/methodology">the full methodology</a>.</p>
+</main>`,
   },
   comparison: {
     path: "/comparison",
     title: "fupit — compare climate by location",
     description:
       "Compare side-by-side climate projections for up to 10 locations. Slide through 2025–2100 to watch temperature, precipitation, risk, and habitability diverge in real time.",
+    bodyHtml: `<main aria-label="Page introduction">
+  <h1>fupit — compare climate by location</h1>
+  <p>Compare side-by-side climate projections for up to 10 locations. Slide through 2025–2100 to watch temperature, precipitation, risk, and habitability diverge in real time.</p>
+  <h2>What you can compare</h2>
+  <ul>
+    <li>Average temperature and temperature change across locations</li>
+    <li>Annual precipitation and precipitation trends</li>
+    <li>Humidity forecasts and changes over time</li>
+    <li>Sea-level projections for coastal locations</li>
+    <li>Heat stress, drought, and flooding risk scores</li>
+    <li>Overall habitability scores from 0 to 100</li>
+  </ul>
+  <p><a href="/">Go back to fupit</a> to explore individual locations in detail.</p>
+</main>`,
+  },
+  methodology: {
+    path: "/methodology",
+    title: "fupit methodology — grounded climate projections",
+    description:
+      "How fupit projects future climate and habitability using CMIP6/IPCC data, NASA/IPCC sea-level projections, ETCCDI extremes, and transparent risk thresholds.",
+    bodyHtml: `<main aria-label="Methodology">
+  <h1>How fupit gets its numbers</h1>
+  <p>Every value on fupit traces to real climate science. We do not invent coefficients or warming rates. Where we cannot ground a number, we leave it blank rather than guess.</p>
+  <h2>Forecast sources</h2>
+  <ul>
+    <li>Temperature, precipitation, and humidity change: CMIP6 model output behind the IPCC Sixth Assessment Report, aggregated by scenario and decade.</li>
+    <li>Present-day baseline: 1995-2014 monthly CMIP6 historical climatology, with a planned upgrade to direct observed baselines.</li>
+    <li>Sea-level rise: IPCC AR6 regional projections.</li>
+    <li>Heat, drought, and flood risk: CMIP6 ETCCDI extreme-climate indices scored against documented thresholds.</li>
+  </ul>
+  <h2>Honesty rules</h2>
+  <ul>
+    <li>Temperature is shown with the IPCC-calibrated value as the headline and raw CMIP6 model consensus available for comparison.</li>
+    <li>Precipitation and humidity are shown as model consensus plus spread because there is no equivalent single assessed calibration anchor.</li>
+    <li>Risk scores expose the raw physical quantity next to the 0 to 100 score.</li>
+  </ul>
+  <p>Sources: IPCC AR6 Working Group I; CMIP6; ETCCDI indices; IPCC AR6 sea-level projections.</p>
+  <p><a href="/">Return to fupit</a>.</p>
+</main>`,
   },
 };
 
+function pageUrl(pagePath: string): string {
+  return `${SEO_BASE}${pagePath === "/" ? "/" : pagePath}`;
+}
+
+function pageSchema(page: SeoPage) {
+  const url = pageUrl(page.path);
+  if (page.path === "/") {
+    return {
+      "@context": "https://schema.org",
+      "@type": "WebApplication",
+      name: "fupit",
+      url,
+      description: page.description,
+      applicationCategory: "EducationalApplication",
+      operatingSystem: "All",
+      offers: { "@type": "Offer", price: "0", priceCurrency: "USD" },
+      publisher: { "@id": `${SEO_BASE}/#org` },
+    };
+  }
+  return {
+    "@context": "https://schema.org",
+    "@type": "WebPage",
+    name: page.title,
+    url,
+    description: page.description,
+    isPartOf: {
+      "@type": "WebSite",
+      name: "fupit",
+      url: `${SEO_BASE}/`,
+    },
+  };
+}
+
+function injectSeoHtml(template: string, page: SeoPage): string {
+  const url = pageUrl(page.path);
+  const ogImage = `${SEO_BASE}/og-image.png`;
+  const jsonLd = JSON.stringify(pageSchema(page));
+  return template
+    .split("https://global-geo-selector-mikkoparkkola.replit.app")
+    .join(SEO_BASE)
+    .split("https://climate-projections.replit.app")
+    .join(SEO_BASE)
+    .replace(/<title>[\s\S]*?<\/title>/, `<title>${page.title}</title>`)
+    .replace(/<meta name="description" content="[^"]*"\s*\/?>/, `<meta name="description" content="${page.description}" />`)
+    .replace(/<meta property="og:title" content="[^"]*"\s*\/?>/, `<meta property="og:title" content="${page.title}" />`)
+    .replace(/<meta property="og:description" content="[^"]*"\s*\/?>/, `<meta property="og:description" content="${page.description}" />`)
+    .replace(/<meta property="og:url" content="[^"]*"\s*\/?>/, `<meta property="og:url" content="${url}" />`)
+    .replace(/<meta property="og:image" content="[^"]*"\s*\/?>/, `<meta property="og:image" content="${ogImage}" />`)
+    .replace(/<meta name="twitter:title" content="[^"]*"\s*\/?>/, `<meta name="twitter:title" content="${page.title}" />`)
+    .replace(/<meta name="twitter:description" content="[^"]*"\s*\/?>/, `<meta name="twitter:description" content="${page.description}" />`)
+    .replace(/<meta name="twitter:image" content="[^"]*"\s*\/?>/, `<meta name="twitter:image" content="${ogImage}" />`)
+    .replace(/<link rel="canonical" href="[^"]*"\s*\/?>/, `<link rel="canonical" href="${url}" />`)
+    .replace(
+      /<script type="application\/ld\+json" id="page-schema">[\s\S]*?<\/script>/,
+      `<script type="application/ld+json" id="page-schema">${jsonLd}</script>`,
+    )
+    .replace(/<div id="root"><\/div>/, `<div id="root">${page.bodyHtml}</div>`);
+}
+
 function makeSeoHandler(page: SeoPage) {
-  return (req: any, res: any, next: any) => {
+  return (_req: any, res: any, next: any) => {
     try {
       const file = path.resolve(import.meta.dirname, "public", "index.html");
-      let html = fs.readFileSync(file, "utf-8");
-      // Sanitize the Host header before reflecting it into HTML: only allow a
-      // valid hostname[:port] shape, otherwise fall back to the known base.
-      // Prevents Host-header injection; `Vary: Host` blocks cross-host caching.
-      const rawHost = (req.get("host") || "").toString();
-      const host = /^[a-z0-9.-]+(:\d+)?$/i.test(rawHost) ? rawHost : new URL(SEO_BASE).host;
-      const base = `https://${host}`;
-      const url = base + page.path;
-      const ogImage = `${base}/og-image.png`;
-      // Align every absolute URL (canonical, OG, schema graph) with the live host.
-      html = html.split(SEO_BASE).join(base);
-      const pageSchema = {
-        "@context": "https://schema.org",
-        "@type": "WebPage",
-        name: page.title,
-        description: page.description,
-        url,
-        isPartOf: { "@id": `${base}/#website` },
-      };
-      html = html
-        .replace(/<title>[\s\S]*?<\/title>/, `<title>${page.title}</title>`)
-        .replace(/<meta name="description" content="[^"]*"\s*\/?>/, `<meta name="description" content="${page.description}" />`)
-        .replace(/<meta property="og:title" content="[^"]*"\s*\/?>/, `<meta property="og:title" content="${page.title}" />`)
-        .replace(/<meta property="og:description" content="[^"]*"\s*\/?>/, `<meta property="og:description" content="${page.description}" />`)
-        .replace(/<meta property="og:url" content="[^"]*"\s*\/?>/, `<meta property="og:url" content="${url}" />`)
-        .replace(/<meta property="og:image" content="[^"]*"\s*\/?>/, `<meta property="og:image" content="${ogImage}" />`)
-        .replace(/<meta name="twitter:title" content="[^"]*"\s*\/?>/, `<meta name="twitter:title" content="${page.title}" />`)
-        .replace(/<meta name="twitter:description" content="[^"]*"\s*\/?>/, `<meta name="twitter:description" content="${page.description}" />`)
-        .replace(/<meta name="twitter:image" content="[^"]*"\s*\/?>/, `<meta name="twitter:image" content="${ogImage}" />`)
-        .replace(/<link rel="canonical" href="[^"]*"\s*\/?>/, `<link rel="canonical" href="${url}" />`)
-        .replace(
-          /<script type="application\/ld\+json" id="page-schema">[\s\S]*?<\/script>/,
-          `<script type="application/ld+json" id="page-schema">${JSON.stringify(pageSchema)}</script>`,
-        );
+      const html = injectSeoHtml(fs.readFileSync(file, "utf-8"), page);
       res
         .status(200)
         .set({
           "Content-Type": "text/html; charset=utf-8",
           "Cache-Control": "public, max-age=300",
-          Vary: "Host",
         })
         .send(html);
     } catch {
@@ -195,7 +275,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Open Graph, Twitter Card, and JSON-LD tags in the FIRST HTTP response byte.
   //
   // In production, app.get() handlers below are registered BEFORE serveStatic()
-  // (see server/index.ts), so they intercept /  and /comparison before
+  // (see server/index.ts), so they intercept public SPA routes before
   // express.static can serve the shared index.html.  Each handler reads the
   // built dist/public/index.html and rewrites every head tag for that route.
   //
@@ -203,8 +283,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // self-contained HTML document (with the Vite dev entry point) for each route,
   // providing the same per-route tags to crawlers without interfering with HMR.
   if (app.get("env") !== "development") {
-    app.get("/", makeSeoHandler(SEO_PAGES.home));
-    app.get("/comparison", makeSeoHandler(SEO_PAGES.comparison));
+    for (const page of Object.values(SEO_PAGES)) {
+      app.get(page.path, makeSeoHandler(page));
+    }
   }
 
   // Climate location routes
@@ -605,75 +686,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // This is injected into the HTML served to all clients so that crawlers and
   // social preview bots see real page content on the first byte, before any
   // JavaScript executes, regardless of whether the client renders JS.
-  const PAGE_SEMANTIC: Record<string, { title: string; description: string; ogUrl: string; jsonLd: string; bodyHtml: string }> = {
-    "/": {
-      title: "fupit — see where the climate is still livable",
-      description: "Climate projections for any place on Earth, year by year to 2100. Compare locations to find where stays livable — then help f*** up the forecast.",
-      ogUrl: "https://climate-projections.replit.app/",
-      jsonLd: JSON.stringify({
-        "@context": "https://schema.org",
-        "@type": "WebApplication",
-        "name": "fupit",
-        "url": "https://climate-projections.replit.app/",
-        "description": "Climate projections for any place on Earth, year by year to 2100. Compare locations to find where stays livable — then help f*** up the forecast.",
-        "applicationCategory": "UtilityApplication",
-        "operatingSystem": "Any",
-        "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
-      }),
-      bodyHtml: `<main aria-label="Page introduction">
-  <h1>fupit — see where the climate is still livable</h1>
-  <p>Climate projections for any place on Earth, year by year to 2100. Compare locations to find where stays livable — then help f*** up the forecast.</p>
-  <h2>Features</h2>
-  <ul>
-    <li>Search any location worldwide by city name or coordinates</li>
-    <li>View projected average temperature and temperature change</li>
-    <li>Explore annual precipitation and humidity forecasts</li>
-    <li>Assess heat stress, drought, and flooding risk scores</li>
-    <li>Compare habitability rankings across global cities</li>
-    <li>Download climate projection reports as CSV or PDF</li>
-  </ul>
-  <h2>How It Works</h2>
-  <p>Our climate model integrates advanced scientific datasets to project future conditions at any point on Earth. Select a target year between now and 2100, enter a location, and receive detailed projections with a Livability Index score from 0 to 100.</p>
-  <p><a href="/comparison">Compare multiple locations side-by-side</a> to find where stays livable longest.</p>
-</main>`,
-    },
-    "/comparison": {
-      title: "fupit — compare climate by location",
-      description: "Compare side-by-side climate projections for up to 10 locations. Slide through 2025–2100 to watch temperature, precipitation, risk, and habitability diverge in real time.",
-      ogUrl: "https://climate-projections.replit.app/comparison",
-      jsonLd: JSON.stringify({
-        "@context": "https://schema.org",
-        "@type": "WebPage",
-        "name": "fupit — compare climate by location",
-        "url": "https://climate-projections.replit.app/comparison",
-        "description": "Compare side-by-side climate projections for up to 10 locations. Slide through 2025–2100 to watch temperature, precipitation, risk, and habitability diverge in real time.",
-        "isPartOf": {
-          "@type": "WebSite",
-          "name": "fupit",
-          "url": "https://climate-projections.replit.app/",
-        },
-      }),
-      bodyHtml: `<main aria-label="Page introduction">
-  <h1>fupit — compare climate by location</h1>
-  <p>Compare side-by-side climate projections for up to 10 locations. Slide through 2025–2100 to watch temperature, precipitation, risk, and habitability diverge in real time.</p>
-  <h2>What You Can Compare</h2>
-  <ul>
-    <li>Average temperature and temperature change across locations</li>
-    <li>Annual precipitation and precipitation trends</li>
-    <li>Humidity forecasts and changes over time</li>
-    <li>Sea level projections for coastal locations</li>
-    <li>Heat stress, drought, and flooding risk scores</li>
-    <li>Overall Livability Index scores from 0 to 100</li>
-  </ul>
-  <p><a href="/">Go back to fupit</a> to explore individual locations in detail.</p>
-</main>`,
-    },
-  };
+  const PAGE_SEMANTIC = Object.fromEntries(
+    Object.values(SEO_PAGES).map((page) => [page.path, page]),
+  ) as Record<string, SeoPage>;
 
   // In development there is no built index.html; serve a self-contained page
   // that includes Vite's dev entry point so the interactive React app still
   // loads and hydrates after the initial server-rendered content.
-  function buildDevHtml(page: typeof PAGE_SEMANTIC[string]): string {
+  function buildDevHtml(page: SeoPage): string {
+    const url = pageUrl(page.path);
+    const jsonLd = JSON.stringify(pageSchema(page));
     return `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -684,9 +706,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 <meta property="og:title" content="${page.title}">
 <meta property="og:description" content="${page.description}">
 <meta property="og:type" content="website">
-<meta property="og:url" content="${page.ogUrl}">
-<link rel="canonical" href="${page.ogUrl}">
-<script type="application/ld+json">${page.jsonLd}</script>
+<meta property="og:url" content="${url}">
+<link rel="canonical" href="${url}">
+<script type="application/ld+json">${jsonLd}</script>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <!-- Vite dev client + @vitejs/plugin-react refresh preamble. Because this HTML
      is built by hand (not passed through Vite's transformIndexHtml), the React
@@ -727,9 +749,7 @@ window.__vite_plugin_react_preamble_installed__ = true
         // Production: inject semantic content into the built index.html so the
         // correct hashed bundle scripts are preserved.
         const template = await fs.promises.readFile(distIndexPath, "utf-8");
-        const html = template
-          .replace(/<title>[^<]*<\/title>/, `<title>${page.title}</title>`)
-          .replace(/<div id="root"><\/div>/, `<div id="root">${page.bodyHtml}</div>`);
+        const html = injectSeoHtml(template, page);
         return res.status(200).set("Content-Type", "text/html; charset=utf-8").end(html);
       }
       // Development: serve self-contained HTML with Vite dev entry point.
