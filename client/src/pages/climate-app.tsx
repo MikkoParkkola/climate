@@ -24,6 +24,7 @@ const FIVE_YEAR_CHECKPOINTS = Array.from({ length: 15 }, (_, i) => 2030 + i * 5)
 const CHECKPOINTS = Array.from(new Set([BASELINE_YEAR, CURRENT_FORECAST_YEAR, ...FIVE_YEAR_CHECKPOINTS])).sort((a, b) => a - b);
 const YEAR_TICKS = CHECKPOINTS;
 const QUICK_YEAR_BUTTONS = Array.from(new Set([CURRENT_FORECAST_YEAR, 2030, 2050, 2075, 2100].filter((year) => year >= CURRENT_FORECAST_YEAR)));
+const ROADMAP_YEARS = Array.from(new Set([CURRENT_FORECAST_YEAR, 2030, 2040, 2050, 2060, 2070, 2080, 2090, 2100].filter((year) => year >= CURRENT_FORECAST_YEAR && year <= MAX_YEAR))).sort((a, b) => a - b);
 const SCENARIOS = [
   { id: "ssp126", label: "SSP1-2.6", caption: "low emissions; strong mitigation" },
   { id: "ssp245", label: "SSP2-4.5", caption: "middle path; current-policy-adjacent reference" },
@@ -163,6 +164,20 @@ interface ScenarioContrastRow {
   precipChange: number;
   score: number;
   category: string;
+}
+
+interface RoadmapItem {
+  year: number;
+  tempChange: number;
+  heatDays: number;
+  precipChange: number;
+  drought: number;
+  flood: number;
+  seaLevel: number;
+  score: number;
+  category: string;
+  driver: { label: string; text: string; color: string };
+  scenarioDelta?: string;
 }
 
 // ── Math helpers ─────────────────────────────────────────────────────────────
@@ -392,6 +407,78 @@ function contrastSnapshot(points: ProjectionPoint[], year: number, scenarioId: S
     precipChange: interpScalar(points, year, (p) => p.precipitation.anomaly_percent),
     score,
     category: categoryFor(score),
+  };
+}
+
+function roadmapDriver(current: Omit<RoadmapItem, "driver">, previous: Omit<RoadmapItem, "driver">): RoadmapItem["driver"] {
+  const heatDelta = current.heatDays - previous.heatDays;
+  const droughtDelta = current.drought - previous.drought;
+  const floodDelta = current.flood - previous.flood;
+  const precipDelta = current.precipChange - previous.precipChange;
+  const scoreDelta = current.score - previous.score;
+  const candidates = [
+    {
+      weight: Math.abs(heatDelta) / 7,
+      label: "Heat",
+      color: ORANGE,
+      text: heatDelta >= 0
+        ? `heat-stress days rise by ${Math.round(heatDelta)} since the previous roadmap point`
+        : `heat-stress days ease by ${Math.abs(Math.round(heatDelta))} since the previous roadmap point`,
+    },
+    {
+      weight: Math.abs(droughtDelta) / 10,
+      label: "Drought",
+      color: droughtDelta >= 0 ? RED : GREEN,
+      text: droughtDelta >= 0
+        ? `drought pressure rises by ${Math.round(droughtDelta)} points`
+        : `drought pressure eases by ${Math.abs(Math.round(droughtDelta))} points`,
+    },
+    {
+      weight: Math.abs(floodDelta) / 10,
+      label: "Heavy rain",
+      color: floodDelta >= 0 ? BLUE : GREEN,
+      text: floodDelta >= 0
+        ? `heavy-rain/flood pressure rises by ${Math.round(floodDelta)} points`
+        : `heavy-rain/flood pressure eases by ${Math.abs(Math.round(floodDelta))} points`,
+    },
+    {
+      weight: Math.abs(precipDelta) / 8,
+      label: "Water",
+      color: BLUE,
+      text: `annual precipitation signal shifts ${signedNumber(precipDelta, 1)} percentage points`,
+    },
+    {
+      weight: Math.abs(scoreDelta) / 4,
+      label: "Score",
+      color: scoreDelta < 0 ? RED : GREEN,
+      text: scoreDelta < 0
+        ? `habitability score falls by ${Math.abs(Math.round(scoreDelta))} points`
+        : `habitability score rises by ${Math.round(scoreDelta)} points`,
+    },
+  ].sort((a, b) => b.weight - a.weight);
+  const top = candidates[0];
+  if (!top || top.weight < 0.15) {
+    return { label: "Stable", color: MUTED, text: "no single modeled signal changes sharply in this interval" };
+  }
+  return { label: top.label, color: top.color, text: top.text };
+}
+
+function roadmapSnapshot(points: ProjectionPoint[], year: number, previous?: Omit<RoadmapItem, "driver">): RoadmapItem {
+  const score = Math.max(0, Math.min(100, Math.round(interpScalar(points, year, (p) => p.habitability.score))));
+  const base = {
+    year,
+    tempChange: interpScalar(points, year, (p) => p.temperature.anomaly),
+    heatDays: Math.max(0, Math.round(interpScalar(points, year, (p) => p.extremes.heat_stress_days))),
+    precipChange: interpScalar(points, year, (p) => p.precipitation.anomaly_percent),
+    drought: Math.round(riskScore(interpScalar(points, year, (p) => p.extremes.drought_risk))),
+    flood: Math.round(riskScore(interpScalar(points, year, (p) => p.extremes.flood_risk))),
+    seaLevel: Math.max(0, Math.round(interpScalar(points, year, (p) => p.extremes.sea_level_rise_cm ?? 0))),
+    score,
+    category: categoryFor(score),
+  };
+  return {
+    ...base,
+    driver: previous ? roadmapDriver(base, previous) : { label: "Baseline", color: ACCENT, text: "current roadmap start for this forecast" },
   };
 }
 
@@ -973,6 +1060,24 @@ export default function ClimateApp() {
     };
   }, [scenarioContrastRows, displayYear]);
 
+  const roadmapItems = useMemo(() => {
+    if (!trajectory) return [];
+    let previous: RoadmapItem | undefined;
+    return ROADMAP_YEARS.map((roadmapYear) => {
+      const item = roadmapSnapshot(trajectory, roadmapYear, previous);
+      previous = item;
+      const lowPoints = scenarioContrast?.ssp126;
+      const highPoints = scenarioContrast?.ssp370;
+      if (!lowPoints || !highPoints) return item;
+      const low = contrastSnapshot(lowPoints, roadmapYear, "ssp126");
+      const high = contrastSnapshot(highPoints, roadmapYear, "ssp370");
+      return {
+        ...item,
+        scenarioDelta: `SSP3-7.0 vs SSP1-2.6: ${signedNumber(high.tempChange - low.tempChange, 1)}°C raw warming, ${signedNumber(high.heatDays - low.heatDays, 0)} heat-stress days, ${signedNumber(high.score - low.score, 0)} score points.`,
+      };
+    });
+  }, [trajectory, scenarioContrast]);
+
   const scoreStory = useMemo(() => {
     if (!trajectory || !d) return null;
     const baseline = trajectory[0];
@@ -1416,6 +1521,50 @@ export default function ClimateApp() {
               : <> No modeled tipping points are crossed at this horizon.</>}
           </p>
         </div>
+
+        {roadmapItems.length > 0 && (
+          <div style={{ ...card, padding: 18, marginBottom: 14, borderLeft: `3px solid ${PURPLE}` }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 14, flexWrap: "wrap", marginBottom: 12 }}>
+              <div style={{ flex: "1 1 460px" }}>
+                <h2 style={{ fontSize: 12, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.07em", color: MUTED }}>Roadmap · current year to 2100</h2>
+                <p style={{ fontSize: 12.5, color: "rgba(255,255,255,0.68)", lineHeight: 1.6, margin: "6px 0 0" }}>
+                  The slider gives a value for every year. This roadmap summarizes the current year and decade waypoints so the trend reads like a living-conditions timeline, not a single snapshot.
+                </p>
+              </div>
+              <ReceiptDetails label="method" text="Roadmap values use the same /api/climate-trajectory points as the charts. The current build requests the current year plus 5-year checkpoints through 2100 and linearly interpolates intermediate years for display." />
+            </div>
+            <div style={{ display: "grid", gap: 8 }}>
+              {roadmapItems.map((item) => {
+                const active = item.year === displayYear || (displayYear > item.year && displayYear < item.year + 10);
+                return (
+                  <div key={item.year} style={{ display: "flex", gap: 10, alignItems: "stretch", flexWrap: "wrap", padding: "9px 10px", borderRadius: 8, border: `1px solid ${active ? `${PURPLE}55` : BORDER}`, background: active ? `${PURPLE}10` : "rgba(255,255,255,0.032)" }}>
+                    <div style={{ flex: "0 0 56px" }}>
+                      <div style={{ fontSize: 16, fontWeight: 900, color: active ? PURPLE : "white" }}>{item.year}</div>
+                      <div style={{ fontSize: 9, color: MUTED }}>{item.category}</div>
+                    </div>
+                    <div style={{ minWidth: 180, flex: "2 1 260px" }}>
+                      <div style={{ display: "flex", gap: 7, alignItems: "center", flexWrap: "wrap", marginBottom: 3 }}>
+                        <span style={{ color: item.driver.color, fontSize: 12, fontWeight: 850 }}>{item.driver.label}</span>
+                        {item.scenarioDelta && <span style={{ color: BLUE, fontSize: 10, border: `1px solid ${BLUE}30`, borderRadius: 999, padding: "1px 6px" }}>scenario delta</span>}
+                      </div>
+                      <div style={{ fontSize: 11.5, color: "rgba(255,255,255,0.76)", lineHeight: 1.45 }}>{item.driver.text}</div>
+                      {item.scenarioDelta ? (
+                        <div style={{ marginTop: 3, fontSize: 10.5, color: "rgba(255,255,255,0.6)", lineHeight: 1.45 }}>{item.scenarioDelta}</div>
+                      ) : (
+                        <div style={{ marginTop: 3, fontSize: 10.5, color: MUTED }}>Load pathway contrast to add lower-vs-higher scenario deltas.</div>
+                      )}
+                    </div>
+                    <div style={{ flex: "1 1 82px" }}><div style={{ fontSize: 9, color: MUTED }}>Raw warming</div><div style={{ fontSize: 12.5, fontWeight: 800, color: RED }}>{signedNumber(item.tempChange, 1)}°C</div></div>
+                    <div style={{ flex: "1 1 72px" }}><div style={{ fontSize: 9, color: MUTED }}>Heat days</div><div style={{ fontSize: 12.5, fontWeight: 800, color: ORANGE }}>{item.heatDays}</div></div>
+                    <div style={{ flex: "1 1 82px" }}><div style={{ fontSize: 9, color: MUTED }}>Water signal</div><div style={{ fontSize: 12.5, fontWeight: 800, color: BLUE }}>{signedNumber(item.precipChange, 1)}%</div></div>
+                    <div style={{ flex: "1 1 74px" }}><div style={{ fontSize: 9, color: MUTED }}>Sea level</div><div style={{ fontSize: 12.5, fontWeight: 800, color: CYAN }}>{item.seaLevel} cm</div></div>
+                    <div style={{ flex: "1 1 70px" }}><div style={{ fontSize: 9, color: MUTED }}>Score</div><div style={{ fontSize: 12.5, fontWeight: 800, color: scoreColor(item.score) }}>{item.score}/100</div></div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
 
         <div style={{ ...card, padding: 18, marginBottom: 14, borderLeft: `3px solid ${BLUE}` }}>
           <div style={{ display: "flex", justifyContent: "space-between", gap: 14, alignItems: "flex-start", flexWrap: "wrap", marginBottom: 12 }}>

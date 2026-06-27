@@ -13,6 +13,13 @@ assert.match(source, /componentScoreEffect/, "storyline adjusts contribution and
 assert.match(source, /scoreDrivers[\s\S]*?sort\(\(a, b\) => Math\.abs\(b\.effect\) - Math\.abs\(a\.effect\)\)/, "storyline ranks drivers by absolute score effect");
 assert.match(source, /Math\.abs\(driver\.effect\) >= 0\.05/, "storyline filters out near-zero driver movement before ranking");
 assert.match(source, /perDecade/, "storyline exposes per-decade trend rates, not only endpoint deltas");
+assert.match(source, /const roadmapItems = useMemo/, "result page derives a living-conditions roadmap from the selected trajectory");
+assert.match(source, /ROADMAP_YEARS/, "roadmap includes the current year and decade waypoints through 2100");
+assert.match(source, /Roadmap · current year to 2100/, "result page renders the required roadmap section");
+assert.match(source, /5-year checkpoints through 2100 and linearly interpolates intermediate years/, "roadmap method receipt discloses checkpoint cadence and interpolation");
+assert.match(source, /Sea level/, "roadmap includes sea-level relevance as a visible metric");
+assert.match(source, /SSP3-7\.0 vs SSP1-2\.6/, "roadmap can show lower-vs-higher pathway deltas after scenario contrast loads");
+assert.match(source, /Load pathway contrast to add lower-vs-higher scenario deltas/, "roadmap discloses missing scenario deltas before contrast is loaded");
 assert.match(source, /Why this changed/, "result page renders the required why-this-changed section");
 assert.match(source, /What this means for daily life/, "result page renders the required daily-life interpretation section");
 assert.match(source, /not a full causal attribution model/, "driver ranking caveats the attribution boundary");
@@ -23,4 +30,4 @@ assert.match(source, /<ReceiptDetails label="source" text=\{signal\.receipt\} \/
 assert.doesNotMatch(source, /title=\{signal\.receipt\}/, "daily-life source receipts must not regress to hover-only title text");
 assert.match(source, /Not yet included in the score/, "storyline discloses important missing impact domains");
 
-console.log("storyline smoke passed: explainability sections, trend rates, and accessible receipts guarded");
+console.log("storyline smoke passed: roadmap, explainability sections, trend rates, and accessible receipts guarded");
