@@ -1,9 +1,5 @@
 import { useState, useEffect, useMemo, useRef } from "react";
 import { GitCompare, Loader2, Download, Search, MapPin, ArrowLeft, Play, Pause, ShieldCheck, ExternalLink, Share2, Check } from "lucide-react";
-import {
-  agriculturalViability, biodiversityLoss, waterStress, projectedAqi, climateTwin,
-  FALLBACK_BASELINE_AQI, type EstimateInputs,
-} from "@/lib/climate-estimates";
 
 // ── Theme ──────────────────────────────────────────────────────────────────
 const BG = "hsl(222,47%,8%)";
@@ -343,27 +339,6 @@ function ScoreSparkline({ years, data, color, year }: { years: number[]; data: n
   );
 }
 
-// Semicircular gauge for the derived environmental estimates.
-function GaugeMeter({ value, max, color }: { value: number; max: number; color: string }) {
-  const R = 32, cx = 42, cy = 40, sw = 8;
-  const arcLen = Math.PI * R;
-  const pct = Math.max(0, Math.min(1, value / max));
-  const arc = `M ${cx - R} ${cy} A ${R} ${R} 0 0 1 ${cx + R} ${cy}`;
-  return (
-    <svg viewBox="0 0 84 50" style={{ width: 96, height: 56 }}>
-      <path d={arc} fill="none" stroke="rgba(255,255,255,0.08)" strokeWidth={sw} strokeLinecap="round" />
-      <path d={arc} fill="none" stroke={color} strokeWidth={sw} strokeLinecap="round" strokeDasharray={`${pct * arcLen} ${arcLen}`} style={{ transition: "stroke-dasharray 0.35s ease" }} />
-      <text x={cx} y={cy - 4} textAnchor="middle" fontSize="16" fontWeight="800" fill={color}>{Math.round(value)}</text>
-    </svg>
-  );
-}
-
-const ESTIMATE_BADGE: React.CSSProperties = {
-  fontSize: 8.5, fontWeight: 700, letterSpacing: 0.5, color: AMBER,
-  background: "rgba(245,158,11,0.12)", border: "1px solid rgba(245,158,11,0.3)",
-  borderRadius: 4, padding: "2px 6px", marginLeft: "auto",
-};
-
 // ── Main ─────────────────────────────────────────────────────────────────────
 export default function ClimateApp() {
   const [locationText, setLocationText] = useState("");
@@ -378,9 +353,6 @@ export default function ClimateApp() {
   const [exporting, setExporting] = useState(false);
   const [playing, setPlaying] = useState(false);
   const [shareCopied, setShareCopied] = useState(false);
-  // Present-day measured AQI baseline (Open-Meteo, free, no key) for the AQI estimate.
-  const [baselineAqi, setBaselineAqi] = useState<number | null>(null);
-  const [aqiMeasured, setAqiMeasured] = useState(false);
   const resultsRef = useRef<HTMLDivElement>(null);
   const deepLinkRunRef = useRef(false);
 
@@ -397,37 +369,6 @@ export default function ClimateApp() {
     if (linked.year) setYear(linked.year);
     deepLinkRunRef.current = linked.autoRun;
   }, []);
-
-  // Fetch present-day air quality for the selected location once results load.
-  useEffect(() => {
-    if (!trajectory || !selectedLocation) return;
-    let cancelled = false;
-    setBaselineAqi(null);
-    setAqiMeasured(false);
-    (async () => {
-      try {
-        const r = await fetch(
-          `https://air-quality-api.open-meteo.com/v1/air-quality?latitude=${selectedLocation.lat}&longitude=${selectedLocation.lng}&current=us_aqi`
-        );
-        const j = await r.json();
-        const v = j?.current?.us_aqi;
-        if (cancelled) return;
-        if (typeof v === "number" && isFinite(v)) {
-          setBaselineAqi(v);
-          setAqiMeasured(true);
-        } else {
-          setBaselineAqi(FALLBACK_BASELINE_AQI);
-          setAqiMeasured(false);
-        }
-      } catch {
-        if (!cancelled) {
-          setBaselineAqi(FALLBACK_BASELINE_AQI);
-          setAqiMeasured(false);
-        }
-      }
-    })();
-    return () => { cancelled = true; };
-  }, [trajectory, selectedLocation]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -625,23 +566,10 @@ export default function ClimateApp() {
     const sensColor = sensLabel === "High" ? ORANGE : sensLabel === "Moderate" ? AMBER : GREEN;
     const feedbacks = np.atmospheric_physics?.feedback_mechanisms ?? [];
 
-    // Derived estimates (clearly labelled as estimates in the UI) — computed from
-    // the real modeled variables plus published scientific relationships.
-    const estInputs: EstimateInputs = {
-      avgTemp, tempAnomaly: tempChange, annualPrecip, precipChangePct: precipChange,
-      heatDays, baseHeatDays, droughtRisk: drought / 100,
-    };
-    const agri = agriculturalViability(estInputs);
-    const bio = biodiversityLoss(estInputs);
-    const water = waterStress(estInputs);
-    const aqi = projectedAqi(baselineAqi ?? FALLBACK_BASELINE_AQI, estInputs);
-    const twin = climateTwin(avgTemp, annualPrecip, selectedLocation?.name);
-
     return {
       avgTemp, tempChange, annualPrecip, precipChange, heatDays, baseHeatDays, drought, flood, seaLevel,
       score, category, monthlyTemps, monthlyPrecip, minIdx, maxIdx, wetIdx, dryIdx, breakdown,
       np, sensitivity, sensLabel, sensColor, feedbacks,
-      agri, bio, water, aqi, twin,
       circulation: np.atmospheric_physics?.circulation_pattern,
       climateZone: np.location?.climate_zone,
       confidence: np.metadata?.confidence ?? "medium-high",
@@ -662,7 +590,7 @@ export default function ClimateApp() {
       seaHigh: np.extremes.detail?.uncertainty?.sea_level_high_cm ?? np.metadata?.uncertainty?.sea_level_high_cm,
       sourceTrail: np.metadata?.source_trail ?? [],
     };
-  }, [trajectory, year, baselineAqi, selectedLocation]);
+  }, [trajectory, year]);
 
   // Tipping points computed from real interpolated trajectory
   const tipping = useMemo(() => {
@@ -930,8 +858,7 @@ export default function ClimateApp() {
           </div>
           <p style={{ fontSize: 14.5, lineHeight: 1.75, color: "rgba(255,255,255,0.9)", margin: 0 }}>
             By <strong style={{ color: "white" }}>{displayYear}</strong>, {placeName} is projected to be{" "}
-            <strong style={{ color: RED }}>+{d!.tempChange.toFixed(1)}°C warmer</strong> than its baseline — close to today's climate in{" "}
-            <strong style={{ color: ACCENT }}>{d!.twin}</strong>. Heat-stress days{" "}
+            <strong style={{ color: RED }}>+{d!.tempChange.toFixed(1)}°C warmer</strong> than its baseline. Heat-stress days{" "}
             <strong style={{ color: ORANGE }}>{heatDelta >= 0 ? "rise" : "fall"} from {d!.baseHeatDays} to {d!.heatDays}/yr</strong>, annual rainfall shifts{" "}
             <strong style={{ color: BLUE }}>{d!.precipChange >= 0 ? "+" : ""}{d!.precipChange.toFixed(1)}%</strong>, and overall habitability sits at{" "}
             <strong style={{ color: sc }}>{d!.score}/100 ({d!.category})</strong>.
@@ -1122,45 +1049,26 @@ export default function ClimateApp() {
           ))}
         </div>
 
-        {/* Climate Twin + Atmospheric Physics */}
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14, marginBottom: 14 }}>
-          {/* Climate Twin (estimated analog) */}
-          <div style={{ ...card, padding: 18 }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
-              <span style={{ fontSize: 18 }}>🌍</span>
-              <h3 style={{ fontSize: 14, fontWeight: 700 }}>Climate Twin</h3>
-              <span style={ESTIMATE_BADGE}>ESTIMATE</span>
-            </div>
-            <p style={{ fontSize: 12, color: MUTED, marginBottom: 10, lineHeight: 1.5 }}>
-              {(selectedLocation?.city || selectedLocation?.name.split(",")[0])} in {Math.round(year)} will feel like today's climate of:
-            </p>
-            <div style={{ fontSize: 22, fontWeight: 800, color: ACCENT, marginBottom: 12, lineHeight: 1.2 }}>{d!.twin}</div>
-            <p style={{ fontSize: 10.5, color: MUTED, lineHeight: 1.5 }}>
-              Nearest present-day climate analog, matched on annual mean temperature and precipitation against a reference set of global city climate normals. Drag the slider to watch the analog migrate as warming progresses.
-            </p>
+        {/* Atmospheric Physics */}
+        <div style={{ ...card, padding: 18, marginBottom: 14 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
+            <span style={{ fontSize: 18 }}>⚛️</span>
+            <h3 style={{ fontSize: 14, fontWeight: 700 }}>Atmospheric Physics</h3>
           </div>
-
-          {/* Atmospheric Physics (model output) */}
-          <div style={{ ...card, padding: 18 }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
-              <span style={{ fontSize: 18 }}>⚛️</span>
-              <h3 style={{ fontSize: 14, fontWeight: 700 }}>Atmospheric Physics</h3>
-            </div>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr" }}>
-              {[
-                { label: "Circulation Pattern", value: d!.circulation ?? "—", color: BLUE },
-                { label: "Climate Sensitivity", value: d!.sensitivity != null ? `${d!.sensitivity.toFixed(1)}°C per CO₂ doubling` : "—", color: ORANGE },
-                { label: "Active Feedbacks", value: d!.feedbacks.length ? d!.feedbacks.map((f) => f.split(":")[0].trim()).join(" · ") : "—", color: PURPLE },
-                { label: "Model Confidence", value: prettify(d!.confidence), color: confidenceColor(d!.confidence) },
-                { label: "Model", value: d!.modelVersion ? `${d!.model} ${d!.modelVersion}` : d!.model, color: MUTED },
-                { label: "Resolution", value: d!.resolution ?? "—", color: MUTED },
-              ].map(({ label, value, color }) => (
-                <div key={label} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, borderBottom: "1px solid rgba(255,255,255,0.04)", paddingBottom: 6, marginBottom: 6, fontSize: 11 }}>
-                  <span style={{ color: MUTED, flexShrink: 0 }}>{label}</span>
-                  <span style={{ fontWeight: 600, color, textAlign: "right" }}>{value}</span>
-                </div>
-              ))}
-            </div>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(220px,1fr))", gap: "2px 18px" }}>
+            {[
+              { label: "Circulation Pattern", value: d!.circulation ?? "—", color: BLUE },
+              { label: "Climate Sensitivity", value: d!.sensitivity != null ? `${d!.sensitivity.toFixed(1)}°C per CO₂ doubling` : "—", color: ORANGE },
+              { label: "Active Feedbacks", value: d!.feedbacks.length ? d!.feedbacks.map((f) => f.split(":")[0].trim()).join(" · ") : "—", color: PURPLE },
+              { label: "Model Confidence", value: prettify(d!.confidence), color: confidenceColor(d!.confidence) },
+              { label: "Model", value: d!.modelVersion ? `${d!.model} ${d!.modelVersion}` : d!.model, color: MUTED },
+              { label: "Resolution", value: d!.resolution ?? "—", color: MUTED },
+            ].map(({ label, value, color }) => (
+              <div key={label} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, borderBottom: "1px solid rgba(255,255,255,0.04)", paddingBottom: 6, marginBottom: 6, fontSize: 11 }}>
+                <span style={{ color: MUTED, flexShrink: 0 }}>{label}</span>
+                <span style={{ fontWeight: 600, color, textAlign: "right" }}>{value}</span>
+              </div>
+            ))}
           </div>
         </div>
 
@@ -1226,44 +1134,6 @@ export default function ClimateApp() {
                 <div style={{ fontSize: 9, color: "rgba(255,255,255,0.42)", marginTop: 4 }}>{entry.citation}</div>
               </div>
             ))}
-          </div>
-        </div>
-
-        {/* Environmental & Agricultural Impact (derived estimates) */}
-        <div style={{ ...card, padding: 18, marginBottom: 14 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
-            <span style={{ fontSize: 18 }}>🌿</span>
-            <h2 style={{ fontSize: 15, fontWeight: 700 }}>Environmental & Agricultural Impact</h2>
-            <span style={ESTIMATE_BADGE}>ESTIMATES</span>
-          </div>
-          <p style={{ fontSize: 10.5, color: MUTED, marginBottom: 16, lineHeight: 1.5 }}>
-            Derived from the modeled climate variables and public datasets (FAO agro-climatic suitability, IPCC AR6 range-loss figures, Open-Meteo air quality) — these are estimates, not direct model outputs.
-          </p>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 14 }}>
-            {(() => {
-              const aqiColor = d!.aqi < 50 ? GREEN : d!.aqi < 100 ? AMBER : d!.aqi < 150 ? ORANGE : RED;
-              const aqiSub = d!.aqi < 50 ? "Good" : d!.aqi < 100 ? "Moderate" : d!.aqi < 150 ? "Unhealthy (SG)" : "Unhealthy";
-              const agriColor = d!.agri >= 70 ? GREEN : d!.agri >= 45 ? AMBER : ORANGE;
-              const agriSub = d!.agri >= 70 ? "Favorable" : d!.agri >= 45 ? "Reduced" : "Stressed";
-              const waterColor = d!.water < 35 ? GREEN : d!.water < 60 ? AMBER : RED;
-              const waterSub = d!.water < 35 ? "Low stress" : d!.water < 60 ? "Moderate" : "High stress";
-              const bioColor = d!.bio < 10 ? AMBER : d!.bio < 25 ? ORANGE : RED;
-              const bioSub = d!.bio < 10 ? "Mild" : d!.bio < 25 ? "Moderate" : "Severe";
-              const gauges = [
-                { name: "Air Quality", value: d!.aqi, max: 200, color: aqiColor, sub: `US AQI · ${aqiSub}`, note: aqiMeasured ? "Measured baseline + climate ozone penalty" : "Estimated baseline + climate ozone penalty" },
-                { name: "Agricultural Viability", value: d!.agri, max: 100, color: agriColor, sub: agriSub, note: "Agro-climatic suitability (thermal + water)" },
-                { name: "Water Stress", value: d!.water, max: 100, color: waterColor, sub: waterSub, note: "From modeled drought risk + precipitation" },
-                { name: "Biodiversity Loss", value: d!.bio, max: 60, color: bioColor, sub: `${bioSub} · % species`, note: "Range loss calibrated to IPCC AR6" },
-              ];
-              return gauges.map((g) => (
-                <div key={g.name} style={{ textAlign: "center", padding: "14px 8px", borderRadius: 10, background: "rgba(255,255,255,0.02)", border: `1px solid ${BORDER}` }}>
-                  <div style={{ display: "flex", justifyContent: "center" }}><GaugeMeter value={g.value} max={g.max} color={g.color} /></div>
-                  <div style={{ fontSize: 12, fontWeight: 700, marginTop: 6 }}>{g.name}</div>
-                  <div style={{ fontSize: 11, fontWeight: 600, color: g.color, marginTop: 2 }}>{g.sub}</div>
-                  <div style={{ fontSize: 9.5, color: MUTED, marginTop: 6, lineHeight: 1.4 }}>{g.note}</div>
-                </div>
-              ));
-            })()}
           </div>
         </div>
 
