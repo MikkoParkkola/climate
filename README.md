@@ -13,6 +13,7 @@ Every number served to users must trace to real CMIP6/IPCC model output or anoth
 - PostgreSQL via Drizzle schema in `shared/schema.ts`
 - Offline Python projection engine in `grounded_model.py`
 - Compact grounded grid in `data/grid.i16.gz` with metadata in `data/manifest.json`
+- WorldClim v2.1 observed baseline overlay in `data/worldclim10m.i16.gz`
 
 ## Common commands
 

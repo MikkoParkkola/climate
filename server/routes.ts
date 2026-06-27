@@ -199,7 +199,7 @@ const SEO_PAGES: Record<string, SeoPage> = {
   <h2>Forecast sources</h2>
   <ul>
     <li>Temperature and precipitation change: CMIP6 model output behind the IPCC Sixth Assessment Report, aggregated by scenario and decade.</li>
-    <li>Present-day baseline: 1995-2014 monthly CMIP6 historical climatology, with a planned upgrade to direct observed baselines.</li>
+    <li>Present-day baseline: WorldClim v2.1 observed monthly climatology (1970-2000, 10 arc-minutes) where available, with CMIP6 historical climatology as fallback.</li>
     <li>Sea-level rise: IPCC AR6 regional projections.</li>
     <li>Heat, drought, and flood risk: CMIP6 ETCCDI extreme-climate indices scored against documented thresholds.</li>
   </ul>
@@ -209,7 +209,7 @@ const SEO_PAGES: Record<string, SeoPage> = {
     <li>Precipitation is shown as model consensus plus spread because there is no equivalent single assessed calibration anchor.</li>
     <li>Risk scores expose the raw physical quantity next to the 0 to 100 score.</li>
   </ul>
-  <p>Sources: IPCC AR6 Working Group I; CMIP6; ETCCDI indices; IPCC AR6 sea-level projections.</p>
+  <p>Sources: WorldClim v2.1 (Fick & Hijmans 2017); IPCC AR6 Working Group I; CMIP6; ETCCDI indices; IPCC AR6 sea-level projections.</p>
   <p><a href="/">Return to fupit</a> or inspect <a href="${GITHUB_REPO_URL}">the source on GitHub</a>.</p>
 </main>`,
   },

@@ -76,6 +76,14 @@ interface ProjectionPoint {
     model_version?: string;
     scenario?: string;
     baseline?: string;
+    baseline_source?: {
+      temperature?: string;
+      precipitation?: string;
+      observed_period?: string;
+      observed_resolution?: string;
+      observed_citation?: string;
+      delta_reference_period?: string;
+    };
     projection_method?: string;
     uncertainty?: {
       temperature_anomaly_spread_c?: number;
@@ -573,6 +581,7 @@ export default function ClimateApp() {
       modelVersion: np.metadata?.model_version ?? "",
       scenario: np.metadata?.scenario ?? np.scenario,
       baseline: np.metadata?.baseline,
+      baselineSource: np.metadata?.baseline_source,
       projectionMethod: np.metadata?.projection_method,
       tempSpread: np.temperature.uncertainty?.anomaly_spread,
       tempLow: np.temperature.uncertainty?.annual_mean_low,
@@ -1089,8 +1098,8 @@ export default function ClimateApp() {
               },
               {
                 label: "Baseline",
-                value: "1995–2014",
-                sub: "CMIP6 historical monthly climatology",
+                value: d!.baselineSource?.observed_resolution ?? "1.0 degree",
+                sub: d!.baselineSource?.temperature ?? d!.baseline ?? "CMIP6 historical monthly climatology",
                 color: GREEN,
               },
             ].map((item) => (
@@ -1101,6 +1110,11 @@ export default function ClimateApp() {
               </div>
             ))}
           </div>
+          {d!.baselineSource?.delta_reference_period && (
+            <p style={{ color: MUTED, fontSize: 9.5, lineHeight: 1.45, marginTop: 10 }}>
+              Baseline note: {d!.baselineSource.delta_reference_period}.
+            </p>
+          )}
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(220px,1fr))", gap: 8 }}>
             {d!.sourceTrail.slice(0, 4).map((entry) => (
               <div key={entry.label} style={{ padding: "9px 10px", borderRadius: 8, background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.055)" }}>

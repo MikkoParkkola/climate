@@ -7,5 +7,6 @@ vite.config.ts.*
 # Ingest pipeline grids (raw NetCDF staging; serving uses the compact export)
 ingest/out/
 ingest/sealevel_raw/
+ingest/cache/
 ingest/export/grid.i16.gz
 ingest/export/manifest.json

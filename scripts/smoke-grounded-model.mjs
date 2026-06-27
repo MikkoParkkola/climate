@@ -8,6 +8,8 @@ const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), ".."
 const modelPath = path.join(repoRoot, "grounded_model.py");
 const gridPath = path.join(repoRoot, "data", "grid.i16.gz");
 const manifestPath = path.join(repoRoot, "data", "manifest.json");
+const worldclimPath = path.join(repoRoot, "data", "worldclim10m.i16.gz");
+const worldclimManifestPath = path.join(repoRoot, "data", "worldclim10m.manifest.json");
 
 const samples = [
   { name: "Helsinki", lat: 60.17, lng: 24.94 },
@@ -60,6 +62,10 @@ const requiredPaths = [
   "metadata.model",
   "metadata.model_version",
   "metadata.data_source",
+  "metadata.baseline",
+  "metadata.baseline_source.temperature",
+  "metadata.baseline_source.precipitation",
+  "metadata.baseline_source.delta_reference_period",
   "metadata.projection_method",
   "metadata.uncertainty.temperature_anomaly_spread_c",
   "metadata.uncertainty.precipitation_anomaly_spread_pct",
@@ -206,6 +212,8 @@ function validateProjection(sample, projection, expectedYear = 2050) {
   assert(projection.extremes.detail.uncertainty.sea_level_high_cm >= projection.extremes.sea_level_rise_cm, `${sample.name} sea-level high below median`);
   assert(Array.isArray(projection.metadata.source_trail), `${sample.name} source trail missing`);
   assert(projection.metadata.source_trail.length >= 4, `${sample.name} source trail incomplete`);
+  assert(/WorldClim|CMIP6/.test(projection.metadata.baseline_source.temperature), `${sample.name} temperature baseline source missing provenance`);
+  assert(/WorldClim|CMIP6/.test(projection.metadata.baseline_source.precipitation), `${sample.name} precipitation baseline source missing provenance`);
   projection.metadata.source_trail.forEach((entry, index) => {
     assert(entry.label && entry.source && entry.method && entry.citation, `${sample.name} source trail entry ${index} incomplete`);
   });
@@ -222,7 +230,7 @@ function validateKnownRegressions(results) {
   assert(singapore.extremes.heat_stress_days >= 300, "Singapore tropical-night regression: heat stress days unexpectedly low");
 }
 
-for (const requiredFile of [modelPath, gridPath, manifestPath]) {
+for (const requiredFile of [modelPath, gridPath, manifestPath, worldclimPath, worldclimManifestPath]) {
   assert(existsSync(requiredFile), `Required file missing: ${path.relative(repoRoot, requiredFile)}`);
 }
 
