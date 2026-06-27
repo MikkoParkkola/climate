@@ -891,7 +891,7 @@ export default function ClimateComparison({ onBack }: ClimateComparisonProps) {
           </a>{" "}
           · fupit
         </p>
-        <p className="mt-1">Powered by CBottle/ICON Atmospheric Physics · For research and planning purposes only</p>
+        <p className="mt-1">Powered by grounded CMIP6/IPCC projections · For research and planning purposes only</p>
       </footer>
     </main>
   );

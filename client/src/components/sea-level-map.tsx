@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
-import { MapContainer, TileLayer, Marker, Popup, useMap } from "react-leaflet";
-import { Icon } from "leaflet";
+import { MapContainer, TileLayer, Marker, Popup, useMap, useMapEvents } from "react-leaflet";
+import L, { Icon } from "leaflet";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
@@ -22,6 +22,17 @@ interface SeaLevelZone {
   opacity: number;
   description: string;
   riskLevel: 'low' | 'moderate' | 'high' | 'extreme';
+}
+
+function LocationClickHandler({ onLocationSelect }: { onLocationSelect: (latitude: number, longitude: number) => void }) {
+  useMapEvents({
+    click: (e) => {
+      const { lat, lng } = e.latlng;
+      onLocationSelect(lat, lng);
+    },
+  });
+
+  return null;
 }
 
 // Sea level visualization overlay component
@@ -231,11 +242,8 @@ export default function SeaLevelMap({
             center={selectedLocation ? [selectedLocation.latitude, selectedLocation.longitude] : [40.7128, -74.0060]}
             zoom={selectedLocation ? 10 : 3}
             style={{ height: "100%", width: "100%" }}
-            onClick={(e: any) => {
-              const { lat, lng } = e.latlng;
-              onLocationSelect(lat, lng);
-            }}
           >
+            <LocationClickHandler onLocationSelect={onLocationSelect} />
             <TileLayer
               url={getTileLayerUrl(mapStyle)}
               attribution={

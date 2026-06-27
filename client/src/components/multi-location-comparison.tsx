@@ -29,6 +29,17 @@ interface ComparisonData {
   currentProjection: ClimateProjection;
 }
 
+interface SavedComparison {
+  id: number;
+  name: string;
+  locationIds: string;
+  year: number;
+}
+
+interface ExportComparisonResponse {
+  downloadUrl: string;
+}
+
 export default function MultiLocationComparison({ 
   initialLocations = [], 
   selectedYear, 
@@ -42,27 +53,32 @@ export default function MultiLocationComparison({
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  const { data: searchResults } = useQuery({
+  const { data: searchResults = [] } = useQuery<ClimateLocation[]>({
     queryKey: ['/api/climate/search', searchQuery],
+    queryFn: async () => {
+      const response = await apiRequest("GET", `/api/locations/search?q=${encodeURIComponent(searchQuery)}`);
+      return response.json();
+    },
     enabled: searchQuery.length > 2,
   });
 
-  const { data: comparisonData, isLoading } = useQuery({
+  const { data: comparisonData = [], isLoading } = useQuery<ComparisonData[]>({
     queryKey: ['/api/climate/multi-comparison', selectedLocations.map(l => l.id), selectedYear],
+    queryFn: async () => {
+      const locationIds = selectedLocations.map(l => l.id).join(",");
+      const response = await apiRequest("GET", `/api/climate/multi-comparison?locationIds=${encodeURIComponent(locationIds)}&year=${selectedYear}`);
+      return response.json();
+    },
     enabled: selectedLocations.length > 0,
   });
 
-  const { data: savedComparisons } = useQuery({
+  const { data: savedComparisons = [] } = useQuery<SavedComparison[]>({
     queryKey: ['/api/user/comparisons'],
   });
 
   const saveComparisonMutation = useMutation({
     mutationFn: async (data: { name: string; locationIds: number[]; year: number }) => {
-      return await apiRequest('/api/user/comparisons', {
-        method: 'POST',
-        body: JSON.stringify(data),
-        headers: { 'Content-Type': 'application/json' },
-      });
+      return await apiRequest("POST", "/api/user/comparisons", data);
     },
     onSuccess: () => {
       toast({
@@ -83,18 +99,14 @@ export default function MultiLocationComparison({
 
   const exportPdfMutation = useMutation({
     mutationFn: async () => {
-      const response = await apiRequest('/api/climate/export-comparison', {
-        method: 'POST',
-        body: JSON.stringify({
-          locationIds: selectedLocations.map(l => l.id),
-          year: selectedYear,
-          name: comparisonName || `Climate Comparison ${selectedYear}`,
-        }),
-        headers: { 'Content-Type': 'application/json' },
+      const response = await apiRequest("POST", "/api/climate/export-comparison", {
+        locationIds: selectedLocations.map(l => l.id),
+        year: selectedYear,
+        name: comparisonName || `Climate Comparison ${selectedYear}`,
       });
-      return response;
+      return response.json() as Promise<ExportComparisonResponse>;
     },
-    onSuccess: (data: any) => {
+    onSuccess: (data) => {
       // Create and download PDF
       const link = document.createElement('a');
       link.href = data.downloadUrl;
@@ -455,7 +467,7 @@ export default function MultiLocationComparison({
           </CardHeader>
           <CardContent>
             <div className="space-y-2">
-              {savedComparisons.map((comparison: any) => (
+              {savedComparisons.map((comparison) => (
                 <div key={comparison.id} className="flex items-center justify-between p-3 border rounded-lg">
                   <div>
                     <h4 className="font-medium">{comparison.name}</h4>
@@ -468,8 +480,9 @@ export default function MultiLocationComparison({
                     size="sm"
                     onClick={() => {
                       // Load this comparison
-                      const locationIds = JSON.parse(comparison.locationIds);
+                      const locationIds = JSON.parse(comparison.locationIds) as number[];
                       // You would need to fetch these locations and set them
+                      void locationIds;
                       onYearChange(comparison.year);
                     }}
                   >

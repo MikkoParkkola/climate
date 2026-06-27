@@ -522,7 +522,7 @@ export default function ClimateApp() {
       climateZone: np.location?.climate_zone,
       confidence: np.metadata?.confidence ?? "medium-high",
       resolution: np.metadata?.resolution,
-      model: np.metadata?.model ?? "CBottle / ICON",
+      model: np.metadata?.model ?? "CMIP6 / IPCC AR6",
       modelVersion: np.metadata?.model_version ?? "",
     };
   }, [trajectory, year, baselineAqi, selectedLocation]);
@@ -565,7 +565,7 @@ export default function ClimateApp() {
         <main style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "40px 20px" }}>
           <div style={{ maxWidth: 600, width: "100%", textAlign: "center" }}>
             <div style={{ display: "inline-block", padding: "4px 12px", borderRadius: 20, border: `1px solid ${BORDER}`, background: CARD, fontSize: 11, color: ACCENT, marginBottom: 20, letterSpacing: "0.05em" }}>
-              CBottle · ICON Atmospheric Physics
+              CMIP6 · IPCC AR6 · NASA Sea Level
             </div>
             <h1 style={{ fontSize: 42, fontWeight: 800, lineHeight: 1.1, marginBottom: 14 }}>
               Everywhere's getting worse.<br />Just not equally.
@@ -614,7 +614,7 @@ export default function ClimateApp() {
 
             {isLoading && (
               <div style={{ marginTop: 18, fontSize: 13, color: MUTED }}>
-                Running CBottle ICON model — checkpoint {Math.min(loadingStep + 1, CHECKPOINTS.length)}/{CHECKPOINTS.length} ({CHECKPOINTS[loadingStep]})
+                Sampling grounded CMIP6/IPCC grid — checkpoint {Math.min(loadingStep + 1, CHECKPOINTS.length)}/{CHECKPOINTS.length} ({CHECKPOINTS[loadingStep]})
                 <div style={{ marginTop: 10, height: 4, background: "rgba(255,255,255,0.08)", borderRadius: 2, overflow: "hidden" }}>
                   <div style={{ height: "100%", background: ACCENT, borderRadius: 2, width: `${((loadingStep + 1) / CHECKPOINTS.length) * 100}%`, transition: "width 0.4s ease" }} />
                 </div>

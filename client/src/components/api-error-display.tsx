@@ -1,6 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { AlertCircle, RefreshCw, ExternalLink } from "lucide-react";
+import { AlertCircle, RefreshCw } from "lucide-react";
 
 interface ApiErrorDisplayProps {
   error: string;
@@ -22,13 +22,13 @@ export default function ApiErrorDisplay({ error, onRetry, isRetrying = false }: 
 
   const getErrorSolution = () => {
     if (isAuthError) {
-      return "Please verify your NVIDIA API key is correct and has access to Earth-2 Climate modeling functions.";
+      return "This deployment uses the offline grounded climate model; external API keys are not required. Refresh and try again.";
     }
     if (isRateLimit) {
-      return "API usage limit reached. Please wait a few minutes before trying again or consider upgrading your API plan.";
+      return "Usage limit reached. Please wait a few minutes before trying again.";
     }
     if (isEndpointError) {
-      return "The NVIDIA Earth-2 Climate service is currently unavailable. Please try again later.";
+      return "The grounded climate service is currently unavailable. Please try again later.";
     }
     return "There was an issue retrieving climate projection data. Please check your connection and try again.";
   };
@@ -71,25 +71,13 @@ export default function ApiErrorDisplay({ error, onRetry, isRetrying = false }: 
                 )}
               </Button>
             )}
-            
-            {isAuthError && (
-              <Button
-                variant="outline"
-                onClick={() => window.open("https://developer.nvidia.com/", "_blank")}
-                className="border-red-300 text-red-700 hover:bg-red-50"
-              >
-                <ExternalLink className="h-4 w-4 mr-2" />
-                Get NVIDIA API Key
-              </Button>
-            )}
           </div>
 
           <div className="bg-blue-50 p-3 rounded border border-blue-200">
             <h4 className="text-sm font-medium text-blue-800 mb-2">About Climate Data Sources</h4>
             <p className="text-xs text-blue-700">
-              This application uses authentic climate projections from NVIDIA's Earth-2 Climate API, 
-              which provides AI-powered climate modeling based on advanced atmospheric simulations. 
-              When the service is available, you'll receive real climate projection data for your selected location.
+              This application serves grounded CMIP6/IPCC projections from the local climate grid.
+              If the model cannot produce a value, the app should omit it rather than inventing a fallback.
             </p>
           </div>
         </div>

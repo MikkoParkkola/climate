@@ -14,7 +14,7 @@ import ComparableLocation from "@/components/comparable-location";
 import ApiErrorDisplay from "@/components/api-error-display";
 import ClimateTimeline from "@/components/climate-timeline";
 import ClimateImpactExplanation from "@/components/climate-impact-explanation";
-import HabitabilityRanking from "@/components/habitability-ranking";
+import HabitabilityRanking from "@/components/habitability-ranking-refactored";
 import LivabilityIndexBreakdown from "@/components/livability-index-breakdown";
 import QuickYearSelector from "@/components/quick-year-selector";
 import { Input } from "@/components/ui/input";
@@ -462,16 +462,16 @@ export default function ComprehensiveClimateReport() {
             <div className="mb-4 p-3 bg-white rounded border">
               <div className="flex items-center gap-2 mb-2">
                 <span className="font-medium">Data Source:</span>
-                <Badge variant={debugData.dataSource === 'NVIDIA_API' ? 'default' : 'secondary'}>
+                <Badge variant={debugData.dataSource === 'GROUNDED_GRID' ? 'default' : 'secondary'}>
                   {debugData.dataSource}
                 </Badge>
                 <span className="text-sm text-gray-500">{debugData.timestamp}</span>
               </div>
-              {debugData.dataSource === 'NVIDIA_API' && (
-                <div className="text-sm text-green-600">✅ Authentic NVIDIA Earth-2 Studio API Data</div>
+              {debugData.dataSource === 'GROUNDED_GRID' && (
+                <div className="text-sm text-green-600">Grounded CMIP6/IPCC grid data</div>
               )}
               {debugData.dataSource === 'CACHED_FALLBACK' && (
-                <div className="text-sm text-yellow-600">⚠️ Using cached fallback data - NVIDIA API unavailable</div>
+                <div className="text-sm text-yellow-600">Legacy cached fallback data is no longer accepted</div>
               )}
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

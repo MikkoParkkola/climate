@@ -175,7 +175,7 @@ export default function HabitabilityRanking({ selectedYear, onLocationSelect }: 
           Global Climate Rankings - {selectedYear}
         </h2>
         <p className="text-gray-600 dark:text-gray-400 mt-2">
-          Comparative analysis based on CBottle climate model projections
+          Comparative analysis based on grounded CMIP6/IPCC projections
         </p>
       </div>
 
@@ -259,9 +259,9 @@ export default function HabitabilityRanking({ selectedYear, onLocationSelect }: 
 
       <div className="mt-8 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
         <p className="text-sm text-blue-800 dark:text-blue-200">
-          <strong>Source Data:</strong> All scores are calculated directly from CBottle climate model 
-          projections for {selectedYear}. Temperature comfort, humidity, and infrastructure scores 
-          are derived from CBottle's atmospheric physics calculations and baseline meteorological data.
+          <strong>Source Data:</strong> Scores are calculated from grounded CMIP6/IPCC projections
+          for {selectedYear}. Temperature comfort, humidity, and infrastructure scores are derived
+          from documented forecast fields and baseline meteorological data.
         </p>
       </div>
     </div>

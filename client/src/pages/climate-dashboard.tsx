@@ -16,7 +16,7 @@ import ComparableLocation from "@/components/comparable-location";
 import ApiErrorDisplay from "@/components/api-error-display";
 import ClimateTimeline from "@/components/climate-timeline";
 import ClimateImpactExplanation from "@/components/climate-impact-explanation";
-import HabitabilityRanking from "@/components/habitability-ranking";
+import HabitabilityRanking from "@/components/habitability-ranking-refactored";
 import ApiKeyManager from "@/components/api-key-manager";
 import MultiLocationComparison from "@/components/multi-location-comparison";
 import LivabilityIndexBreakdown from "@/components/livability-index-breakdown";
