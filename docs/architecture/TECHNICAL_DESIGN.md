@@ -432,9 +432,15 @@ Replit remains the origin; CDN absorbs read spikes.
 
 ### Phase 3 - Node Grid Reader
 
-- Port grid decoding/interpolation to TypeScript.
-- Add Python parity tests.
-- Switch trajectory API behind `CLIMATE_GRID_ENGINE=node`.
+- Port grid decoding/interpolation to TypeScript. Initial decoder/interpolator
+  parity is implemented in `server/grid-reader.ts`.
+- Add Python parity tests. Initial parity is covered by
+  `npm run smoke:grid-reader`, which compares Node samples against
+  `grounded_model.py` on the real grid and WorldClim artifacts.
+- Switch trajectory API behind `CLIMATE_GRID_ENGINE=node` after full projected
+  response parity exists. `npm run smoke:node-model` now covers the first
+  full-response parity matrix; the core trajectory/climate-twin helpers can
+  opt into Node while Python remains the default bridge.
 - Keep Python fallback for one release only.
 
 ### Phase 4 - Enrichments

@@ -10,6 +10,8 @@ import { z } from "zod";
 import { getRanking, rankingQuerySchema } from "./precomputed-rankings";
 import { loadSourceRegistry } from "./source-registry";
 import { climateTwinQuerySchema, findClimateTwin, loadClimateAnalogCatalog } from "./climate-twin";
+import { getClimateGridEngine } from "./climate-grid-engine";
+import { climateTrajectory, projectClimate } from "./grounded-node-model";
 
 const MAX_PYTHON_CONCURRENT = 2;
 const PYTHON_TIMEOUT_MS = 60_000;
@@ -123,6 +125,9 @@ async function runClimateModel(
   year: number,
   scenario = DEFAULT_CLIMATE_SCENARIO,
 ): Promise<any> {
+  if (getClimateGridEngine() === "node") {
+    return projectClimate(lat, lng, year, scenario);
+  }
   return runGroundedModel([lat.toString(), lng.toString(), year.toString(), scenario]);
 }
 
@@ -134,6 +139,9 @@ async function runClimateTrajectory(
   years: number[],
   scenario = DEFAULT_CLIMATE_SCENARIO,
 ): Promise<any> {
+  if (getClimateGridEngine() === "node") {
+    return climateTrajectory(lat, lng, years, scenario);
+  }
   return runGroundedModel([
     "--trajectory",
     lat.toString(),
@@ -358,6 +366,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       app: "fupit",
       service: "climate-api",
       engine: "grounded_model.py",
+      gridEngine: getClimateGridEngine(),
       modelCacheVersion: MODEL_CACHE_VERSION,
       sourceRegistryVersion: SOURCE_REGISTRY_VERSION,
       cachePurge: "startup-incompatible-delete-enabled",
