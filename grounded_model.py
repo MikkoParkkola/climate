@@ -15,6 +15,7 @@ factor architecture). Risk = absolute extreme index scored against a CITED thres
 
 CLI (matches the old runner so routes.ts can swap the spawn target):
     python grounded_model.py <lat> <lng> <year> [scenario]
+    python grounded_model.py --trajectory <lat> <lng> <year,year,...> [scenario]
     python grounded_model.py --rankings <year> [scenario]
 prints JSON to stdout. scenario default ssp245 (middle-of-road); ids:
 ssp119 ssp126 ssp245 ssp370 ssp585.
@@ -284,6 +285,12 @@ def main():
             out.append({**ci, "habitability": p["habitability"], "year": year})
         out.sort(key=lambda r: r["habitability"]["score"], reverse=True)
         print(json.dumps({"year": year, "scenario": scenario, "rankings": out}))
+        return
+    if a and a[0] == "--trajectory":
+        lat = float(a[1]); lng = float(a[2])
+        years = sorted({int(y) for y in a[3].split(",") if y.strip()})
+        scenario = a[4] if len(a) > 4 else DEFAULT_SCENARIO
+        print(json.dumps(trajectory(lat, lng, years, scenario)))
         return
     lat = float(a[0]); lng = float(a[1]); year = int(a[2])
     scenario = a[3] if len(a) > 3 else DEFAULT_SCENARIO

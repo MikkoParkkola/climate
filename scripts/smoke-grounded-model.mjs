@@ -99,6 +99,27 @@ function runModel(pythonBin, sample, year = 2050) {
   }
 }
 
+function runTrajectory(pythonBin, sample, years) {
+  const result = spawnSync(
+    pythonBin,
+    [modelPath, "--trajectory", String(sample.lat), String(sample.lng), years.join(",")],
+    { cwd: repoRoot, encoding: "utf8", maxBuffer: 16 * 1024 * 1024 },
+  );
+  if (result.error) {
+    throw result.error;
+  }
+  if (result.status !== 0) {
+    throw new Error(
+      `${sample.name} trajectory process failed with exit ${result.status}: ${result.stderr || result.stdout}`,
+    );
+  }
+  try {
+    return JSON.parse(result.stdout);
+  } catch (error) {
+    throw new Error(`${sample.name} trajectory output was not valid JSON: ${error.message}`);
+  }
+}
+
 function findPython() {
   const candidates = [process.env.PYTHON_BIN, "python3", "python"].filter(Boolean);
   for (const candidate of candidates) {
@@ -108,7 +129,7 @@ function findPython() {
   throw new Error("No python executable with numpy available. Install numpy or set PYTHON_BIN.");
 }
 
-function validateProjection(sample, projection) {
+function validateProjection(sample, projection, expectedYear = 2050) {
   for (const requiredPath of requiredPaths) {
     assert(getPath(projection, requiredPath) !== undefined, `${sample.name} missing ${requiredPath}`);
   }
@@ -116,7 +137,7 @@ function validateProjection(sample, projection) {
   const nulls = collectNullPaths(projection);
   assert(nulls.length === 0, `${sample.name} returned null values: ${nulls.slice(0, 12).join(", ")}`);
 
-  assert(projection.year === 2050, `${sample.name} year mismatch`);
+  assert(projection.year === expectedYear, `${sample.name} year mismatch`);
   assert(projection.scenario === "ssp245", `${sample.name} scenario mismatch`);
   assert(Array.isArray(projection.temperature.monthly), `${sample.name} temperature.monthly missing`);
   assert(projection.temperature.monthly.length === 12, `${sample.name} temperature.monthly length is not 12`);
@@ -157,6 +178,19 @@ const results = samples.map((sample) => {
 
 validateKnownRegressions(results);
 
+const trajectoryYears = [2025, 2050, 2075, 2100];
+const trajectorySample = samples[0];
+const trajectory = runTrajectory(pythonBin, trajectorySample, trajectoryYears);
+assert(
+  JSON.stringify(trajectory.coordinates) === JSON.stringify({ lat: trajectorySample.lat, lng: trajectorySample.lng }),
+  "trajectory coordinates mismatch",
+);
+assert(Array.isArray(trajectory.points), "trajectory points missing");
+assert(trajectory.points.length === trajectoryYears.length, "trajectory point count mismatch");
+trajectory.points.forEach((point, index) => {
+  validateProjection(trajectorySample, point, trajectoryYears[index]);
+});
+
 for (const { sample, projection } of results) {
   console.log(
     `${sample.name}: temp=${projection.temperature.annual_mean}C precip=${projection.precipitation.annual_total}mm ` +
@@ -165,3 +199,4 @@ for (const { sample, projection } of results) {
   );
 }
 console.log(`grounded_model contract smoke passed for ${samples.length} cities using ${pythonBin}`);
+console.log(`grounded_model trajectory smoke passed for ${trajectorySample.name} years ${trajectoryYears.join(",")}`);

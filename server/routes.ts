@@ -10,6 +10,7 @@ import { z } from "zod";
 
 const MAX_PYTHON_CONCURRENT = 2;
 const PYTHON_TIMEOUT_MS = 60_000;
+const PYTHON_BIN = process.env.PYTHON_BIN || "python";
 let activePythonProcesses = 0;
 
 const RATE_LIMIT_WINDOW_MS = 60_000;
@@ -54,23 +55,16 @@ function releasePythonSlot(): void {
   }
 }
 
-// Runs the climate model for a single (lat, lng, year), respecting the
-// concurrency limit. Resolves with the parsed projection JSON.
-async function runClimateModel(
-  lat: number,
-  lng: number,
-  year: number,
-): Promise<any> {
+// Runs grounded_model.py with bounded concurrency and returns parsed JSON.
+async function runGroundedModel(args: string[]): Promise<any> {
   await acquirePythonSlot();
   return new Promise((resolve, reject) => {
     let killed = false;
     let settled = false;
     // grounded_model.py is offline (reads the compact CMIP6/IPCC grid in data/).
-    const python = spawn("python", [
+    const python = spawn(PYTHON_BIN, [
       "grounded_model.py",
-      lat.toString(),
-      lng.toString(),
-      year.toString(),
+      ...args,
     ]);
 
     const killTimer = setTimeout(() => {
@@ -109,6 +103,31 @@ async function runClimateModel(
       reject(new Error("spawn_error"));
     });
   });
+}
+
+// Runs the climate model for a single (lat, lng, year). Kept as a narrow wrapper
+// for legacy call sites and single-year cache fills.
+async function runClimateModel(
+  lat: number,
+  lng: number,
+  year: number,
+): Promise<any> {
+  return runGroundedModel([lat.toString(), lng.toString(), year.toString()]);
+}
+
+// Runs the climate model for multiple checkpoint years in one Python process so
+// the compact grid is loaded once for an uncached trajectory.
+async function runClimateTrajectory(
+  lat: number,
+  lng: number,
+  years: number[],
+): Promise<any> {
+  return runGroundedModel([
+    "--trajectory",
+    lat.toString(),
+    lng.toString(),
+    years.join(","),
+  ]);
 }
 
 // ── SEO: per-route HTML head injection (production only) ────────────────────
@@ -540,7 +559,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     let killed = false;
     let responded = false;
 
-    const python = spawn("python", [
+    const python = spawn(PYTHON_BIN, [
       "grounded_model.py",
       coordinates.lat.toString(),
       coordinates.lng.toString(),
@@ -630,20 +649,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
     const lngKey = round2(coordinates.lng);
 
     try {
-      const points: any[] = [];
+      const pointsByYear = new Map<number, any>();
+      const missingYears: number[] = [];
       let cachedCount = 0;
       for (const year of years) {
         const cached = await storage.getCachedModelProjection(latKey, lngKey, year);
         if (cached) {
           cachedCount++;
-          points.push({ year, cached: true, ...(cached as object) });
+          pointsByYear.set(year, { year, cached: true, ...(cached as object) });
           continue;
         }
-        // grounded_model.py is offline — no API key needed for any location.
-        const projection = await runClimateModel(coordinates.lat, coordinates.lng, year);
-        await storage.saveModelProjection(latKey, lngKey, year, projection);
-        points.push({ year, cached: false, ...projection });
+        missingYears.push(year);
       }
+
+      if (missingYears.length > 0) {
+        // grounded_model.py is offline — no API key needed for any location.
+        const trajectory = await runClimateTrajectory(coordinates.lat, coordinates.lng, missingYears);
+        const projectedPoints = Array.isArray(trajectory?.points) ? trajectory.points : [];
+        for (const projection of projectedPoints) {
+          const year = Number(projection?.year);
+          if (!missingYears.includes(year)) continue;
+          await storage.saveModelProjection(latKey, lngKey, year, projection);
+          pointsByYear.set(year, { year, cached: false, ...projection });
+        }
+        for (const year of missingYears) {
+          if (!pointsByYear.has(year)) {
+            throw new Error("parse_error");
+          }
+        }
+      }
+
+      const points = years.map((year) => pointsByYear.get(year));
       res.json({ success: true, data: { coordinates, points, cachedCount } });
     } catch (err) {
       const msg = (err as Error).message;
@@ -672,7 +708,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     let killed = false;
     let responded = false;
 
-    const python = spawn("python", ["grounded_model.py", "--rankings", year.toString()]);
+    const python = spawn(PYTHON_BIN, ["grounded_model.py", "--rankings", year.toString()]);
 
     const killTimer = setTimeout(() => {
       killed = true;
