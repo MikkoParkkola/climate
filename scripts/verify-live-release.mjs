@@ -142,6 +142,16 @@ try {
   assert(rankingsPage.text.includes("bounded climate rankings"), "/rankings carries bounded-ranking copy");
   assert(rankingsPage.text.includes("not complete global"), "/rankings avoids complete-global claim");
 
+  const { json: ranking } = await getJson("/api/climate/global-rankings?catalog=curated_cities&scenario=ssp245&year=2050&metric=habitability_score&direction=highest&limit=10");
+  assert(ranking.catalog === "curated_cities", "ranking API uses curated_cities catalog");
+  assert(ranking.catalogSize === 45, "ranking API discloses catalog size");
+  assert(ranking.scenario === "ssp245", "ranking API scenario=ssp245");
+  assert(ranking.year === 2050, "ranking API year=2050");
+  assert(ranking.metric === "habitability_score", "ranking API metric=habitability_score");
+  assert(Array.isArray(ranking.rows) && ranking.rows.length === 10, "ranking API returns top 10 rows");
+  assert(Array.isArray(ranking.sourceIds) && ranking.sourceIds.includes("curated-ranking-cities-v1"), "ranking API exposes source IDs");
+  assert(Array.isArray(ranking.caveats) && ranking.caveats.some((caveat) => caveat.includes("not complete global rankings")), "ranking API exposes bounded-catalog caveat");
+
   const dataQualityPage = await getText("/data-quality");
   assert(dataQualityPage.res.status === 200, "GET /data-quality returns 200");
   assert(dataQualityPage.text.includes("fupit data quality"), "/data-quality carries data-quality heading");
