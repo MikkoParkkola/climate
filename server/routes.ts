@@ -4,6 +4,7 @@ import { spawn } from "child_process";
 import fs from "fs";
 import path from "path";
 import { storage } from "./storage";
+import { MODEL_CACHE_VERSION } from "./model-cache-version";
 import { insertClimateLocationSchema } from "@shared/schema";
 import { z } from "zod";
 
@@ -269,6 +270,28 @@ function makeSeoHandler(page: SeoPage) {
 }
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  app.get("/api/health", (_req, res) => {
+    res.json({
+      ok: true,
+      app: "fupit",
+      service: "climate-api",
+      engine: "grounded_model.py",
+      modelCacheVersion: MODEL_CACHE_VERSION,
+      cachePurge: "startup-incompatible-delete-enabled",
+      legacyProjectionEndpoints: "410-gone",
+      seoBase: SEO_BASE,
+      routes: ["/", "/comparison", "/methodology"],
+      deployment: {
+        commit:
+          process.env.REPLIT_GIT_SHA ||
+          process.env.GIT_COMMIT_SHA ||
+          process.env.COMMIT_SHA ||
+          null,
+        id: process.env.REPLIT_DEPLOYMENT_ID || null,
+      },
+    });
+  });
+
   // ── Per-route SEO head injection ─────────────────────────────────────────────
   // Social crawlers and search engines do not execute JavaScript, so each public
   // route must receive distinct <title>, <meta description>, <link canonical>,
