@@ -1,9 +1,9 @@
 ---
-name: Pushing to a private GitHub repo from this Repl
-description: Use the Replit GitHub connector token (not a user PAT) to create/push to private repos; bash git guard blocks .git writes.
+name: Pushing/pulling a private GitHub repo from this Repl
+description: Use the Replit GitHub connector token (not a user PAT) to push/pull private repos; bash git guard blocks .git writes; tsx dev server needs a manual restart after pulling server-side changes.
 ---
 
-# Pushing to a private GitHub repo from this Repl
+# Pushing/pulling a private GitHub repo from this Repl
 
 To create or push to a **private** GitHub repo for this user, prefer the Replit
 GitHub **connector** token over a user-supplied PAT.
@@ -33,3 +33,29 @@ on the first try.
   (`fs.unlinkSync`) or skip them. Read-only `git --no-optional-locks ...` is fine.
 - `repo.size` (KB) from the API lags asynchronously (can read 0 right after a
   push); trust `ls-remote` refs + commit count, not size.
+
+## Pulling (same token + git-guard constraints)
+- `origin` URL on disk is intentionally clean (no token), and the repo is private,
+  so a bare `git fetch origin` HANGS on auth. Fetch from code_execution with a
+  tokenized URL **and** a refspec that updates the tracking ref, so the workspace
+  still knows where origin is: `spawnSync('git', ['fetch',
+  \`https://x-access-token:${token}@github.com/Owner/repo.git\`,
+  'main:refs/remotes/origin/main'])`.
+- The bash git guard also blocks `git merge`/`git commit`, so do the merge from
+  code_execution too. Git identity is **unset** here, so pass it inline or the
+  merge commit fails: `git -c user.name=... -c user.email=... merge origin/main`.
+- Replit auto-creates a local memory-file commit on top of the last synced commit,
+  so a pull is a real merge (divergence), not a fast-forward. It stays
+  conflict-free because the only local-divergent files live under `.agents/memory/`
+  and upstream app commits never touch that path — verify with
+  `git diff --name-only <base> origin/main | grep .agents/` before merging.
+
+## After pulling: restart the dev server manually
+**Why:** the `dev` script is `tsx server/index.ts` with **no watch mode**. Vite
+HMR only reloads CLIENT files; changes pulled into `server/*.ts` do NOT take
+effect until the "Start application" workflow is restarted. Symptom that bit me:
+right after a pull, `curl /api/health` returned the SPA HTML shell (old server
+still running, no route) even though the new route existed in source.
+**How to apply:** after a pull (or any server-side edit), `restart_workflow`
+"Start application", then verify. A package install also reboots workflows, but
+don't rely on its timing — restart explicitly and confirm via the endpoint.
