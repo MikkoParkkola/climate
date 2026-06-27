@@ -350,7 +350,7 @@ Each enrichment module must pass these checks before public display:
 - Root README explains what the app does, what data it uses, how to run it, and what its limits are.
 - Methodology page is crawlable without client-side JavaScript.
 - `llms.txt`, sitemap, Open Graph, and structured data identify fupit and the public source trail.
-- CI or documented local validation includes typecheck, build, model contract smoke, trajectory audit, and live verification after deploy.
+- CI or documented local validation includes typecheck, build, model contract smoke, trajectory audit, data-quality artifact smoke, and live verification after deploy.
 
 ## Launch acceptance criteria
 
@@ -376,7 +376,7 @@ The app is public-launch ready when:
 2. Evaluate NASA NEX-GDDP-CMIP6 as a finer, bias-corrected delta layer.
 3. Add coastal-relevance/elevation gating for sea-level and coastal flood cards.
 4. Add exportable classroom/journalist/researcher report.
-5. Add public data-quality dashboard showing cache version, source versions, audit city trends, and known limitations.
+5. Expand the public data-quality dashboard with hindcast validation and live-deploy evidence after Replit publish/cache purge.
 6. Research cBottle on DGX Spark only after permission clearance and with a written validation protocol.
 7. Add share-card image generation and social previews.
 8. Add guided classroom/explainer mode.

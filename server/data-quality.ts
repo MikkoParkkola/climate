@@ -1,0 +1,177 @@
+import { createHash } from "node:crypto";
+import fs from "node:fs";
+import path from "node:path";
+import { MODEL_CACHE_VERSION, SOURCE_REGISTRY_VERSION } from "./model-cache-version";
+import { loadSourceRegistry } from "./source-registry";
+
+type RankingArtifact = {
+  methodVersion: string;
+  sourceRegistryVersion: string;
+  generatedAt: string;
+  catalog: string;
+  entries: Array<{
+    catalog: string;
+    catalogSize: number;
+    scenario: string;
+    year: number;
+    metric: string;
+    direction: string;
+    caveats: string[];
+    sourceIds: string[];
+  }>;
+};
+
+type TrajectoryAuditSummary = {
+  version: string;
+  generatedAt: string;
+  baselineYear: number;
+  maxYear: number;
+  yearCount: number;
+  scenarios: string[];
+  cityCount: number;
+  resultCount: number;
+  trendReview: Array<{ scenario: string; name: string; flags: string[] }>;
+  note: string;
+};
+
+let cachedDataQuality: Record<string, unknown> | undefined;
+
+function dataPath(relativePath: string): string {
+  return path.resolve(import.meta.dirname, "..", relativePath);
+}
+
+function readJson<T>(relativePath: string): T {
+  return JSON.parse(fs.readFileSync(dataPath(relativePath), "utf-8")) as T;
+}
+
+function artifactInfo(relativePath: string) {
+  const filePath = dataPath(relativePath);
+  const bytes = fs.readFileSync(filePath);
+  return {
+    path: relativePath,
+    bytes: bytes.length,
+    sha256: createHash("sha256").update(bytes).digest("hex"),
+  };
+}
+
+function uniqueSorted<T>(values: T[]): T[] {
+  return Array.from(new Set(values)).sort((a, b) => String(a).localeCompare(String(b)));
+}
+
+export function loadDataQuality(): Record<string, unknown> {
+  if (cachedDataQuality) return cachedDataQuality;
+
+  const registry = loadSourceRegistry() as ReturnType<typeof loadSourceRegistry> & { policy?: string };
+  const primaryManifest = readJson<{
+    format: string;
+    encoding: string;
+    grid: { nlat: number; nlon: number; dlat: number; dlon: number };
+    layers: unknown[];
+    binary: string;
+    decoded_bytes: number;
+  }>("data/manifest.json");
+  const observedManifest = readJson<{
+    format: string;
+    grid: { nlat: number; nlon: number; dlat: number; dlon: number };
+    layers: unknown[];
+    binary: string;
+    decoded_bytes: number;
+    source?: { name?: string; period?: string; resolution?: string; citation?: string };
+  }>("data/worldclim10m.manifest.json");
+  const rankingCities = readJson<Array<unknown>>("data/ranking_cities.json");
+  const rankings = readJson<RankingArtifact>("data/rankings.curated-cities.json");
+  const audit = readJson<TrajectoryAuditSummary>("data/trajectory-audit-summary.json");
+  const rankingYears = uniqueSorted(rankings.entries.map((entry) => entry.year));
+  const rankingSourceIds = uniqueSorted(rankings.entries.flatMap((entry) => entry.sourceIds));
+
+  cachedDataQuality = {
+    version: "data-quality-v1",
+    generatedAt: new Date().toISOString(),
+    methodVersion: MODEL_CACHE_VERSION,
+    sourceRegistryVersion: SOURCE_REGISTRY_VERSION,
+    artifacts: [
+      artifactInfo("data/grid.i16.gz"),
+      artifactInfo("data/manifest.json"),
+      artifactInfo("data/worldclim10m.i16.gz"),
+      artifactInfo("data/worldclim10m.manifest.json"),
+      artifactInfo("data/source-registry.json"),
+      artifactInfo("data/rankings.curated-cities.json"),
+      artifactInfo("data/trajectory-audit-summary.json"),
+    ],
+    sourceRegistry: {
+      version: registry.version,
+      generatedAt: registry.generatedAt,
+      rowCount: registry.rows.length,
+      policy: registry.policy,
+      rows: registry.rows.map((row) => ({
+        sourceId: row.sourceId,
+        provider: row.provider,
+        displayPolicy: row.displayPolicy,
+        variables: row.variables,
+      })),
+    },
+    grids: {
+      primary: {
+        format: primaryManifest.format,
+        encoding: primaryManifest.encoding,
+        binary: primaryManifest.binary,
+        layerCount: primaryManifest.layers.length,
+        decodedBytes: primaryManifest.decoded_bytes,
+        resolution: `${Math.abs(primaryManifest.grid.dlat)} degree`,
+        cells: primaryManifest.grid.nlat * primaryManifest.grid.nlon,
+      },
+      observedBaseline: {
+        format: observedManifest.format,
+        binary: observedManifest.binary,
+        layerCount: observedManifest.layers.length,
+        decodedBytes: observedManifest.decoded_bytes,
+        resolution: observedManifest.source?.resolution ?? `${Math.abs(observedManifest.grid.dlat)} degree`,
+        period: observedManifest.source?.period,
+        citation: observedManifest.source?.citation,
+        cells: observedManifest.grid.nlat * observedManifest.grid.nlon,
+      },
+    },
+    rankings: {
+      artifactGeneratedAt: rankings.generatedAt,
+      catalog: rankings.catalog,
+      catalogSize: rankingCities.length,
+      entryCount: rankings.entries.length,
+      scenarios: uniqueSorted(rankings.entries.map((entry) => entry.scenario)),
+      yearRange: [rankingYears[0], rankingYears[rankingYears.length - 1]],
+      metrics: uniqueSorted(rankings.entries.map((entry) => entry.metric)),
+      directions: uniqueSorted(rankings.entries.map((entry) => entry.direction)),
+      sourceIds: rankingSourceIds,
+      caveats: uniqueSorted(rankings.entries.flatMap((entry) => entry.caveats)),
+    },
+    trajectoryAudit: {
+      artifactGeneratedAt: audit.generatedAt,
+      version: audit.version,
+      cityCount: audit.cityCount,
+      scenarioCount: audit.scenarios.length,
+      scenarios: audit.scenarios,
+      yearRange: [audit.baselineYear, audit.maxYear],
+      yearCount: audit.yearCount,
+      resultCount: audit.resultCount,
+      trendReviewCount: audit.trendReview.length,
+      trendReview: audit.trendReview,
+      note: audit.note,
+    },
+    executableChecks: [
+      "npm run validate:artifacts",
+      "npm run smoke:grid-reader",
+      "npm run smoke:node-model",
+      "npm run smoke:model",
+      "npm run audit:trajectories",
+      "npm run ci",
+    ],
+    limitations: [
+      "This dashboard describes the packaged artifact bundle. It does not prove the public Replit deployment is current.",
+      "Production climate_model_cache still requires purge or live version-guard proof after deployment.",
+      "Curated-city rankings are bounded examples, not complete global or country rankings.",
+      "Trend review flags are intentionally visible for scientific review and are not automatically hidden by green CI.",
+      "Freshwater, biodiversity, agriculture, infrastructure, and AMOC context remain withheld until source-registry approval and implementation.",
+    ],
+  };
+
+  return cachedDataQuality;
+}

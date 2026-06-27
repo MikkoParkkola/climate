@@ -15,10 +15,11 @@
     "smoke:twin": "tsx scripts/smoke-climate-twin.ts",
     "smoke:grid-reader": "tsx scripts/smoke-node-grid-reader.ts",
     "smoke:node-model": "tsx scripts/smoke-node-grounded-model.ts",
+    "smoke:data-quality": "tsx scripts/smoke-data-quality.ts",
     "smoke:model": "node scripts/smoke-grounded-model.mjs",
     "audit:trajectories": "node scripts/audit-trajectories.mjs",
     "verify:live": "node scripts/verify-live-release.mjs",
-    "ci": "npm run check && npm run build && npm run smoke:cache && npm run smoke:rankings && npm run smoke:twin && npm run smoke:grid-reader && npm run smoke:node-model && npm run smoke:model && npm run audit:trajectories",
+    "ci": "npm run check && npm run build && npm run smoke:cache && npm run smoke:rankings && npm run smoke:twin && npm run smoke:grid-reader && npm run smoke:node-model && npm run smoke:data-quality && npm run smoke:model && npm run audit:trajectories",
     "db:push": "drizzle-kit push"
   },
   "dependencies": {

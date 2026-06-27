@@ -9,6 +9,7 @@ import { insertClimateLocationSchema } from "@shared/schema";
 import { z } from "zod";
 import { getRanking, rankingQuerySchema } from "./precomputed-rankings";
 import { loadSourceRegistry } from "./source-registry";
+import { loadDataQuality } from "./data-quality";
 import { climateTwinQuerySchema, findClimateTwin, loadClimateAnalogCatalog } from "./climate-twin";
 import { getClimateGridEngine } from "./climate-grid-engine";
 import { climateTrajectory, projectClimate } from "./grounded-node-model";
@@ -245,6 +246,24 @@ const SEO_PAGES: Record<string, SeoPage> = {
   <p><a href="/">Return to fupit</a> or inspect <a href="${GITHUB_REPO_URL}">the source on GitHub</a>.</p>
 </main>`,
   },
+  dataQuality: {
+    path: "/data-quality",
+    title: "fupit data quality — source and validation evidence",
+    description:
+      "Current fupit build evidence: artifact hashes, source registry, ranking catalog coverage, trajectory-audit coverage, trend-review flags, and known limitations.",
+    bodyHtml: `<main aria-label="Data quality">
+  <h1>fupit data quality</h1>
+  <p>This page reports the evidence behind the current packaged build: model/cache version, source-registry version, artifact hashes, ranking catalog coverage, annual trajectory-audit coverage, and known limitations.</p>
+  <h2>What it proves</h2>
+  <ul>
+    <li>Which immutable climate artifacts are packaged with the app.</li>
+    <li>Which source registry rows approve visible metrics and rankings.</li>
+    <li>How much of the curated rankings and trajectory audit matrix is covered.</li>
+    <li>Which trend-review flags still require human scientific review.</li>
+  </ul>
+  <p>Use this page with <a href="/methodology">the methodology</a> and <a href="${GITHUB_REPO_URL}">the source repository</a>. It does not prove that the public Replit deployment has already been republished or that production cache purge has been completed.</p>
+</main>`,
+  },
 };
 
 function pageUrl(pagePath: string): string {
@@ -381,10 +400,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       ],
       supportedScenarios: [...CLIMATE_SCENARIOS],
       seoBase: SEO_BASE,
-      routes: ["/", "/comparison", "/methodology"],
+      routes: ["/", "/comparison", "/methodology", "/data-quality"],
       apiRoutes: [
         "/api/health",
         "/api/source-registry",
+        "/api/data-quality",
         "/api/climate-trajectory",
         "/api/climate-twin",
         "/api/climate/global-rankings",
@@ -744,6 +764,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.get("/api/data-quality", (_req, res) => {
+    try {
+      res
+        .set("Cache-Control", "public, max-age=300")
+        .json(loadDataQuality());
+    } catch (err) {
+      console.error("data-quality failed:", (err as Error).message);
+      res.status(500).json({ message: "Data-quality report unavailable." });
+    }
+  });
+
   // Global habitability rankings endpoint
   app.get("/api/climate/global-rankings", async (req, res) => {
     const clientIp = ((req.ip ?? "") || (req.socket?.remoteAddress ?? "unknown")).replace(/^::ffff:/, "");
@@ -848,7 +879,7 @@ window.__vite_plugin_react_preamble_installed__ = true
   // through to express.static, and any that are not found on disk then fall
   // through to the narrowed /{*any} fallback in server/vite.ts which also
   // returns 404 for non-SPA paths.
-  const KNOWN_SPA_ROUTES_404 = new Set(["/", "/comparison", "/methodology"]);
+  const KNOWN_SPA_ROUTES_404 = new Set(["/", "/comparison", "/methodology", "/data-quality"]);
   const VITE_INTERNAL_PREFIXES = ["/api/", "/@", "/src/", "/node_modules/", "/__mockup", "/__vite"];
   const isDev = process.env.NODE_ENV !== "production";
   const NOT_FOUND_HTML_404 = `<!DOCTYPE html>

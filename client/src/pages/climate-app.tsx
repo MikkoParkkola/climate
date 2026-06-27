@@ -824,7 +824,7 @@ export default function ClimateApp() {
   };
 
   const sc = d ? scoreColor(d.score) : GREEN;
-  const tPct = ((year - 2025) / 75) * 100;
+  const tPct = ((year - BASELINE_YEAR) / (MAX_YEAR - BASELINE_YEAR)) * 100;
   const maxBreakdown = d ? Math.max(...d.breakdown.map((b) => Math.abs(b.val)), 1) : 1;
 
   // ── Landing ────────────────────────────────────────────────────────────────
@@ -1235,7 +1235,7 @@ export default function ClimateApp() {
             <div style={{ display: "flex", gap: 14, fontSize: 10 }}>
               <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
                 <svg width="20" height="3"><line x1="0" y1="1.5" x2="20" y2="1.5" stroke="rgba(255,255,255,0.3)" strokeWidth="1.5" strokeDasharray="4 3" /></svg>
-                <span style={{ color: MUTED }}>2025 baseline</span>
+                <span style={{ color: MUTED }}>{BASELINE_YEAR} baseline</span>
               </div>
               <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
                 <div style={{ width: 20, height: 2, background: RED, borderRadius: 1 }} />
@@ -1446,7 +1446,7 @@ export default function ClimateApp() {
                   <span style={{ fontSize: 16 }}>{tp.icon}</span>
                   <div style={{ flex: 1 }}>
                     <div style={{ fontSize: 12, fontWeight: 600, color: passed ? RED : isNext ? AMBER : MUTED }}>{tp.label}</div>
-                    <div style={{ fontSize: 9, color: MUTED, marginTop: 1 }}>{reached ? `${tp.year} · ${tp.year! - 2025} years from baseline` : "Not reached by 2100"}</div>
+                    <div style={{ fontSize: 9, color: MUTED, marginTop: 1 }}>{reached ? `${tp.year} · ${tp.year! - BASELINE_YEAR} years from baseline` : "Not reached by 2100"}</div>
                   </div>
                   <div style={{ fontSize: 15, fontWeight: 700, color: passed ? RED : MUTED }}>{reached ? tp.year : "—"}</div>
                   {passed && <span style={{ fontSize: 9, padding: "2px 6px", background: "rgba(239,68,68,0.18)", color: RED, borderRadius: 4, fontWeight: 700 }}>CROSSED</span>}

@@ -14,6 +14,11 @@ const scenarios = (process.env.FUPIT_AUDIT_SCENARIOS || "all")
 const baselineYear = 2025;
 const maxYear = 2100;
 const years = Array.from({ length: maxYear - baselineYear + 1 }, (_, i) => baselineYear + i);
+const jsonOutput = process.env.FUPIT_AUDIT_JSON === "1";
+
+function emit(line) {
+  if (!jsonOutput) console.log(line);
+}
 
 const cities = [
   ["Helsinki", 60.1699, 24.9384],
@@ -204,8 +209,8 @@ const allResults = [];
 for (const scenario of scenarios) {
   const results = cities.map((city) => runCity(city, scenario));
   allResults.push(...results.map((result) => ({ ...result, scenario })));
-  console.log(`Trajectory audit ${scenario}: ${cities.length} cities, ${years.length} annual points each (${baselineYear}-${maxYear})`);
-  for (const result of results) console.log(result.summary);
+  emit(`Trajectory audit ${scenario}: ${cities.length} cities, ${years.length} annual points each (${baselineYear}-${maxYear})`);
+  for (const result of results) emit(result.summary);
 }
 
 const trendReview = allResults.filter((result) =>
@@ -217,16 +222,47 @@ const trendReview = allResults.filter((result) =>
   result.warnings.maxScoreSlopeChange > 5
 );
 
-if (trendReview.length > 0) {
-  console.log("Trend review flags (reported for human scientific review, not auto-failed):");
+function reviewFlags(result) {
+  const flags = [];
+  if (result.warnings.anomalyDownYears.length > 0) flags.push(`anomalyDown=${result.warnings.anomalyDownYears.join("|")}`);
+  if (result.warnings.tempDownYears.length > 0) flags.push(`tempDown=${result.warnings.tempDownYears.join("|")}`);
+  if (result.warnings.tempMaxSlopeChange > 0.12) flags.push(`tempSlopeBreak=${fmt(result.warnings.tempMaxSlopeChange)}C/yr`);
+  if (result.warnings.maxPrecipStep > 25) flags.push(`precipStep=${fmt(result.warnings.maxPrecipStep, 1)}mm`);
+  if (result.warnings.scoreDirectionChanges > 6) flags.push(`scoreDirChanges=${result.warnings.scoreDirectionChanges}`);
+  if (result.warnings.maxScoreSlopeChange > 5) flags.push(`scoreSlopeBreak=${fmt(result.warnings.maxScoreSlopeChange, 1)}pts/yr`);
+  return flags;
+}
+
+if (jsonOutput) {
+  console.log(JSON.stringify({
+    version: "trajectory-audit-summary-v1",
+    generatedAt: new Date().toISOString(),
+    model: "grounded_model.py",
+    baselineYear,
+    maxYear,
+    yearCount: years.length,
+    supportedScenarios,
+    scenarios,
+    cityCount: cities.length,
+    cities: cities.map(([name, lat, lng]) => ({ name, lat, lng })),
+    requiredPaths,
+    resultCount: allResults.length,
+    summaries: allResults.map((result) => ({
+      scenario: result.scenario,
+      name: result.name,
+      summary: result.summary,
+      warnings: result.warnings,
+    })),
+    trendReview: trendReview.map((result) => ({
+      scenario: result.scenario,
+      name: result.name,
+      flags: reviewFlags(result),
+    })),
+    note: "Trend review flags are reported for human scientific review, not auto-failed.",
+  }, null, 2));
+} else if (trendReview.length > 0) {
+  emit("Trend review flags (reported for human scientific review, not auto-failed):");
   for (const result of trendReview) {
-    const flags = [];
-    if (result.warnings.anomalyDownYears.length > 0) flags.push(`anomalyDown=${result.warnings.anomalyDownYears.join("|")}`);
-    if (result.warnings.tempDownYears.length > 0) flags.push(`tempDown=${result.warnings.tempDownYears.join("|")}`);
-    if (result.warnings.tempMaxSlopeChange > 0.12) flags.push(`tempSlopeBreak=${fmt(result.warnings.tempMaxSlopeChange)}C/yr`);
-    if (result.warnings.maxPrecipStep > 25) flags.push(`precipStep=${fmt(result.warnings.maxPrecipStep, 1)}mm`);
-    if (result.warnings.scoreDirectionChanges > 6) flags.push(`scoreDirChanges=${result.warnings.scoreDirectionChanges}`);
-    if (result.warnings.maxScoreSlopeChange > 5) flags.push(`scoreSlopeBreak=${fmt(result.warnings.maxScoreSlopeChange, 1)}pts/yr`);
-    console.log(`- ${result.scenario} ${result.name}: ${flags.join("; ")}`);
+    emit(`- ${result.scenario} ${result.name}: ${reviewFlags(result).join("; ")}`);
   }
 }

@@ -218,7 +218,7 @@ function Sparkline({ data, years, color, year, w = 80, h = 22 }: { data: number[
 function TrajectoryChart({ trajectories, colors, year }: { trajectories: { years: number[]; scores: number[] }[]; colors: string[]; year: number }) {
   const W = 660, H = 180, px = 32, py = 12;
   const cW = W - px * 2, cH = H - py * 2 - 16;
-  const xp = (yr: number) => px + ((yr - 2025) / 75) * cW;
+  const xp = (yr: number) => px + ((yr - BASELINE_YEAR) / (MAX_YEAR - BASELINE_YEAR)) * cW;
   const yp = (s: number) => py + cH - (s / 100) * cH;
   const curX = xp(year);
   return (
@@ -241,7 +241,7 @@ function TrajectoryChart({ trajectories, colors, year }: { trajectories: { years
           </g>
         );
       })}
-      {[2025, 2050, 2075, 2100].map((y) => (
+      {[BASELINE_YEAR, 2050, 2075, MAX_YEAR].map((y) => (
         <text key={y} x={xp(y)} y={H - 1} textAnchor="middle" fill={MUTED} fontSize="9">{y}</text>
       ))}
       <text x={curX} y={py - 3} textAnchor="middle" fill={ACCENT} fontSize="9" fontWeight="700">{year}</text>
@@ -519,7 +519,7 @@ export default function ClimateComparison({ onBack }: ClimateComparisonProps) {
         { label: "Annual Mean", vals: snapshots.map((d) => `${d.temp.toFixed(1)}°C`), winnerIdx: argClosest(snapshots.map((d) => d.temp), 14) },
         { label: "Warmest Month", vals: snapshots.map((d) => `${Math.max(...d.monthlyTemps).toFixed(1)}°C`), winnerIdx: argMin(snapshots.map((d) => Math.max(...d.monthlyTemps))) },
         { label: "Coldest Month", vals: snapshots.map((d) => `${Math.min(...d.monthlyTemps).toFixed(1)}°C`), winnerIdx: argClosest(snapshots.map((d) => Math.min(...d.monthlyTemps)), 5) },
-        { label: "Change vs 2025", vals: snapshots.map((d) => `${d.temp - d.baseTemp >= 0 ? "+" : ""}${(d.temp - d.baseTemp).toFixed(1)}°`), winnerIdx: argMin(snapshots.map((d) => d.temp - d.baseTemp)) },
+        { label: `Change vs ${BASELINE_YEAR}`, vals: snapshots.map((d) => `${d.temp - d.baseTemp >= 0 ? "+" : ""}${(d.temp - d.baseTemp).toFixed(1)}°`), winnerIdx: argMin(snapshots.map((d) => d.temp - d.baseTemp)) },
       ]
     : [];
 
@@ -528,7 +528,7 @@ export default function ClimateComparison({ onBack }: ClimateComparisonProps) {
         { label: "Annual Total", vals: snapshots.map((d) => `${d.precip}mm`), winnerIdx: argClosest(snapshots.map((d) => d.precip), 750) },
         { label: "Wettest Month", vals: snapshots.map((d) => `${Math.max(...d.monthlyPrecip)}mm`), winnerIdx: argClosest(snapshots.map((d) => Math.max(...d.monthlyPrecip)), 80) },
         {
-          label: "Change vs 2025",
+          label: `Change vs ${BASELINE_YEAR}`,
           vals: snapshots.map((d) => {
             const delta = d.basePrecip ? ((d.precip / d.basePrecip) - 1) * 100 : 0;
             return `${delta >= 0 ? "+" : ""}${delta.toFixed(1)}%`;
@@ -879,7 +879,7 @@ export default function ClimateComparison({ onBack }: ClimateComparisonProps) {
                       </div>
                       <div style={{ display: "flex", gap: 6, marginTop: 5, flexWrap: "wrap" }}>
                         <span style={{ fontSize: 10, padding: "1px 6px", background: `${t.color}18`, color: t.color, border: `1px solid ${t.color}30`, borderRadius: 4 }}>
-                          {delta >= 0 ? "+" : ""}{delta} pts vs 2025
+                          {delta >= 0 ? "+" : ""}{delta} pts vs {BASELINE_YEAR}
                         </span>
                         <span style={{ fontSize: 10, padding: "1px 6px", background: BORDER, color: MUTED, borderRadius: 4 }}>{d.category}</span>
                       </div>

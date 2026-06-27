@@ -1,0 +1,1221 @@
+{
+  "version": "trajectory-audit-summary-v1",
+  "generatedAt": "2026-06-27T21:09:59.405Z",
+  "model": "grounded_model.py",
+  "baselineYear": 2025,
+  "maxYear": 2100,
+  "yearCount": 76,
+  "supportedScenarios": [
+    "ssp126",
+    "ssp245",
+    "ssp370",
+    "ssp585"
+  ],
+  "scenarios": [
+    "ssp126",
+    "ssp245",
+    "ssp370",
+    "ssp585"
+  ],
+  "cityCount": 13,
+  "cities": [
+    {
+      "name": "Helsinki",
+      "lat": 60.1699,
+      "lng": 24.9384
+    },
+    {
+      "name": "London",
+      "lat": 51.5074,
+      "lng": -0.1278
+    },
+    {
+      "name": "Amsterdam",
+      "lat": 52.3676,
+      "lng": 4.9041
+    },
+    {
+      "name": "Paris",
+      "lat": 48.8566,
+      "lng": 2.3522
+    },
+    {
+      "name": "Prague",
+      "lat": 50.0755,
+      "lng": 14.4378
+    },
+    {
+      "name": "Kyiv",
+      "lat": 50.4501,
+      "lng": 30.5234
+    },
+    {
+      "name": "Bangkok",
+      "lat": 13.7563,
+      "lng": 100.5018
+    },
+    {
+      "name": "New York",
+      "lat": 40.7128,
+      "lng": -74.006
+    },
+    {
+      "name": "San Francisco",
+      "lat": 37.7749,
+      "lng": -122.4194
+    },
+    {
+      "name": "Singapore",
+      "lat": 1.3521,
+      "lng": 103.8198
+    },
+    {
+      "name": "Mumbai",
+      "lat": 19.076,
+      "lng": 72.8777
+    },
+    {
+      "name": "Cairo",
+      "lat": 30.0444,
+      "lng": 31.2357
+    },
+    {
+      "name": "Manaus",
+      "lat": -3.119,
+      "lng": -60.0217
+    }
+  ],
+  "requiredPaths": [
+    "temperature.annual_mean",
+    "temperature.anomaly",
+    "temperature.ipcc_calibrated.annual_mean",
+    "temperature.ipcc_calibrated.anomaly",
+    "precipitation.annual_total",
+    "precipitation.anomaly_percent",
+    "extremes.heat_stress_days",
+    "extremes.drought_risk",
+    "extremes.flood_risk",
+    "habitability.score"
+  ],
+  "resultCount": 52,
+  "summaries": [
+    {
+      "scenario": "ssp126",
+      "name": "Helsinki",
+      "summary": "Helsinki: contract OK; temp 6.47->7.21C; anomaly 1.34->2.08C; ipccAdj2100 -0.64C; tempDownYears=2072,2075,2076,2079,2083,2088; maxTempStep=0.05C at 2053; maxTempSlopeBreak=0.03C/yr at 2061; precipDirChanges=3; maxPrecipStep=2.1mm at 2031; scoreDirChanges=3; score 77.7->77.8",
+      "warnings": {
+        "anomalyDownYears": [
+          2071,
+          2072,
+          2074,
+          2076,
+          2077,
+          2079,
+          2081,
+          2083,
+          2086,
+          2088,
+          2090
+        ],
+        "tempDownYears": [
+          2072,
+          2075,
+          2076,
+          2079,
+          2083,
+          2088
+        ],
+        "tempMaxSlopeChange": 0.03000000000000025,
+        "precipDirectionChanges": 3,
+        "scoreDirectionChanges": 3,
+        "maxPrecipStep": 2.1100000000000136,
+        "maxScoreSlopeChange": 0.10000000000000853
+      }
+    },
+    {
+      "scenario": "ssp126",
+      "name": "London",
+      "summary": "London: contract OK; temp 11.11->11.38C; anomaly 0.59->0.85C; ipccAdj2100 -0.26C; tempDownYears=2081,2083,2084,2085,2086,2087,2088,2089; maxTempStep=0.02C at 2045; maxTempSlopeBreak=0.02C/yr at 2081; precipDirChanges=3; maxPrecipStep=2.3mm at 2091; scoreDirChanges=3; score 79.3->79.6",
+      "warnings": {
+        "anomalyDownYears": [
+          2081,
+          2082,
+          2083,
+          2084,
+          2085,
+          2086,
+          2087,
+          2088,
+          2089,
+          2090
+        ],
+        "tempDownYears": [
+          2081,
+          2083,
+          2084,
+          2085,
+          2086,
+          2087,
+          2088,
+          2089
+        ],
+        "tempMaxSlopeChange": 0.02000000000000135,
+        "precipDirectionChanges": 3,
+        "scoreDirectionChanges": 3,
+        "maxPrecipStep": 2.25,
+        "maxScoreSlopeChange": 0.20000000000001705
+      }
+    },
+    {
+      "scenario": "ssp126",
+      "name": "Amsterdam",
+      "summary": "Amsterdam: contract OK; temp 10.34->10.74C; anomaly 0.63->1.03C; ipccAdj2100 -0.32C; tempDownYears=2081,2082,2083,2084,2085,2086,2087,2088,2089,2090; maxTempStep=0.03C at 2053; maxTempSlopeBreak=0.03C/yr at 2061; precipDirChanges=5; maxPrecipStep=4.1mm at 2062; scoreDirChanges=3; score 80.9->81.1",
+      "warnings": {
+        "anomalyDownYears": [
+          2081,
+          2082,
+          2083,
+          2084,
+          2085,
+          2086,
+          2087,
+          2088,
+          2089,
+          2090
+        ],
+        "tempDownYears": [
+          2081,
+          2082,
+          2083,
+          2084,
+          2085,
+          2086,
+          2087,
+          2088,
+          2089,
+          2090
+        ],
+        "tempMaxSlopeChange": 0.02999999999999936,
+        "precipDirectionChanges": 5,
+        "scoreDirectionChanges": 3,
+        "maxPrecipStep": 4.100000000000023,
+        "maxScoreSlopeChange": 0.20000000000001705
+      }
+    },
+    {
+      "scenario": "ssp126",
+      "name": "Paris",
+      "summary": "Paris: contract OK; temp 12.27->12.69C; anomaly 0.83->1.25C; ipccAdj2100 -0.38C; tempDownYears=2066,2081,2083,2084,2085,2086,2087,2088,2089,2091; maxTempStep=0.03C at 2041; maxTempSlopeBreak=0.02C/yr at 2041; precipDirChanges=2; maxPrecipStep=2.4mm at 2091; scoreDirChanges=3; score 78.6->78.7",
+      "warnings": {
+        "anomalyDownYears": [
+          2065,
+          2081,
+          2082,
+          2083,
+          2084,
+          2085,
+          2086,
+          2087,
+          2088,
+          2089,
+          2090,
+          2096
+        ],
+        "tempDownYears": [
+          2066,
+          2081,
+          2083,
+          2084,
+          2085,
+          2086,
+          2087,
+          2088,
+          2089,
+          2091
+        ],
+        "tempMaxSlopeChange": 0.02000000000000135,
+        "precipDirectionChanges": 2,
+        "scoreDirectionChanges": 3,
+        "maxPrecipStep": 2.400000000000091,
+        "maxScoreSlopeChange": 0.10000000000000853
+      }
+    },
+    {
+      "scenario": "ssp126",
+      "name": "Prague",
+      "summary": "Prague: contract OK; temp 10.38->11.05C; anomaly 1.08->1.75C; ipccAdj2100 -0.54C; tempDownYears=2069,2081,2082,2083,2084,2085,2086,2087,2088,2089,2090; maxTempStep=0.04C at 2052; maxTempSlopeBreak=0.05C/yr at 2061; precipDirChanges=0; maxPrecipStep=1.9mm at 2092; scoreDirChanges=3; score 75.8->75.9",
+      "warnings": {
+        "anomalyDownYears": [
+          2061,
+          2062,
+          2063,
+          2064,
+          2066,
+          2067,
+          2068,
+          2069,
+          2070,
+          2081,
+          2082,
+          2083,
+          2084,
+          2085,
+          2086,
+          2087,
+          2088,
+          2089,
+          2090
+        ],
+        "tempDownYears": [
+          2069,
+          2081,
+          2082,
+          2083,
+          2084,
+          2085,
+          2086,
+          2087,
+          2088,
+          2089,
+          2090
+        ],
+        "tempMaxSlopeChange": 0.049999999999998934,
+        "precipDirectionChanges": 0,
+        "scoreDirectionChanges": 3,
+        "maxPrecipStep": 1.8700000000000045,
+        "maxScoreSlopeChange": 0.10000000000000853
+      }
+    },
+    {
+      "scenario": "ssp126",
+      "name": "Kyiv",
+      "summary": "Kyiv: contract OK; temp 9.40->10.22C; anomaly 1.37->2.19C; ipccAdj2100 -0.67C; tempDownYears=2066,2081,2082,2083,2084,2085,2086,2087,2088,2089,2090; maxTempStep=0.05C at 2096; maxTempSlopeBreak=0.07C/yr at 2091; precipDirChanges=3; maxPrecipStep=4.1mm at 2041; scoreDirChanges=4; score 72.7->70.5",
+      "warnings": {
+        "anomalyDownYears": [
+          2061,
+          2064,
+          2066,
+          2069,
+          2081,
+          2082,
+          2083,
+          2084,
+          2085,
+          2086,
+          2087,
+          2088,
+          2089,
+          2090
+        ],
+        "tempDownYears": [
+          2066,
+          2081,
+          2082,
+          2083,
+          2084,
+          2085,
+          2086,
+          2087,
+          2088,
+          2089,
+          2090
+        ],
+        "tempMaxSlopeChange": 0.06999999999999851,
+        "precipDirectionChanges": 3,
+        "scoreDirectionChanges": 4,
+        "maxPrecipStep": 4.060000000000059,
+        "maxScoreSlopeChange": 0.30000000000001137
+      }
+    },
+    {
+      "scenario": "ssp126",
+      "name": "Bangkok",
+      "summary": "Bangkok: contract OK; temp 29.21->29.87C; anomaly 0.82->1.48C; ipccAdj2100 -0.45C; tempDownYears=2076,2079,2091,2096; maxTempStep=0.04C at 2031; maxTempSlopeBreak=0.04C/yr at 2031; precipDirChanges=3; maxPrecipStep=5.9mm at 2041; scoreDirChanges=3; score 29.3->28.1",
+      "warnings": {
+        "anomalyDownYears": [
+          2071,
+          2074,
+          2077,
+          2080,
+          2092,
+          2094,
+          2096,
+          2099
+        ],
+        "tempDownYears": [
+          2076,
+          2079,
+          2091,
+          2096
+        ],
+        "tempMaxSlopeChange": 0.03999999999999915,
+        "precipDirectionChanges": 3,
+        "scoreDirectionChanges": 3,
+        "maxPrecipStep": 5.900000000000091,
+        "maxScoreSlopeChange": 0.5000000000000036
+      }
+    },
+    {
+      "scenario": "ssp126",
+      "name": "New York",
+      "summary": "New York: contract OK; temp 13.38->14.53C; anomaly 1.31->2.46C; ipccAdj2100 -0.75C; tempDownYears=2087,2088; maxTempStep=0.04C at 2032; maxTempSlopeBreak=0.04C/yr at 2031; precipDirChanges=5; maxPrecipStep=5.0mm at 2096; scoreDirChanges=1; score 53.1->49.7",
+      "warnings": {
+        "anomalyDownYears": [
+          2063,
+          2069,
+          2081,
+          2083,
+          2086,
+          2087,
+          2089
+        ],
+        "tempDownYears": [
+          2087,
+          2088
+        ],
+        "tempMaxSlopeChange": 0.03999999999999915,
+        "precipDirectionChanges": 5,
+        "scoreDirectionChanges": 1,
+        "maxPrecipStep": 5.040000000000191,
+        "maxScoreSlopeChange": 0.20000000000000284
+      }
+    },
+    {
+      "scenario": "ssp126",
+      "name": "San Francisco",
+      "summary": "San Francisco: contract OK; temp 15.00->15.81C; anomaly 0.81->1.62C; ipccAdj2100 -0.50C; tempDownYears=none; maxTempStep=0.04C at 2043; maxTempSlopeBreak=0.03C/yr at 2031; precipDirChanges=4; maxPrecipStep=9.7mm at 2070; scoreDirChanges=4; score 63.9->65.2",
+      "warnings": {
+        "anomalyDownYears": [
+          2074
+        ],
+        "tempDownYears": [],
+        "tempMaxSlopeChange": 0.02999999999999936,
+        "precipDirectionChanges": 4,
+        "scoreDirectionChanges": 4,
+        "maxPrecipStep": 9.720000000000027,
+        "maxScoreSlopeChange": 0.30000000000000426
+      }
+    },
+    {
+      "scenario": "ssp126",
+      "name": "Singapore",
+      "summary": "Singapore: contract OK; temp 27.41->27.87C; anomaly 0.59->1.05C; ipccAdj2100 -0.32C; tempDownYears=2072,2075,2079,2093,2095,2098; maxTempStep=0.03C at 2032; maxTempSlopeBreak=0.02C/yr at 2041; precipDirChanges=4; maxPrecipStep=5.6mm at 2031; scoreDirChanges=3; score 32.2->31.1",
+      "warnings": {
+        "anomalyDownYears": [
+          2071,
+          2073,
+          2074,
+          2076,
+          2079,
+          2080,
+          2092,
+          2093,
+          2095,
+          2097,
+          2099,
+          2100
+        ],
+        "tempDownYears": [
+          2072,
+          2075,
+          2079,
+          2093,
+          2095,
+          2098
+        ],
+        "tempMaxSlopeChange": 0.020000000000003126,
+        "precipDirectionChanges": 4,
+        "scoreDirectionChanges": 3,
+        "maxPrecipStep": 5.5900000000001455,
+        "maxScoreSlopeChange": 0.20000000000000284
+      }
+    },
+    {
+      "scenario": "ssp126",
+      "name": "Mumbai",
+      "summary": "Mumbai: contract OK; temp 27.84->28.48C; anomaly 0.58->1.23C; ipccAdj2100 -0.38C; tempDownYears=2091,2093,2096,2098,2099; maxTempStep=0.04C at 2037; maxTempSlopeBreak=0.03C/yr at 2031; precipDirChanges=4; maxPrecipStep=22.6mm at 2078; scoreDirChanges=0; score 10.0->10.0",
+      "warnings": {
+        "anomalyDownYears": [
+          2091,
+          2092,
+          2093,
+          2094,
+          2095,
+          2096,
+          2097,
+          2099,
+          2100
+        ],
+        "tempDownYears": [
+          2091,
+          2093,
+          2096,
+          2098,
+          2099
+        ],
+        "tempMaxSlopeChange": 0.030000000000001137,
+        "precipDirectionChanges": 4,
+        "scoreDirectionChanges": 0,
+        "maxPrecipStep": 22.620000000000346,
+        "maxScoreSlopeChange": 0
+      }
+    },
+    {
+      "scenario": "ssp126",
+      "name": "Cairo",
+      "summary": "Cairo: contract OK; temp 22.62->23.20C; anomaly 1.03->1.61C; ipccAdj2100 -0.49C; tempDownYears=2081,2084,2090; maxTempStep=0.04C at 2048; maxTempSlopeBreak=0.03C/yr at 2051; precipDirChanges=0; maxPrecipStep=0.2mm at 2061; scoreDirChanges=0; score 21.2->20.8",
+      "warnings": {
+        "anomalyDownYears": [
+          2081,
+          2084,
+          2087,
+          2090
+        ],
+        "tempDownYears": [
+          2081,
+          2084,
+          2090
+        ],
+        "tempMaxSlopeChange": 0.030000000000001137,
+        "precipDirectionChanges": 0,
+        "scoreDirectionChanges": 0,
+        "maxPrecipStep": 0.21000000000000085,
+        "maxScoreSlopeChange": 0.10000000000000142
+      }
+    },
+    {
+      "scenario": "ssp126",
+      "name": "Manaus",
+      "summary": "Manaus: contract OK; temp 27.76->28.32C; anomaly 0.91->1.47C; ipccAdj2100 -0.45C; tempDownYears=2052,2055,2056,2058,2060,2081,2084,2090,2092,2093,2094,2095,2096,2098,2099; maxTempStep=0.04C at 2043; maxTempSlopeBreak=0.04C/yr at 2051; precipDirChanges=3; maxPrecipStep=12.7mm at 2051; scoreDirChanges=3; score 31.3->30.9",
+      "warnings": {
+        "anomalyDownYears": [
+          2051,
+          2052,
+          2053,
+          2055,
+          2056,
+          2057,
+          2058,
+          2059,
+          2060,
+          2081,
+          2084,
+          2087,
+          2091,
+          2092,
+          2093,
+          2094,
+          2095,
+          2096,
+          2097,
+          2098,
+          2099,
+          2100
+        ],
+        "tempDownYears": [
+          2052,
+          2055,
+          2056,
+          2058,
+          2060,
+          2081,
+          2084,
+          2090,
+          2092,
+          2093,
+          2094,
+          2095,
+          2096,
+          2098,
+          2099
+        ],
+        "tempMaxSlopeChange": 0.039999999999995595,
+        "precipDirectionChanges": 3,
+        "scoreDirectionChanges": 3,
+        "maxPrecipStep": 12.690000000000055,
+        "maxScoreSlopeChange": 0.20000000000000284
+      }
+    },
+    {
+      "scenario": "ssp245",
+      "name": "Helsinki",
+      "summary": "Helsinki: contract OK; temp 6.33->8.64C; anomaly 1.20->3.52C; ipccAdj2100 -0.83C; tempDownYears=none; maxTempStep=0.06C at 2032; maxTempSlopeBreak=0.06C/yr at 2031; precipDirChanges=0; maxPrecipStep=3.1mm at 2045; scoreDirChanges=4; score 77.2->77.3",
+      "warnings": {
+        "anomalyDownYears": [
+          2068
+        ],
+        "tempDownYears": [],
+        "tempMaxSlopeChange": 0.05999999999999961,
+        "precipDirectionChanges": 0,
+        "scoreDirectionChanges": 4,
+        "maxPrecipStep": 3.1400000000001,
+        "maxScoreSlopeChange": 0.19999999999998863
+      }
+    },
+    {
+      "scenario": "ssp245",
+      "name": "London",
+      "summary": "London: contract OK; temp 11.12->12.38C; anomaly 0.59->1.85C; ipccAdj2100 -0.44C; tempDownYears=none; maxTempStep=0.04C at 2033; maxTempSlopeBreak=0.03C/yr at 2031; precipDirChanges=3; maxPrecipStep=2.1mm at 2031; scoreDirChanges=2; score 79.0->76.4",
+      "warnings": {
+        "anomalyDownYears": [],
+        "tempDownYears": [],
+        "tempMaxSlopeChange": 0.030000000000001137,
+        "precipDirectionChanges": 3,
+        "scoreDirectionChanges": 2,
+        "maxPrecipStep": 2.1000000000000227,
+        "maxScoreSlopeChange": 0.10000000000000853
+      }
+    },
+    {
+      "scenario": "ssp245",
+      "name": "Amsterdam",
+      "summary": "Amsterdam: contract OK; temp 10.29->11.71C; anomaly 0.59->2.00C; ipccAdj2100 -0.47C; tempDownYears=none; maxTempStep=0.05C at 2031; maxTempSlopeBreak=0.05C/yr at 2031; precipDirChanges=5; maxPrecipStep=2.4mm at 2053; scoreDirChanges=3; score 81.0->77.9",
+      "warnings": {
+        "anomalyDownYears": [],
+        "tempDownYears": [],
+        "tempMaxSlopeChange": 0.05000000000000071,
+        "precipDirectionChanges": 5,
+        "scoreDirectionChanges": 3,
+        "maxPrecipStep": 2.400000000000091,
+        "maxScoreSlopeChange": 0.29999999999998295
+      }
+    },
+    {
+      "scenario": "ssp245",
+      "name": "Paris",
+      "summary": "Paris: contract OK; temp 12.25->13.83C; anomaly 0.81->2.38C; ipccAdj2100 -0.56C; tempDownYears=none; maxTempStep=0.05C at 2031; maxTempSlopeBreak=0.05C/yr at 2031; precipDirChanges=3; maxPrecipStep=2.4mm at 2072; scoreDirChanges=1; score 78.0->74.2",
+      "warnings": {
+        "anomalyDownYears": [],
+        "tempDownYears": [],
+        "tempMaxSlopeChange": 0.05000000000000071,
+        "precipDirectionChanges": 3,
+        "scoreDirectionChanges": 1,
+        "maxPrecipStep": 2.419999999999959,
+        "maxScoreSlopeChange": 0.10000000000000853
+      }
+    },
+    {
+      "scenario": "ssp245",
+      "name": "Prague",
+      "summary": "Prague: contract OK; temp 10.22->12.24C; anomaly 0.92->2.94C; ipccAdj2100 -0.70C; tempDownYears=none; maxTempStep=0.06C at 2033; maxTempSlopeBreak=0.05C/yr at 2031; precipDirChanges=0; maxPrecipStep=2.1mm at 2073; scoreDirChanges=4; score 75.1->74.2",
+      "warnings": {
+        "anomalyDownYears": [],
+        "tempDownYears": [],
+        "tempMaxSlopeChange": 0.049999999999998934,
+        "precipDirectionChanges": 0,
+        "scoreDirectionChanges": 4,
+        "maxPrecipStep": 2.080000000000041,
+        "maxScoreSlopeChange": 0.19999999999998863
+      }
+    },
+    {
+      "scenario": "ssp245",
+      "name": "Kyiv",
+      "summary": "Kyiv: contract OK; temp 9.02->11.42C; anomaly 1.00->3.39C; ipccAdj2100 -0.80C; tempDownYears=none; maxTempStep=0.06C at 2031; maxTempSlopeBreak=0.06C/yr at 2031; precipDirChanges=3; maxPrecipStep=2.9mm at 2062; scoreDirChanges=0; score 71.5->66.4",
+      "warnings": {
+        "anomalyDownYears": [],
+        "tempDownYears": [],
+        "tempMaxSlopeChange": 0.0600000000000005,
+        "precipDirectionChanges": 3,
+        "scoreDirectionChanges": 0,
+        "maxPrecipStep": 2.8500000000000227,
+        "maxScoreSlopeChange": 0.20000000000000284
+      }
+    },
+    {
+      "scenario": "ssp245",
+      "name": "Bangkok",
+      "summary": "Bangkok: contract OK; temp 29.21->30.98C; anomaly 0.82->2.60C; ipccAdj2100 -0.61C; tempDownYears=none; maxTempStep=0.04C at 2041; maxTempSlopeBreak=0.03C/yr at 2031; precipDirChanges=3; maxPrecipStep=6.9mm at 2092; scoreDirChanges=3; score 30.7->27.6",
+      "warnings": {
+        "anomalyDownYears": [],
+        "tempDownYears": [],
+        "tempMaxSlopeChange": 0.029999999999997584,
+        "precipDirectionChanges": 3,
+        "scoreDirectionChanges": 3,
+        "maxPrecipStep": 6.940000000000055,
+        "maxScoreSlopeChange": 0.1999999999999993
+      }
+    },
+    {
+      "scenario": "ssp245",
+      "name": "New York",
+      "summary": "New York: contract OK; temp 13.34->15.53C; anomaly 1.27->3.45C; ipccAdj2100 -0.82C; tempDownYears=none; maxTempStep=0.05C at 2044; maxTempSlopeBreak=0.04C/yr at 2031; precipDirChanges=4; maxPrecipStep=3.7mm at 2052; scoreDirChanges=4; score 53.0->48.5",
+      "warnings": {
+        "anomalyDownYears": [],
+        "tempDownYears": [],
+        "tempMaxSlopeChange": 0.040000000000000924,
+        "precipDirectionChanges": 4,
+        "scoreDirectionChanges": 4,
+        "maxPrecipStep": 3.7000000000000455,
+        "maxScoreSlopeChange": 0.20000000000000284
+      }
+    },
+    {
+      "scenario": "ssp245",
+      "name": "San Francisco",
+      "summary": "San Francisco: contract OK; temp 15.09->16.84C; anomaly 0.90->2.65C; ipccAdj2100 -0.63C; tempDownYears=none; maxTempStep=0.04C at 2083; maxTempSlopeBreak=0.02C/yr at 2041; precipDirChanges=3; maxPrecipStep=4.3mm at 2085; scoreDirChanges=0; score 65.2->55.1",
+      "warnings": {
+        "anomalyDownYears": [],
+        "tempDownYears": [],
+        "tempMaxSlopeChange": 0.02000000000000135,
+        "precipDirectionChanges": 3,
+        "scoreDirectionChanges": 0,
+        "maxPrecipStep": 4.280000000000086,
+        "maxScoreSlopeChange": 0.29999999999999716
+      }
+    },
+    {
+      "scenario": "ssp245",
+      "name": "Singapore",
+      "summary": "Singapore: contract OK; temp 27.43->28.84C; anomaly 0.61->2.02C; ipccAdj2100 -0.48C; tempDownYears=none; maxTempStep=0.03C at 2031; maxTempSlopeBreak=0.03C/yr at 2031; precipDirChanges=5; maxPrecipStep=5.9mm at 2082; scoreDirChanges=2; score 32.5->28.6",
+      "warnings": {
+        "anomalyDownYears": [],
+        "tempDownYears": [],
+        "tempMaxSlopeChange": 0.030000000000001137,
+        "precipDirectionChanges": 5,
+        "scoreDirectionChanges": 2,
+        "maxPrecipStep": 5.870000000000346,
+        "maxScoreSlopeChange": 0.1999999999999993
+      }
+    },
+    {
+      "scenario": "ssp245",
+      "name": "Mumbai",
+      "summary": "Mumbai: contract OK; temp 27.88->29.50C; anomaly 0.62->2.25C; ipccAdj2100 -0.53C; tempDownYears=none; maxTempStep=0.04C at 2049; maxTempSlopeBreak=0.02C/yr at 2071; precipDirChanges=3; maxPrecipStep=14.0mm at 2031; scoreDirChanges=0; score 10.0->10.0",
+      "warnings": {
+        "anomalyDownYears": [],
+        "tempDownYears": [],
+        "tempMaxSlopeChange": 0.020000000000003126,
+        "precipDirectionChanges": 3,
+        "scoreDirectionChanges": 0,
+        "maxPrecipStep": 13.960000000000036,
+        "maxScoreSlopeChange": 0
+      }
+    },
+    {
+      "scenario": "ssp245",
+      "name": "Cairo",
+      "summary": "Cairo: contract OK; temp 22.42->24.26C; anomaly 0.83->2.67C; ipccAdj2100 -0.63C; tempDownYears=2096; maxTempStep=0.04C at 2035; maxTempSlopeBreak=0.04C/yr at 2031; precipDirChanges=0; maxPrecipStep=0.3mm at 2071; scoreDirChanges=0; score 21.3->20.0",
+      "warnings": {
+        "anomalyDownYears": [
+          2093,
+          2099
+        ],
+        "tempDownYears": [
+          2096
+        ],
+        "tempMaxSlopeChange": 0.03999999999999915,
+        "precipDirectionChanges": 0,
+        "scoreDirectionChanges": 0,
+        "maxPrecipStep": 0.28000000000000114,
+        "maxScoreSlopeChange": 0.10000000000000142
+      }
+    },
+    {
+      "scenario": "ssp245",
+      "name": "Manaus",
+      "summary": "Manaus: contract OK; temp 27.77->29.77C; anomaly 0.92->2.92C; ipccAdj2100 -0.69C; tempDownYears=none; maxTempStep=0.05C at 2032; maxTempSlopeBreak=0.04C/yr at 2031; precipDirChanges=4; maxPrecipStep=7.4mm at 2031; scoreDirChanges=0; score 31.5->28.2",
+      "warnings": {
+        "anomalyDownYears": [],
+        "tempDownYears": [],
+        "tempMaxSlopeChange": 0.03999999999999915,
+        "precipDirectionChanges": 4,
+        "scoreDirectionChanges": 0,
+        "maxPrecipStep": 7.440000000000055,
+        "maxScoreSlopeChange": 0.10000000000000142
+      }
+    },
+    {
+      "scenario": "ssp370",
+      "name": "Helsinki",
+      "summary": "Helsinki: contract OK; temp 6.23->10.25C; anomaly 1.11->5.12C; ipccAdj2100 -1.32C; tempDownYears=none; maxTempStep=0.11C at 2082; maxTempSlopeBreak=0.09C/yr at 2091; precipDirChanges=2; maxPrecipStep=3.1mm at 2091; scoreDirChanges=3; score 77.4->76.5",
+      "warnings": {
+        "anomalyDownYears": [],
+        "tempDownYears": [],
+        "tempMaxSlopeChange": 0.08999999999999986,
+        "precipDirectionChanges": 2,
+        "scoreDirectionChanges": 3,
+        "maxPrecipStep": 3.1400000000001,
+        "maxScoreSlopeChange": 0.19999999999998863
+      }
+    },
+    {
+      "scenario": "ssp370",
+      "name": "London",
+      "summary": "London: contract OK; temp 11.16->13.58C; anomaly 0.63->3.05C; ipccAdj2100 -0.79C; tempDownYears=none; maxTempStep=0.08C at 2082; maxTempSlopeBreak=0.05C/yr at 2091; precipDirChanges=3; maxPrecipStep=1.3mm at 2053; scoreDirChanges=1; score 79.1->68.3",
+      "warnings": {
+        "anomalyDownYears": [],
+        "tempDownYears": [],
+        "tempMaxSlopeChange": 0.05000000000000071,
+        "precipDirectionChanges": 3,
+        "scoreDirectionChanges": 1,
+        "maxPrecipStep": 1.3000000000000682,
+        "maxScoreSlopeChange": 0.10000000000000853
+      }
+    },
+    {
+      "scenario": "ssp370",
+      "name": "Amsterdam",
+      "summary": "Amsterdam: contract OK; temp 10.35->12.83C; anomaly 0.65->3.13C; ipccAdj2100 -0.80C; tempDownYears=none; maxTempStep=0.08C at 2081; maxTempSlopeBreak=0.07C/yr at 2091; precipDirChanges=4; maxPrecipStep=3.2mm at 2094; scoreDirChanges=2; score 80.7->71.4",
+      "warnings": {
+        "anomalyDownYears": [],
+        "tempDownYears": [],
+        "tempMaxSlopeChange": 0.07000000000000028,
+        "precipDirectionChanges": 4,
+        "scoreDirectionChanges": 2,
+        "maxPrecipStep": 3.150000000000091,
+        "maxScoreSlopeChange": 0.20000000000001705
+      }
+    },
+    {
+      "scenario": "ssp370",
+      "name": "Paris",
+      "summary": "Paris: contract OK; temp 12.22->15.26C; anomaly 0.78->3.82C; ipccAdj2100 -0.98C; tempDownYears=none; maxTempStep=0.09C at 2082; maxTempSlopeBreak=0.07C/yr at 2091; precipDirChanges=2; maxPrecipStep=2.1mm at 2042; scoreDirChanges=0; score 78.5->65.7",
+      "warnings": {
+        "anomalyDownYears": [],
+        "tempDownYears": [],
+        "tempMaxSlopeChange": 0.06999999999999851,
+        "precipDirectionChanges": 2,
+        "scoreDirectionChanges": 0,
+        "maxPrecipStep": 2.1200000000000045,
+        "maxScoreSlopeChange": 0.30000000000001137
+      }
+    },
+    {
+      "scenario": "ssp370",
+      "name": "Prague",
+      "summary": "Prague: contract OK; temp 10.29->13.68C; anomaly 0.99->4.38C; ipccAdj2100 -1.13C; tempDownYears=none; maxTempStep=0.08C at 2082; maxTempSlopeBreak=0.04C/yr at 2031; precipDirChanges=4; maxPrecipStep=1.4mm at 2063; scoreDirChanges=2; score 75.4->68.4",
+      "warnings": {
+        "anomalyDownYears": [],
+        "tempDownYears": [],
+        "tempMaxSlopeChange": 0.040000000000000924,
+        "precipDirectionChanges": 4,
+        "scoreDirectionChanges": 2,
+        "maxPrecipStep": 1.3600000000000136,
+        "maxScoreSlopeChange": 0.20000000000001705
+      }
+    },
+    {
+      "scenario": "ssp370",
+      "name": "Kyiv",
+      "summary": "Kyiv: contract OK; temp 9.13->13.06C; anomaly 1.10->5.03C; ipccAdj2100 -1.29C; tempDownYears=none; maxTempStep=0.10C at 2085; maxTempSlopeBreak=0.08C/yr at 2091; precipDirChanges=1; maxPrecipStep=2.7mm at 2081; scoreDirChanges=0; score 72.6->58.5",
+      "warnings": {
+        "anomalyDownYears": [],
+        "tempDownYears": [],
+        "tempMaxSlopeChange": 0.0799999999999983,
+        "precipDirectionChanges": 1,
+        "scoreDirectionChanges": 0,
+        "maxPrecipStep": 2.650000000000091,
+        "maxScoreSlopeChange": 0.30000000000001137
+      }
+    },
+    {
+      "scenario": "ssp370",
+      "name": "Bangkok",
+      "summary": "Bangkok: contract OK; temp 29.33->32.44C; anomaly 0.94->4.05C; ipccAdj2100 -1.04C; tempDownYears=none; maxTempStep=0.07C at 2071; maxTempSlopeBreak=0.05C/yr at 2071; precipDirChanges=5; maxPrecipStep=7.2mm at 2041; scoreDirChanges=3; score 30.4->24.9",
+      "warnings": {
+        "anomalyDownYears": [],
+        "tempDownYears": [],
+        "tempMaxSlopeChange": 0.05000000000000071,
+        "precipDirectionChanges": 5,
+        "scoreDirectionChanges": 3,
+        "maxPrecipStep": 7.160000000000082,
+        "maxScoreSlopeChange": 0.30000000000000426
+      }
+    },
+    {
+      "scenario": "ssp370",
+      "name": "New York",
+      "summary": "New York: contract OK; temp 13.54->17.00C; anomaly 1.47->4.92C; ipccAdj2100 -1.27C; tempDownYears=none; maxTempStep=0.08C at 2085; maxTempSlopeBreak=0.05C/yr at 2091; precipDirChanges=2; maxPrecipStep=5.9mm at 2053; scoreDirChanges=1; score 52.5->50.4",
+      "warnings": {
+        "anomalyDownYears": [],
+        "tempDownYears": [],
+        "tempMaxSlopeChange": 0.05000000000000071,
+        "precipDirectionChanges": 2,
+        "scoreDirectionChanges": 1,
+        "maxPrecipStep": 5.879999999999882,
+        "maxScoreSlopeChange": 0.29999999999999716
+      }
+    },
+    {
+      "scenario": "ssp370",
+      "name": "San Francisco",
+      "summary": "San Francisco: contract OK; temp 14.92->18.00C; anomaly 0.74->3.81C; ipccAdj2100 -0.98C; tempDownYears=none; maxTempStep=0.08C at 2082; maxTempSlopeBreak=0.06C/yr at 2091; precipDirChanges=3; maxPrecipStep=7.9mm at 2041; scoreDirChanges=2; score 65.6->40.6",
+      "warnings": {
+        "anomalyDownYears": [],
+        "tempDownYears": [],
+        "tempMaxSlopeChange": 0.060000000000002274,
+        "precipDirectionChanges": 3,
+        "scoreDirectionChanges": 2,
+        "maxPrecipStep": 7.880000000000109,
+        "maxScoreSlopeChange": 0.30000000000001137
+      }
+    },
+    {
+      "scenario": "ssp370",
+      "name": "Singapore",
+      "summary": "Singapore: contract OK; temp 27.49->30.02C; anomaly 0.67->3.20C; ipccAdj2100 -0.82C; tempDownYears=none; maxTempStep=0.05C at 2072; maxTempSlopeBreak=0.03C/yr at 2031; precipDirChanges=3; maxPrecipStep=9.9mm at 2093; scoreDirChanges=1; score 33.4->28.4",
+      "warnings": {
+        "anomalyDownYears": [],
+        "tempDownYears": [],
+        "tempMaxSlopeChange": 0.030000000000001137,
+        "precipDirectionChanges": 3,
+        "scoreDirectionChanges": 1,
+        "maxPrecipStep": 9.860000000000127,
+        "maxScoreSlopeChange": 0.19999999999999574
+      }
+    },
+    {
+      "scenario": "ssp370",
+      "name": "Mumbai",
+      "summary": "Mumbai: contract OK; temp 27.81->30.59C; anomaly 0.55->3.33C; ipccAdj2100 -0.86C; tempDownYears=none; maxTempStep=0.05C at 2053; maxTempSlopeBreak=0.03C/yr at 2031; precipDirChanges=5; maxPrecipStep=32.8mm at 2064; scoreDirChanges=0; score 10.0->10.0",
+      "warnings": {
+        "anomalyDownYears": [],
+        "tempDownYears": [],
+        "tempMaxSlopeChange": 0.030000000000001137,
+        "precipDirectionChanges": 5,
+        "scoreDirectionChanges": 0,
+        "maxPrecipStep": 32.7800000000002,
+        "maxScoreSlopeChange": 0
+      }
+    },
+    {
+      "scenario": "ssp370",
+      "name": "Cairo",
+      "summary": "Cairo: contract OK; temp 22.49->25.67C; anomaly 0.90->4.08C; ipccAdj2100 -1.05C; tempDownYears=none; maxTempStep=0.07C at 2081; maxTempSlopeBreak=0.05C/yr at 2091; precipDirChanges=0; maxPrecipStep=0.3mm at 2076; scoreDirChanges=0; score 21.2->18.2",
+      "warnings": {
+        "anomalyDownYears": [],
+        "tempDownYears": [],
+        "tempMaxSlopeChange": 0.05000000000000071,
+        "precipDirectionChanges": 0,
+        "scoreDirectionChanges": 0,
+        "maxPrecipStep": 0.2699999999999996,
+        "maxScoreSlopeChange": 0.20000000000000284
+      }
+    },
+    {
+      "scenario": "ssp370",
+      "name": "Manaus",
+      "summary": "Manaus: contract OK; temp 27.87->31.88C; anomaly 1.02->5.03C; ipccAdj2100 -1.29C; tempDownYears=none; maxTempStep=0.11C at 2082; maxTempSlopeBreak=0.09C/yr at 2091; precipDirChanges=0; maxPrecipStep=9.7mm at 2047; scoreDirChanges=0; score 31.1->25.5",
+      "warnings": {
+        "anomalyDownYears": [],
+        "tempDownYears": [],
+        "tempMaxSlopeChange": 0.08999999999999986,
+        "precipDirectionChanges": 0,
+        "scoreDirectionChanges": 0,
+        "maxPrecipStep": 9.659999999999854,
+        "maxScoreSlopeChange": 0.29999999999999716
+      }
+    },
+    {
+      "scenario": "ssp585",
+      "name": "Helsinki",
+      "summary": "Helsinki: contract OK; temp 6.25->11.48C; anomaly 1.12->6.35C; ipccAdj2100 -1.63C; tempDownYears=none; maxTempStep=0.12C at 2082; maxTempSlopeBreak=0.08C/yr at 2031; precipDirChanges=0; maxPrecipStep=4.4mm at 2081; scoreDirChanges=1; score 77.2->73.3",
+      "warnings": {
+        "anomalyDownYears": [],
+        "tempDownYears": [],
+        "tempMaxSlopeChange": 0.08000000000000007,
+        "precipDirectionChanges": 0,
+        "scoreDirectionChanges": 1,
+        "maxPrecipStep": 4.360000000000014,
+        "maxScoreSlopeChange": 0.10000000000000853
+      }
+    },
+    {
+      "scenario": "ssp585",
+      "name": "London",
+      "summary": "London: contract OK; temp 11.11->14.56C; anomaly 0.58->4.03C; ipccAdj2100 -1.03C; tempDownYears=none; maxTempStep=0.08C at 2081; maxTempSlopeBreak=0.04C/yr at 2031; precipDirChanges=1; maxPrecipStep=1.3mm at 2084; scoreDirChanges=0; score 79.3->62.6",
+      "warnings": {
+        "anomalyDownYears": [],
+        "tempDownYears": [],
+        "tempMaxSlopeChange": 0.040000000000000924,
+        "precipDirectionChanges": 1,
+        "scoreDirectionChanges": 0,
+        "maxPrecipStep": 1.3400000000000318,
+        "maxScoreSlopeChange": 0.30000000000001137
+      }
+    },
+    {
+      "scenario": "ssp585",
+      "name": "Amsterdam",
+      "summary": "Amsterdam: contract OK; temp 10.32->13.79C; anomaly 0.62->4.08C; ipccAdj2100 -1.05C; tempDownYears=none; maxTempStep=0.08C at 2081; maxTempSlopeBreak=0.04C/yr at 2081; precipDirChanges=2; maxPrecipStep=3.2mm at 2083; scoreDirChanges=0; score 80.3->64.9",
+      "warnings": {
+        "anomalyDownYears": [],
+        "tempDownYears": [],
+        "tempMaxSlopeChange": 0.040000000000000924,
+        "precipDirectionChanges": 2,
+        "scoreDirectionChanges": 0,
+        "maxPrecipStep": 3.1900000000000546,
+        "maxScoreSlopeChange": 0.20000000000000284
+      }
+    },
+    {
+      "scenario": "ssp585",
+      "name": "Paris",
+      "summary": "Paris: contract OK; temp 12.30->16.45C; anomaly 0.86->5.01C; ipccAdj2100 -1.28C; tempDownYears=none; maxTempStep=0.09C at 2081; maxTempSlopeBreak=0.05C/yr at 2031; precipDirChanges=1; maxPrecipStep=1.2mm at 2046; scoreDirChanges=0; score 78.3->58.4",
+      "warnings": {
+        "anomalyDownYears": [],
+        "tempDownYears": [],
+        "tempMaxSlopeChange": 0.049999999999998934,
+        "precipDirectionChanges": 1,
+        "scoreDirectionChanges": 0,
+        "maxPrecipStep": 1.150000000000091,
+        "maxScoreSlopeChange": 0.29999999999999716
+      }
+    },
+    {
+      "scenario": "ssp585",
+      "name": "Prague",
+      "summary": "Prague: contract OK; temp 10.41->15.02C; anomaly 1.12->5.72C; ipccAdj2100 -1.47C; tempDownYears=none; maxTempStep=0.10C at 2082; maxTempSlopeBreak=0.06C/yr at 2031; precipDirChanges=5; maxPrecipStep=1.4mm at 2034; scoreDirChanges=0; score 74.7->62.5",
+      "warnings": {
+        "anomalyDownYears": [],
+        "tempDownYears": [],
+        "tempMaxSlopeChange": 0.0600000000000005,
+        "precipDirectionChanges": 5,
+        "scoreDirectionChanges": 0,
+        "maxPrecipStep": 1.4399999999999977,
+        "maxScoreSlopeChange": 0.19999999999999574
+      }
+    },
+    {
+      "scenario": "ssp585",
+      "name": "Kyiv",
+      "summary": "Kyiv: contract OK; temp 9.23->14.45C; anomaly 1.20->6.42C; ipccAdj2100 -1.64C; tempDownYears=none; maxTempStep=0.11C at 2089; maxTempSlopeBreak=0.07C/yr at 2031; precipDirChanges=2; maxPrecipStep=2.2mm at 2053; scoreDirChanges=0; score 70.6->54.0",
+      "warnings": {
+        "anomalyDownYears": [],
+        "tempDownYears": [],
+        "tempMaxSlopeChange": 0.07000000000000028,
+        "precipDirectionChanges": 2,
+        "scoreDirectionChanges": 0,
+        "maxPrecipStep": 2.2000000000000455,
+        "maxScoreSlopeChange": 0.30000000000001137
+      }
+    },
+    {
+      "scenario": "ssp585",
+      "name": "Bangkok",
+      "summary": "Bangkok: contract OK; temp 29.24->33.62C; anomaly 0.86->5.23C; ipccAdj2100 -1.34C; tempDownYears=none; maxTempStep=0.09C at 2084; maxTempSlopeBreak=0.06C/yr at 2031; precipDirChanges=4; maxPrecipStep=4.8mm at 2083; scoreDirChanges=0; score 30.6->22.5",
+      "warnings": {
+        "anomalyDownYears": [],
+        "tempDownYears": [],
+        "tempMaxSlopeChange": 0.060000000000002274,
+        "precipDirectionChanges": 4,
+        "scoreDirectionChanges": 0,
+        "maxPrecipStep": 4.820000000000164,
+        "maxScoreSlopeChange": 0.10000000000000142
+      }
+    },
+    {
+      "scenario": "ssp585",
+      "name": "New York",
+      "summary": "New York: contract OK; temp 13.43->18.08C; anomaly 1.36->6.00C; ipccAdj2100 -1.54C; tempDownYears=none; maxTempStep=0.09C at 2079; maxTempSlopeBreak=0.06C/yr at 2031; precipDirChanges=3; maxPrecipStep=6.0mm at 2051; scoreDirChanges=3; score 52.1->49.1",
+      "warnings": {
+        "anomalyDownYears": [],
+        "tempDownYears": [],
+        "tempMaxSlopeChange": 0.0600000000000005,
+        "precipDirectionChanges": 3,
+        "scoreDirectionChanges": 3,
+        "maxPrecipStep": 5.990000000000009,
+        "maxScoreSlopeChange": 0.30000000000000426
+      }
+    },
+    {
+      "scenario": "ssp585",
+      "name": "San Francisco",
+      "summary": "San Francisco: contract OK; temp 15.04->19.20C; anomaly 0.86->5.01C; ipccAdj2100 -1.28C; tempDownYears=none; maxTempStep=0.08C at 2054; maxTempSlopeBreak=0.05C/yr at 2031; precipDirChanges=1; maxPrecipStep=9.8mm at 2032; scoreDirChanges=1; score 64.7->41.8",
+      "warnings": {
+        "anomalyDownYears": [],
+        "tempDownYears": [],
+        "tempMaxSlopeChange": 0.05000000000000071,
+        "precipDirectionChanges": 1,
+        "scoreDirectionChanges": 1,
+        "maxPrecipStep": 9.800000000000068,
+        "maxScoreSlopeChange": 0.7999999999999972
+      }
+    },
+    {
+      "scenario": "ssp585",
+      "name": "Singapore",
+      "summary": "Singapore: contract OK; temp 27.52->30.86C; anomaly 0.70->4.04C; ipccAdj2100 -1.04C; tempDownYears=none; maxTempStep=0.06C at 2062; maxTempSlopeBreak=0.04C/yr at 2031; precipDirChanges=3; maxPrecipStep=9.8mm at 2071; scoreDirChanges=1; score 31.6->25.6",
+      "warnings": {
+        "anomalyDownYears": [],
+        "tempDownYears": [],
+        "tempMaxSlopeChange": 0.03999999999999915,
+        "precipDirectionChanges": 3,
+        "scoreDirectionChanges": 1,
+        "maxPrecipStep": 9.820000000000164,
+        "maxScoreSlopeChange": 0.3000000000000007
+      }
+    },
+    {
+      "scenario": "ssp585",
+      "name": "Mumbai",
+      "summary": "Mumbai: contract OK; temp 27.90->31.79C; anomaly 0.65->4.54C; ipccAdj2100 -1.16C; tempDownYears=none; maxTempStep=0.07C at 2065; maxTempSlopeBreak=0.04C/yr at 2031; precipDirChanges=3; maxPrecipStep=19.4mm at 2041; scoreDirChanges=0; score 10.0->10.0",
+      "warnings": {
+        "anomalyDownYears": [],
+        "tempDownYears": [],
+        "tempMaxSlopeChange": 0.0400000000000027,
+        "precipDirectionChanges": 3,
+        "scoreDirectionChanges": 0,
+        "maxPrecipStep": 19.43000000000029,
+        "maxScoreSlopeChange": 0
+      }
+    },
+    {
+      "scenario": "ssp585",
+      "name": "Cairo",
+      "summary": "Cairo: contract OK; temp 22.67->27.26C; anomaly 1.08->5.67C; ipccAdj2100 -1.45C; tempDownYears=none; maxTempStep=0.09C at 2093; maxTempSlopeBreak=0.04C/yr at 2031; precipDirChanges=0; maxPrecipStep=0.2mm at 2091; scoreDirChanges=0; score 21.1->15.7",
+      "warnings": {
+        "anomalyDownYears": [],
+        "tempDownYears": [],
+        "tempMaxSlopeChange": 0.03999999999999915,
+        "precipDirectionChanges": 0,
+        "scoreDirectionChanges": 0,
+        "maxPrecipStep": 0.22000000000000242,
+        "maxScoreSlopeChange": 0.3000000000000007
+      }
+    },
+    {
+      "scenario": "ssp585",
+      "name": "Manaus",
+      "summary": "Manaus: contract OK; temp 27.88->33.23C; anomaly 1.03->6.38C; ipccAdj2100 -1.63C; tempDownYears=none; maxTempStep=0.10C at 2065; maxTempSlopeBreak=0.07C/yr at 2031; precipDirChanges=2; maxPrecipStep=12.1mm at 2035; scoreDirChanges=0; score 31.2->22.8",
+      "warnings": {
+        "anomalyDownYears": [],
+        "tempDownYears": [],
+        "tempMaxSlopeChange": 0.07000000000000028,
+        "precipDirectionChanges": 2,
+        "scoreDirectionChanges": 0,
+        "maxPrecipStep": 12.100000000000364,
+        "maxScoreSlopeChange": 0.3000000000000007
+      }
+    }
+  ],
+  "trendReview": [
+    {
+      "scenario": "ssp126",
+      "name": "Helsinki",
+      "flags": [
+        "anomalyDown=2071|2072|2074|2076|2077|2079|2081|2083|2086|2088|2090",
+        "tempDown=2072|2075|2076|2079|2083|2088"
+      ]
+    },
+    {
+      "scenario": "ssp126",
+      "name": "London",
+      "flags": [
+        "anomalyDown=2081|2082|2083|2084|2085|2086|2087|2088|2089|2090",
+        "tempDown=2081|2083|2084|2085|2086|2087|2088|2089"
+      ]
+    },
+    {
+      "scenario": "ssp126",
+      "name": "Amsterdam",
+      "flags": [
+        "anomalyDown=2081|2082|2083|2084|2085|2086|2087|2088|2089|2090",
+        "tempDown=2081|2082|2083|2084|2085|2086|2087|2088|2089|2090"
+      ]
+    },
+    {
+      "scenario": "ssp126",
+      "name": "Paris",
+      "flags": [
+        "anomalyDown=2065|2081|2082|2083|2084|2085|2086|2087|2088|2089|2090|2096",
+        "tempDown=2066|2081|2083|2084|2085|2086|2087|2088|2089|2091"
+      ]
+    },
+    {
+      "scenario": "ssp126",
+      "name": "Prague",
+      "flags": [
+        "anomalyDown=2061|2062|2063|2064|2066|2067|2068|2069|2070|2081|2082|2083|2084|2085|2086|2087|2088|2089|2090",
+        "tempDown=2069|2081|2082|2083|2084|2085|2086|2087|2088|2089|2090"
+      ]
+    },
+    {
+      "scenario": "ssp126",
+      "name": "Kyiv",
+      "flags": [
+        "anomalyDown=2061|2064|2066|2069|2081|2082|2083|2084|2085|2086|2087|2088|2089|2090",
+        "tempDown=2066|2081|2082|2083|2084|2085|2086|2087|2088|2089|2090"
+      ]
+    },
+    {
+      "scenario": "ssp126",
+      "name": "Bangkok",
+      "flags": [
+        "anomalyDown=2071|2074|2077|2080|2092|2094|2096|2099",
+        "tempDown=2076|2079|2091|2096"
+      ]
+    },
+    {
+      "scenario": "ssp126",
+      "name": "New York",
+      "flags": [
+        "anomalyDown=2063|2069|2081|2083|2086|2087|2089",
+        "tempDown=2087|2088"
+      ]
+    },
+    {
+      "scenario": "ssp126",
+      "name": "San Francisco",
+      "flags": [
+        "anomalyDown=2074"
+      ]
+    },
+    {
+      "scenario": "ssp126",
+      "name": "Singapore",
+      "flags": [
+        "anomalyDown=2071|2073|2074|2076|2079|2080|2092|2093|2095|2097|2099|2100",
+        "tempDown=2072|2075|2079|2093|2095|2098"
+      ]
+    },
+    {
+      "scenario": "ssp126",
+      "name": "Mumbai",
+      "flags": [
+        "anomalyDown=2091|2092|2093|2094|2095|2096|2097|2099|2100",
+        "tempDown=2091|2093|2096|2098|2099"
+      ]
+    },
+    {
+      "scenario": "ssp126",
+      "name": "Cairo",
+      "flags": [
+        "anomalyDown=2081|2084|2087|2090",
+        "tempDown=2081|2084|2090"
+      ]
+    },
+    {
+      "scenario": "ssp126",
+      "name": "Manaus",
+      "flags": [
+        "anomalyDown=2051|2052|2053|2055|2056|2057|2058|2059|2060|2081|2084|2087|2091|2092|2093|2094|2095|2096|2097|2098|2099|2100",
+        "tempDown=2052|2055|2056|2058|2060|2081|2084|2090|2092|2093|2094|2095|2096|2098|2099"
+      ]
+    },
+    {
+      "scenario": "ssp245",
+      "name": "Helsinki",
+      "flags": [
+        "anomalyDown=2068"
+      ]
+    },
+    {
+      "scenario": "ssp245",
+      "name": "Cairo",
+      "flags": [
+        "anomalyDown=2093|2099",
+        "tempDown=2096"
+      ]
+    },
+    {
+      "scenario": "ssp370",
+      "name": "Mumbai",
+      "flags": [
+        "precipStep=32.8mm"
+      ]
+    }
+  ],
+  "note": "Trend review flags are reported for human scientific review, not auto-failed."
+}

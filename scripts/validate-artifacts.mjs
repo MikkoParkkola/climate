@@ -23,6 +23,7 @@ for (const relativePath of [
   "data/worldclim10m.manifest.json",
   "data/source-registry.json",
   "data/rankings.curated-cities.json",
+  "data/trajectory-audit-summary.json",
 ]) {
   assert(existsSync(path.join(repoRoot, relativePath)), `${relativePath} missing`);
   assert(statSync(path.join(repoRoot, relativePath)).size > 0, `${relativePath} is empty`);
@@ -50,4 +51,10 @@ for (const entry of rankings.entries) {
   }
 }
 
-console.log(`artifact validation passed: ${rankings.entries.length} ranking slices, ${registry.rows.length} source rows`);
+const audit = readJson("data/trajectory-audit-summary.json");
+assert(audit.version === "trajectory-audit-summary-v1", "trajectory audit summary version mismatch");
+assert(audit.cityCount === 13, "trajectory audit city count mismatch");
+assert(audit.resultCount === 52, "trajectory audit result count mismatch");
+assert(Array.isArray(audit.trendReview), "trajectory audit trend review missing");
+
+console.log(`artifact validation passed: ${rankings.entries.length} ranking slices, ${registry.rows.length} source rows, ${audit.resultCount} audit results`);
