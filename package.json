@@ -19,6 +19,7 @@
     "smoke:data-quality": "tsx scripts/smoke-data-quality.ts",
     "smoke:model": "node scripts/smoke-grounded-model.mjs",
     "audit:trajectories": "node scripts/audit-trajectories.mjs",
+    "screenshots:capture": "node scripts/capture-screenshots.mjs",
     "verify:live": "node scripts/verify-live-release.mjs",
     "ci": "npm run check && npm run build && npm run smoke:cache && npm run smoke:rankings && npm run smoke:twin && npm run smoke:comparison-layout && npm run smoke:grid-reader && npm run smoke:node-model && npm run smoke:data-quality && npm run smoke:model && npm run audit:trajectories",
     "db:push": "drizzle-kit push"

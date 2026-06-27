@@ -76,6 +76,8 @@ Local validation on 2026-06-27:
 - `npm run validate:artifacts` verifies ranking slices, the current climate-twin analog catalog,
   registered source rows, and trajectory-audit coverage.
 - `npm run smoke:comparison-layout` guards the comparison slider offset and scenario propagation.
+- `npm run screenshots:capture` captures desktop/mobile PNG evidence for layered launch checks
+  using local Chrome headless; use `--include-single` only on a host with `DATABASE_URL`.
 - Legacy projection routes return HTTP 410.
 - `LICENSE` and `CONTRIBUTING.md` are present.
 
@@ -85,8 +87,8 @@ Local validation on 2026-06-27:
 - Production `climate_model_cache` must be truncated, or live startup/version-guard proof must show
   all incompatible rows are rejected and removed.
 - `npm run verify:live` and manual live smoke must pass against the public URL after republish.
-- Browser screenshots should be captured for desktop/mobile home, single-location, comparison,
-  rankings, methodology, and data-quality once the deployed build is current.
+- Browser screenshots should be captured against the live republished app for desktop/mobile home,
+  single-location, comparison, rankings, methodology, and data-quality once the deployed build is current.
 
 ## Known future work
 

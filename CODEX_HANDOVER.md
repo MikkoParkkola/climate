@@ -55,7 +55,13 @@ These require live Replit/prod database access:
 2. Run `TRUNCATE climate_model_cache;` against production Postgres, or prove the live startup guard
    rejected and removed every incompatible row before any public forecast was served.
 3. Run `npm run verify:live` against the public URL.
-4. Manually smoke:
+4. Capture layered screenshot evidence:
+
+```bash
+npm run screenshots:capture -- --base https://fupit.com --include-single --out artifacts/release-screenshots
+```
+
+5. Manually smoke:
 
 ```bash
 curl -s https://fupit.com/api/health | python3 -m json.tool
