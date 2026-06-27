@@ -65,8 +65,9 @@ how much the models are tuned down, so users understand the two are not the same
   expressed vs 1995–2014) and stores it. `calibrated_delta = k × raw_delta`.
 - Serve `{ modelConsensus, ipccCalibrated, adjustment, adjustmentPct, modelSpread, method, source }`.
 - **Scope honesty:** temperature has clean AR6 assessed anchors → calibrate it. Precipitation /
-  humidity have **no** comparable single assessed anchor → show as "model consensus + spread,"
-  labeled as such; do **not** fabricate a calibration we cannot ground (cardinal rule).
+  other variables have **no** comparable single assessed anchor → show as "model consensus
+  + spread," labeled as such; do **not** fabricate a calibration we cannot ground
+  (cardinal rule).
 - The exact assessed-vs-1995–2014 reference values (not the −0.85 °C approximation) are pinned
   in the Phase 5 validation step before these numbers are served.
 
@@ -89,7 +90,7 @@ how much the models are tuned down, so users understand the two are not the same
 |---|---|
 | Avg temperature / change | CMIP6 multi-model regional anomaly under chosen SSP, added to NOAA baseline. Atlas for region aggregation. |
 | Precipitation / change | CMIP6 regional precip change %, per SSP. |
-| Humidity / change | CMIP6 near-surface relative/specific humidity, per SSP (if available; else mark estimate). |
+| Humidity / change | **Not currently served.** If added, use CMIP6 near-surface relative/specific humidity per SSP and label it as model consensus + spread; do not fabricate an assessed calibration. |
 | Sea level / coastal flooding | NASA AR6 Sea Level tool, per-location, per-SSP. |
 | Heat-stress / drought / flood risk | Derived from CMIP6 ETCCDI extreme indices (`ingest/fetch_extremes.py`) — **not** from mean fields. Scored at **serve time** against absolute cited thresholds. **See "Risk index grounding (serve-time)" below.** |
 | Habitability score & breakdown | Transparent weighted composite of the above — weights documented and shown to the user. Not a hidden black box. |

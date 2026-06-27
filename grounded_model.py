@@ -29,6 +29,32 @@ MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun",
 DEFAULT_SCENARIO = "ssp245"
 MIN_FORECAST_YEAR = 2024
 MAX_FORECAST_YEAR = 2100
+SOURCE_TRAIL = [
+    {
+        "label": "Temperature",
+        "source": "CMIP6 ScenarioMIP ensemble, IPCC AR6 calibrated",
+        "method": "1995-2014 baseline plus calibrated ensemble anomaly",
+        "citation": "IPCC AR6 WGI SPM Table SPM.1; CMIP6 / Eyring et al. 2016",
+    },
+    {
+        "label": "Precipitation",
+        "source": "CMIP6 ScenarioMIP ensemble",
+        "method": "1995-2014 monthly baseline multiplied by ensemble percent change",
+        "citation": "CMIP6 / Eyring et al. 2016",
+    },
+    {
+        "label": "Sea level",
+        "source": "IPCC AR6 regional sea-level projections",
+        "method": "regional median plus low/high range sampled at this grid cell",
+        "citation": "IPCC AR6 sea-level projections; NASA AR6 archive",
+    },
+    {
+        "label": "Heat, drought, flood",
+        "source": "CMIP6 ETCCDI extreme-climate indices",
+        "method": "absolute future index scored against documented thresholds",
+        "citation": "Sillmann et al. 2013; IPCC AR6 WGI Ch.11",
+    },
+]
 
 # ── Risk thresholds (serve-time, cited; see SCIENTIFIC_GROUNDING.md) ──────────
 # Each score 0-100 is a transparent linear map of an ABSOLUTE index to a cited
@@ -194,7 +220,9 @@ def project(lat, lng, year, scenario=DEFAULT_SCENARIO):
     k = calibration_k(scenario, year)
     # monthly absolute = baseline monthly + annual delta (temp: calibrated)
     t_delta = sample("temperature", scenario, "mean", lat, lng, year) * k
+    t_std = sample("temperature", scenario, "std", lat, lng, year) * k
     p_delta = sample("precipitation", scenario, "mean", lat, lng, year)        # percent
+    p_std = sample("precipitation", scenario, "std", lat, lng, year)          # percent
     monthly_t, monthly_p = [], []
     for m in range(1, 13):
         bt = sample("baseline", "temperature", "clim", lat, lng, m)
@@ -216,12 +244,23 @@ def project(lat, lng, year, scenario=DEFAULT_SCENARIO):
     tr_abs = absolute("tr")        # tropical nights / yr (heat)
     cdd_abs = absolute("cdd")      # consecutive dry days (drought)
     rx5_abs = absolute("rx5day")   # max 5-day precip mm (flood)
+    tr_std = sample("extreme-tr", scenario, "std", lat, lng, year)
+    cdd_std = sample("extreme-cdd", scenario, "std", lat, lng, year)
+    rx5_std = sample("extreme-rx5day", scenario, "std", lat, lng, year)
     heat_nights = None if np.isnan(tr_abs) else max(0, tr_abs)
     drought_risk = None if np.isnan(cdd_abs) else float(np.clip(100 * max(0, cdd_abs) / DROUGHT_MAX_CDD, 0, 100))
     flood_risk = None if np.isnan(rx5_abs) else float(np.clip(100 * max(0, rx5_abs) / FLOOD_MAX_RX5, 0, 100))
 
     slr = sample("sealevel", scenario, "median", lat, lng, year)      # metres
     slr_cm = None if np.isnan(slr) else slr * 100.0
+    slr_low = sample("sealevel", scenario, "low", lat, lng, year)
+    slr_high = sample("sealevel", scenario, "high", lat, lng, year)
+    slr_low_cm = None if np.isnan(slr_low) else slr_low * 100.0
+    slr_high_cm = None if np.isnan(slr_high) else slr_high * 100.0
+
+    t_spread = None if np.isnan(t_std) else abs(t_std)
+    p_spread_pct = None if np.isnan(p_std) else abs(p_std)
+    precip_spread_mm = None if annual_total is None or p_spread_pct is None else annual_total * p_spread_pct / 100.0
 
     score, breakdown = habitability(annual_mean, annual_total, heat_nights, drought_risk, flood_risk)
 
@@ -235,6 +274,12 @@ def project(lat, lng, year, scenario=DEFAULT_SCENARIO):
             "anomaly": _num(t_delta),
             "min": _num(min(mt)) if mt else None, "max": _num(max(mt)) if mt else None,
             "seasonal_amplitude": _num(max(mt) - min(mt)) if mt else None,
+            "uncertainty": {
+                "annual_mean_low": _num(annual_mean - t_spread) if annual_mean is not None and t_spread is not None else None,
+                "annual_mean_high": _num(annual_mean + t_spread) if annual_mean is not None and t_spread is not None else None,
+                "anomaly_spread": _num(t_spread),
+                "method": "CMIP6 ensemble standard deviation, scaled by the same IPCC AR6 calibration factor as the mean anomaly",
+            },
         },
         "precipitation": {
             "annual_total": _num(annual_total),
@@ -244,6 +289,12 @@ def project(lat, lng, year, scenario=DEFAULT_SCENARIO):
             "driest_month": _num(min(mp)) if mp else None,
             "wettest_month_name": MONTHS[int(np.nanargmax(monthly_p))] if mp else None,
             "driest_month_name": MONTHS[int(np.nanargmin(monthly_p))] if mp else None,
+            "uncertainty": {
+                "annual_total_low": _num(max(0, annual_total - precip_spread_mm)) if annual_total is not None and precip_spread_mm is not None else None,
+                "annual_total_high": _num(annual_total + precip_spread_mm) if annual_total is not None and precip_spread_mm is not None else None,
+                "anomaly_percent_spread": _num(p_spread_pct),
+                "method": "CMIP6 ensemble standard deviation of precipitation percent change, converted to annual-total millimetres at this location",
+            },
         },
         "extremes": {
             "heat_stress_days": None if heat_nights is None else int(round(heat_nights)),
@@ -253,6 +304,14 @@ def project(lat, lng, year, scenario=DEFAULT_SCENARIO):
                 "tropical_nights_per_year": _num(heat_nights),
                 "consecutive_dry_days": _num(None if np.isnan(cdd_abs) else cdd_abs),
                 "max_5day_precip_mm": _num(None if np.isnan(rx5_abs) else rx5_abs),
+                "uncertainty": {
+                    "tropical_nights_spread_days": _num(None if np.isnan(tr_std) else abs(tr_std)),
+                    "consecutive_dry_days_spread": _num(None if np.isnan(cdd_std) else abs(cdd_std)),
+                    "max_5day_precip_spread_mm": _num(None if np.isnan(rx5_std) else abs(rx5_std)),
+                    "sea_level_low_cm": _num(slr_low_cm),
+                    "sea_level_high_cm": _num(slr_high_cm),
+                    "method": "CMIP6 ETCCDI ensemble standard deviation for extremes; IPCC AR6 low/high range for sea level",
+                },
                 "thresholds": {"tropical_night_C": TROPICAL_NIGHT_T,
                                "drought_max_cdd": DROUGHT_MAX_CDD, "flood_max_rx5_mm": FLOOD_MAX_RX5},
             },
@@ -260,11 +319,19 @@ def project(lat, lng, year, scenario=DEFAULT_SCENARIO):
         "habitability": {"score": round(score, 1), "category": category(score), "breakdown": breakdown},
         "metadata": {
             "model": "fupit grounded engine (CMIP6/IPCC AR6)", "model_version": "grounded-v1",
-            "resolution": "1.0 degree", "confidence": "ensemble spread reported",
+            "resolution": "1.0 degree", "confidence": "CMIP6 ensemble spread + AR6 likely ranges reported",
             "data_source": "CMIP6 ScenarioMIP + IPCC AR6 (temp IPCC-calibrated) + AR6 sea level + CMIP6 ETCCDI extremes",
             "baseline": "1995-2014 (CMIP6 historical; model baseline, observed bias-correction planned)",
             "projection_method": "delta/change-factor; baseline + ensemble delta; serve-time risk thresholds",
             "scenario": scenario,
+            "uncertainty": {
+                "temperature_anomaly_spread_c": _num(t_spread),
+                "precipitation_anomaly_spread_pct": _num(p_spread_pct),
+                "sea_level_low_cm": _num(slr_low_cm),
+                "sea_level_high_cm": _num(slr_high_cm),
+                "extreme_index_spread_source": "CMIP6 ETCCDI ensemble standard deviation",
+            },
+            "source_trail": SOURCE_TRAIL,
         },
     }
 

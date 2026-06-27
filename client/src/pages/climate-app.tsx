@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useRef } from "react";
-import { GitCompare, Loader2, Download, Search, MapPin, ArrowLeft, Play, Pause } from "lucide-react";
+import { GitCompare, Loader2, Download, Search, MapPin, ArrowLeft, Play, Pause, ShieldCheck, ExternalLink } from "lucide-react";
 import {
   agriculturalViability, biodiversityLoss, waterStress, projectedAqi, climateTwin,
   FALLBACK_BASELINE_AQI, type EstimateInputs,
@@ -35,13 +35,56 @@ interface LocationOption {
 
 interface ProjectionPoint {
   year: number;
-  temperature: { annual_mean: number; monthly: number[]; anomaly: number; min: number; max: number };
-  precipitation: { annual_total: number; monthly: number[]; anomaly_percent: number };
-  extremes: { heat_stress_days: number; drought_risk: number; flood_risk: number; sea_level_rise_cm?: number };
+  scenario?: string;
+  temperature: {
+    annual_mean: number;
+    monthly: number[];
+    anomaly: number;
+    min: number;
+    max: number;
+    uncertainty?: { annual_mean_low?: number; annual_mean_high?: number; anomaly_spread?: number; method?: string };
+  };
+  precipitation: {
+    annual_total: number;
+    monthly: number[];
+    anomaly_percent: number;
+    uncertainty?: { annual_total_low?: number; annual_total_high?: number; anomaly_percent_spread?: number; method?: string };
+  };
+  extremes: {
+    heat_stress_days: number;
+    drought_risk: number;
+    flood_risk: number;
+    sea_level_rise_cm?: number;
+    detail?: {
+      uncertainty?: {
+        tropical_nights_spread_days?: number;
+        consecutive_dry_days_spread?: number;
+        max_5day_precip_spread_mm?: number;
+        sea_level_low_cm?: number;
+        sea_level_high_cm?: number;
+        method?: string;
+      };
+    };
+  };
   habitability: { score: number; category?: string; breakdown?: Record<string, number> };
   atmospheric_physics?: { circulation_pattern?: string; climate_sensitivity?: number; feedback_mechanisms?: string[] };
   location?: { climate_zone?: string; latitude?: number; longitude?: number };
-  metadata?: { confidence?: string; resolution?: string; model?: string; model_version?: string };
+  metadata?: {
+    confidence?: string;
+    resolution?: string;
+    model?: string;
+    model_version?: string;
+    scenario?: string;
+    baseline?: string;
+    projection_method?: string;
+    uncertainty?: {
+      temperature_anomaly_spread_c?: number;
+      precipitation_anomaly_spread_pct?: number;
+      sea_level_low_cm?: number;
+      sea_level_high_cm?: number;
+    };
+    source_trail?: Array<{ label: string; source: string; method: string; citation: string }>;
+  };
 }
 
 // ── Math helpers ─────────────────────────────────────────────────────────────
@@ -528,6 +571,18 @@ export default function ClimateApp() {
       resolution: np.metadata?.resolution,
       model: np.metadata?.model ?? "CMIP6 / IPCC AR6",
       modelVersion: np.metadata?.model_version ?? "",
+      scenario: np.metadata?.scenario ?? np.scenario,
+      baseline: np.metadata?.baseline,
+      projectionMethod: np.metadata?.projection_method,
+      tempSpread: np.temperature.uncertainty?.anomaly_spread,
+      tempLow: np.temperature.uncertainty?.annual_mean_low,
+      tempHigh: np.temperature.uncertainty?.annual_mean_high,
+      precipSpreadPct: np.precipitation.uncertainty?.anomaly_percent_spread,
+      precipLow: np.precipitation.uncertainty?.annual_total_low,
+      precipHigh: np.precipitation.uncertainty?.annual_total_high,
+      seaLow: np.extremes.detail?.uncertainty?.sea_level_low_cm ?? np.metadata?.uncertainty?.sea_level_low_cm,
+      seaHigh: np.extremes.detail?.uncertainty?.sea_level_high_cm ?? np.metadata?.uncertainty?.sea_level_high_cm,
+      sourceTrail: np.metadata?.source_trail ?? [],
     };
   }, [trajectory, year, baselineAqi, selectedLocation]);
 
@@ -605,15 +660,18 @@ export default function ClimateApp() {
             </div>
 
             <button
-              onClick={() => (window.location.href = "/comparison")}
+              onClick={generate}
+              disabled={isLoading}
               style={{
                 marginTop: 16, width: "100%", padding: "14px", borderRadius: 10, border: "none", fontSize: 15, fontWeight: 700,
-                cursor: "pointer",
+                cursor: isLoading ? "wait" : "pointer",
                 background: "linear-gradient(135deg, hsl(192,91%,40%) 0%, hsl(215,91%,55%) 100%)",
                 color: "white",
+                opacity: isLoading ? 0.72 : 1,
                 display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
               }}>
-              Compare locations →
+              {isLoading ? <Loader2 style={{ width: 16, height: 16, animation: "spin 1s linear infinite" }} /> : null}
+              {isLoading ? "Generating forecast" : "See climate forecast →"}
             </button>
 
             {isLoading && (
@@ -997,6 +1055,66 @@ export default function ClimateApp() {
           </div>
         </div>
 
+        {/* Projection Receipt */}
+        <div style={{ ...card, padding: 18, marginBottom: 14 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 14, flexWrap: "wrap" }}>
+            <ShieldCheck size={17} color={ACCENT} />
+            <h2 style={{ fontSize: 15, fontWeight: 700 }}>Projection Receipt</h2>
+            <span style={{ marginLeft: "auto", fontSize: 10, color: MUTED }}>
+              {d!.scenario?.toUpperCase()} · {d!.resolution ?? "1.0 degree"} grid · {Math.round(year)}
+            </span>
+            <a href="/methodology" style={{ display: "inline-flex", alignItems: "center", gap: 4, fontSize: 10, color: ACCENT, textDecoration: "none" }}>
+              Methodology <ExternalLink size={11} />
+            </a>
+          </div>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(145px,1fr))", gap: 10, marginBottom: 12 }}>
+            {[
+              {
+                label: "Temperature range",
+                value: d!.tempLow != null && d!.tempHigh != null ? `${d!.tempLow.toFixed(1)}–${d!.tempHigh.toFixed(1)}°C` : "—",
+                sub: d!.tempSpread != null ? `±${d!.tempSpread.toFixed(1)}°C ensemble spread` : "spread unavailable",
+                color: RED,
+              },
+              {
+                label: "Precipitation range",
+                value: d!.precipLow != null && d!.precipHigh != null ? `${Math.round(d!.precipLow)}–${Math.round(d!.precipHigh)}mm` : "—",
+                sub: d!.precipSpreadPct != null ? `±${d!.precipSpreadPct.toFixed(1)}% model spread` : "spread unavailable",
+                color: BLUE,
+              },
+              {
+                label: "Sea-level range",
+                value: d!.seaLow != null && d!.seaHigh != null ? `${Math.round(d!.seaLow)}–${Math.round(d!.seaHigh)}cm` : "—",
+                sub: "IPCC AR6 low to high",
+                color: CYAN,
+              },
+              {
+                label: "Baseline",
+                value: "1995–2014",
+                sub: "CMIP6 historical monthly climatology",
+                color: GREEN,
+              },
+            ].map((item) => (
+              <div key={item.label} style={{ background: "rgba(255,255,255,0.025)", border: `1px solid ${BORDER}`, borderRadius: 8, padding: "10px 11px" }}>
+                <div style={{ fontSize: 9, color: MUTED, textTransform: "uppercase", letterSpacing: 0.4 }}>{item.label}</div>
+                <div style={{ fontSize: 16, fontWeight: 800, color: item.color, marginTop: 5 }}>{item.value}</div>
+                <div style={{ fontSize: 9.5, color: MUTED, lineHeight: 1.35, marginTop: 4 }}>{item.sub}</div>
+              </div>
+            ))}
+          </div>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(220px,1fr))", gap: 8 }}>
+            {d!.sourceTrail.slice(0, 4).map((entry) => (
+              <div key={entry.label} style={{ padding: "9px 10px", borderRadius: 8, background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.055)" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", gap: 8, marginBottom: 3 }}>
+                  <span style={{ fontSize: 11, fontWeight: 700, color: "white" }}>{entry.label}</span>
+                  <span style={{ fontSize: 9, color: ACCENT, textAlign: "right" }}>{entry.source}</span>
+                </div>
+                <div style={{ fontSize: 9.5, color: MUTED, lineHeight: 1.35 }}>{entry.method}</div>
+                <div style={{ fontSize: 9, color: "rgba(255,255,255,0.42)", marginTop: 4 }}>{entry.citation}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+
         {/* Environmental & Agricultural Impact (derived estimates) */}
         <div style={{ ...card, padding: 18, marginBottom: 14 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
@@ -1146,7 +1264,7 @@ export default function ClimateApp() {
 
       <footer style={{ borderTop: `1px solid ${BORDER}`, padding: "16px 20px", textAlign: "center" }}>
         <p style={{ color: MUTED, fontSize: 10 }}>
-          fupit · {d!.model}{d!.modelVersion ? ` ${d!.modelVersion}` : ""} · Confidence: {prettify(d!.confidence)} · RCP 4.5–8.5 / SSP2 · For research &amp; planning
+          fupit · {d!.model}{d!.modelVersion ? ` ${d!.modelVersion}` : ""} · {d!.scenario?.toUpperCase()} · Uncertainty shown from ensemble spread / AR6 ranges · For research &amp; planning
         </p>
         <p style={{ color: MUTED, fontSize: 10, marginTop: 6 }}>
           © {new Date().getFullYear()}{" "}

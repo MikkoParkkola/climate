@@ -29,16 +29,24 @@ const requiredPaths = [
   "temperature.min",
   "temperature.max",
   "temperature.seasonal_amplitude",
+  "temperature.uncertainty.annual_mean_low",
+  "temperature.uncertainty.annual_mean_high",
+  "temperature.uncertainty.anomaly_spread",
   "precipitation.annual_total",
   "precipitation.anomaly_percent",
   "precipitation.wettest_month",
   "precipitation.driest_month",
   "precipitation.wettest_month_name",
   "precipitation.driest_month_name",
+  "precipitation.uncertainty.annual_total_low",
+  "precipitation.uncertainty.annual_total_high",
+  "precipitation.uncertainty.anomaly_percent_spread",
   "extremes.heat_stress_days",
   "extremes.drought_risk",
   "extremes.flood_risk",
   "extremes.sea_level_rise_cm",
+  "extremes.detail.uncertainty.sea_level_low_cm",
+  "extremes.detail.uncertainty.sea_level_high_cm",
   "habitability.score",
   "habitability.category",
   "habitability.breakdown.temperature_comfort",
@@ -53,6 +61,10 @@ const requiredPaths = [
   "metadata.model_version",
   "metadata.data_source",
   "metadata.projection_method",
+  "metadata.uncertainty.temperature_anomaly_spread_c",
+  "metadata.uncertainty.precipitation_anomaly_spread_pct",
+  "metadata.uncertainty.sea_level_low_cm",
+  "metadata.uncertainty.sea_level_high_cm",
 ];
 
 function assert(condition, message) {
@@ -186,6 +198,17 @@ function validateProjection(sample, projection, expectedYear = 2050) {
   assert(projection.extremes.drought_risk >= 0 && projection.extremes.drought_risk <= 100, `${sample.name} drought_risk out of 0-100 range`);
   assert(projection.extremes.flood_risk >= 0 && projection.extremes.flood_risk <= 100, `${sample.name} flood_risk out of 0-100 range`);
   assert(projection.habitability.score >= 0 && projection.habitability.score <= 100, `${sample.name} habitability score out of range`);
+  assert(projection.temperature.uncertainty.annual_mean_low <= projection.temperature.annual_mean, `${sample.name} temperature uncertainty low above mean`);
+  assert(projection.temperature.uncertainty.annual_mean_high >= projection.temperature.annual_mean, `${sample.name} temperature uncertainty high below mean`);
+  assert(projection.precipitation.uncertainty.annual_total_low <= projection.precipitation.annual_total, `${sample.name} precipitation uncertainty low above total`);
+  assert(projection.precipitation.uncertainty.annual_total_high >= projection.precipitation.annual_total, `${sample.name} precipitation uncertainty high below total`);
+  assert(projection.extremes.detail.uncertainty.sea_level_low_cm <= projection.extremes.sea_level_rise_cm, `${sample.name} sea-level low above median`);
+  assert(projection.extremes.detail.uncertainty.sea_level_high_cm >= projection.extremes.sea_level_rise_cm, `${sample.name} sea-level high below median`);
+  assert(Array.isArray(projection.metadata.source_trail), `${sample.name} source trail missing`);
+  assert(projection.metadata.source_trail.length >= 4, `${sample.name} source trail incomplete`);
+  projection.metadata.source_trail.forEach((entry, index) => {
+    assert(entry.label && entry.source && entry.method && entry.citation, `${sample.name} source trail entry ${index} incomplete`);
+  });
 }
 
 function validateKnownRegressions(results) {

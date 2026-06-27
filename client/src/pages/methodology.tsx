@@ -20,12 +20,12 @@ export default function Methodology() {
           </p>
         </header>
 
-        <Card>
-          <CardContent className="prose prose-sm max-w-none pt-6">
+        <Card className="bg-white text-gray-900">
+          <CardContent className="prose prose-sm prose-slate max-w-none pt-6">
             <h2>What the forecast is built from</h2>
             <ul>
               <li>
-                <strong>Temperature, precipitation, humidity change</strong> — CMIP6, the
+                <strong>Temperature and precipitation change</strong> — CMIP6, the
                 model ensemble behind the IPCC Sixth Assessment Report. We take the
                 multi-model average change for each scenario, decade by decade to 2100.
               </li>
@@ -52,8 +52,8 @@ export default function Methodology() {
               evidence support. The IPCC did not simply average the raw models; it adjusted
               its assessed warming toward observations. We do the same: for temperature we
               show both the raw model average and the IPCC-calibrated value, and default to
-              the calibrated one. Precipitation and humidity have no comparable single
-              assessed anchor, so we show them as model average plus spread, labeled as such.
+              the calibrated one. Precipitation has no comparable single assessed anchor,
+              so we show it as model average plus spread, labeled as such.
               We do not fabricate a calibration we cannot ground.
             </p>
 

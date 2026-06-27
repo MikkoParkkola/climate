@@ -159,7 +159,7 @@ const SEO_PAGES: Record<string, SeoPage> = {
   <ul>
     <li>Search any location worldwide by city name or coordinates</li>
     <li>View projected average temperature and temperature change</li>
-    <li>Explore annual precipitation and humidity forecasts</li>
+    <li>Explore annual precipitation forecasts and model-spread ranges</li>
     <li>Assess heat stress, drought, and flooding risk scores</li>
     <li>Compare habitability rankings across global cities</li>
   </ul>
@@ -180,7 +180,7 @@ const SEO_PAGES: Record<string, SeoPage> = {
   <ul>
     <li>Average temperature and temperature change across locations</li>
     <li>Annual precipitation and precipitation trends</li>
-    <li>Humidity forecasts and changes over time</li>
+    <li>Model-spread ranges and risk changes over time</li>
     <li>Sea-level projections for coastal locations</li>
     <li>Heat stress, drought, and flooding risk scores</li>
     <li>Overall habitability scores from 0 to 100</li>
@@ -198,7 +198,7 @@ const SEO_PAGES: Record<string, SeoPage> = {
   <p>Every value on fupit traces to real climate science. We do not invent coefficients or warming rates. Where we cannot ground a number, we leave it blank rather than guess.</p>
   <h2>Forecast sources</h2>
   <ul>
-    <li>Temperature, precipitation, and humidity change: CMIP6 model output behind the IPCC Sixth Assessment Report, aggregated by scenario and decade.</li>
+    <li>Temperature and precipitation change: CMIP6 model output behind the IPCC Sixth Assessment Report, aggregated by scenario and decade.</li>
     <li>Present-day baseline: 1995-2014 monthly CMIP6 historical climatology, with a planned upgrade to direct observed baselines.</li>
     <li>Sea-level rise: IPCC AR6 regional projections.</li>
     <li>Heat, drought, and flood risk: CMIP6 ETCCDI extreme-climate indices scored against documented thresholds.</li>
@@ -206,7 +206,7 @@ const SEO_PAGES: Record<string, SeoPage> = {
   <h2>Honesty rules</h2>
   <ul>
     <li>Temperature is shown with the IPCC-calibrated value as the headline and raw CMIP6 model consensus available for comparison.</li>
-    <li>Precipitation and humidity are shown as model consensus plus spread because there is no equivalent single assessed calibration anchor.</li>
+    <li>Precipitation is shown as model consensus plus spread because there is no equivalent single assessed calibration anchor.</li>
     <li>Risk scores expose the raw physical quantity next to the 0 to 100 score.</li>
   </ul>
   <p>Sources: IPCC AR6 Working Group I; CMIP6; ETCCDI indices; IPCC AR6 sea-level projections.</p>
