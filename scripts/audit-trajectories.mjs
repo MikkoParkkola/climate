@@ -5,21 +5,30 @@ import { fileURLToPath } from "url";
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(__dirname, "..");
 const pythonBin = process.env.PYTHON_BIN || "python3";
-const scenario = process.env.FUPIT_AUDIT_SCENARIO || "ssp245";
+const supportedScenarios = ["ssp126", "ssp245", "ssp370", "ssp585"];
+const scenarios = (process.env.FUPIT_AUDIT_SCENARIOS || "all")
+  .split(",")
+  .map((item) => item.trim())
+  .filter(Boolean)
+  .flatMap((item) => (item === "all" ? supportedScenarios : [item]));
 const baselineYear = 2025;
 const maxYear = 2100;
 const years = Array.from({ length: maxYear - baselineYear + 1 }, (_, i) => baselineYear + i);
 
 const cities = [
+  ["Helsinki", 60.1699, 24.9384],
+  ["London", 51.5074, -0.1278],
   ["Amsterdam", 52.3676, 4.9041],
   ["Paris", 48.8566, 2.3522],
-  ["London", 51.5074, -0.1278],
-  ["Helsinki", 60.1699, 24.9384],
   ["Prague", 50.0755, 14.4378],
   ["Kyiv", 50.4501, 30.5234],
   ["Bangkok", 13.7563, 100.5018],
   ["New York", 40.7128, -74.0060],
   ["San Francisco", 37.7749, -122.4194],
+  ["Singapore", 1.3521, 103.8198],
+  ["Mumbai", 19.0760, 72.8777],
+  ["Cairo", 30.0444, 31.2357],
+  ["Manaus", -3.1190, -60.0217],
 ];
 
 const requiredPaths = [
@@ -58,6 +67,32 @@ function assertCoreContract(city, points) {
       if (!Array.isArray(value) || value.length !== 12 || value.some((item) => item == null || Number.isNaN(item))) {
         failures.push(`${point.year} invalid ${pathName}`);
       }
+    }
+
+    const monthlyTemp = point.temperature.monthly;
+    const monthlyPrecip = point.precipitation.monthly;
+    if (point.temperature.annual_mean < -80 || point.temperature.annual_mean > 70) {
+      failures.push(`${point.year} implausible annual temperature ${point.temperature.annual_mean}`);
+    }
+    if (monthlyTemp.some((value) => value < -100 || value > 80)) {
+      failures.push(`${point.year} implausible monthly temperature`);
+    }
+    if (point.precipitation.annual_total < 0 || point.precipitation.annual_total > 15000) {
+      failures.push(`${point.year} implausible annual precipitation ${point.precipitation.annual_total}`);
+    }
+    if (monthlyPrecip.some((value) => value < 0 || value > 3500)) {
+      failures.push(`${point.year} implausible monthly precipitation`);
+    }
+    if (point.extremes.heat_stress_days < 0 || point.extremes.heat_stress_days > 366) {
+      failures.push(`${point.year} heat_stress_days out of range`);
+    }
+    for (const key of ["drought_risk", "flood_risk"]) {
+      if (point.extremes[key] < 0 || point.extremes[key] > 100) {
+        failures.push(`${point.year} ${key} out of range`);
+      }
+    }
+    if (point.habitability.score < 0 || point.habitability.score > 100) {
+      failures.push(`${point.year} habitability score out of range`);
     }
   }
 
@@ -110,7 +145,7 @@ function fmt(value, digits = 2) {
   return Number(value).toFixed(digits);
 }
 
-function runCity([name, lat, lng]) {
+function runCity([name, lat, lng], scenario) {
   const child = spawnSync(
     pythonBin,
     ["grounded_model.py", "--trajectory", String(lat), String(lng), years.join(","), scenario],
@@ -153,18 +188,45 @@ function runCity([name, lat, lng]) {
       tempMaxSlopeChange: tempStats.maxSlopeChange,
       precipDirectionChanges: precipStats.directionChanges,
       scoreDirectionChanges: scoreStats.directionChanges,
+      maxPrecipStep: precipStats.maxAbsStep,
+      maxScoreSlopeChange: scoreStats.maxSlopeChange,
     },
   };
 }
 
-const results = cities.map(runCity);
-console.log(`Trajectory audit ${scenario}: ${cities.length} cities, ${years.length} annual points each (${baselineYear}-${maxYear})`);
-for (const result of results) console.log(result.summary);
+for (const scenario of scenarios) {
+  if (!supportedScenarios.includes(scenario)) {
+    throw new Error(`Unsupported audit scenario "${scenario}". Expected one of ${supportedScenarios.join(", ")} or "all".`);
+  }
+}
 
-const tempWarnings = results.filter((result) => result.warnings.tempDownYears.length > 0);
-if (tempWarnings.length > 0) {
-  console.log("Temperature decrease warnings:");
-  for (const result of tempWarnings) {
-    console.log(`- ${result.name}: ${result.warnings.tempDownYears.join(", ")}`);
+const allResults = [];
+for (const scenario of scenarios) {
+  const results = cities.map((city) => runCity(city, scenario));
+  allResults.push(...results.map((result) => ({ ...result, scenario })));
+  console.log(`Trajectory audit ${scenario}: ${cities.length} cities, ${years.length} annual points each (${baselineYear}-${maxYear})`);
+  for (const result of results) console.log(result.summary);
+}
+
+const trendReview = allResults.filter((result) =>
+  result.warnings.anomalyDownYears.length > 0 ||
+  result.warnings.tempDownYears.length > 0 ||
+  result.warnings.tempMaxSlopeChange > 0.12 ||
+  result.warnings.maxPrecipStep > 25 ||
+  result.warnings.scoreDirectionChanges > 6 ||
+  result.warnings.maxScoreSlopeChange > 5
+);
+
+if (trendReview.length > 0) {
+  console.log("Trend review flags (reported for human scientific review, not auto-failed):");
+  for (const result of trendReview) {
+    const flags = [];
+    if (result.warnings.anomalyDownYears.length > 0) flags.push(`anomalyDown=${result.warnings.anomalyDownYears.join("|")}`);
+    if (result.warnings.tempDownYears.length > 0) flags.push(`tempDown=${result.warnings.tempDownYears.join("|")}`);
+    if (result.warnings.tempMaxSlopeChange > 0.12) flags.push(`tempSlopeBreak=${fmt(result.warnings.tempMaxSlopeChange)}C/yr`);
+    if (result.warnings.maxPrecipStep > 25) flags.push(`precipStep=${fmt(result.warnings.maxPrecipStep, 1)}mm`);
+    if (result.warnings.scoreDirectionChanges > 6) flags.push(`scoreDirChanges=${result.warnings.scoreDirectionChanges}`);
+    if (result.warnings.maxScoreSlopeChange > 5) flags.push(`scoreSlopeBreak=${fmt(result.warnings.maxScoreSlopeChange, 1)}pts/yr`);
+    console.log(`- ${result.scenario} ${result.name}: ${flags.join("; ")}`);
   }
 }

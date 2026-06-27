@@ -18,8 +18,11 @@ CLI (matches the old runner so routes.ts can swap the spawn target):
     python grounded_model.py <lat> <lng> <year> [scenario]
     python grounded_model.py --trajectory <lat> <lng> <year,year,...> [scenario]
     python grounded_model.py --rankings <year> [scenario]
-prints JSON to stdout. scenario default ssp245 (middle-of-road); ids:
-ssp119 ssp126 ssp245 ssp370 ssp585.
+prints JSON to stdout. scenario default ssp245 (middle-of-road). Full
+habitability forecasts currently support ssp126, ssp245, ssp370, and ssp585.
+SSP1-1.9 temperature/precipitation layers exist in the source grid, but the
+ETCCDI extremes source lacks SSP1-1.9, so the app rejects it instead of serving
+habitability scores with missing heat/drought/flood penalties.
 """
 import sys, os, json, gzip
 import numpy as np
@@ -29,6 +32,7 @@ OBSERVED_BASELINE_MANIFEST = "worldclim10m.manifest.json"
 MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun",
           "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
 DEFAULT_SCENARIO = "ssp245"
+SERVABLE_SCENARIOS = {"ssp126", "ssp245", "ssp370", "ssp585"}
 MIN_FORECAST_YEAR = 2024
 MAX_FORECAST_YEAR = 2100
 SOURCE_TRAIL = [
@@ -451,11 +455,21 @@ def _parse_years(value):
     return years
 
 
+def _parse_scenario(value):
+    if value not in SERVABLE_SCENARIOS:
+        allowed = ", ".join(sorted(SERVABLE_SCENARIOS))
+        raise ValueError(
+            f"unsupported full-forecast scenario '{value}'. Supported scenarios: {allowed}. "
+            "SSP1-1.9 lacks grounded ETCCDI heat/drought/flood layers, so it is withheld."
+        )
+    return value
+
+
 def main():
     try:
         a = sys.argv[1:]
         if a and a[0] == "--rankings":
-            year = _parse_year(a[1]); scenario = a[2] if len(a) > 2 else DEFAULT_SCENARIO
+            year = _parse_year(a[1]); scenario = _parse_scenario(a[2] if len(a) > 2 else DEFAULT_SCENARIO)
             # rank a fixed set of major cities by habitability (grounded)
             from_cities = json.load(open(os.path.join(DATA, "ranking_cities.json"))) \
                 if os.path.exists(os.path.join(DATA, "ranking_cities.json")) else []
@@ -489,11 +503,11 @@ def main():
         if a and a[0] == "--trajectory":
             lat = float(a[1]); lng = float(a[2])
             years = _parse_years(a[3])
-            scenario = a[4] if len(a) > 4 else DEFAULT_SCENARIO
+            scenario = _parse_scenario(a[4] if len(a) > 4 else DEFAULT_SCENARIO)
             print(json.dumps(trajectory(lat, lng, years, scenario)))
             return
         lat = float(a[0]); lng = float(a[1]); year = _parse_year(a[2])
-        scenario = a[3] if len(a) > 3 else DEFAULT_SCENARIO
+        scenario = _parse_scenario(a[3] if len(a) > 3 else DEFAULT_SCENARIO)
         print(json.dumps(project(lat, lng, year, scenario)))
     except (IndexError, ValueError) as exc:
         print(f"error: {exc}", file=sys.stderr)

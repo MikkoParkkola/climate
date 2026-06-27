@@ -10,3 +10,6 @@ ingest/sealevel_raw/
 ingest/cache/
 ingest/export/grid.i16.gz
 ingest/export/manifest.json
+
+# Local agent skill bundles; project memory notes remain tracked under .agents/memory/
+.agents/skills/

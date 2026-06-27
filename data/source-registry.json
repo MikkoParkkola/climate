@@ -32,7 +32,7 @@
       "variables": ["temperature anomaly", "precipitation anomaly"],
       "spatialResolution": "1 degree packaged grid",
       "temporalResolution": "decade anchors with interpolation in serving model",
-      "scenarioCoverage": "SSP1-1.9, SSP1-2.6, SSP2-4.5, SSP3-7.0, SSP5-8.5",
+      "scenarioCoverage": "temperature/precipitation layers include SSP1-1.9, SSP1-2.6, SSP2-4.5, SSP3-7.0, SSP5-8.5; full app forecasts require ETCCDI coverage and currently serve SSP1-2.6/2-4.5/3-7.0/5-8.5",
       "method": "Raw model-consensus anomaly is added to observed/model baseline; IPCC-calibrated temperature is shown alongside.",
       "displayPolicy": "show-with-method-receipt",
       "reviewedAt": "2026-06-27"
@@ -83,7 +83,7 @@
       "variables": ["tropical nights", "consecutive dry days", "maximum 5-day precipitation"],
       "spatialResolution": "1 degree packaged grid",
       "temporalResolution": "decade anchors with interpolation in serving model",
-      "scenarioCoverage": "SSP pathways present in packaged artifact",
+      "scenarioCoverage": "SSP1-2.6, SSP2-4.5, SSP3-7.0, SSP5-8.5; no SSP1-1.9 in this source",
       "method": "Converted to transparent heat, drought, and flood pressure scores using documented thresholds.",
       "displayPolicy": "show-educational-only-with-license-warning",
       "reviewedAt": "2026-06-27"
@@ -100,7 +100,7 @@
       "variables": ["habitability score", "score breakdown"],
       "spatialResolution": "inherits input projection resolution",
       "temporalResolution": "annual interpolated projections from registered inputs",
-      "scenarioCoverage": "all supported app SSP scenarios",
+      "scenarioCoverage": "supported full-forecast app scenarios: SSP1-2.6, SSP2-4.5, SSP3-7.0, SSP5-8.5",
       "method": "Presentation score derived from temperature comfort, precipitation adequacy, heat stress, drought pressure, flood pressure, and adaptation placeholder documented in methodology.",
       "displayPolicy": "show-as-derived-score-not-advice",
       "reviewedAt": "2026-06-27"

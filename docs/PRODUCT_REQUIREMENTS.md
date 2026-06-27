@@ -42,9 +42,10 @@ These are product assumptions, not hidden model constants. They must be reviewed
   [Climate Action Tracker](https://climateactiontracker.org/publications/warming-projections-global-update-2025/)
   estimates about 2.6 C. The app should therefore default to a versioned
   "current-policy reference" pathway mapped to the closest available SSP/warming range.
-- Paris-compatible pathways such as SSP1-1.9 and SSP1-2.6 remain essential comparison
-  pathways, but they must not be presented as the central current-policy future unless
-  the cited policy literature changes.
+- Paris-compatible pathways remain essential comparison pathways, but a pathway must not be
+  offered as a full living-conditions forecast until every visible metric in that view is
+  grounded. Today SSP1-2.6 is the low-emissions full-forecast pathway; SSP1-1.9 remains
+  documented context because the packaged ETCCDI extremes source lacks that scenario.
 - SSP5-8.5 remains useful as a very-high-emissions / high-end stress test, not as the
   default "most likely" future. The UI should label this distinction plainly.
 - [IPCC AR6 WGI](https://www.ipcc.ch/report/ar6/wg1/chapter/summary-for-policymakers/)
@@ -301,8 +302,9 @@ Acceptance criteria:
 ### F3. Climate twin
 
 - Climate twin works for any queried location, but its candidate set is explicitly bounded to the current analog catalog until a global analog index exists.
-- The output shows closest match, distance/confidence band, temperature gap, precipitation gap, heat-stress gap, and "no close analog" when appropriate.
+- The output shows closest match, distance, method-specific match band, temperature gap, precipitation gap, heat-stress gap, and "no close analog" when appropriate.
 - The twin must be framed as a communication aid, not a scientific equivalence claim.
+- Public API behavior: `GET /api/climate-twin` returns the bounded catalog id/version/year, compared count, alternatives, distance components, deltas, source receipt, and caveats. It must reject unsupported full-forecast scenarios rather than fill missing risk layers.
 
 ### F4. Explainability layer
 

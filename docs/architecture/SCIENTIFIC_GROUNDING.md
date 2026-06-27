@@ -28,7 +28,11 @@ NVIDIA cBottle ("Climate in a Bottle") is a diffusion-based generative emulator 
 
 ## IPCC AR6 anchor numbers (best estimate; very-likely range, °C vs 1850–1900)
 
-Product supports **all five** scenarios (operator decision 2026-06-26).
+The source grid contains temperature/precipitation/sea-level context for five AR6 scenarios,
+but full fupit habitability forecasts are served only where the required heat/drought/flood
+extreme-index layers exist. Today the app serves full forecasts for SSP1-2.6, SSP2-4.5,
+SSP3-7.0, and SSP5-8.5; SSP1-1.9 is withheld from full forecasts because the ETCCDI source
+does not include it.
 
 | Scenario | 2021–2040 | 2041–2060 | 2081–2100 |
 |---|---|---|---|
@@ -97,7 +101,7 @@ the same and can judge the pathway themselves.
 | Sea level / coastal flooding | NASA AR6 Sea Level tool, per-location, per-SSP. |
 | Heat-stress / drought / flood risk | Derived from CMIP6 ETCCDI extreme indices (`ingest/fetch_extremes.py`) — **not** from mean fields. Scored at **serve time** against absolute cited thresholds. **See "Risk index grounding (serve-time)" below.** |
 | Habitability score & breakdown | Transparent weighted composite of the above — weights documented and shown to the user. Not a hidden black box. |
-| Comparable location | Nearest present-day analog by multivariate climate distance over the grounded fields. |
+| Comparable location | Nearest present-day analog by multivariate climate distance over grounded monthly temperature and log precipitation vectors, bounded to the registered current catalog and returned with catalog/source caveats. |
 | Uncertainty | Carried end-to-end as the AR6/CMIP6 model spread (range), shown in UI — never collapsed to false precision. |
 
 ## Honesty requirements (non-negotiable)
@@ -144,7 +148,7 @@ Where a cell lacks an observed baseline, the score is withheld (NaN), not guesse
 | **Flood** | Rx5day (`extreme-rx5day`) | max 5-day precipitation total, mm | ETCCDI Rx5day; pluvial-flood proxy (IPCC AR6 WGI Ch.11 heavy-precip assessment) |
 | **Flood** | R20mm (`extreme-r20mm`) | days with ≥ 20 mm precipitation, count/yr | ETCCDI R20mm heavy-precip-day count |
 
-Source dataset for all five: **CDS `sis-extreme-indices-cmip6`** (ETCCDI indices derived
+Source dataset for all five indices: **CDS `sis-extreme-indices-cmip6`** (ETCCDI indices derived
 from CMIP6, base-independent, annual), 10-model ensemble, SSP1-2.6/2-4.5/3-7.0/5-8.5.
 Citation: Sillmann et al. 2013 (ETCCDI index definitions, JGR-Atmospheres); CMIP6
 (Eyring et al. 2016). **Provenance caveat:** CDS marks this dataset *"no longer supported

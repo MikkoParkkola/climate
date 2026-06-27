@@ -4,7 +4,7 @@ import { z } from "zod";
 import { MODEL_CACHE_VERSION, SOURCE_REGISTRY_VERSION } from "./model-cache-version";
 import { assertSourceIdsRegistered } from "./source-registry";
 
-const CLIMATE_SCENARIOS = ["ssp119", "ssp126", "ssp245", "ssp370", "ssp585"] as const;
+const CLIMATE_SCENARIOS = ["ssp126", "ssp245", "ssp370", "ssp585"] as const;
 const RANKING_DIRECTIONS = ["highest", "lowest"] as const;
 
 export const rankingQuerySchema = z.object({

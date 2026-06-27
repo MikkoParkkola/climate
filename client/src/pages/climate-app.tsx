@@ -25,7 +25,6 @@ const CHECKPOINTS = Array.from(new Set([BASELINE_YEAR, CURRENT_FORECAST_YEAR, ..
 const YEAR_TICKS = CHECKPOINTS;
 const QUICK_YEAR_BUTTONS = Array.from(new Set([CURRENT_FORECAST_YEAR, 2030, 2050, 2075, 2100].filter((year) => year >= CURRENT_FORECAST_YEAR)));
 const SCENARIOS = [
-  { id: "ssp119", label: "SSP1-1.9", caption: "very low emissions; aggressive mitigation" },
   { id: "ssp126", label: "SSP1-2.6", caption: "low emissions; strong mitigation" },
   { id: "ssp245", label: "SSP2-4.5", caption: "middle path; current-policy-adjacent reference" },
   { id: "ssp370", label: "SSP3-7.0", caption: "high emissions; weak mitigation stress case" },

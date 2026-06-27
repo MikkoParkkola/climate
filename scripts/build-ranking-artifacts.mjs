@@ -16,7 +16,7 @@ if (!modelVersion || !sourceRegistryVersion) {
   throw new Error("Could not read model/source registry versions");
 }
 
-const scenarios = ["ssp119", "ssp126", "ssp245", "ssp370", "ssp585"];
+const scenarios = ["ssp126", "ssp245", "ssp370", "ssp585"];
 const years = [2025, 2026, ...Array.from({ length: 15 }, (_, i) => 2030 + i * 5)];
 const catalog = "curated_cities";
 const commonSourceIds = ["curated-ranking-cities-v1"];

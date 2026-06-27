@@ -184,6 +184,39 @@ function assertInvalidYearRejected(pythonBin) {
   }
 }
 
+function assertUnsupportedFullScenarioRejected(pythonBin) {
+  const commands = [
+    {
+      label: "single projection",
+      args: [modelPath, "60.17", "24.94", "2050", "ssp119"],
+    },
+    {
+      label: "trajectory projection",
+      args: [modelPath, "--trajectory", "60.17", "24.94", "2025,2050", "ssp119"],
+    },
+    {
+      label: "rankings projection",
+      args: [modelPath, "--rankings", "2050", "ssp119"],
+    },
+  ];
+
+  for (const command of commands) {
+    const result = spawnSync(pythonBin, command.args, {
+      cwd: repoRoot,
+      encoding: "utf8",
+      maxBuffer: 2 * 1024 * 1024,
+    });
+    if (result.error) {
+      throw result.error;
+    }
+    assert(result.status !== 0, `${command.label} accepted unsupported full-forecast scenario ssp119`);
+    assert(
+      result.stderr.includes("SSP1-1.9 lacks grounded ETCCDI"),
+      `${command.label} rejection did not explain the missing ETCCDI source: ${result.stderr || result.stdout}`,
+    );
+  }
+}
+
 function findPython() {
   const candidates = [process.env.PYTHON_BIN, "python3", "python"].filter(Boolean);
   for (const candidate of candidates) {
@@ -286,6 +319,7 @@ highScenarioTrajectory.points.forEach((point, index) => {
 });
 
 assertInvalidYearRejected(pythonBin);
+assertUnsupportedFullScenarioRejected(pythonBin);
 
 for (const { sample, projection } of results) {
   console.log(
@@ -298,3 +332,4 @@ console.log(`grounded_model contract smoke passed for ${samples.length} cities u
 console.log(`grounded_model trajectory smoke passed for ${trajectorySample.name} years ${trajectoryYears.join(",")}`);
 console.log("grounded_model non-default scenario trajectory smoke passed for ssp585");
 console.log("grounded_model rejects forecast years beyond 2100");
+console.log("grounded_model rejects SSP1-1.9 full forecasts until ETCCDI extremes exist");

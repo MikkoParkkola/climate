@@ -126,13 +126,13 @@ Runtime stays boring:
 
 ### API Shape
 
-Recommended public APIs:
+Launch public APIs:
 
 - `GET /api/health`: no DB dependency; returns deployment commit, artifact hashes, cache version, source-registry version, and supported scenarios.
 - `POST /api/climate-trajectory`: input `{ coordinates, years, scenario }`; output annual points, metadata, uncertainty, source receipt, cache status.
 - `GET /api/climate/global-rankings`: input `metric`, `year`, `scenario`, `catalog`, `limit`; output precomputed ranked rows with catalog/source/uncertainty/exclusion metadata.
 - `GET /api/source-registry`: returns source rows used by current artifact bundle.
-- `GET /api/climate-twin`: input coordinates, year, scenario, catalog; output bounded analog result and distance components.
+- `GET /api/climate-twin`: input coordinates, year, scenario, catalog; output bounded current-day analog result, alternatives, distance components, deltas, source receipt, catalog caveats, and a data-derived "no close catalog analog" flag.
 - `GET /api/build-info`: optional lightweight debug endpoint with no protected values.
 
 Endpoints that cannot be grounded must return 404/410/422, not fabricated fallback data.

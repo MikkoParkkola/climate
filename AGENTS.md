@@ -25,7 +25,7 @@ If you cannot ground a value, the correct behavior is to **not show it** (or sho
 |---|---|
 | Frontend | React 18, Vite 6, Wouter (routing), TanStack Query, Radix UI + Tailwind (shadcn-style), Leaflet, Chart.js / Recharts, Framer Motion |
 | Backend | Express **5** + TypeScript (`tsx` dev, `esbuild` prod bundle) |
-| DB | PostgreSQL via Drizzle ORM (`@neondatabase/serverless`) — schema in `shared/schema.ts` |
+| DB | PostgreSQL via Drizzle ORM + `pg` — schema in `shared/schema.ts` |
 | Model | Python (`grounded_model.py`) spawned as subprocess; offline CMIP6/IPCC grid reader |
 | Other | `@octokit/rest` (GitHub-repo tool) |
 

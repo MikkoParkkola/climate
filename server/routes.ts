@@ -9,6 +9,7 @@ import { insertClimateLocationSchema } from "@shared/schema";
 import { z } from "zod";
 import { getRanking, rankingQuerySchema } from "./precomputed-rankings";
 import { loadSourceRegistry } from "./source-registry";
+import { climateTwinQuerySchema, findClimateTwin, loadClimateAnalogCatalog } from "./climate-twin";
 
 const MAX_PYTHON_CONCURRENT = 2;
 const PYTHON_TIMEOUT_MS = 60_000;
@@ -20,7 +21,10 @@ const RATE_LIMIT_MAX_PER_WINDOW = 10;
 const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
 const MIN_FORECAST_YEAR = 2024;
 const MAX_FORECAST_YEAR = 2100;
-const CLIMATE_SCENARIOS = ["ssp119", "ssp126", "ssp245", "ssp370", "ssp585"] as const;
+// SSP1-1.9 temperature/precipitation layers exist in the artifact, but the
+// ETCCDI extremes source has no SSP1-1.9. Full habitability forecasts therefore
+// reject it instead of serving missing heat/drought/flood penalties.
+const CLIMATE_SCENARIOS = ["ssp126", "ssp245", "ssp370", "ssp585"] as const;
 const DEFAULT_CLIMATE_SCENARIO = "ssp245";
 
 function checkRateLimit(ip: string): boolean {
@@ -144,6 +148,10 @@ function projectionScenario(projection: unknown): string | undefined {
   const p = projection as { scenario?: unknown; metadata?: { scenario?: unknown } };
   const scenario = p.metadata?.scenario ?? p.scenario;
   return typeof scenario === "string" ? scenario : undefined;
+}
+
+function roundCacheKey(n: number): number {
+  return Math.round(n * 100) / 100;
 }
 
 // ── SEO: per-route HTML head injection (production only) ────────────────────
@@ -354,8 +362,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
       sourceRegistryVersion: SOURCE_REGISTRY_VERSION,
       cachePurge: "startup-incompatible-delete-enabled",
       legacyProjectionEndpoints: "410-gone",
+      retiredEndpoints: [
+        "/api/projections",
+        "/api/export/csv/:locationId/:year",
+        "/api/user/keys",
+        "/api/user/comparisons",
+        "/api/climate/multi-comparison",
+        "/api/climate/export-comparison",
+      ],
+      supportedScenarios: [...CLIMATE_SCENARIOS],
       seoBase: SEO_BASE,
       routes: ["/", "/comparison", "/methodology"],
+      apiRoutes: [
+        "/api/health",
+        "/api/source-registry",
+        "/api/climate-trajectory",
+        "/api/climate-twin",
+        "/api/climate/global-rankings",
+      ],
       deployment: {
         commit: deploymentCommit,
         build: buildInfo,
@@ -428,73 +452,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
   const legacyProjectionGone = (res: any) => res.status(410).json({
     message: "Legacy location-id projection endpoints are retired. Use /api/climate-trajectory for grounded CMIP6/IPCC projections.",
   });
+  const retiredFeatureGone = (res: any) => res.status(410).json({
+    message: "This legacy endpoint is retired. Use /api/climate-trajectory, /api/climate-twin, /api/climate/global-rankings, or /api/source-registry for grounded public data.",
+  });
 
   // Climate projection routes
   app.get("/api/projections", (_req, res) => legacyProjectionGone(res));
   app.get("/api/projections/:locationId/:year", (_req, res) => legacyProjectionGone(res));
   app.get("/api/projections/:locationId", (_req, res) => legacyProjectionGone(res));
 
-  // Export data routes
-  app.get("/api/export/csv/:locationId/:year", async (req, res) => {
-    try {
-      const locationId = parseInt(req.params.locationId);
-      const year = parseInt(req.params.year);
-      
-      const location = await storage.getClimateLocation(locationId);
-      const projection = await storage.getClimateProjection(locationId, year);
-      
-      if (!location || !projection) {
-        return res.status(404).json({ message: "Data not found" });
-      }
-      
-      const csvData = generateCSV(location, projection);
-      
-      res.setHeader('Content-Type', 'text/csv');
-      res.setHeader('Content-Disposition', `attachment; filename="climate-projection-${location.name}-${year}.csv"`);
-      res.send(csvData);
-    } catch (error) {
-      console.error("Error exporting CSV:", error);
-      res.status(500).json({ message: "Failed to export CSV" });
-    }
-  });
-
-  // API Key Management Routes
-  app.get("/api/user/keys", async (req, res) => {
-    try {
-      const userId = 1; // Demo user - in production would come from auth
-      const user = await storage.getUser(userId);
-      
-      if (!user) {
-        return res.status(404).json({ message: "User not found" });
-      }
-
-      res.json({
-        nvidiaApiKey: !!user.nvidiaApiKey,
-        cbottleApiKey: !!user.cbottleApiKey,
-      });
-    } catch (error) {
-      console.error("Error fetching user keys:", error);
-      res.status(500).json({ message: "Failed to fetch API keys" });
-    }
-  });
-
-  app.put("/api/user/keys", async (req, res) => {
-    try {
-      const { nvidiaApiKey, cbottleApiKey } = req.body;
-      const userId = 1; // Demo user
-      
-      const user = await storage.updateUserApiKeys(userId, nvidiaApiKey, cbottleApiKey);
-      
-      res.json({
-        message: "API keys updated successfully",
-        nvidiaApiKey: !!user.nvidiaApiKey,
-        cbottleApiKey: !!user.cbottleApiKey,
-      });
-    } catch (error) {
-      console.error("Error updating API keys:", error);
-      res.status(500).json({ message: "Failed to update API keys" });
-    }
-  });
+  app.get("/api/export/csv/:locationId/:year", (_req, res) => retiredFeatureGone(res));
+  app.get("/api/user/keys", (_req, res) => retiredFeatureGone(res));
+  app.put("/api/user/keys", (_req, res) => retiredFeatureGone(res));
 
   // Multi-location comparison endpoint
   app.get("/api/climate/multi-comparison", async (req, res) => {
@@ -519,48 +488,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Save user comparison
-  app.post("/api/user/comparisons", async (req, res) => {
-    try {
-      const { name, locationIds, year } = req.body;
-      const userId = 1; // Demo user
-      
-      const comparison = await storage.createLocationComparison(userId, name, locationIds, year);
-      res.json(comparison);
-    } catch (error) {
-      console.error("Error saving comparison:", error);
-      res.status(500).json({ message: "Failed to save comparison" });
-    }
-  });
-
-  // Get user comparisons
-  app.get("/api/user/comparisons", async (req, res) => {
-    try {
-      const userId = 1; // Demo user
-      const comparisons = await storage.getUserComparisons(userId);
-      res.json(comparisons);
-    } catch (error) {
-      console.error("Error fetching comparisons:", error);
-      res.status(500).json({ message: "Failed to fetch comparisons" });
-    }
-  });
-
-  // PDF Export endpoint
-  app.post("/api/climate/export-comparison", async (req, res) => {
-    try {
-      const { locationIds, year, name } = req.body;
-      
-      const pdfData = await generateComparisonPDF(locationIds, year, name);
-      
-      res.json({ 
-        downloadUrl: `/tmp/${pdfData.filename}`,
-        message: "PDF generated successfully" 
-      });
-    } catch (error) {
-      console.error("Error generating PDF:", error);
-      res.status(500).json({ message: "Failed to generate PDF" });
-    }
-  });
+  app.post("/api/user/comparisons", (_req, res) => retiredFeatureGone(res));
+  app.get("/api/user/comparisons", (_req, res) => retiredFeatureGone(res));
+  app.post("/api/climate/export-comparison", (_req, res) => retiredFeatureGone(res));
 
   // POST /api/climate-projection — securely spawns Python runner with validated args
   app.post("/api/climate-projection", async (req, res) => {
@@ -686,9 +616,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     // one — reuses a previously cached model run instead of re-spawning Python.
     // Storage also checks the JSON payload's grounded-grid cache version; old
     // unversioned cbottle-era rows read as misses and are overwritten.
-    const round2 = (n: number) => Math.round(n * 100) / 100;
-    const latKey = round2(coordinates.lat);
-    const lngKey = round2(coordinates.lng);
+    const latKey = roundCacheKey(coordinates.lat);
+    const lngKey = roundCacheKey(coordinates.lng);
 
     try {
       const pointsByYear = new Map<number, any>();
@@ -730,6 +659,68 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       console.error("climate-trajectory failed:", msg);
       res.status(500).json({ message: "Climate model failed. Please try again." });
+    }
+  });
+
+  // GET /api/climate-twin - bounded current-day analog lookup. The target
+  // projection is grounded_model.py output; the candidate set is the registered
+  // current analog catalog, not an unbounded global search.
+  app.get("/api/climate-twin", async (req, res) => {
+    const clientIp = ((req.ip ?? "") || (req.socket?.remoteAddress ?? "unknown")).replace(/^::ffff:/, "");
+    if (!checkRateLimit(clientIp)) {
+      return res.status(429).json({ message: "Too many requests. Please try again later." });
+    }
+
+    const parsed = climateTwinQuerySchema.safeParse(req.query);
+    if (!parsed.success) {
+      return res.status(400).json({ message: "Invalid request parameters", errors: parsed.error.issues });
+    }
+
+    const { lat, lng, year, scenario, catalog, limit } = parsed.data;
+    if (catalog !== "current") {
+      return res.status(404).json({
+        message: "No climate twin catalog for those parameters.",
+        availableCatalogs: ["current"],
+      });
+    }
+
+    const latKey = roundCacheKey(lat);
+    const lngKey = roundCacheKey(lng);
+
+    try {
+      let projection = await storage.getCachedModelProjection(latKey, lngKey, year, scenario);
+      let cachedProjection = Boolean(projection && projectionScenario(projection) === scenario);
+
+      if (!cachedProjection) {
+        projection = await runClimateModel(lat, lng, year, scenario);
+        await storage.saveModelProjection(latKey, lngKey, year, scenario, projection);
+        cachedProjection = false;
+      }
+
+      const twin = findClimateTwin({
+        catalog: loadClimateAnalogCatalog(),
+        projection: projection as Parameters<typeof findClimateTwin>[0]["projection"],
+        lat,
+        lng,
+        year,
+        scenario,
+        limit,
+      });
+
+      if (!twin) {
+        return res.status(422).json({ message: "Climate twin could not be computed from the current catalog." });
+      }
+
+      res
+        .set("Cache-Control", "public, max-age=300")
+        .json({ success: true, data: { ...twin, cachedProjection } });
+    } catch (err) {
+      const msg = (err as Error).message;
+      if (msg === "timeout") {
+        return res.status(504).json({ message: "Climate model timed out. Please try again." });
+      }
+      console.error("climate-twin failed:", msg);
+      res.status(500).json({ message: "Climate twin failed. Please try again." });
     }
   });
 
@@ -886,56 +877,4 @@ window.__vite_plugin_react_preamble_installed__ = true
 
   const httpServer = createServer(app);
   return httpServer;
-}
-
-async function generateComparisonPDF(locationIds: number[], year: number, name: string) {
-  // Simplified PDF generation - in production use libraries like PDFKit or Puppeteer
-  const filename = `climate-comparison-${year}-${Date.now()}.pdf`;
-  const content = `Climate Comparison Report\n\nName: ${name}\nYear: ${year}\nLocations: ${locationIds.join(', ')}\n\nGenerated on: ${new Date().toISOString()}`;
-  
-  return {
-    filename,
-    content,
-    path: `/tmp/${filename}`
-  };
-}
-
-function generateCSV(location: any, projection: any): string {
-  const headers = [
-    'Location',
-    'Latitude',
-    'Longitude',
-    'Projection Year',
-    'Average Temperature (°C)',
-    'Temperature Change (°C)',
-    'Annual Precipitation (mm)',
-    'Precipitation Change (mm)',
-    'Humidity (%)',
-    'Humidity Change (%)',
-    'Sea Level (m)',
-    'Sea Level Change (m)',
-    'Heat Stress Risk (0-100)',
-    'Drought Risk (0-100)',
-    'Flooding Risk (0-100)',
-  ];
-
-  const row = [
-    location.name,
-    location.latitude,
-    location.longitude,
-    projection.projectionYear,
-    projection.averageTemperature,
-    projection.temperatureChange,
-    projection.annualPrecipitation,
-    projection.precipitationChange,
-    projection.humidity,
-    projection.humidityChange,
-    projection.seaLevel,
-    projection.seaLevelChange,
-    projection.heatStressRisk,
-    projection.droughtRisk,
-    projection.floodingRisk,
-  ];
-
-  return [headers.join(','), row.join(',')].join('\n');
 }

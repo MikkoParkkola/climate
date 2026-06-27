@@ -120,6 +120,10 @@ try {
   assert(health.cachePurge === "startup-incompatible-delete-enabled", "startup cache purge enabled");
   assert(health.legacyProjectionEndpoints === "410-gone", "health marks legacy projection endpoints gone");
   assert(Array.isArray(health.routes) && health.routes.includes("/methodology"), "health exposes /methodology route");
+  assert(Array.isArray(health.apiRoutes) && health.apiRoutes.includes("/api/climate-twin"), "health exposes /api/climate-twin route");
+  assert(Array.isArray(health.retiredEndpoints) && health.retiredEndpoints.includes("/api/user/keys"), "health exposes retired API-key endpoint guard");
+  assert(Array.isArray(health.supportedScenarios) && health.supportedScenarios.includes("ssp126"), "health exposes supported full-forecast scenarios");
+  assert(Array.isArray(health.supportedScenarios) && !health.supportedScenarios.includes("ssp119"), "health excludes SSP1-1.9 from full forecasts");
   if (expectedCommit) {
     assert(commitMatches(health.deployment?.commit, expectedCommit), `health deployment commit matches ${String(expectedCommit).slice(0, 12)}`);
   }
@@ -142,6 +146,10 @@ try {
   assert(legacyProjection.res.status === 410, "legacy /api/projections returns 410");
   const legacyComparison = await getText("/api/climate/multi-comparison?locationIds=1&year=2050");
   assert(legacyComparison.res.status === 410, "legacy /api/climate/multi-comparison returns 410");
+  const legacyCsv = await getText("/api/export/csv/1/2050");
+  assert(legacyCsv.res.status === 410, "legacy /api/export/csv returns 410");
+  const legacyKeys = await getText("/api/user/keys");
+  assert(legacyKeys.res.status === 410, "legacy /api/user/keys returns 410");
 
   if (skipTrajectory) {
     pass("trajectory endpoint skipped by --skip-trajectory");
@@ -179,6 +187,20 @@ try {
     assert(Array.isArray(point?.metadata?.source_trail) && point.metadata.source_trail.some((entry) => entry.label === "Observed baseline"), "source trail includes observed baseline");
     const nulls = nullPaths(point);
     assert(nulls.length === 0, `trajectory point has zero nulls${nulls.length ? ` (${nulls.slice(0, 5).join(", ")})` : ""}`);
+
+    const { json: twinPayload } = await getJson(`/api/climate-twin?lat=${lat}&lng=${lng}&year=${year}&scenario=${scenario}&limit=3`);
+    const twin = twinPayload.data;
+    assert(twinPayload.success === true, "climate twin success=true");
+    assert(twin?.target?.scenario === scenario, `climate twin target scenario=${scenario}`);
+    assert(twin?.catalog?.id === "current", "climate twin uses current catalog");
+    assert(Number.isInteger(twin?.catalog?.candidateCount) && twin.catalog.candidateCount > 0, "climate twin reports bounded catalog size");
+    assert(Number.isInteger(twin?.catalog?.comparedCount) && twin.catalog.comparedCount > 0, "climate twin reports compared count");
+    assert(typeof twin?.match?.candidate?.name === "string", "climate twin has closest match name");
+    assert(Number.isFinite(twin?.match?.distance), "climate twin match distance is finite");
+    assert(Number.isFinite(twin?.match?.distanceComponents?.monthlyTemperature), "climate twin temperature distance is finite");
+    assert(Number.isFinite(twin?.match?.distanceComponents?.monthlyPrecipitation), "climate twin precipitation distance is finite");
+    assert(Array.isArray(twin?.sourceReceipt?.sourceIds) && twin.sourceReceipt.sourceIds.includes("curated-ranking-cities-v1"), "climate twin source receipt includes catalog source");
+    assert(Array.isArray(twin?.sourceReceipt?.caveats) && twin.sourceReceipt.caveats.some((caveat) => caveat.includes("bounded")), "climate twin exposes bounded-catalog caveat");
   }
 } catch (error) {
   fail(error instanceof Error ? error.message : String(error));
