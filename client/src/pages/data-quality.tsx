@@ -31,6 +31,15 @@ type DataQuality = {
     trendReview: Array<{ scenario: string; name: string; flags: string[] }>;
     note: string;
   };
+  validationReport: {
+    repoPath: string;
+    status: string;
+    artifactGeneratedAt: string;
+    historicalObservationHindcast: string;
+    trendReviewCount: number;
+    trendReviewSummary: Array<{ kind: string; count: number }>;
+    blockers: string[];
+  };
   executableChecks: string[];
   limitations: string[];
 };
@@ -142,6 +151,34 @@ export default function DataQualityPage() {
                   </table>
                 </div>
                 <p className="text-xs text-slate-500">{data.trajectoryAudit.note}</p>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardContent className="space-y-4 pt-6">
+                <div className="flex items-center gap-2">
+                  <FileCheck2 className="h-5 w-5 text-blue-700" aria-hidden />
+                  <h2 className="text-xl font-semibold">Validation report</h2>
+                </div>
+                <p className="text-sm text-slate-600">
+                  The repository report at <code className="rounded bg-slate-100 px-1">{data.validationReport.repoPath}</code> summarizes
+                  the same trajectory-audit artifact and keeps historical hindcast status explicit:
+                  <span className="font-medium"> {data.validationReport.historicalObservationHindcast}</span>.
+                </p>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <Stat label="Trend review items" value={data.validationReport.trendReviewCount} />
+                  <Stat label="Hindcast status" value={data.validationReport.historicalObservationHindcast} />
+                </div>
+                <ul className="list-disc space-y-1 pl-5 text-sm text-slate-600">
+                  {data.validationReport.blockers.map((blocker) => <li key={blocker}>{blocker}</li>)}
+                </ul>
+                <div className="flex flex-wrap gap-2 text-xs">
+                  {data.validationReport.trendReviewSummary.map((item) => (
+                    <span key={item.kind} className="rounded border border-slate-200 bg-white px-2 py-1">
+                      {item.kind}: {item.count}
+                    </span>
+                  ))}
+                </div>
               </CardContent>
             </Card>
 

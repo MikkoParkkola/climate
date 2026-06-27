@@ -16,6 +16,10 @@ assert.equal(report.trajectoryAudit.scenarioCount, 4);
 assert.equal(report.trajectoryAudit.yearCount, 76);
 assert.equal(report.trajectoryAudit.resultCount, 52);
 assert.ok(report.trajectoryAudit.trendReviewCount > 0);
+assert.equal(report.validationReport.repoPath, "docs/VALIDATION_REPORT.md");
+assert.equal(report.validationReport.historicalObservationHindcast, "pending");
+assert.ok(report.validationReport.blockers.some((blocker: string) => blocker.includes("No NOAA/ERA5/WorldClim")));
+assert.ok(report.validationReport.trendReviewSummary.some((item: any) => item.kind === "precipStep" && item.count >= 1));
 assert.ok(report.limitations.some((limit: string) => limit.includes("Replit deployment")));
 
 console.log("data-quality smoke passed");

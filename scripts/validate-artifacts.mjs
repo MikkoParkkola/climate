@@ -24,6 +24,7 @@ for (const relativePath of [
   "data/source-registry.json",
   "data/rankings.curated-cities.json",
   "data/trajectory-audit-summary.json",
+  "docs/VALIDATION_REPORT.md",
   "client/public/climate-analog-catalog.current.json",
 ]) {
   assert(existsSync(path.join(repoRoot, relativePath)), `${relativePath} missing`);
@@ -86,5 +87,9 @@ assert(audit.version === "trajectory-audit-summary-v1", "trajectory audit summar
 assert(audit.cityCount === 13, "trajectory audit city count mismatch");
 assert(audit.resultCount === 52, "trajectory audit result count mismatch");
 assert(Array.isArray(audit.trendReview), "trajectory audit trend review missing");
+const validationReport = readFileSync(path.join(repoRoot, "docs/VALIDATION_REPORT.md"), "utf8");
+assert(validationReport.includes(audit.generatedAt), "validation report is not synced to trajectory audit artifact");
+assert(validationReport.includes("Not a Historical Hindcast"), "validation report must disclose missing historical hindcast");
+assert(validationReport.includes("Trend review flags are unresolved scientific-review evidence"), "validation report must keep trend flags visible");
 
 console.log(`artifact validation passed: ${rankings.entries.length} ranking slices, ${analog.candidateCount} analog candidates, ${registry.rows.length} source rows, ${audit.resultCount} audit results`);

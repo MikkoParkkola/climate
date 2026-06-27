@@ -74,7 +74,7 @@ Local validation on 2026-06-27:
   catalog caveats.
 - `/data-quality` renders from the built server.
 - `npm run validate:artifacts` verifies ranking slices, the current climate-twin analog catalog,
-  registered source rows, and trajectory-audit coverage.
+  registered source rows, trajectory-audit coverage, and validation-report sync.
 - `npm run smoke:comparison-layout` guards the comparison slider offset and scenario propagation.
 - `npm run screenshots:capture` captures desktop/mobile PNG evidence for layered launch checks
   using local Chrome headless; use `--include-single` only on a host with `DATABASE_URL`.
@@ -98,4 +98,5 @@ Local validation on 2026-06-27:
   and license review are complete.
 - Add freshwater, biodiversity, agriculture, fire-weather, infrastructure, and AMOC/context
   enrichments only after source/license registry approval.
-- Publish a hindcast/validation report.
+- Replace the current trajectory validation report with a true observation-backed hindcast
+  comparison once a historical observation matrix is packaged.

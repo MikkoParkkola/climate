@@ -34,6 +34,7 @@ npm run verify:live
 - `CONTRIBUTING.md` - contribution rules and validation checklist
 - `docs/PLAN.md` - current delivery plan and handoff status
 - `docs/PRODUCT_REQUIREMENTS.md` - educational/research product requirements and public-launch criteria
+- `docs/VALIDATION_REPORT.md` - generated trajectory validation report and unresolved hindcast gap
 - `docs/architecture/TECHNICAL_DESIGN.md` - Replit-scale serving architecture and performance targets
 - `docs/architecture/SCIENTIFIC_GROUNDING.md` - source and method map
 - `CODEX_HANDOVER.md` - latest operational handoff notes

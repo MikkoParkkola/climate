@@ -58,6 +58,23 @@ function uniqueSorted<T>(values: T[]): T[] {
   return Array.from(new Set(values)).sort((a, b) => String(a).localeCompare(String(b)));
 }
 
+function trendFlagKind(flag: string): string {
+  return flag.split("=")[0];
+}
+
+function countTrendFlags(trendReview: Array<{ flags: string[] }>): Array<{ kind: string; count: number }> {
+  const counts = new Map<string, number>();
+  for (const item of trendReview) {
+    for (const flag of item.flags) {
+      const kind = trendFlagKind(flag);
+      counts.set(kind, (counts.get(kind) ?? 0) + 1);
+    }
+  }
+  return Array.from(counts.entries())
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([kind, count]) => ({ kind, count }));
+}
+
 export function loadDataQuality(): Record<string, unknown> {
   if (cachedDataQuality) return cachedDataQuality;
 
@@ -156,11 +173,24 @@ export function loadDataQuality(): Record<string, unknown> {
       trendReview: audit.trendReview,
       note: audit.note,
     },
+    validationReport: {
+      repoPath: "docs/VALIDATION_REPORT.md",
+      status: "trajectory-audit report published; observation-backed historical hindcast pending",
+      artifactGeneratedAt: audit.generatedAt,
+      historicalObservationHindcast: "pending",
+      trendReviewCount: audit.trendReview.length,
+      trendReviewSummary: countTrendFlags(audit.trendReview),
+      blockers: [
+        "No NOAA/ERA5/WorldClim historical observation comparison matrix is packaged yet.",
+        "Trend-review flags require explanation or science review before they can be treated as resolved.",
+      ],
+    },
     executableChecks: [
       "npm run validate:artifacts",
       "npm run smoke:grid-reader",
       "npm run smoke:node-model",
       "npm run smoke:model",
+      "npm run smoke:validation-report",
       "npm run audit:trajectories",
       "npm run ci",
     ],

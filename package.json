@@ -9,6 +9,7 @@
     "start": "NODE_ENV=production node dist/index.js",
     "check": "tsc",
     "build:rankings": "node scripts/build-ranking-artifacts.mjs",
+    "report:validation": "node scripts/generate-validation-report.mjs",
     "validate:artifacts": "node scripts/validate-artifacts.mjs",
     "smoke:cache": "tsx scripts/smoke-cache-envelope.ts",
     "smoke:rankings": "tsx scripts/smoke-ranking-artifacts.ts",
@@ -21,11 +22,12 @@
     "smoke:grid-reader": "tsx scripts/smoke-node-grid-reader.ts",
     "smoke:node-model": "tsx scripts/smoke-node-grounded-model.ts",
     "smoke:data-quality": "tsx scripts/smoke-data-quality.ts",
+    "smoke:validation-report": "node scripts/smoke-validation-report.mjs",
     "smoke:model": "node scripts/smoke-grounded-model.mjs",
     "audit:trajectories": "node scripts/audit-trajectories.mjs",
     "screenshots:capture": "node scripts/capture-screenshots.mjs",
     "verify:live": "node scripts/verify-live-release.mjs",
-    "ci": "npm run check && npm run build && npm run smoke:cache && npm run smoke:rankings && npm run smoke:twin && npm run smoke:comparison-layout && npm run smoke:projection-route && npm run smoke:raw-json && npm run smoke:storyline && npm run smoke:scenario-contrast && npm run smoke:grid-reader && npm run smoke:node-model && npm run smoke:data-quality && npm run smoke:model && npm run audit:trajectories",
+    "ci": "npm run check && npm run build && npm run smoke:cache && npm run smoke:rankings && npm run smoke:twin && npm run smoke:comparison-layout && npm run smoke:projection-route && npm run smoke:raw-json && npm run smoke:storyline && npm run smoke:scenario-contrast && npm run smoke:grid-reader && npm run smoke:node-model && npm run smoke:data-quality && npm run smoke:validation-report && npm run smoke:model && npm run audit:trajectories",
     "db:push": "drizzle-kit push"
   },
   "dependencies": {

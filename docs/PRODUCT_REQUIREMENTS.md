@@ -376,7 +376,7 @@ The app is public-launch ready when:
 2. Evaluate NASA NEX-GDDP-CMIP6 as a finer, bias-corrected delta layer.
 3. Add coastal-relevance/elevation gating for sea-level and coastal flood cards.
 4. Add exportable classroom/journalist/researcher report.
-5. Expand the public data-quality dashboard with hindcast validation and live-deploy evidence after Replit publish/cache purge.
+5. Expand the public data-quality dashboard from the current trajectory validation report to a true observation-backed hindcast matrix, then add live-deploy evidence after Replit publish/cache purge.
 6. Research cBottle on DGX Spark only after permission clearance and with a written validation protocol.
 7. Add share-card image generation and social previews.
 8. Add guided classroom/explainer mode.
