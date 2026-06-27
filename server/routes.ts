@@ -107,7 +107,7 @@ async function runClimateModel(
       releasePythonSlot();
       if (settled) return;
       settled = true;
-      console.error("Failed to start cbottle_runner.py:", err.message);
+      console.error("Failed to start grounded_model.py:", err.message);
       reject(new Error("spawn_error"));
     });
   });
@@ -532,14 +532,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(504).json({ message: "Climate model timed out. Please try again." });
       }
       if (code !== 0) {
-        console.error("cbottle_runner.py exited with non-zero code:", code);
+        console.error("grounded_model.py exited with non-zero code:", code);
         return res.status(500).json({ message: "Climate model failed. Please try again." });
       }
       try {
         const result = JSON.parse(output);
         res.json({ success: true, data: result });
       } catch {
-        console.error("Failed to parse cbottle_runner.py output");
+        console.error("Failed to parse grounded_model.py output");
         res.status(500).json({ message: "Failed to parse climate model output." });
       }
     });
@@ -549,7 +549,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       releasePythonSlot();
       if (responded) return;
       responded = true;
-      console.error("Failed to start cbottle_runner.py:", err.message);
+      console.error("Failed to start grounded_model.py:", err.message);
       res.status(500).json({ message: "Climate model unavailable." });
     });
   });
@@ -587,7 +587,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     //
     // NOTE ON CACHE INVALIDATION: the cache key is (latKey, lngKey, year) only —
     // it does NOT encode the climate model/scenario version. Cached projections
-    // are kept indefinitely. If cbottle_runner.py's model, scenario, or output
+    // are kept indefinitely. If grounded_model.py's model, scenario, or output
     // semantics ever change, the cached rows become stale; invalidate them by
     // truncating the `climate_model_cache` table (or add a version column to the
     // key) as part of that change.
@@ -666,7 +666,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(504).json({ message: "Rankings computation timed out. Please try again." });
       }
       if (code !== 0) {
-        console.error("cbottle_runner.py --rankings exited with code:", code);
+        console.error("grounded_model.py --rankings exited with code:", code);
         return res.status(500).json({ message: "Failed to generate global rankings." });
       }
       try {
@@ -683,7 +683,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       releasePythonSlot();
       if (responded) return;
       responded = true;
-      console.error("Failed to start cbottle_runner.py --rankings:", err.message);
+      console.error("Failed to start grounded_model.py --rankings:", err.message);
       res.status(500).json({ message: "Rankings service unavailable." });
     });
   });
@@ -834,7 +834,7 @@ window.__vite_plugin_react_preamble_installed__ = true
   // through to express.static, and any that are not found on disk then fall
   // through to the narrowed /{*any} fallback in server/vite.ts which also
   // returns 404 for non-SPA paths.
-  const KNOWN_SPA_ROUTES_404 = new Set(["/", "/comparison"]);
+  const KNOWN_SPA_ROUTES_404 = new Set(["/", "/comparison", "/methodology"]);
   const VITE_INTERNAL_PREFIXES = ["/api/", "/@", "/src/", "/node_modules/", "/__mockup", "/__vite"];
   const isDev = process.env.NODE_ENV !== "production";
   const NOT_FOUND_HTML_404 = `<!DOCTYPE html>

@@ -2,7 +2,7 @@
 
 > This is the **canonical** agent/contributor guide. `CLAUDE.md` and `LLM.md` are symlinks to this file. Keep it current; it is the first thing any agent should read.
 
-> **STATUS (2026-06-27):** Grounded engine landed. `grounded_model.py` (CMIP6/IPCC, offline, reads `data/grid.i16.gz` with numpy+gzip) has **replaced** `cbottle_runner.py` at all 3 spawn sites in `server/routes.ts`; build green. `/methodology` page live. **To finish + deploy, follow the ordered checklist in `docs/PLAN.md` → "Phase 4 handoff".** Blocking items: copy final grid export to `data/` after Spark `baseline_extremes.py` finishes, live endpoint smoke, purge stale `climate_model_cache`. cBottle decision (not for accuracy): `docs/architecture/RESOLUTION_AND_CBOTTLE.md`.
+> **STATUS (2026-06-27):** Grounded engine landed. `grounded_model.py` (CMIP6/IPCC, offline, reads `data/grid.i16.gz` with numpy+gzip) has **replaced** the fabricated legacy runner at all 3 spawn sites in `server/routes.ts`; build green. `/methodology` page live. **To finish + deploy, follow the ordered checklist in `docs/PLAN.md` → "Phase 4 handoff".** Blocking items: live endpoint smoke on a host with the production-style database URL, deploy, and purge stale `climate_model_cache`. cBottle decision (not for accuracy): `docs/architecture/RESOLUTION_AND_CBOTTLE.md`.
 
 ## What this project is
 
@@ -15,7 +15,7 @@
 
 This product's entire value is **accuracy grounded in real climate science**. Every number served to a user must trace to a defensible source: real model output (cBottle), IPCC AR6 scenario data, or a peer-reviewed / authoritative public dataset.
 
-**Never** invent coefficients, "plausible-looking" formulas, or hardcoded warming rates and present them as a model. The legacy `cbottle_runner.py` does exactly this (see `docs/CURRENT_STATE.md`) — it is **not** cBottle and is being replaced. Do not extend it; replace it per `docs/PLAN.md`.
+**Never** invent coefficients, "plausible-looking" formulas, or hardcoded warming rates and present them as a model. The deleted legacy runner did exactly this (see `docs/CURRENT_STATE.md`) — it was **not** cBottle and must not be revived. If a value is not grounded, do not show it.
 
 If you cannot ground a value, the correct behavior is to **not show it** (or show it explicitly labeled as an estimate with stated method and uncertainty). Silence beats a confident lie. This maps to Rams #6 (Honest — no overclaim).
 
@@ -26,7 +26,7 @@ If you cannot ground a value, the correct behavior is to **not show it** (or sho
 | Frontend | React 18, Vite 6, Wouter (routing), TanStack Query, Radix UI + Tailwind (shadcn-style), Leaflet, Chart.js / Recharts, Framer Motion |
 | Backend | Express **5** + TypeScript (`tsx` dev, `esbuild` prod bundle) |
 | DB | PostgreSQL via Drizzle ORM (`@neondatabase/serverless`) — schema in `shared/schema.ts` |
-| Model | Python (`cbottle_runner.py`) spawned as subprocess — **being replaced by real cBottle, see plan** |
+| Model | Python (`grounded_model.py`) spawned as subprocess; offline CMIP6/IPCC grid reader |
 | Other | `@octokit/rest` (GitHub-repo tool) |
 
 ## Layout
@@ -35,7 +35,7 @@ If you cannot ground a value, the correct behavior is to **not show it** (or sho
 client/          React SPA (pages/, components/, components/ui/, lib/, hooks/)
 server/          Express: index.ts (entry), routes.ts (API + SEO), storage.ts, db.ts, vite.ts
 shared/          schema.ts — Drizzle tables + Zod insert schemas (single source of truth for DB types)
-cbottle_runner.py  legacy heuristic "model" (to be replaced)
+grounded_model.py  grounded offline forecast engine (reads data/grid.i16.gz + data/manifest.json)
 docs/            plans + architecture (this is the persistence layer — read before large changes)
 .agents/memory/  project-local gotcha notes (read these; they cost real time to learn)
 artifacts/       mockup sandbox — NOT production
@@ -78,8 +78,7 @@ npm run db:push  # drizzle-kit push (apply schema to DB)
 
 ## Known drift to reconcile
 
-- `threat_model.md` references `server/routes-simple.ts` as the production routes file — that file **does not exist**; live routes are `server/routes.ts`. Threat model is stale.
-- `conflict_area.txt` (root) is a leftover merge artifact — safe to delete once confirmed.
+- `docs/CURRENT_STATE.md` intentionally documents the deleted fabricated legacy runner as history; do not treat it as live architecture.
 
 <!-- gitnexus:start -->
 # GitNexus — Code Intelligence

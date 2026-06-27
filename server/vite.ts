@@ -8,7 +8,7 @@ import { nanoid } from "nanoid";
 
 const viteLogger = createLogger();
 
-const KNOWN_SPA_ROUTES = new Set(["/", "/comparison"]);
+const KNOWN_SPA_ROUTES = new Set(["/", "/comparison", "/methodology"]);
 
 const NOT_FOUND_HTML = `<!DOCTYPE html>
 <html lang="en">

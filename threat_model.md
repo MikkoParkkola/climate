@@ -2,7 +2,7 @@
 
 ## Project Overview
 
-This project is a public-facing climate projection web application deployed on Replit autoscale. The production stack is a React/Vite frontend served by an Express backend, with a Python climate-model runner (`cbottle_runner.py`) invoked from the Node server for compute-heavy forecasts and rankings. The backend can also use environment-backed API keys and a PostgreSQL database, but the currently mounted production routes are in `server/routes-simple.ts`.
+This project is a public-facing climate projection web application deployed on Replit autoscale. The production stack is a React/Vite frontend served by an Express backend, with a Python climate-model runner (`grounded_model.py`) invoked from the Node server for compute-heavy forecasts and rankings. The backend can also use environment-backed API keys and a PostgreSQL database, but the currently mounted production routes are in `server/routes.ts`.
 
 Assumptions for this scan:
 - Only production-reachable code matters.
@@ -21,15 +21,15 @@ Assumptions for this scan:
 ## Trust Boundaries
 
 - **Browser to Express API** — all request bodies, query strings, and headers are attacker-controlled and must be validated server-side.
-- **Express to Python runner** — data passed from TypeScript routes into `cbottle_runner.py` crosses into OS process execution and is high risk for injection or resource exhaustion.
+- **Express to Python runner** — data passed from TypeScript routes into `grounded_model.py` crosses into OS process execution and is high risk for injection or resource exhaustion.
 - **Express to external APIs** — outbound requests to geocoding and climate providers consume secrets and quotas; user input must not turn these integrations into abuse primitives.
 - **Express to PostgreSQL** — any future live database-backed routes must protect stored user data and secrets.
 - **Public to internal/dead code boundary** — `server/routes.ts`, database-backed auth scaffolding, and `artifacts/mockup-sandbox/` should be ignored unless they are re-wired into production entry points.
 
 ## Scan Anchors
 
-- **Production entry points**: `server/index.ts`, `server/routes-simple.ts`, `server/vite.ts`, `client/src/App.tsx`, `client/src/pages/climate-app.tsx`, `client/src/pages/climate-comparison.tsx`.
-- **Highest-risk code areas**: subprocess execution in `server/routes-simple.ts`, Python CLI parsing in `cbottle_runner.py`, any secret handling in `/api/config`, and any future live DB-backed user-key routes.
+- **Production entry points**: `server/index.ts`, `server/routes.ts`, `server/vite.ts`, `client/src/App.tsx`, `client/src/pages/climate-app.tsx`, `client/src/pages/climate-comparison.tsx`.
+- **Highest-risk code areas**: subprocess execution in `server/routes.ts`, Python CLI parsing in `grounded_model.py`, any secret handling in `/api/config`, and any future live DB-backed user-key routes.
 - **Public surfaces**: `/api/config`, `/api/locations/search`, `/api/climate-projection`, `/api/climate/global-rankings`, `/`, `/comparison`.
 - **Dev-only or currently non-live areas**: `artifacts/mockup-sandbox/`, Vite dev middleware behavior, and currently unmounted `server/routes.ts`.
 

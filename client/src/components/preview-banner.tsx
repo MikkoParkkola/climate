@@ -1,12 +1,9 @@
 import { AlertTriangle } from "lucide-react";
 
 /**
- * Phase 0 honesty banner. The current projections are produced by a heuristic
- * (see docs/CURRENT_STATE.md), not a validated climate model. Until the
- * IPCC AR6 / CMIP6 pipeline ships (docs/PLAN.md), every projection MUST be
- * labeled as a non-scientific preview. Non-dismissible by design — hiding the
- * disclaimer would defeat its purpose. Remove only when forecasts are grounded.
- * ponytail: one global bar, mounted once in App.tsx; covers all routes.
+ * Grounded beta banner. Forecasts now come from the CMIP6/IPCC grid, but the
+ * hindcast validation report and uncertainty UI are still follow-up work.
+ * Non-dismissible by design: users should see the scope and limits everywhere.
  */
 export default function PreviewBanner() {
   return (
@@ -29,9 +26,9 @@ export default function PreviewBanner() {
     >
       <AlertTriangle size={16} style={{ flexShrink: 0 }} aria-hidden />
       <span>
-        <strong>Preview &mdash; not scientifically validated.</strong>{" "}
-        These projections come from a placeholder model and are being rebuilt on
-        IPCC AR6 / CMIP6 data. Don&rsquo;t rely on them for real decisions yet.
+        <strong>Grounded forecast beta.</strong>{" "}
+        Projections are based on CMIP6/IPCC data and documented on the methodology
+        page. Treat them as decision support, not safety-critical advice.
       </span>
     </div>
   );
