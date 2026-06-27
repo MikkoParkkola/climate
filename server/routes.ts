@@ -214,6 +214,7 @@ const SEO_PAGES: Record<string, SeoPage> = {
     <li>Present-day baseline: WorldClim v2.1 observed monthly climatology (1970-2000, 10 arc-minutes) where available, with CMIP6 historical climatology as fallback.</li>
     <li>Sea-level rise: IPCC AR6 regional projections.</li>
     <li>Heat, drought, and flood risk: CMIP6 ETCCDI extreme-climate indices scored against documented thresholds.</li>
+    <li>Climate twin: nearest present-day city in the indexed catalog by standardized monthly temperature and precipitation distance from grounded model output.</li>
   </ul>
   <h2>Honesty rules</h2>
   <ul>

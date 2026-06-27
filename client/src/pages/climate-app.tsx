@@ -100,6 +100,40 @@ interface ProjectionPoint {
   };
 }
 
+interface AnalogCandidate {
+  name: string;
+  country: string;
+  lat: number;
+  lng: number;
+  year: number;
+  scenario: ScenarioId;
+  temperature: { annual_mean: number; monthly: number[] };
+  precipitation: { annual_total: number; monthly: number[] };
+  extremes: { heat_stress_days: number; drought_risk: number; flood_risk: number };
+  metadata?: { baseline_source?: NonNullable<ProjectionPoint["metadata"]>["baseline_source"] };
+}
+
+interface AnalogCatalog {
+  version: string;
+  catalogYear: number;
+  scenario: ScenarioId;
+  candidateCount: number;
+  method: string;
+  source: string;
+  candidates: AnalogCandidate[];
+}
+
+interface ClimateAnalogMatch {
+  candidate: AnalogCandidate;
+  distance: number;
+  comparedCount: number;
+  annualTempDelta: number;
+  annualPrecipDelta: number;
+  heatDaysDelta: number;
+  droughtDelta: number;
+  floodDelta: number;
+}
+
 // ── Math helpers ─────────────────────────────────────────────────────────────
 function lerp(a: number, b: number, t: number) {
   return a + (b - a) * Math.max(0, Math.min(1, t));
@@ -149,6 +183,84 @@ function categoryFor(score: number) {
 
 function scoreColor(s: number) {
   return s >= 85 ? GREEN : s >= 70 ? "#4ade80" : s >= 60 ? AMBER : s >= 40 ? ORANGE : RED;
+}
+
+function signedNumber(value: number, decimals = 1) {
+  const rounded = value.toFixed(decimals);
+  return value >= 0 ? `+${rounded}` : rounded;
+}
+
+function climateVector(monthlyTemps: number[], monthlyPrecip: number[]): number[] | null {
+  if (monthlyTemps.length !== 12 || monthlyPrecip.length !== 12) return null;
+  const vals = [
+    ...monthlyTemps,
+    ...monthlyPrecip.map((v) => Math.log1p(Math.max(0, v))),
+  ];
+  return vals.every(Number.isFinite) ? vals : null;
+}
+
+function candidateClimateVector(candidate: AnalogCandidate): number[] | null {
+  return climateVector(candidate.temperature.monthly, candidate.precipitation.monthly);
+}
+
+function sameCatalogPlace(candidate: AnalogCandidate, location: LocationOption): boolean {
+  return Math.abs(candidate.lat - location.lat) < 0.15 && Math.abs(candidate.lng - location.lng) < 0.15;
+}
+
+function findClimateAnalog(
+  catalog: AnalogCatalog,
+  location: LocationOption,
+  year: number,
+  snapshot: {
+    monthlyTemps: number[];
+    monthlyPrecip: number[];
+    avgTemp: number;
+    annualPrecip: number;
+    heatDays: number;
+    drought: number;
+    flood: number;
+  },
+): ClimateAnalogMatch | null {
+  const candidateRows = catalog.candidates
+    .map((candidate) => ({ candidate, vector: candidateClimateVector(candidate) }))
+    .filter((row): row is { candidate: AnalogCandidate; vector: number[] } => row.vector !== null);
+  const target = climateVector(snapshot.monthlyTemps, snapshot.monthlyPrecip);
+  if (!target || candidateRows.length === 0) return null;
+
+  const dims = target.length;
+  const means = Array.from({ length: dims }, (_, i) =>
+    candidateRows.reduce((sum, row) => sum + row.vector[i], 0) / candidateRows.length,
+  );
+  const stds = means.map((mean, i) => {
+    const variance = candidateRows.reduce((sum, row) => sum + (row.vector[i] - mean) ** 2, 0) / candidateRows.length;
+    return Math.sqrt(variance) || 1;
+  });
+
+  const excludeSelf = year > catalog.catalogYear + 2;
+  const scored = candidateRows
+    .filter((row) => !(excludeSelf && sameCatalogPlace(row.candidate, location)))
+    .map((row) => {
+      const squared = row.vector.reduce((sum, v, i) => {
+        const z = (target[i] - v) / stds[i];
+        return sum + z * z;
+      }, 0);
+      return { candidate: row.candidate, distance: Math.sqrt(squared / dims) };
+    })
+    .sort((a, b) => a.distance - b.distance);
+
+  const best = scored[0];
+  if (!best) return null;
+  const c = best.candidate;
+  return {
+    candidate: c,
+    distance: best.distance,
+    comparedCount: scored.length,
+    annualTempDelta: snapshot.avgTemp - c.temperature.annual_mean,
+    annualPrecipDelta: snapshot.annualPrecip - c.precipitation.annual_total,
+    heatDaysDelta: snapshot.heatDays - c.extremes.heat_stress_days,
+    droughtDelta: snapshot.drought - c.extremes.drought_risk,
+    floodDelta: snapshot.flood - c.extremes.flood_risk,
+  };
 }
 
 function prettify(key: string) {
@@ -373,11 +485,29 @@ export default function ClimateApp() {
   const [exporting, setExporting] = useState(false);
   const [playing, setPlaying] = useState(false);
   const [shareCopied, setShareCopied] = useState(false);
+  const [analogCatalog, setAnalogCatalog] = useState<AnalogCatalog | null>(null);
+  const [analogError, setAnalogError] = useState<string | null>(null);
   const resultsRef = useRef<HTMLDivElement>(null);
   const deepLinkRunRef = useRef(false);
 
   useEffect(() => {
     document.title = "fupit — see where the climate is still livable";
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    fetch("/climate-analog-catalog.2025.json")
+      .then((response) => {
+        if (!response.ok) throw new Error("catalog_unavailable");
+        return response.json();
+      })
+      .then((catalog: AnalogCatalog) => {
+        if (!cancelled) setAnalogCatalog(catalog);
+      })
+      .catch(() => {
+        if (!cancelled) setAnalogError("Climate twin catalog unavailable");
+      });
+    return () => { cancelled = true; };
   }, []);
 
   useEffect(() => {
@@ -622,6 +752,13 @@ export default function ClimateApp() {
     };
   }, [trajectory, year]);
 
+  const displayYear = Math.round(year);
+
+  const climateAnalog = useMemo(() => {
+    if (!analogCatalog || !selectedLocation || !d) return null;
+    return findClimateAnalog(analogCatalog, selectedLocation, displayYear, d);
+  }, [analogCatalog, selectedLocation, d, displayYear]);
+
   // Tipping points computed from real interpolated trajectory
   const tipping = useMemo(() => {
     if (!trajectory) return [];
@@ -634,7 +771,6 @@ export default function ClimateApp() {
     return items.sort((a, b) => (a.year ?? Infinity) - (b.year ?? Infinity));
   }, [trajectory]);
 
-  const displayYear = Math.round(year);
   const selectedScenario = scenarioInfo(scenario);
   const shownScenario = scenarioInfo(d?.scenario ?? scenario);
   const shareUrl = useMemo(() => selectedLocation ? forecastUrl(selectedLocation, displayYear, scenario, true) : "", [selectedLocation, displayYear, scenario]);
@@ -927,8 +1063,70 @@ export default function ClimateApp() {
               ? <> The next threshold ahead — <strong style={{ color: AMBER }}>{nextTip.label.toLowerCase()}</strong> — is crossed around <strong style={{ color: AMBER }}>{nextTip.year}</strong>.</>
               : crossedTips > 0
                 ? <> All <strong style={{ color: RED }}>{crossedTips}</strong> modeled tipping points have already been crossed by this point.</>
-                : <> No modeled tipping points are crossed at this horizon.</>}
+              : <> No modeled tipping points are crossed at this horizon.</>}
           </p>
+        </div>
+
+        {/* Climate Twin — nearest present-day analog from the grounded catalog */}
+        <div style={{ ...card, padding: 18, marginBottom: 14, borderLeft: `3px solid ${PURPLE}` }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, flexWrap: "wrap", marginBottom: 12 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <MapPin style={{ width: 15, height: 15, color: PURPLE }} />
+              <h2 style={{ fontSize: 12, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.07em", color: MUTED }}>Climate Twin · current-day analog</h2>
+            </div>
+            {analogCatalog && (
+              <span style={{ fontSize: 10, color: MUTED }}>
+                {analogCatalog.candidateCount} indexed cities · {analogCatalog.catalogYear} catalog
+              </span>
+            )}
+          </div>
+
+          {climateAnalog ? (
+            <div>
+              <div style={{ display: "flex", justifyContent: "space-between", gap: 14, alignItems: "flex-start", flexWrap: "wrap" }}>
+                <div style={{ flex: "1 1 360px" }}>
+                  <p style={{ fontSize: 14.5, lineHeight: 1.7, color: "rgba(255,255,255,0.9)", margin: 0 }}>
+                    In <strong style={{ color: "white" }}>{displayYear}</strong>, {placeName}'s climate most resembles{" "}
+                    <strong style={{ color: PURPLE }}>{climateAnalog.candidate.name}, {climateAnalog.candidate.country}</strong>{" "}
+                    in the current-day catalog. This is a nearest match across monthly temperature and precipitation, not a claim that every local impact is identical.
+                  </p>
+                  <p style={{ fontSize: 11, color: MUTED, marginTop: 8, lineHeight: 1.55 }}>
+                    Distance {climateAnalog.distance.toFixed(2)} standardized climate units; lower is closer. Compared {climateAnalog.comparedCount} cities from the grounded catalog generated by <code style={{ color: "rgba(255,255,255,0.72)" }}>grounded_model.py</code>.
+                  </p>
+                </div>
+                <button
+                  onClick={() => {
+                    const c = climateAnalog.candidate;
+                    const loc: LocationOption = { name: `${c.name}, ${c.country}`, city: c.name, country: c.country, lat: c.lat, lng: c.lng };
+                    window.location.href = forecastUrl(loc, analogCatalog?.catalogYear ?? 2025, analogCatalog?.scenario ?? DEFAULT_SCENARIO, true);
+                  }}
+                  style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "8px 12px", borderRadius: 7, border: `1px solid ${PURPLE}55`, background: `${PURPLE}16`, color: "white", fontSize: 12, fontWeight: 700, cursor: "pointer" }}
+                >
+                  <ExternalLink style={{ width: 13, height: 13 }} />
+                  Open twin city
+                </button>
+              </div>
+
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(118px, 1fr))", gap: 8, marginTop: 14 }}>
+                {[
+                  { label: "Avg temp gap", value: `${signedNumber(climateAnalog.annualTempDelta, 1)}°C`, color: RED },
+                  { label: "Rainfall gap", value: `${signedNumber(climateAnalog.annualPrecipDelta, 0)} mm`, color: BLUE },
+                  { label: "Heat nights gap", value: `${signedNumber(climateAnalog.heatDaysDelta, 0)} d/yr`, color: ORANGE },
+                  { label: "Drought gap", value: `${signedNumber(climateAnalog.droughtDelta, 0)} pts`, color: AMBER },
+                  { label: "Flood gap", value: `${signedNumber(climateAnalog.floodDelta, 0)} pts`, color: CYAN },
+                ].map((item) => (
+                  <div key={item.label} style={{ background: "rgba(255,255,255,0.035)", border: `1px solid ${BORDER}`, borderRadius: 8, padding: 10, minWidth: 0 }}>
+                    <div style={{ fontSize: 9, color: MUTED, textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 4 }}>{item.label}</div>
+                    <div style={{ fontSize: 15, fontWeight: 800, color: item.color, whiteSpace: "nowrap" }}>{item.value}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : (
+            <p style={{ margin: 0, color: analogError ? "#fca5a5" : MUTED, fontSize: 13 }}>
+              {analogError ?? "Loading grounded current-day analog catalog..."}
+            </p>
+          )}
         </div>
 
         {/* KPI Strip */}
