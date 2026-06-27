@@ -27,6 +27,8 @@ DATA = os.path.join(os.path.dirname(__file__), "data")
 MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun",
           "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
 DEFAULT_SCENARIO = "ssp245"
+MIN_FORECAST_YEAR = 2024
+MAX_FORECAST_YEAR = 2100
 
 # ── Risk thresholds (serve-time, cited; see SCIENTIFIC_GROUNDING.md) ──────────
 # Each score 0-100 is a transparent linear map of an ABSOLUTE index to a cited
@@ -272,29 +274,47 @@ def trajectory(lat, lng, years, scenario=DEFAULT_SCENARIO):
             "points": [{"year": y, **project(lat, lng, y, scenario)} for y in years]}
 
 
+def _parse_year(value):
+    year = int(value)
+    if year < MIN_FORECAST_YEAR or year > MAX_FORECAST_YEAR:
+        raise ValueError(f"forecast year must be {MIN_FORECAST_YEAR}-{MAX_FORECAST_YEAR}; got {year}")
+    return year
+
+
+def _parse_years(value):
+    years = sorted({_parse_year(y.strip()) for y in value.split(",") if y.strip()})
+    if not years:
+        raise ValueError("at least one forecast year is required")
+    return years
+
+
 def main():
-    a = sys.argv[1:]
-    if a and a[0] == "--rankings":
-        year = int(a[1]); scenario = a[2] if len(a) > 2 else DEFAULT_SCENARIO
-        # rank a fixed set of major cities by habitability (grounded)
-        from_cities = json.load(open(os.path.join(DATA, "ranking_cities.json"))) \
-            if os.path.exists(os.path.join(DATA, "ranking_cities.json")) else []
-        out = []
-        for ci in from_cities:
-            p = project(ci["lat"], ci["lng"], year, scenario)
-            out.append({**ci, "habitability": p["habitability"], "year": year})
-        out.sort(key=lambda r: r["habitability"]["score"], reverse=True)
-        print(json.dumps({"year": year, "scenario": scenario, "rankings": out}))
-        return
-    if a and a[0] == "--trajectory":
-        lat = float(a[1]); lng = float(a[2])
-        years = sorted({int(y) for y in a[3].split(",") if y.strip()})
-        scenario = a[4] if len(a) > 4 else DEFAULT_SCENARIO
-        print(json.dumps(trajectory(lat, lng, years, scenario)))
-        return
-    lat = float(a[0]); lng = float(a[1]); year = int(a[2])
-    scenario = a[3] if len(a) > 3 else DEFAULT_SCENARIO
-    print(json.dumps(project(lat, lng, year, scenario)))
+    try:
+        a = sys.argv[1:]
+        if a and a[0] == "--rankings":
+            year = _parse_year(a[1]); scenario = a[2] if len(a) > 2 else DEFAULT_SCENARIO
+            # rank a fixed set of major cities by habitability (grounded)
+            from_cities = json.load(open(os.path.join(DATA, "ranking_cities.json"))) \
+                if os.path.exists(os.path.join(DATA, "ranking_cities.json")) else []
+            out = []
+            for ci in from_cities:
+                p = project(ci["lat"], ci["lng"], year, scenario)
+                out.append({**ci, "habitability": p["habitability"], "year": year})
+            out.sort(key=lambda r: r["habitability"]["score"], reverse=True)
+            print(json.dumps({"year": year, "scenario": scenario, "rankings": out}))
+            return
+        if a and a[0] == "--trajectory":
+            lat = float(a[1]); lng = float(a[2])
+            years = _parse_years(a[3])
+            scenario = a[4] if len(a) > 4 else DEFAULT_SCENARIO
+            print(json.dumps(trajectory(lat, lng, years, scenario)))
+            return
+        lat = float(a[0]); lng = float(a[1]); year = _parse_year(a[2])
+        scenario = a[3] if len(a) > 3 else DEFAULT_SCENARIO
+        print(json.dumps(project(lat, lng, year, scenario)))
+    except (IndexError, ValueError) as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        sys.exit(2)
 
 
 if __name__ == "__main__":

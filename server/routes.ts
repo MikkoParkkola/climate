@@ -16,6 +16,8 @@ let activePythonProcesses = 0;
 const RATE_LIMIT_WINDOW_MS = 60_000;
 const RATE_LIMIT_MAX_PER_WINDOW = 10;
 const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
+const MIN_FORECAST_YEAR = 2024;
+const MAX_FORECAST_YEAR = 2100;
 
 function checkRateLimit(ip: string): boolean {
   const now = Date.now();
@@ -540,7 +542,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         lat: z.coerce.number().min(-90).max(90),
         lng: z.coerce.number().min(-180).max(180),
       }),
-      year: z.coerce.number().int().min(2024).max(2200),
+      year: z.coerce.number().int().min(MIN_FORECAST_YEAR).max(MAX_FORECAST_YEAR),
       apiKey: z.string().max(500).optional(),
     });
 
@@ -627,7 +629,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         lat: z.coerce.number().min(-90).max(90),
         lng: z.coerce.number().min(-180).max(180),
       }),
-      years: z.array(z.coerce.number().int().min(2024).max(2200)).min(1).max(5),
+      years: z.array(z.coerce.number().int().min(MIN_FORECAST_YEAR).max(MAX_FORECAST_YEAR)).min(1).max(5),
     });
 
     const parsed = bodySchema.safeParse(req.body);
@@ -701,8 +703,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       return res.status(503).json({ message: "Server busy. Please try again shortly." });
     }
 
-    const rawYear = parseInt(req.query.year as string);
-    const year = Number.isInteger(rawYear) && rawYear >= 2024 && rawYear <= 2200 ? rawYear : 2050;
+    const rawYear = req.query.year === undefined ? 2050 : Number(req.query.year);
+    if (!Number.isInteger(rawYear) || rawYear < MIN_FORECAST_YEAR || rawYear > MAX_FORECAST_YEAR) {
+      return res.status(400).json({ message: "Invalid request parameters" });
+    }
+    const year = rawYear;
 
     activePythonProcesses++;
     let killed = false;

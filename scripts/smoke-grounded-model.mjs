@@ -120,6 +120,40 @@ function runTrajectory(pythonBin, sample, years) {
   }
 }
 
+function assertInvalidYearRejected(pythonBin) {
+  const invalidYear = "2200";
+  const commands = [
+    {
+      label: "single projection",
+      args: [modelPath, "60.17", "24.94", invalidYear],
+    },
+    {
+      label: "trajectory projection",
+      args: [modelPath, "--trajectory", "60.17", "24.94", `2050,${invalidYear}`],
+    },
+    {
+      label: "rankings projection",
+      args: [modelPath, "--rankings", invalidYear],
+    },
+  ];
+
+  for (const command of commands) {
+    const result = spawnSync(pythonBin, command.args, {
+      cwd: repoRoot,
+      encoding: "utf8",
+      maxBuffer: 2 * 1024 * 1024,
+    });
+    if (result.error) {
+      throw result.error;
+    }
+    assert(result.status !== 0, `${command.label} accepted year ${invalidYear}`);
+    assert(
+      result.stderr.includes("2100"),
+      `${command.label} rejection did not mention the 2100 upper bound: ${result.stderr || result.stdout}`,
+    );
+  }
+}
+
 function findPython() {
   const candidates = [process.env.PYTHON_BIN, "python3", "python"].filter(Boolean);
   for (const candidate of candidates) {
@@ -191,6 +225,8 @@ trajectory.points.forEach((point, index) => {
   validateProjection(trajectorySample, point, trajectoryYears[index]);
 });
 
+assertInvalidYearRejected(pythonBin);
+
 for (const { sample, projection } of results) {
   console.log(
     `${sample.name}: temp=${projection.temperature.annual_mean}C precip=${projection.precipitation.annual_total}mm ` +
@@ -200,3 +236,4 @@ for (const { sample, projection } of results) {
 }
 console.log(`grounded_model contract smoke passed for ${samples.length} cities using ${pythonBin}`);
 console.log(`grounded_model trajectory smoke passed for ${trajectorySample.name} years ${trajectoryYears.join(",")}`);
+console.log("grounded_model rejects forecast years beyond 2100");
