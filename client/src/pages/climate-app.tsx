@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useRef } from "react";
-import { GitCompare, Loader2, Download, Search, MapPin, ArrowLeft, Play, Pause, ShieldCheck, ExternalLink } from "lucide-react";
+import { GitCompare, Loader2, Download, Search, MapPin, ArrowLeft, Play, Pause, ShieldCheck, ExternalLink, Share2, Check } from "lucide-react";
 import {
   agriculturalViability, biodiversityLoss, waterStress, projectedAqi, climateTwin,
   FALLBACK_BASELINE_AQI, type EstimateInputs,
@@ -167,6 +167,54 @@ function feedbackTag(text: string): { icon: string; label: string; color: string
   return { icon: "🔁", label: short, color: AMBER };
 }
 
+function forecastUrl(location: LocationOption, year: number, autoRun = true): string {
+  const url = new URL("/", window.location.origin);
+  url.searchParams.set("lat", location.lat.toFixed(4));
+  url.searchParams.set("lng", location.lng.toFixed(4));
+  url.searchParams.set("place", location.name);
+  if (location.country) url.searchParams.set("country", location.country);
+  url.searchParams.set("year", Math.round(year).toString());
+  if (autoRun) url.searchParams.set("run", "1");
+  return url.toString();
+}
+
+function linkLocationFromParams(): { location: LocationOption; year?: number; autoRun: boolean } | null {
+  const params = new URLSearchParams(window.location.search);
+  const lat = Number(params.get("lat"));
+  const lng = Number(params.get("lng"));
+  if (!Number.isFinite(lat) || !Number.isFinite(lng) || lat < -90 || lat > 90 || lng < -180 || lng > 180) {
+    return null;
+  }
+  const name = params.get("place") || params.get("location") || `${lat.toFixed(4)}, ${lng.toFixed(4)}`;
+  const year = Number(params.get("year"));
+  return {
+    location: {
+      name,
+      lat,
+      lng,
+      country: params.get("country") || "",
+      city: name.split(",")[0] || name,
+    },
+    year: Number.isInteger(year) && year >= 2025 && year <= 2100 ? year : undefined,
+    autoRun: params.get("run") === "1",
+  };
+}
+
+async function copyToClipboard(text: string): Promise<void> {
+  if (navigator.clipboard?.writeText) {
+    await navigator.clipboard.writeText(text);
+    return;
+  }
+  const el = document.createElement("textarea");
+  el.value = text;
+  el.style.position = "fixed";
+  el.style.opacity = "0";
+  document.body.appendChild(el);
+  el.select();
+  document.execCommand("copy");
+  document.body.removeChild(el);
+}
+
 // First year (2025–2100) at which an interpolated metric crosses a threshold.
 function crossYear(points: ProjectionPoint[], threshold: number, dir: "above" | "below", get: (p: ProjectionPoint) => number): number | null {
   for (let y = 2025; y <= 2100; y++) {
@@ -329,13 +377,25 @@ export default function ClimateApp() {
   const [error, setError] = useState<string | null>(null);
   const [exporting, setExporting] = useState(false);
   const [playing, setPlaying] = useState(false);
+  const [shareCopied, setShareCopied] = useState(false);
   // Present-day measured AQI baseline (Open-Meteo, free, no key) for the AQI estimate.
   const [baselineAqi, setBaselineAqi] = useState<number | null>(null);
   const [aqiMeasured, setAqiMeasured] = useState(false);
   const resultsRef = useRef<HTMLDivElement>(null);
+  const deepLinkRunRef = useRef(false);
 
   useEffect(() => {
     document.title = "fupit — see where the climate is still livable";
+  }, []);
+
+  useEffect(() => {
+    const linked = linkLocationFromParams();
+    if (!linked) return;
+    setSelectedLocation(linked.location);
+    setLocationText(linked.location.name);
+    setShowSuggestions(false);
+    if (linked.year) setYear(linked.year);
+    deepLinkRunRef.current = linked.autoRun;
   }, []);
 
   // Fetch present-day air quality for the selected location once results load.
@@ -434,8 +494,9 @@ export default function ClimateApp() {
     setShowSuggestions(false);
   };
 
-  const generate = async () => {
-    if (!selectedLocation) { setError("Please select a location from the suggestions."); return; }
+  const generate = async (locationOverride?: LocationOption) => {
+    const targetLocation = locationOverride ?? selectedLocation;
+    if (!targetLocation) { setError("Please select a location from the suggestions."); return; }
     setError(null);
     setIsLoading(true);
     setTrajectory(null);
@@ -443,7 +504,7 @@ export default function ClimateApp() {
       const response = await fetch("/api/climate-trajectory", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ coordinates: { lat: selectedLocation.lat, lng: selectedLocation.lng }, years: CHECKPOINTS }),
+        body: JSON.stringify({ coordinates: { lat: targetLocation.lat, lng: targetLocation.lng }, years: CHECKPOINTS }),
       });
       if (!response.ok) {
         let detail = response.statusText;
@@ -464,10 +525,18 @@ export default function ClimateApp() {
     }
   };
 
+  useEffect(() => {
+    if (!selectedLocation || !deepLinkRunRef.current || isLoading || trajectory) return;
+    deepLinkRunRef.current = false;
+    void generate(selectedLocation);
+  }, [selectedLocation, isLoading, trajectory]);
+
   const newSearch = () => {
     setPlaying(false);
     setTrajectory(null);
     setError(null);
+    setShareCopied(false);
+    window.history.replaceState(null, "", "/");
   };
 
   const exportPDF = async () => {
@@ -608,6 +677,34 @@ export default function ClimateApp() {
   }, [trajectory]);
 
   const displayYear = Math.round(year);
+  const shareUrl = useMemo(() => selectedLocation ? forecastUrl(selectedLocation, displayYear, true) : "", [selectedLocation, displayYear]);
+
+  useEffect(() => {
+    if (!trajectory || !selectedLocation) return;
+    window.history.replaceState(null, "", forecastUrl(selectedLocation, displayYear, true));
+  }, [trajectory, selectedLocation, displayYear]);
+
+  const shareForecast = async () => {
+    if (!selectedLocation || !shareUrl) return;
+    const title = `${selectedLocation.name} climate forecast to ${displayYear}`;
+    const text = d
+      ? `${selectedLocation.name} in ${displayYear}: ${d.avgTemp.toFixed(1)}°C average, ${d.score}/100 habitability, grounded by fupit.`
+      : `Explore ${selectedLocation.name}'s grounded climate forecast to 2100 on fupit.`;
+    try {
+      if (navigator.share) {
+        await navigator.share({ title, text, url: shareUrl });
+      } else {
+        await copyToClipboard(shareUrl);
+        setShareCopied(true);
+        window.setTimeout(() => setShareCopied(false), 1800);
+      }
+    } catch {
+      await copyToClipboard(shareUrl);
+      setShareCopied(true);
+      window.setTimeout(() => setShareCopied(false), 1800);
+    }
+  };
+
   const sc = d ? scoreColor(d.score) : GREEN;
   const tPct = ((year - 2025) / 75) * 100;
   const maxBreakdown = d ? Math.max(...d.breakdown.map((b) => Math.abs(b.val)), 1) : 1;
@@ -669,7 +766,7 @@ export default function ClimateApp() {
             </div>
 
             <button
-              onClick={generate}
+              onClick={() => generate()}
               disabled={isLoading}
               style={{
                 marginTop: 16, width: "100%", padding: "14px", borderRadius: 10, border: "none", fontSize: 15, fontWeight: 700,
@@ -735,6 +832,9 @@ export default function ClimateApp() {
             </button>
             <button onClick={() => (window.location.href = "/comparison")} style={{ display: "flex", alignItems: "center", gap: 5, padding: "5px 12px", borderRadius: 6, border: `1px solid ${BORDER}`, background: CARD, color: "white", fontSize: 12, cursor: "pointer" }}>
               <GitCompare style={{ width: 13, height: 13 }} /> Compare
+            </button>
+            <button onClick={shareForecast} style={{ display: "flex", alignItems: "center", gap: 5, padding: "5px 12px", borderRadius: 6, border: `1px solid ${shareCopied ? GREEN : BORDER}`, background: shareCopied ? `${GREEN}18` : CARD, color: shareCopied ? GREEN : "white", fontSize: 12, cursor: "pointer" }}>
+              {shareCopied ? <Check style={{ width: 13, height: 13 }} /> : <Share2 style={{ width: 13, height: 13 }} />} {shareCopied ? "Copied" : "Share"}
             </button>
             <button onClick={exportPDF} disabled={exporting} style={{ display: "flex", alignItems: "center", gap: 5, padding: "5px 12px", borderRadius: 6, border: `1px solid ${BORDER}`, background: CARD, color: "white", fontSize: 12, cursor: exporting ? "wait" : "pointer" }}>
               {exporting ? <Loader2 style={{ width: 13, height: 13, animation: "spin 1s linear infinite" }} /> : <Download style={{ width: 13, height: 13 }} />} Export PDF
