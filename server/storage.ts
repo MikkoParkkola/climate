@@ -5,8 +5,8 @@ import {
   type ClimateProjection, type InsertClimateProjection,
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, and, gte, lte, ilike, or } from "drizzle-orm";
-import { unwrapModelProjectionFromCache, wrapModelProjectionForCache } from "./model-cache-version";
+import { eq, and, gte, lte, ilike, or, sql } from "drizzle-orm";
+import { MODEL_CACHE_VERSION, unwrapModelProjectionFromCache, wrapModelProjectionForCache } from "./model-cache-version";
 
 // ── Safe JSON parsing ────────────────────────────────────────────────────────
 function safeJsonParse<T = unknown>(val: string | null | undefined): T | undefined {
@@ -46,6 +46,7 @@ export interface IStorage {
   // Raw model-output cache, versioned inside the JSON payload.
   getCachedModelProjection(latKey: number, lngKey: number, year: number): Promise<unknown | undefined>;
   saveModelProjection(latKey: number, lngKey: number, year: number, projection: unknown): Promise<void>;
+  purgeIncompatibleModelCache(): Promise<number>;
 
   createLocationComparison(userId: number, name: string, locationIds: number[], year: number): Promise<unknown>;
   getUserComparisons(userId: number): Promise<unknown[]>;
@@ -195,6 +196,15 @@ export class DatabaseStorage implements IStorage {
         target: [climateModelCache.latKey, climateModelCache.lngKey, climateModelCache.year],
         set: { projection: cachedProjection, createdAt: new Date() },
       });
+  }
+
+  async purgeIncompatibleModelCache(): Promise<number> {
+    const currentEnvelopePrefix = `{"__cache":{"modelVersion":"${MODEL_CACHE_VERSION}"`;
+    const deleted = await db
+      .delete(climateModelCache)
+      .where(sql`left(${climateModelCache.projection}, ${currentEnvelopePrefix.length}) <> ${currentEnvelopePrefix}`)
+      .returning({ id: climateModelCache.id });
+    return deleted.length;
   }
 
   // ── Comparisons ──────────────────────────────────────────────────────────

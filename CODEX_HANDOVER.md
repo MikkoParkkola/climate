@@ -8,16 +8,22 @@ deeper context is in `docs/PLAN.md` ("Phase 4 handoff") and `docs/architecture/`
 
 Supersedes the older "not merged" and "cleanup pending" notes below where they conflict.
 
-- `main` includes the grounded engine work through `7dbc5ed`.
+- `main` includes the grounded engine work through `3636727`.
 - Cleanup is done: `cbottle_runner.py` and `conflict_area.txt` are deleted, `threat_model.md`
   points at `server/routes.ts`, and the root `README.md` exists.
 - New cache guard added after `7dbc5ed`: `climate_model_cache` payloads are wrapped with
   `MODEL_CACHE_VERSION = "grounded-grid-i16-v1:0dc3f9d188e4d757"`. Old unversioned
   cbottle-era rows read as cache misses and are overwritten on first recompute after deploy.
-- This **does not** remove fabricated rows from prod storage. `TRUNCATE climate_model_cache;`
-  remains required during the Replit production deploy.
-- Last public checks still showed `GET /methodology` returning 404 on `fupit.com` and the
-  Replit deployment URL, so autoscale had not been republished with the route fix yet.
+- `3636727` retires the legacy `/api/projections*` and `/api/climate/multi-comparison`
+  location-id projection paths with HTTP 410, so they cannot serve old fabricated rows once
+  deployed.
+- Startup now deletes `climate_model_cache` rows whose JSON envelope is not the current
+  grounded-grid version. Manual `TRUNCATE climate_model_cache;` is still acceptable and
+  cleaner during Replit deploy, but the next republished app should also self-purge
+  incompatible legacy rows before serving.
+- Last public checks still showed `GET /methodology` returning 404 on `fupit.com`, and
+  `GET /api/projections?locationId=1&year=2050` returning HTTP 200 with old fabricated
+  legacy fields. Autoscale had not been republished with the route/cache fixes yet.
 
 ## ✅ UPDATE (end of session) — data steps DONE, only deploy seam left
 
