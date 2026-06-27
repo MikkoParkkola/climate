@@ -43,5 +43,9 @@ assert.match(source, /role="note"/, "expanded receipt disclosures are announced 
 assert.match(source, /<ReceiptDetails label="source" text=\{signal\.receipt\} \/>/, "daily-life rows expose keyboard and touch accessible source receipts");
 assert.doesNotMatch(source, /title=\{signal\.receipt\}/, "daily-life source receipts must not regress to hover-only title text");
 assert.match(source, /Not yet included in the score/, "storyline discloses important missing impact domains");
+assert.match(source, /Raw CMIP6 model-consensus annual_mean and anomaly/, "temperature KPI exposes a source receipt");
+assert.match(source, /groundwater, reservoirs, demand, or local drainage capacity/, "precipitation KPI discloses missing local water-system factors");
+assert.match(source, /climate screening indicator, not medical or occupational-safety advice/, "heat-stress KPI has a non-advisory receipt");
+assert.match(source, /not a safety certificate or relocation recommendation/, "habitability KPI caveats interpretation");
 
 console.log("storyline smoke passed: roadmap, explainability sections, trend rates, and accessible receipts guarded");

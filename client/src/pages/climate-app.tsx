@@ -2145,12 +2145,18 @@ export default function ClimateApp() {
               <span style={{ fontSize: 24, fontWeight: 700 }}>{d!.avgTemp.toFixed(1)}°C</span>
               <span style={{ fontSize: 12, fontWeight: 600, color: RED }}>+{d!.tempChange.toFixed(1)}°</span>
             </div>
+            <div style={{ marginTop: 7 }}>
+              <ReceiptDetails label="source" text="Raw CMIP6 model-consensus annual_mean and anomaly for the selected SSP scenario. Trend range uses temperature.uncertainty.annual_mean_low/high when exposed by the grounded API." />
+            </div>
           </div>
           <div style={{ ...card, padding: 14 }}>
             <div style={{ fontSize: 9, textTransform: "uppercase", letterSpacing: "0.08em", color: MUTED, marginBottom: 4 }}>Annual Precip</div>
             <div style={{ display: "flex", alignItems: "baseline", gap: 5 }}>
               <span style={{ fontSize: 24, fontWeight: 700 }}>{d!.annualPrecip}mm</span>
               <span style={{ fontSize: 12, fontWeight: 600, color: BLUE }}>{d!.precipChange >= 0 ? "+" : ""}{d!.precipChange.toFixed(1)}%</span>
+            </div>
+            <div style={{ marginTop: 7 }}>
+              <ReceiptDetails label="source" text="Annual precipitation total and anomaly_percent from the grounded precipitation projection. It does not include groundwater, reservoirs, demand, or local drainage capacity." />
             </div>
           </div>
           <div style={{ ...card, padding: 14 }}>
@@ -2162,12 +2168,18 @@ export default function ClimateApp() {
             <div style={{ marginTop: 6, height: 3, background: "rgba(255,255,255,0.08)", borderRadius: 2 }}>
               <div style={{ height: "100%", borderRadius: 2, background: ORANGE, width: `${Math.min((d!.heatDays / Math.max(...traj!.heat, 1)) * 100, 100)}%`, transition: "width 0.25s ease" }} />
             </div>
+            <div style={{ marginTop: 7 }}>
+              <ReceiptDetails label="source" text="Heat-stress days come from the grounded extremes layer returned by /api/climate-trajectory. Treat as a climate screening indicator, not medical or occupational-safety advice." />
+            </div>
           </div>
           <div style={{ ...card, padding: 14, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
             <div>
               <div style={{ fontSize: 9, textTransform: "uppercase", letterSpacing: "0.08em", color: MUTED, marginBottom: 4 }}>Habitability</div>
               <div style={{ fontSize: 24, fontWeight: 700 }}>{d!.score}<span style={{ fontSize: 14, color: MUTED }}>/100</span></div>
               <div style={{ fontSize: 11, fontWeight: 600, color: sc, marginTop: 2 }}>{d!.category}</div>
+              <div style={{ marginTop: 7 }}>
+                <ReceiptDetails label="method" text="Habitability is the score returned by grounded_model.py from its visible climate component breakdown. It is educational context, not a safety certificate or relocation recommendation." />
+              </div>
             </div>
             <div style={{ position: "relative", width: 54, height: 54 }}>
               <svg viewBox="0 0 36 36" style={{ width: "100%", height: "100%", transform: "rotate(-90deg)" }}>
