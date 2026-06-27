@@ -88,6 +88,101 @@
   }
 }
 
+.fupit-landing {
+  position: relative;
+  overflow: hidden;
+  background: hsl(222, 47%, 8%);
+  color: white;
+  min-height: 100vh;
+  font-family: 'Inter', system-ui, sans-serif;
+  display: flex;
+  flex-direction: column;
+}
+
+.fupit-landing::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(90deg, rgba(8, 11, 18, 0.92) 0%, rgba(8, 11, 18, 0.78) 38%, rgba(8, 11, 18, 0.36) 72%, rgba(8, 11, 18, 0.54) 100%),
+    linear-gradient(180deg, rgba(8, 11, 18, 0.12) 0%, rgba(8, 11, 18, 0.16) 56%, rgba(8, 11, 18, 0.76) 100%),
+    url("/landing-climate-field.webp");
+  background-size: cover;
+  background-position: center;
+  transform: scale(1.01);
+}
+
+.fupit-landing::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.035) 1px, transparent 1px);
+  background-size: 72px 72px;
+  -webkit-mask-image: linear-gradient(90deg, transparent 0%, black 18%, black 78%, transparent 100%);
+  mask-image: linear-gradient(90deg, transparent 0%, black 18%, black 78%, transparent 100%);
+  pointer-events: none;
+  opacity: 0.42;
+}
+
+.fupit-landing > * {
+  position: relative;
+  z-index: 1;
+}
+
+.fupit-landing-main {
+  flex: 1;
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: clamp(44px, 8vh, 96px) 20px;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+}
+
+.fupit-landing-content {
+  max-width: 600px;
+  width: 100%;
+  text-align: left;
+}
+
+.fupit-landing-title {
+  font-size: clamp(2.55rem, 6vw, 4.8rem);
+  font-weight: 850;
+  line-height: 0.95;
+  margin-bottom: 16px;
+  letter-spacing: 0;
+}
+
+.fupit-landing-copy {
+  max-width: 560px;
+}
+
+@media (max-width: 760px) {
+  .fupit-landing::before {
+    background-position: 62% center;
+    background-image:
+      linear-gradient(90deg, rgba(8, 11, 18, 0.88) 0%, rgba(8, 11, 18, 0.72) 56%, rgba(8, 11, 18, 0.55) 100%),
+      linear-gradient(180deg, rgba(8, 11, 18, 0.2) 0%, rgba(8, 11, 18, 0.34) 58%, rgba(8, 11, 18, 0.82) 100%),
+      url("/landing-climate-field.webp");
+  }
+
+  .fupit-landing-main {
+    justify-content: center;
+    padding: 40px 20px 56px;
+  }
+
+  .fupit-landing-content {
+    text-align: center;
+  }
+
+  .fupit-landing-copy {
+    max-width: none;
+  }
+}
+
 @layer components {
   .glass-card {
     background: var(--glass-bg);
