@@ -18,6 +18,15 @@ const card: React.CSSProperties = { backgroundColor: CARD, border: `1px solid ${
 
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 const CHECKPOINTS = [2025, 2050, 2075, 2100];
+const SCENARIOS = [
+  { id: "ssp119", label: "SSP1-1.9", caption: "very low emissions" },
+  { id: "ssp126", label: "SSP1-2.6", caption: "low emissions" },
+  { id: "ssp245", label: "SSP2-4.5", caption: "middle of the road" },
+  { id: "ssp370", label: "SSP3-7.0", caption: "high emissions" },
+  { id: "ssp585", label: "SSP5-8.5", caption: "very high emissions" },
+] as const;
+type ScenarioId = (typeof SCENARIOS)[number]["id"];
+const DEFAULT_SCENARIO: ScenarioId = "ssp245";
 
 // ── Types ────────────────────────────────────────────────────────────────────
 interface LocationOption {
@@ -163,18 +172,27 @@ function feedbackTag(text: string): { icon: string; label: string; color: string
   return { icon: "🔁", label: short, color: AMBER };
 }
 
-function forecastUrl(location: LocationOption, year: number, autoRun = true): string {
+function scenarioInfo(id?: string): { id: ScenarioId; label: string; caption: string } {
+  return SCENARIOS.find((s) => s.id === id) ?? SCENARIOS.find((s) => s.id === DEFAULT_SCENARIO)!;
+}
+
+function parseScenario(id: string | null): ScenarioId {
+  return (SCENARIOS.some((s) => s.id === id) ? id : DEFAULT_SCENARIO) as ScenarioId;
+}
+
+function forecastUrl(location: LocationOption, year: number, scenario: ScenarioId, autoRun = true): string {
   const url = new URL("/", window.location.origin);
   url.searchParams.set("lat", location.lat.toFixed(4));
   url.searchParams.set("lng", location.lng.toFixed(4));
   url.searchParams.set("place", location.name);
   if (location.country) url.searchParams.set("country", location.country);
   url.searchParams.set("year", Math.round(year).toString());
+  url.searchParams.set("scenario", scenario);
   if (autoRun) url.searchParams.set("run", "1");
   return url.toString();
 }
 
-function linkLocationFromParams(): { location: LocationOption; year?: number; autoRun: boolean } | null {
+function linkLocationFromParams(): { location: LocationOption; year?: number; scenario: ScenarioId; autoRun: boolean } | null {
   const params = new URLSearchParams(window.location.search);
   const lat = Number(params.get("lat"));
   const lng = Number(params.get("lng"));
@@ -192,6 +210,7 @@ function linkLocationFromParams(): { location: LocationOption; year?: number; au
       city: name.split(",")[0] || name,
     },
     year: Number.isInteger(year) && year >= 2025 && year <= 2100 ? year : undefined,
+    scenario: parseScenario(params.get("scenario")),
     autoRun: params.get("run") === "1",
   };
 }
@@ -346,6 +365,7 @@ export default function ClimateApp() {
   const [suggestions, setSuggestions] = useState<LocationOption[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [year, setYear] = useState(2050);
+  const [scenario, setScenario] = useState<ScenarioId>(DEFAULT_SCENARIO);
   const [trajectory, setTrajectory] = useState<ProjectionPoint[] | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [loadingStep, setLoadingStep] = useState(0);
@@ -367,6 +387,7 @@ export default function ClimateApp() {
     setLocationText(linked.location.name);
     setShowSuggestions(false);
     if (linked.year) setYear(linked.year);
+    setScenario(linked.scenario);
     deepLinkRunRef.current = linked.autoRun;
   }, []);
 
@@ -435,7 +456,7 @@ export default function ClimateApp() {
     setShowSuggestions(false);
   };
 
-  const generate = async (locationOverride?: LocationOption) => {
+  const generate = async (locationOverride?: LocationOption, scenarioOverride: ScenarioId = scenario) => {
     const targetLocation = locationOverride ?? selectedLocation;
     if (!targetLocation) { setError("Please select a location from the suggestions."); return; }
     setError(null);
@@ -445,7 +466,7 @@ export default function ClimateApp() {
       const response = await fetch("/api/climate-trajectory", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ coordinates: { lat: targetLocation.lat, lng: targetLocation.lng }, years: CHECKPOINTS }),
+        body: JSON.stringify({ coordinates: { lat: targetLocation.lat, lng: targetLocation.lng }, years: CHECKPOINTS, scenario: scenarioOverride }),
       });
       if (!response.ok) {
         let detail = response.statusText;
@@ -466,11 +487,20 @@ export default function ClimateApp() {
     }
   };
 
+  const changeScenario = (next: ScenarioId) => {
+    setScenario(next);
+    setShareCopied(false);
+    setPlaying(false);
+    if (trajectory && selectedLocation) {
+      void generate(selectedLocation, next);
+    }
+  };
+
   useEffect(() => {
     if (!selectedLocation || !deepLinkRunRef.current || isLoading || trajectory) return;
     deepLinkRunRef.current = false;
-    void generate(selectedLocation);
-  }, [selectedLocation, isLoading, trajectory]);
+    void generate(selectedLocation, scenario);
+  }, [selectedLocation, isLoading, trajectory, scenario]);
 
   const newSearch = () => {
     setPlaying(false);
@@ -504,7 +534,7 @@ export default function ClimateApp() {
         heightLeft -= pageH;
       }
       const name = selectedLocation?.city || selectedLocation?.name.split(",")[0] || "location";
-      pdf.save(`climate-projection-${name}-${Math.round(year)}.pdf`);
+      pdf.save(`climate-projection-${name}-${Math.round(year)}-${scenario}.pdf`);
     } catch (err) {
       console.warn("PDF export failed:", err);
     } finally {
@@ -605,18 +635,20 @@ export default function ClimateApp() {
   }, [trajectory]);
 
   const displayYear = Math.round(year);
-  const shareUrl = useMemo(() => selectedLocation ? forecastUrl(selectedLocation, displayYear, true) : "", [selectedLocation, displayYear]);
+  const selectedScenario = scenarioInfo(scenario);
+  const shownScenario = scenarioInfo(d?.scenario ?? scenario);
+  const shareUrl = useMemo(() => selectedLocation ? forecastUrl(selectedLocation, displayYear, scenario, true) : "", [selectedLocation, displayYear, scenario]);
 
   useEffect(() => {
     if (!trajectory || !selectedLocation) return;
-    window.history.replaceState(null, "", forecastUrl(selectedLocation, displayYear, true));
-  }, [trajectory, selectedLocation, displayYear]);
+    window.history.replaceState(null, "", forecastUrl(selectedLocation, displayYear, scenario, true));
+  }, [trajectory, selectedLocation, displayYear, scenario]);
 
   const shareForecast = async () => {
     if (!selectedLocation || !shareUrl) return;
     const title = `${selectedLocation.name} climate forecast to ${displayYear}`;
     const text = d
-      ? `${selectedLocation.name} in ${displayYear}: ${d.avgTemp.toFixed(1)}°C average, ${d.score}/100 habitability, grounded by fupit.`
+      ? `${selectedLocation.name} in ${displayYear} under ${shownScenario.label}: ${d.avgTemp.toFixed(1)}°C average, ${d.score}/100 habitability, grounded by fupit.`
       : `Explore ${selectedLocation.name}'s grounded climate forecast to 2100 on fupit.`;
     try {
       if (navigator.share) {
@@ -693,6 +725,22 @@ export default function ClimateApp() {
               )}
             </div>
 
+            <div style={{ marginTop: 12, display: "flex", alignItems: "center", gap: 10, textAlign: "left", padding: 10, borderRadius: 10, border: `1px solid ${BORDER}`, background: "rgba(255,255,255,0.035)" }}>
+              <label htmlFor="scenario-select" style={{ fontSize: 11, color: MUTED, textTransform: "uppercase", letterSpacing: "0.05em", flexShrink: 0 }}>Scenario</label>
+              <select
+                id="scenario-select"
+                value={scenario}
+                onChange={(e) => changeScenario(parseScenario(e.target.value))}
+                disabled={isLoading}
+                style={{ flex: "0 0 132px", border: `1px solid ${BORDER}`, borderRadius: 7, background: "rgba(8,11,18,0.94)", color: "white", padding: "7px 9px", fontSize: 13, fontWeight: 700, outline: "none" }}
+              >
+                {SCENARIOS.map((s) => <option key={s.id} value={s.id}>{s.label}</option>)}
+              </select>
+              <span style={{ color: MUTED, fontSize: 12, lineHeight: 1.35 }}>
+                {selectedScenario.caption}. The shared forecast URL keeps this scenario.
+              </span>
+            </div>
+
             <button
               onClick={() => generate()}
               disabled={isLoading}
@@ -753,8 +801,20 @@ export default function ClimateApp() {
             <span style={{ fontSize: 13 }}>{selectedLocation?.name}</span>
             <span style={{ fontSize: 13, color: MUTED }}>·</span>
             <span style={{ fontSize: 14, fontWeight: 700, color: ACCENT }}>{displayYear}</span>
+            <span style={{ fontSize: 13, color: MUTED }}>·</span>
+            <span style={{ fontSize: 13, fontWeight: 700, color: RED }}>{shownScenario.label}</span>
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <select
+              value={scenario}
+              onChange={(e) => changeScenario(parseScenario(e.target.value))}
+              disabled={isLoading}
+              title="Climate scenario"
+              aria-label="Climate scenario"
+              style={{ height: 29, borderRadius: 6, border: `1px solid ${BORDER}`, background: CARD, color: "white", fontSize: 12, fontWeight: 700, padding: "0 8px", cursor: isLoading ? "wait" : "pointer" }}
+            >
+              {SCENARIOS.map((s) => <option key={s.id} value={s.id}>{s.label}</option>)}
+            </select>
             <button onClick={newSearch} style={{ display: "flex", alignItems: "center", gap: 5, padding: "5px 12px", borderRadius: 6, border: `1px solid ${BORDER}`, background: CARD, color: MUTED, fontSize: 12, cursor: "pointer" }}>
               <ArrowLeft style={{ width: 13, height: 13 }} /> New Search
             </button>
@@ -843,7 +903,8 @@ export default function ClimateApp() {
             </div>
             <div style={{ textAlign: "right" }}>
               <div style={{ fontSize: 10, color: MUTED, textTransform: "uppercase", marginBottom: 4 }}>Warming Scenario</div>
-              <div style={{ fontSize: 20, fontWeight: 700, color: RED }}>RCP 4.5–8.5 · SSP2</div>
+              <div style={{ fontSize: 20, fontWeight: 700, color: RED }}>{shownScenario.label}</div>
+              <div style={{ fontSize: 10, color: MUTED, marginTop: 2 }}>{shownScenario.caption}</div>
               <div style={{ fontSize: 26, fontWeight: 800, color: RED, marginTop: 2 }}>+{d!.tempChange.toFixed(1)}°C</div>
               <div style={{ fontSize: 11, color: MUTED }}>vs baseline</div>
             </div>
@@ -1078,7 +1139,7 @@ export default function ClimateApp() {
             <ShieldCheck size={17} color={ACCENT} />
             <h2 style={{ fontSize: 15, fontWeight: 700 }}>Projection Receipt</h2>
             <span style={{ marginLeft: "auto", fontSize: 10, color: MUTED }}>
-              {d!.scenario?.toUpperCase()} · {d!.resolution ?? "1.0 degree"} grid · {Math.round(year)}
+              {shownScenario.label} · {d!.resolution ?? "1.0 degree"} grid · {Math.round(year)}
             </span>
             <a href="/methodology" style={{ display: "inline-flex", alignItems: "center", gap: 4, fontSize: 10, color: ACCENT, textDecoration: "none" }}>
               Methodology <ExternalLink size={11} />
@@ -1248,7 +1309,7 @@ export default function ClimateApp() {
 
       <footer style={{ borderTop: `1px solid ${BORDER}`, padding: "16px 20px", textAlign: "center" }}>
         <p style={{ color: MUTED, fontSize: 10 }}>
-          fupit · {d!.model}{d!.modelVersion ? ` ${d!.modelVersion}` : ""} · {d!.scenario?.toUpperCase()} · Uncertainty shown from ensemble spread / AR6 ranges · For research &amp; planning
+          fupit · {d!.model}{d!.modelVersion ? ` ${d!.modelVersion}` : ""} · {shownScenario.label} · Uncertainty shown from ensemble spread / AR6 ranges · For research &amp; planning
         </p>
         <p style={{ color: MUTED, fontSize: 10, marginTop: 6 }}>
           © {new Date().getFullYear()}{" "}

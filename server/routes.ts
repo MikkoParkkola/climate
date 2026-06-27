@@ -18,6 +18,8 @@ const RATE_LIMIT_MAX_PER_WINDOW = 10;
 const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
 const MIN_FORECAST_YEAR = 2024;
 const MAX_FORECAST_YEAR = 2100;
+const CLIMATE_SCENARIOS = ["ssp119", "ssp126", "ssp245", "ssp370", "ssp585"] as const;
+const DEFAULT_CLIMATE_SCENARIO = "ssp245";
 
 function checkRateLimit(ip: string): boolean {
   const now = Date.now();
@@ -113,8 +115,9 @@ async function runClimateModel(
   lat: number,
   lng: number,
   year: number,
+  scenario = DEFAULT_CLIMATE_SCENARIO,
 ): Promise<any> {
-  return runGroundedModel([lat.toString(), lng.toString(), year.toString()]);
+  return runGroundedModel([lat.toString(), lng.toString(), year.toString(), scenario]);
 }
 
 // Runs the climate model for multiple checkpoint years in one Python process so
@@ -123,13 +126,22 @@ async function runClimateTrajectory(
   lat: number,
   lng: number,
   years: number[],
+  scenario = DEFAULT_CLIMATE_SCENARIO,
 ): Promise<any> {
   return runGroundedModel([
     "--trajectory",
     lat.toString(),
     lng.toString(),
     years.join(","),
+    scenario,
   ]);
+}
+
+function projectionScenario(projection: unknown): string | undefined {
+  if (!projection || typeof projection !== "object") return undefined;
+  const p = projection as { scenario?: unknown; metadata?: { scenario?: unknown } };
+  const scenario = p.metadata?.scenario ?? p.scenario;
+  return typeof scenario === "string" ? scenario : undefined;
 }
 
 // ── SEO: per-route HTML head injection (production only) ────────────────────
@@ -649,6 +661,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         lng: z.coerce.number().min(-180).max(180),
       }),
       years: z.array(z.coerce.number().int().min(MIN_FORECAST_YEAR).max(MAX_FORECAST_YEAR)).min(1).max(5),
+      scenario: z.enum(CLIMATE_SCENARIOS).default(DEFAULT_CLIMATE_SCENARIO),
     });
 
     const parsed = bodySchema.safeParse(req.body);
@@ -657,7 +670,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       return res.status(400).json({ message: "Invalid request parameters" });
     }
 
-    const { coordinates } = parsed.data;
+    const { coordinates, scenario } = parsed.data;
     // De-duplicate and sort the checkpoint years ascending.
     const years = Array.from(new Set(parsed.data.years)).sort((a, b) => a - b);
 
@@ -675,7 +688,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       let cachedCount = 0;
       for (const year of years) {
         const cached = await storage.getCachedModelProjection(latKey, lngKey, year);
-        if (cached) {
+        if (cached && projectionScenario(cached) === scenario) {
           cachedCount++;
           pointsByYear.set(year, { year, cached: true, ...(cached as object) });
           continue;
@@ -685,7 +698,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       if (missingYears.length > 0) {
         // grounded_model.py is offline — no API key needed for any location.
-        const trajectory = await runClimateTrajectory(coordinates.lat, coordinates.lng, missingYears);
+        const trajectory = await runClimateTrajectory(coordinates.lat, coordinates.lng, missingYears, scenario);
         const projectedPoints = Array.isArray(trajectory?.points) ? trajectory.points : [];
         for (const projection of projectedPoints) {
           const year = Number(projection?.year);

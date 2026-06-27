@@ -96,10 +96,10 @@ function collectNullPaths(value, prefix = "$", out = []) {
   return out;
 }
 
-function runModel(pythonBin, sample, year = 2050) {
+function runModel(pythonBin, sample, year = 2050, scenario = "ssp245") {
   const result = spawnSync(
     pythonBin,
-    [modelPath, String(sample.lat), String(sample.lng), String(year)],
+    [modelPath, String(sample.lat), String(sample.lng), String(year), scenario],
     { cwd: repoRoot, encoding: "utf8", maxBuffer: 8 * 1024 * 1024 },
   );
   if (result.error) {
@@ -117,10 +117,10 @@ function runModel(pythonBin, sample, year = 2050) {
   }
 }
 
-function runTrajectory(pythonBin, sample, years) {
+function runTrajectory(pythonBin, sample, years, scenario = "ssp245") {
   const result = spawnSync(
     pythonBin,
-    [modelPath, "--trajectory", String(sample.lat), String(sample.lng), years.join(",")],
+    [modelPath, "--trajectory", String(sample.lat), String(sample.lng), years.join(","), scenario],
     { cwd: repoRoot, encoding: "utf8", maxBuffer: 16 * 1024 * 1024 },
   );
   if (result.error) {
@@ -181,7 +181,7 @@ function findPython() {
   throw new Error("No python executable with numpy available. Install numpy or set PYTHON_BIN.");
 }
 
-function validateProjection(sample, projection, expectedYear = 2050) {
+function validateProjection(sample, projection, expectedYear = 2050, expectedScenario = "ssp245") {
   for (const requiredPath of requiredPaths) {
     assert(getPath(projection, requiredPath) !== undefined, `${sample.name} missing ${requiredPath}`);
   }
@@ -190,7 +190,8 @@ function validateProjection(sample, projection, expectedYear = 2050) {
   assert(nulls.length === 0, `${sample.name} returned null values: ${nulls.slice(0, 12).join(", ")}`);
 
   assert(projection.year === expectedYear, `${sample.name} year mismatch`);
-  assert(projection.scenario === "ssp245", `${sample.name} scenario mismatch`);
+  assert(projection.scenario === expectedScenario, `${sample.name} scenario mismatch`);
+  assert(projection.metadata.scenario === expectedScenario, `${sample.name} metadata scenario mismatch`);
   assert(Array.isArray(projection.temperature.monthly), `${sample.name} temperature.monthly missing`);
   assert(projection.temperature.monthly.length === 12, `${sample.name} temperature.monthly length is not 12`);
   assert(Array.isArray(projection.temperature.monthly_labels), `${sample.name} temperature.monthly_labels missing`);
@@ -250,10 +251,19 @@ assert(
   JSON.stringify(trajectory.coordinates) === JSON.stringify({ lat: trajectorySample.lat, lng: trajectorySample.lng }),
   "trajectory coordinates mismatch",
 );
+assert(trajectory.scenario === "ssp245", "trajectory scenario mismatch");
 assert(Array.isArray(trajectory.points), "trajectory points missing");
 assert(trajectory.points.length === trajectoryYears.length, "trajectory point count mismatch");
 trajectory.points.forEach((point, index) => {
   validateProjection(trajectorySample, point, trajectoryYears[index]);
+});
+
+const highScenarioTrajectory = runTrajectory(pythonBin, trajectorySample, [2025, 2050], "ssp585");
+assert(highScenarioTrajectory.scenario === "ssp585", "non-default trajectory scenario mismatch");
+assert(Array.isArray(highScenarioTrajectory.points), "non-default trajectory points missing");
+assert(highScenarioTrajectory.points.length === 2, "non-default trajectory point count mismatch");
+highScenarioTrajectory.points.forEach((point, index) => {
+  validateProjection(trajectorySample, point, [2025, 2050][index], "ssp585");
 });
 
 assertInvalidYearRejected(pythonBin);
@@ -267,4 +277,5 @@ for (const { sample, projection } of results) {
 }
 console.log(`grounded_model contract smoke passed for ${samples.length} cities using ${pythonBin}`);
 console.log(`grounded_model trajectory smoke passed for ${trajectorySample.name} years ${trajectoryYears.join(",")}`);
+console.log("grounded_model non-default scenario trajectory smoke passed for ssp585");
 console.log("grounded_model rejects forecast years beyond 2100");

@@ -401,7 +401,7 @@ def project(lat, lng, year, scenario=DEFAULT_SCENARIO):
 
 
 def trajectory(lat, lng, years, scenario=DEFAULT_SCENARIO):
-    return {"coordinates": {"lat": lat, "lng": lng},
+    return {"coordinates": {"lat": lat, "lng": lng}, "scenario": scenario,
             "points": [{"year": y, **project(lat, lng, y, scenario)} for y in years]}
 
 
