@@ -2,7 +2,7 @@
 
 > This is the **canonical** agent/contributor guide. `CLAUDE.md` and `LLM.md` are symlinks to this file. Keep it current; it is the first thing any agent should read.
 
-> **STATUS (2026-06-27):** Grounded engine landed. `grounded_model.py` (CMIP6/IPCC, offline, reads `data/grid.i16.gz` with numpy+gzip) has **replaced** the fabricated legacy runner at all 3 spawn sites in `server/routes.ts`; build green. `/methodology` page live. **To finish + deploy, follow the ordered checklist in `docs/PLAN.md` → "Phase 4 handoff".** Blocking items: live endpoint smoke on a host with the production-style database URL, deploy, and purge stale `climate_model_cache`. cBottle decision (not for accuracy): `docs/architecture/RESOLUTION_AND_CBOTTLE.md`.
+> **STATUS (2026-06-27):** Grounded engine landed. `grounded_model.py` (CMIP6/IPCC, offline, reads `data/grid.i16.gz` with numpy+gzip) has **replaced** the fabricated legacy runner in `server/routes.ts`; build and local Postgres-backed endpoint smoke are green. `/methodology`, source registry, versioned cache identity, and precomputed curated-city rankings are live in code. **To finish public launch, follow `docs/PLAN.md` -> "Phase 4 handoff".** Blocking items: Replit autoscale republish, production `climate_model_cache` purge/version-guard proof, and live verification. cBottle decision (not for accuracy): `docs/architecture/RESOLUTION_AND_CBOTTLE.md`.
 
 ## What this project is
 
@@ -78,12 +78,12 @@ npm run db:push  # drizzle-kit push (apply schema to DB)
 
 ## Known drift to reconcile
 
-- `docs/CURRENT_STATE.md` intentionally documents the deleted fabricated legacy runner as history; do not treat it as live architecture.
+- Public Replit state can lag behind Git. Treat the deployed site as unknown until `/api/health`, `/methodology`, `/api/climate-trajectory`, and retired legacy routes are verified live after republish.
 
 <!-- gitnexus:start -->
 # GitNexus — Code Intelligence
 
-This project is indexed by GitNexus as **climate** (3635 symbols, 6378 relationships, 179 execution flows). Use the GitNexus MCP tools to understand code, assess impact, and navigate safely.
+This project is indexed by GitNexus as **climate** (3854 symbols, 6480 relationships, 168 execution flows). Use the GitNexus MCP tools to understand code, assess impact, and navigate safely.
 
 > If any GitNexus tool warns the index is stale, run `npx gitnexus analyze` in terminal first.
 

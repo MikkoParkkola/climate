@@ -4,9 +4,11 @@ import { spawn } from "child_process";
 import fs from "fs";
 import path from "path";
 import { storage } from "./storage";
-import { MODEL_CACHE_VERSION } from "./model-cache-version";
+import { MODEL_CACHE_VERSION, SOURCE_REGISTRY_VERSION } from "./model-cache-version";
 import { insertClimateLocationSchema } from "@shared/schema";
 import { z } from "zod";
+import { getRanking, rankingQuerySchema } from "./precomputed-rankings";
+import { loadSourceRegistry } from "./source-registry";
 
 const MAX_PYTHON_CONCURRENT = 2;
 const PYTHON_TIMEOUT_MS = 60_000;
@@ -349,6 +351,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       service: "climate-api",
       engine: "grounded_model.py",
       modelCacheVersion: MODEL_CACHE_VERSION,
+      sourceRegistryVersion: SOURCE_REGISTRY_VERSION,
       cachePurge: "startup-incompatible-delete-enabled",
       legacyProjectionEndpoints: "410-gone",
       seoBase: SEO_BASE,
@@ -692,7 +695,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const missingYears: number[] = [];
       let cachedCount = 0;
       for (const year of years) {
-        const cached = await storage.getCachedModelProjection(latKey, lngKey, year);
+        const cached = await storage.getCachedModelProjection(latKey, lngKey, year, scenario);
         if (cached && projectionScenario(cached) === scenario) {
           cachedCount++;
           pointsByYear.set(year, { year, cached: true, ...(cached as object) });
@@ -708,7 +711,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         for (const projection of projectedPoints) {
           const year = Number(projection?.year);
           if (!missingYears.includes(year)) continue;
-          await storage.saveModelProjection(latKey, lngKey, year, projection);
+          await storage.saveModelProjection(latKey, lngKey, year, scenario, projection);
           pointsByYear.set(year, { year, cached: false, ...projection });
         }
         for (const year of missingYears) {
@@ -730,72 +733,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.get("/api/source-registry", (_req, res) => {
+    try {
+      res
+        .set("Cache-Control", "public, max-age=300")
+        .json(loadSourceRegistry());
+    } catch (err) {
+      console.error("source-registry failed:", (err as Error).message);
+      res.status(500).json({ message: "Source registry unavailable." });
+    }
+  });
+
   // Global habitability rankings endpoint
   app.get("/api/climate/global-rankings", async (req, res) => {
     const clientIp = ((req.ip ?? "") || (req.socket?.remoteAddress ?? "unknown")).replace(/^::ffff:/, "");
     if (!checkRateLimit(clientIp)) {
       return res.status(429).json({ message: "Too many requests. Please try again later." });
     }
-    if (activePythonProcesses >= MAX_PYTHON_CONCURRENT) {
-      return res.status(503).json({ message: "Server busy. Please try again shortly." });
+    const parsed = rankingQuerySchema.safeParse(req.query);
+    if (!parsed.success) {
+      return res.status(400).json({ message: "Invalid request parameters", errors: parsed.error.issues });
     }
-
-    const rawYear = req.query.year === undefined ? 2050 : Number(req.query.year);
-    if (!Number.isInteger(rawYear) || rawYear < MIN_FORECAST_YEAR || rawYear > MAX_FORECAST_YEAR) {
-      return res.status(400).json({ message: "Invalid request parameters" });
+    const ranking = getRanking(parsed.data);
+    if (!ranking) {
+      return res.status(404).json({ message: "No precomputed ranking for those parameters." });
     }
-    const year = rawYear;
-
-    activePythonProcesses++;
-    let killed = false;
-    let responded = false;
-
-    const python = spawn(PYTHON_BIN, ["grounded_model.py", "--rankings", year.toString()]);
-
-    const killTimer = setTimeout(() => {
-      killed = true;
-      python.kill("SIGKILL");
-    }, PYTHON_TIMEOUT_MS);
-
-    let output = "";
-
-    python.stdout.on("data", (data: Buffer) => {
-      output += data.toString();
-    });
-
-    python.stderr.on("data", (_data: Buffer) => {
-      // Intentionally discarded — do not expose internal diagnostics to callers
-    });
-
-    python.on("close", (code: number | null) => {
-      clearTimeout(killTimer);
-      releasePythonSlot();
-      if (responded) return;
-      responded = true;
-      if (killed) {
-        return res.status(504).json({ message: "Rankings computation timed out. Please try again." });
-      }
-      if (code !== 0) {
-        console.error("grounded_model.py --rankings exited with code:", code);
-        return res.status(500).json({ message: "Failed to generate global rankings." });
-      }
-      try {
-        const rankings = JSON.parse(output);
-        res.json(rankings);
-      } catch {
-        console.error("Failed to parse global rankings output");
-        res.status(500).json({ message: "Failed to parse rankings data." });
-      }
-    });
-
-    python.on("error", (err: Error) => {
-      clearTimeout(killTimer);
-      releasePythonSlot();
-      if (responded) return;
-      responded = true;
-      console.error("Failed to start grounded_model.py --rankings:", err.message);
-      res.status(500).json({ message: "Rankings service unavailable." });
-    });
+    res
+      .set("Cache-Control", "public, max-age=300")
+      .json(ranking);
   });
 
   // Semantic content for each known public route.

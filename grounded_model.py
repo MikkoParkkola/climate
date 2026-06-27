@@ -462,7 +462,27 @@ def main():
             out = []
             for ci in from_cities:
                 p = project(ci["lat"], ci["lng"], year, scenario)
-                out.append({**ci, "habitability": p["habitability"], "year": year})
+                out.append({
+                    **ci,
+                    "year": year,
+                    "scenario": scenario,
+                    "temperature": {
+                        "annual_mean": p["temperature"]["annual_mean"],
+                        "anomaly": p["temperature"]["anomaly"],
+                        "uncertainty": p["temperature"].get("uncertainty"),
+                    },
+                    "precipitation": {
+                        "annual_total": p["precipitation"]["annual_total"],
+                        "anomaly_percent": p["precipitation"]["anomaly_percent"],
+                        "uncertainty": p["precipitation"].get("uncertainty"),
+                    },
+                    "extremes": p["extremes"],
+                    "habitability": p["habitability"],
+                    "metadata": {
+                        "model_version": p["metadata"]["model_version"],
+                        "source_trail": p["metadata"]["source_trail"],
+                    },
+                })
             out.sort(key=lambda r: r["habitability"]["score"], reverse=True)
             print(json.dumps({"year": year, "scenario": scenario, "rankings": out}))
             return

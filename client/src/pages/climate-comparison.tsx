@@ -717,7 +717,7 @@ export default function ClimateComparison({ onBack }: ClimateComparisonProps) {
       {hasResults && (
         <>
           {/* Sticky Year Slider */}
-          <div style={{ position: "sticky", top: 0, zIndex: 45, background: "rgba(8,11,18,0.97)", borderBottom: `1px solid ${BORDER}`, backdropFilter: "blur(20px)", marginTop: 24 }}>
+          <div style={{ position: "sticky", top: "48px", zIndex: 45, background: "rgba(8,11,18,0.97)", borderBottom: `1px solid ${BORDER}`, backdropFilter: "blur(20px)", marginTop: 24 }}>
             <div style={{ maxWidth: 1280, margin: "0 auto", padding: "10px 20px 20px" }}>
               <div style={{ display: "flex", alignItems: "center", gap: 14, flexWrap: "wrap" }}>
                 <div style={{ display: "flex", gap: 4 }}>

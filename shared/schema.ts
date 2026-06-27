@@ -75,9 +75,9 @@ export const climateProjections = pgTable("climate_projections", {
   fetchedAt: timestamp("fetched_at").defaultNow(),
 });
 
-// Lossless cache of raw climate-model output, keyed by rounded coordinate grid
-// + year at the DB index, and versioned inside the JSON payload. Old payloads
-// from previous model/data versions are ignored and overwritten on recompute.
+// Lossless cache of raw climate-model output, keyed by rounded coordinate grid,
+// year, scenario, and cache version. The JSON payload still carries a version
+// envelope as a belt-and-suspenders guard for old fabricated-era rows.
 export const climateModelCache = pgTable(
   "climate_model_cache",
   {
@@ -85,11 +85,14 @@ export const climateModelCache = pgTable(
     latKey: real("lat_key").notNull(),
     lngKey: real("lng_key").notNull(),
     year: integer("year").notNull(),
+    scenario: text("scenario").notNull().default("ssp245"),
+    cacheVersion: text("cache_version").notNull().default("grounded-grid-i16-v2-raw-temp-headline:0dc3f9d188e4d757"),
+    sourceRegistryVersion: text("source_registry_version").notNull().default("source-registry-v1"),
     projection: text("projection").notNull(), // version envelope + full model output
     createdAt: timestamp("created_at").defaultNow(),
   },
   (t) => ({
-    coordYearIdx: uniqueIndex("cmc_coord_year_idx").on(t.latKey, t.lngKey, t.year),
+    identityIdx: uniqueIndex("cmc_identity_idx").on(t.latKey, t.lngKey, t.year, t.scenario, t.cacheVersion),
   }),
 );
 

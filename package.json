@@ -5,13 +5,17 @@
   "license": "MIT",
   "scripts": {
     "dev": "NODE_ENV=development tsx server/index.ts",
-    "build": "vite build && esbuild server/index.ts --platform=node --packages=external --bundle --format=esm --outdir=dist && node scripts/write-build-info.mjs",
+    "build": "node scripts/validate-artifacts.mjs && vite build && esbuild server/index.ts --platform=node --packages=external --bundle --format=esm --outdir=dist && node scripts/write-build-info.mjs",
     "start": "NODE_ENV=production node dist/index.js",
     "check": "tsc",
+    "build:rankings": "node scripts/build-ranking-artifacts.mjs",
+    "validate:artifacts": "node scripts/validate-artifacts.mjs",
+    "smoke:cache": "tsx scripts/smoke-cache-envelope.ts",
+    "smoke:rankings": "tsx scripts/smoke-ranking-artifacts.ts",
     "smoke:model": "node scripts/smoke-grounded-model.mjs",
     "audit:trajectories": "node scripts/audit-trajectories.mjs",
     "verify:live": "node scripts/verify-live-release.mjs",
-    "ci": "npm run check && npm run build && npm run smoke:model && npm run audit:trajectories",
+    "ci": "npm run check && npm run build && npm run smoke:cache && npm run smoke:rankings && npm run smoke:model && npm run audit:trajectories",
     "db:push": "drizzle-kit push"
   },
   "dependencies": {

@@ -32,5 +32,7 @@ npm run verify:live
 
 - `AGENTS.md` - contributor and agent operating guide
 - `docs/PLAN.md` - current delivery plan and handoff status
+- `docs/PRODUCT_REQUIREMENTS.md` - educational/research product requirements and public-launch criteria
+- `docs/architecture/TECHNICAL_DESIGN.md` - Replit-scale serving architecture and performance targets
 - `docs/architecture/SCIENTIFIC_GROUNDING.md` - source and method map
 - `CODEX_HANDOVER.md` - latest operational handoff notes

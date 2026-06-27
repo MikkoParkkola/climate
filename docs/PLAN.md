@@ -4,7 +4,7 @@
 
 **North-star test:** every number a user sees can be traced to a source and method. No invented coefficients. (Rams #6 — Honest.)
 
-> Architecture/how-to: `docs/architecture/ARCHITECTURE.md`. Data sources + methodology: `docs/architecture/SCIENTIFIC_GROUNDING.md`. Baseline truth: `docs/CURRENT_STATE.md`.
+> Product requirements: `docs/PRODUCT_REQUIREMENTS.md`. Replit-scale technical design: `docs/architecture/TECHNICAL_DESIGN.md`. Architecture/how-to: `docs/architecture/ARCHITECTURE.md`. Data sources + methodology: `docs/architecture/SCIENTIFIC_GROUNDING.md`. Baseline truth: `docs/CURRENT_STATE.md`.
 
 ## Strategy in one breath (updated after research 2026-06-26)
 
@@ -13,7 +13,7 @@ Research verdict: **cBottle cannot be the forecast engine.** It is a present-cli
 ## Phases
 
 ### Phase 0 — Stop the lie (immediate, small)
-- The app currently serves fabricated numbers. Either (a) add a prominent "preview / non-scientific estimate" label to all projections, or (b) gate the model behind a flag until Phase 3 data exists. Operator decision.
+- Historical problem: the old app served fabricated numbers. The current code removes the fabricated runner and rejects retired legacy projection routes.
 - **DoD:** no user sees a fabricated number presented as authoritative.
 
 ### Phase 1 — Lock the scientific grounding spec
@@ -44,7 +44,7 @@ Research verdict: **cBottle cannot be the forecast engine.** It is a present-cli
 - **DoD:** published methodology; validation numbers in repo.
 
 ### Phase 6 — Cleanup
-- Delete heuristic `cbottle_runner.py` once replaced. Fix `threat_model.md` (`routes-simple.ts` → `routes.ts`). Remove `conflict_area.txt`. Add root README.
+- Delete the heuristic legacy runner once replaced. Fix stale threat-model route references. Remove merge artifacts. Add root README.
 - **DoD:** no dead fabrication code; docs match reality.
 
 ## Decisions (resolved 2026-06-26)
@@ -63,17 +63,18 @@ Research verdict: **cBottle cannot be the forecast engine.** It is a present-cli
 - [x] Phase 1 — grounding spec locked (`architecture/SCIENTIFIC_GROUNDING.md`, 5 scenarios, per-variable source/method/citation map)
 - [x] Phase 2 — ingest pipeline COMPLETE. `fetch_reduce.py` (CMIP6 temp/precip/humidity deltas), `fetch_sealevel.py` (AR6 sea level), `fetch_extremes.py` (5 ETCCDI risk indices), `baseline_monthly.py` (1995–2014 CMIP6 monthly fallback climatology), `build_worldclim_baseline.py` (WorldClim v2.1 observed 10 arc-minute monthly baseline), `baseline_extremes.py` (absolute ETCCDI baselines). Calibration layer (`calibration.json`, IPCC hot-model k). Validated on Spark/local smoke. ~42 grids in `ingest/out/` plus compact serving artifacts in `data/`.
 - [x] Phase 3 — global grid (Option C, NOT Postgres). Operator chose to serve a compact binary export instead of loading 7.8M rows into Postgres. `build_export.py` packs all grids → `ingest/export/grid.i16.gz` (~34MB) + `manifest.json` (int16 + byte-shuffle + gzip; numpy-only decode). Self-check: 16600 cells re-decoded vs source NetCDF, 0 mismatches.
-- [~] Phase 4 — serving layer refactor. **Engine swapped:** `grounded_model.py` replaces `cbottle_runner.py` at all 3 spawn sites in `server/routes.ts`; API-key gates removed (engine is offline). Reads `data/grid.i16.gz` with numpy+gzip only — no xarray/netcdf at serve time, no NVIDIA API. Final grid export is in `data/`; direct engine smoke and production build are green. `climate_model_cache` now wraps projections with a grounded-grid cache version so old unversioned cbottle-era rows read as misses and are overwritten on first recompute; server startup also deletes cache rows whose envelope is not the current grounded-grid version. Scenario selector and projection uncertainty receipts are implemented on the main result flow. **Remaining:** HTTP endpoint smoke on a host with Neon/Replit-compatible `DATABASE_URL`; Replit autoscale republish; verify stale `climate_model_cache` purge after deploy.
+- [~] Phase 4 — serving layer refactor. **Engine swapped:** `grounded_model.py` replaces the old fabricated runner in `server/routes.ts`; API-key gates removed (engine is offline). Reads `data/grid.i16.gz` with numpy+gzip only — no xarray/netcdf at serve time, no NVIDIA API. Final grid export is in `data/`; direct engine smoke, production build, `npm run ci`, and local Postgres-backed endpoint smoke are green. `climate_model_cache` identity now includes scenario, cache version, and source-registry version, so old unversioned cbottle-era rows read as misses; server startup deletes incompatible rows. Source registry and curated-city ranking artifacts are served from static data, not request-time global Python loops. Scenario selector and projection uncertainty receipts are implemented on the main result flow. **Remaining:** Replit autoscale republish, production cache purge/version-guard proof, live verification, desktop/mobile screenshots, and the target Node grid reader.
 - [x] Phase 5 (partial) — `/methodology` public page shipped (`client/src/pages/methodology.tsx`, route in `App.tsx`), documents full grounding stack + exact risk threshold bands. `client/public/llms.txt` refreshed for grounded fupit pages. **Remaining:** hindcast validation report.
-- [x] Phase 6 — cleanup. Deleted `cbottle_runner.py`, fixed `threat_model.md` (`routes-simple.ts`→`routes.ts`), removed `conflict_area.txt`, and added root `README.md`.
+- [x] Phase 6 — cleanup. Deleted the heuristic legacy runner, fixed the stale threat-model route reference, removed the merge artifact, and added root `README.md`.
 
 ## Phase 4 handoff (2026-06-27) — pick up here
 
-**Branch:** `main` contains `docs/grounded-forecast-plan` through commit `0cef83a`. **Done:** grounded engine written + wired, final grid export validated and copied to `data/`, methodology page added, ranking-cities list added, prod dependency verified (`numpy` in `pyproject.toml`), GitNexus re-indexed (3,635 nodes), fabricated runner deleted, stale threat-model route fixed.
+**Branch:** current implementation work is on `codex/fupit-implementation-plan`. **Done:** grounded engine written + wired, final grid export validated and copied to `data/`, methodology page added, ranking-cities list added, source registry added, cache identity versioned by scenario/cache/source, curated rankings precomputed, prod dependency verified (`numpy` in `pyproject.toml`), fabricated runner deleted, stale threat-model route fixed, and local Postgres-backed endpoint smoke passed.
 
-**Blocking before claiming Phase 4 complete, in order:**
-1. Run the HTTP endpoint smoke on a host with a Neon/Replit-compatible `DATABASE_URL`: `POST /api/climate-trajectory` for Helsinki 2050 must have `data.points[0].habitability.score`, `temperature.monthly.length === 12`, `precipitation.annual_total`, `extremes.drought_risk`, and zero nulls.
-2. Against the production Replit Postgres, run `TRUNCATE climate_model_cache;` or verify startup deleted every incompatible row. Last observed public checks on 2026-06-27 still showed prod serving stale code: `/methodology` returned 404 and `/api/projections?locationId=1&year=2050` returned 200 with old fabricated legacy fields. Code after `7dbc5ed` prevents unversioned rows from being returned as cache hits once deployed, and code after `3636727` retires the legacy projection endpoints; startup purge now removes rows whose JSON envelope is not the current grounded-grid version.
-3. Republish Replit autoscale from `main`, then run `npm run verify:live`. For the first post-purge forecast proof, use `FUPIT_REQUIRE_FRESH=1` with a new land coordinate so the verifier fails if the response is read from cache.
+**Blocking before claiming public launch complete, in order:**
+1. Republish Replit autoscale from the current code.
+2. Against the production Replit Postgres, run `TRUNCATE climate_model_cache;` or verify startup deleted every incompatible row before public forecasts are served. The app now prevents unversioned or mismatched cache rows from returning as hits and retires the legacy projection endpoints.
+3. Run `npm run verify:live`. For the first post-purge forecast proof, use `FUPIT_REQUIRE_FRESH=1` with a new land coordinate so the verifier fails if the response is read from cache.
+4. Capture desktop/mobile screenshots for home, single-location, comparison, methodology, and rankings. Do not run a full browser e2e over the real model; verify in layers.
 
 **Known risks:** (a) contract drift — `grounded_model.py` output must match what the React client reads (`habitability.breakdown` keys, `monthly[12]`); mapped from client but first wire-up may surface one mismatch. (b) a few CMIP6 models skip with server-side `RoocsValueError` (handled — ensemble drops them).
