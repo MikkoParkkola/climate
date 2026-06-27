@@ -19,5 +19,9 @@ assert.match(source, /lower-likelihood stress test/, "scenario roles caveat SSP5
 assert.match(source, /Local pathway gap/, "scenario contrast gives a concrete local difference");
 assert.match(source, /not predictions/, "scenario contrast avoids declaring a scenario as prophecy");
 assert.match(source, /not a claim that one pathway is guaranteed/, "scenario contrast caveats the selected local gap");
+assert.match(source, /aria-describedby="scenario-contrast-receipt"/, "scenario contrast action links to an accessible method receipt");
+assert.match(source, /id="scenario-contrast-receipt"/, "scenario contrast method receipt is rendered near the action");
+assert.match(source, /<ReceiptDetails label="method" text="Fetches the same annual checkpoints/, "scenario contrast method receipt describes the grounded endpoint and same-coordinate comparison");
+assert.doesNotMatch(source, /title="Fetch the same annual checkpoints/, "scenario contrast method receipt must not regress to hover-only title text");
 
-console.log("scenario contrast smoke passed: same-location pathway comparison and caveats guarded");
+console.log("scenario contrast smoke passed: same-location pathway comparison, caveats, and accessible method receipt guarded");

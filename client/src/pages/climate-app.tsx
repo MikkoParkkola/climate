@@ -462,6 +462,48 @@ function crossYear(points: ProjectionPoint[], threshold: number, dir: "above" | 
   return null;
 }
 
+function ReceiptDetails({ label = "source", text }: { label?: string; text: string }) {
+  return (
+    <details style={{ display: "inline-block", maxWidth: "100%" }}>
+      <summary
+        aria-label={`${label}: ${text}`}
+        style={{
+          display: "inline-flex",
+          alignItems: "center",
+          minHeight: 18,
+          cursor: "pointer",
+          fontSize: 9,
+          textTransform: "uppercase",
+          letterSpacing: "0.06em",
+          color: MUTED,
+          border: `1px solid ${BORDER}`,
+          borderRadius: 999,
+          padding: "2px 6px",
+          userSelect: "none",
+        }}
+      >
+        {label}
+      </summary>
+      <div
+        role="note"
+        style={{
+          marginTop: 6,
+          maxWidth: 340,
+          padding: "8px 9px",
+          border: `1px solid ${BORDER}`,
+          borderRadius: 8,
+          background: "rgba(6,9,16,0.94)",
+          color: "rgba(255,255,255,0.78)",
+          fontSize: 11,
+          lineHeight: 1.5,
+        }}
+      >
+        {text}
+      </div>
+    </details>
+  );
+}
+
 // ── Charts ─────────────────────────────────────────────────────────────────
 interface TrendZone { from: number; to: number; color: string }
 
@@ -1386,12 +1428,15 @@ export default function ClimateApp() {
             <button
               onClick={loadScenarioContrast}
               disabled={scenarioContrastLoading || isLoading}
-              title="Fetch the same annual checkpoints for each supported SSP scenario"
+              aria-describedby="scenario-contrast-receipt"
               style={{ display: "inline-flex", alignItems: "center", gap: 7, padding: "8px 12px", borderRadius: 7, border: `1px solid ${BLUE}55`, background: scenarioContrastRows.length > 0 ? `${BLUE}12` : `${BLUE}22`, color: "white", fontSize: 12, fontWeight: 800, cursor: scenarioContrastLoading || isLoading ? "wait" : "pointer", opacity: scenarioContrastLoading || isLoading ? 0.72 : 1 }}
             >
               {scenarioContrastLoading ? <Loader2 style={{ width: 13, height: 13, animation: "spin 1s linear infinite" }} /> : <GitCompare style={{ width: 13, height: 13 }} />}
               {scenarioContrastLoading ? "Loading pathways" : scenarioContrastRows.length > 0 ? "Refresh pathways" : "Load pathway contrast"}
             </button>
+          </div>
+          <div id="scenario-contrast-receipt" style={{ marginBottom: 10 }}>
+            <ReceiptDetails label="method" text="Fetches the same annual checkpoints for each supported SSP scenario using the grounded /api/climate-trajectory endpoint and the same coordinates." />
           </div>
 
           {scenarioContrastError && (
@@ -1417,7 +1462,7 @@ export default function ClimateApp() {
                 const rowScoreColor = scoreColor(row.score);
                 const active = row.id === shownScenario.id;
                 return (
-                  <div key={row.id} title="Same location and selected year; values interpolate from the annual trajectory returned by /api/climate-trajectory." style={{ border: `1px solid ${active ? `${ACCENT}66` : BORDER}`, background: active ? `${ACCENT}10` : "rgba(255,255,255,0.035)", borderRadius: 8, padding: 11 }}>
+                  <div key={row.id} style={{ border: `1px solid ${active ? `${ACCENT}66` : BORDER}`, background: active ? `${ACCENT}10` : "rgba(255,255,255,0.035)", borderRadius: 8, padding: 11 }}>
                     <div style={{ display: "flex", justifyContent: "space-between", gap: 8, alignItems: "flex-start", marginBottom: 8 }}>
                       <div>
                         <div style={{ fontSize: 13, fontWeight: 800, color: "white" }}>{row.label}</div>
@@ -1434,6 +1479,9 @@ export default function ClimateApp() {
                     <div style={{ marginTop: 9, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
                       <span style={{ fontSize: 10, color: MUTED }}>{row.category}</span>
                       <span style={{ fontSize: 15, fontWeight: 900, color: rowScoreColor }}>{row.score}/100</span>
+                    </div>
+                    <div style={{ marginTop: 8 }}>
+                      <ReceiptDetails label="method" text="Same location and selected year; values interpolate from the annual trajectory returned by /api/climate-trajectory." />
                     </div>
                   </div>
                 );
@@ -1461,9 +1509,12 @@ export default function ClimateApp() {
 
               <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(116px, 1fr))", gap: 8, marginBottom: 12 }}>
                 {scoreStory.trendRates.map((rate) => (
-                  <div key={rate.label} title="Per-decade slope from the baseline point to the selected year." style={{ background: "rgba(255,255,255,0.045)", border: `1px solid ${BORDER}`, borderRadius: 8, padding: "8px 9px" }}>
+                  <div key={rate.label} style={{ background: "rgba(255,255,255,0.045)", border: `1px solid ${BORDER}`, borderRadius: 8, padding: "8px 9px" }}>
                     <div style={{ fontSize: 10, color: MUTED, marginBottom: 3 }}>{rate.label}</div>
                     <div style={{ fontSize: 13, fontWeight: 800, color: rate.color }}>{rate.value}</div>
+                    <div style={{ marginTop: 6 }}>
+                      <ReceiptDetails label="rate" text="Per-decade slope from the baseline point to the selected year." />
+                    </div>
                   </div>
                 ))}
               </div>
@@ -1472,11 +1523,14 @@ export default function ClimateApp() {
                 {scoreStory.scoreDrivers.length > 0 ? scoreStory.scoreDrivers.map((driver, index) => {
                   const helps = driver.effect >= 0;
                   return (
-                    <div key={driver.key} title={`Baseline ${driver.baselineValue.toFixed(1)}; selected year ${driver.val.toFixed(1)}. Effect sign is adjusted so positive means helping the score.`} style={{ display: "grid", gridTemplateColumns: "24px minmax(0, 1fr) auto", gap: 9, alignItems: "center" }}>
+                    <div key={driver.key} style={{ display: "grid", gridTemplateColumns: "24px minmax(0, 1fr) auto", gap: 9, alignItems: "center" }}>
                       <div style={{ width: 24, height: 24, borderRadius: 6, display: "flex", alignItems: "center", justifyContent: "center", background: helps ? `${GREEN}16` : `${RED}16`, color: helps ? GREEN : RED, fontSize: 11, fontWeight: 800 }}>{index + 1}</div>
                       <div style={{ minWidth: 0 }}>
                         <div style={{ fontSize: 12.5, fontWeight: 700, color: "rgba(255,255,255,0.92)" }}>{driver.label}</div>
                         <div style={{ fontSize: 10.5, color: MUTED }}>{driver.movement} · raw component {signedNumber(driver.delta, 1)}</div>
+                        <div style={{ marginTop: 5 }}>
+                          <ReceiptDetails label="method" text={`Baseline ${driver.baselineValue.toFixed(1)}; selected year ${driver.val.toFixed(1)}. Effect sign is adjusted so positive means helping the score.`} />
+                        </div>
                       </div>
                       <div style={{ fontSize: 12, fontWeight: 800, color: helps ? GREEN : RED }}>{signedNumber(driver.effect, 1)} pts</div>
                     </div>
@@ -1491,11 +1545,11 @@ export default function ClimateApp() {
               <h2 style={{ fontSize: 12, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.07em", color: MUTED, marginBottom: 12 }}>What this means for daily life</h2>
               <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
                 {dailyLifeSignals.map((signal) => (
-                  <div key={signal.label} title={signal.receipt} style={{ display: "grid", gridTemplateColumns: "minmax(0, 1fr) auto", gap: 12, paddingBottom: 11, borderBottom: "1px solid rgba(255,255,255,0.07)" }}>
+                  <div key={signal.label} style={{ display: "grid", gridTemplateColumns: "minmax(0, 1fr) auto", gap: 12, paddingBottom: 11, borderBottom: "1px solid rgba(255,255,255,0.07)" }}>
                     <div style={{ minWidth: 0 }}>
                       <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap", marginBottom: 4 }}>
                         <span style={{ fontSize: 12.5, fontWeight: 800, color: "rgba(255,255,255,0.92)" }}>{signal.label}</span>
-                        <span title={signal.receipt} style={{ fontSize: 9, textTransform: "uppercase", letterSpacing: "0.06em", color: MUTED, border: `1px solid ${BORDER}`, borderRadius: 999, padding: "2px 6px" }}>source</span>
+                        <ReceiptDetails label="source" text={signal.receipt} />
                       </div>
                       <p style={{ margin: 0, fontSize: 12.5, color: "rgba(255,255,255,0.78)", lineHeight: 1.58 }}>{signal.text}</p>
                     </div>

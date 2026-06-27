@@ -16,7 +16,11 @@ assert.match(source, /perDecade/, "storyline exposes per-decade trend rates, not
 assert.match(source, /Why this changed/, "result page renders the required why-this-changed section");
 assert.match(source, /What this means for daily life/, "result page renders the required daily-life interpretation section");
 assert.match(source, /not a full causal attribution model/, "driver ranking caveats the attribution boundary");
-assert.match(source, /title=\{signal\.receipt\}/, "daily-life rows expose hover receipts");
+assert.match(source, /function ReceiptDetails\(/, "result page centralizes receipt disclosures in an accessible component");
+assert.match(source, /aria-label=\{`\$\{label\}: \$\{text\}`\}/, "receipt disclosure summaries expose their full text to assistive tech");
+assert.match(source, /role="note"/, "expanded receipt disclosures are announced as notes");
+assert.match(source, /<ReceiptDetails label="source" text=\{signal\.receipt\} \/>/, "daily-life rows expose keyboard and touch accessible source receipts");
+assert.doesNotMatch(source, /title=\{signal\.receipt\}/, "daily-life source receipts must not regress to hover-only title text");
 assert.match(source, /Not yet included in the score/, "storyline discloses important missing impact domains");
 
-console.log("storyline smoke passed: explainability sections, trend rates, and receipts guarded");
+console.log("storyline smoke passed: explainability sections, trend rates, and accessible receipts guarded");
