@@ -538,14 +538,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/user/comparisons", (_req, res) => retiredFeatureGone(res));
   app.post("/api/climate/export-comparison", (_req, res) => retiredFeatureGone(res));
 
-  // POST /api/climate-projection — securely spawns Python runner with validated args
+  // POST /api/climate-projection — compatibility single-year projection route.
+  // Keep the old response envelope, but route through the configured grounded
+  // engine so CLIMATE_GRID_ENGINE=node and Python queueing apply here too.
   app.post("/api/climate-projection", async (req, res) => {
     const clientIp = ((req.ip ?? "") || (req.socket?.remoteAddress ?? "unknown")).replace(/^::ffff:/, "");
     if (!checkRateLimit(clientIp)) {
       return res.status(429).json({ message: "Too many requests. Please try again later." });
-    }
-    if (activePythonProcesses >= MAX_PYTHON_CONCURRENT) {
-      return res.status(503).json({ message: "Server busy. Please try again shortly." });
     }
 
     const bodySchema = z.object({
@@ -555,6 +554,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         lng: z.coerce.number().min(-180).max(180),
       }),
       year: z.coerce.number().int().min(MIN_FORECAST_YEAR).max(MAX_FORECAST_YEAR),
+      scenario: z.enum(CLIMATE_SCENARIOS).default(DEFAULT_CLIMATE_SCENARIO),
       apiKey: z.string().max(500).optional(),
     });
 
@@ -565,9 +565,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
 
     const { coordinates, year, apiKey: clientApiKey } = parsed.data;
+    const scenario = parsed.data.scenario;
     // grounded_model.py is offline (reads the compact CMIP6/IPCC grid in data/)
     // and needs no API key. clientApiKey is accepted but ignored for compatibility.
     void clientApiKey;
+
+    try {
+      const result = await runClimateModel(coordinates.lat, coordinates.lng, year, scenario);
+      return res.json({ success: true, data: result });
+    } catch (err) {
+      const msg = (err as Error).message;
+      if (msg === "timeout") {
+        return res.status(504).json({ message: "Climate model timed out. Please try again." });
+      }
+      console.error("climate-projection model error:", msg);
+      return res.status(500).json({ message: "Climate model failed. Please try again." });
+    }
 
     activePythonProcesses++;
     let killed = false;
@@ -595,35 +608,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Intentionally discarded — stderr may contain internal paths or secrets
     });
 
-    python.on("close", (code: number | null) => {
-      clearTimeout(killTimer);
-      releasePythonSlot();
-      if (responded) return;
-      responded = true;
-      if (killed) {
-        return res.status(504).json({ message: "Climate model timed out. Please try again." });
-      }
-      if (code !== 0) {
-        console.error("grounded_model.py exited with non-zero code:", code);
-        return res.status(500).json({ message: "Climate model failed. Please try again." });
-      }
-      try {
-        const result = JSON.parse(output);
-        res.json({ success: true, data: result });
-      } catch {
-        console.error("Failed to parse grounded_model.py output");
-        res.status(500).json({ message: "Failed to parse climate model output." });
-      }
-    });
-
-    python.on("error", (err: Error) => {
-      clearTimeout(killTimer);
-      releasePythonSlot();
-      if (responded) return;
-      responded = true;
-      console.error("Failed to start grounded_model.py:", err.message);
-      res.status(500).json({ message: "Climate model unavailable." });
-    });
   });
 
   // POST /api/climate-trajectory — runs the model at multiple checkpoint years
