@@ -1,7 +1,9 @@
 User-agent: *
 Allow: /
 Allow: /comparison
+Allow: /rankings
 Allow: /methodology
+Allow: /data-quality
 Disallow: /api/
 
 Sitemap: https://fupit.com/sitemap.xml

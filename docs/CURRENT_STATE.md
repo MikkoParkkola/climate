@@ -23,8 +23,8 @@ cache purge/version-guard proof.
   source-registry version. Old unwrapped or mismatched rows are treated as misses and purged by
   the startup guard.
 - `data/source-registry.json` is the source/license registry for served artifacts.
-- `data/rankings.curated-cities.json` is a bounded curated-city ranking artifact. It is not a
-  complete global city/country ranking.
+- `data/rankings.curated-cities.json` powers `/rankings` and `GET /api/climate/global-rankings`.
+  It is a bounded curated-city ranking artifact, not a complete global city/country ranking.
 
 ## What is real and worth keeping
 
@@ -47,6 +47,8 @@ Production-relevant surfaces include:
 - `POST /api/climate-projection`
 - `GET /api/climate/global-rankings`
 - `GET /methodology`
+- `GET /rankings`
+- `GET /data-quality`
 - `GET /`, `GET /comparison`, and static SPA assets
 
 Retired location-id legacy projection routes return 410 so they cannot serve old fabricated
@@ -63,6 +65,9 @@ Local validation on 2026-06-27:
   fields.
 - Cache isolation proves the same coordinate/year stores separate `ssp245` and `ssp585` rows.
 - `/methodology` renders from the built server.
+- `/rankings` renders from the built server and the ranking API returns bounded top-10 rows with
+  catalog caveats.
+- `/data-quality` renders from the built server.
 - Legacy projection routes return HTTP 410.
 
 ## Remaining launch blockers
@@ -72,7 +77,7 @@ Local validation on 2026-06-27:
   all incompatible rows are rejected and removed.
 - `npm run verify:live` and manual live smoke must pass against the public URL after republish.
 - Browser screenshots should be captured for desktop/mobile home, single-location, comparison,
-  methodology, and rankings once the deployed build is current.
+  rankings, methodology, and data-quality once the deployed build is current.
 
 ## Known future work
 

@@ -1,4 +1,4 @@
-import { Activity, AlertTriangle, BookOpen, Github } from "lucide-react";
+import { Activity, AlertTriangle, BarChart3, BookOpen, Github } from "lucide-react";
 
 /**
  * Grounded beta banner. Forecasts now come from the CMIP6/IPCC grid, but the
@@ -47,6 +47,13 @@ export default function PreviewBanner() {
         >
           <Activity size={14} aria-hidden />
           Data quality
+        </a>
+        <a
+          href="/rankings"
+          style={{ display: "inline-flex", alignItems: "center", gap: 5, color: "#fde68a", textDecoration: "underline", textUnderlineOffset: 3, fontWeight: 600 }}
+        >
+          <BarChart3 size={14} aria-hidden />
+          Rankings
         </a>
         <a
           href="https://github.com/MikkoParkkola/climate"

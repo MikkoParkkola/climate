@@ -264,6 +264,23 @@ const SEO_PAGES: Record<string, SeoPage> = {
   <p>Use this page with <a href="/methodology">the methodology</a> and <a href="${GITHUB_REPO_URL}">the source repository</a>. It does not prove that the public Replit deployment has already been republished or that production cache purge has been completed.</p>
 </main>`,
   },
+  rankings: {
+    path: "/rankings",
+    title: "fupit rankings — bounded climate signal lists",
+    description:
+      "Top-10 climate signal rankings from the current curated-city artifact, with catalog size, caveats, source receipts, and no safe-city claims.",
+    bodyHtml: `<main aria-label="Rankings">
+  <h1>fupit bounded climate rankings</h1>
+  <p>Compare precomputed climate signals across the documented curated-city catalog. Rankings are educational examples, not complete global, country, or climate-haven lists.</p>
+  <h2>Available dimensions</h2>
+  <ul>
+    <li>Habitability score, heat stress, drought pressure, heavy-rain flood pressure, warming anomaly, and regional sea-level rise.</li>
+    <li>Scenario and year controls using the same grounded CMIP6/IPCC artifact as the forecast API.</li>
+    <li>Catalog size, caveats, exclusions, method version, and source IDs for every list.</li>
+  </ul>
+  <p><a href="/data-quality">Inspect data-quality evidence</a>, read <a href="/methodology">the methodology</a>, or return to <a href="/">the map</a>.</p>
+</main>`,
+  },
 };
 
 function pageUrl(pagePath: string): string {
@@ -400,7 +417,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       ],
       supportedScenarios: [...CLIMATE_SCENARIOS],
       seoBase: SEO_BASE,
-      routes: ["/", "/comparison", "/methodology", "/data-quality"],
+      routes: ["/", "/comparison", "/rankings", "/methodology", "/data-quality"],
       apiRoutes: [
         "/api/health",
         "/api/source-registry",
@@ -879,7 +896,7 @@ window.__vite_plugin_react_preamble_installed__ = true
   // through to express.static, and any that are not found on disk then fall
   // through to the narrowed /{*any} fallback in server/vite.ts which also
   // returns 404 for non-SPA paths.
-  const KNOWN_SPA_ROUTES_404 = new Set(["/", "/comparison", "/methodology", "/data-quality"]);
+  const KNOWN_SPA_ROUTES_404 = new Set(["/", "/comparison", "/rankings", "/methodology", "/data-quality"]);
   const VITE_INTERNAL_PREFIXES = ["/api/", "/@", "/src/", "/node_modules/", "/__mockup", "/__vite"];
   const isDev = process.env.NODE_ENV !== "production";
   const NOT_FOUND_HTML_404 = `<!DOCTYPE html>

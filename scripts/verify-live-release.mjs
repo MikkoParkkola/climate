@@ -120,6 +120,7 @@ try {
   assert(health.cachePurge === "startup-incompatible-delete-enabled", "startup cache purge enabled");
   assert(health.legacyProjectionEndpoints === "410-gone", "health marks legacy projection endpoints gone");
   assert(Array.isArray(health.routes) && health.routes.includes("/methodology"), "health exposes /methodology route");
+  assert(Array.isArray(health.routes) && health.routes.includes("/rankings"), "health exposes /rankings route");
   assert(Array.isArray(health.routes) && health.routes.includes("/data-quality"), "health exposes /data-quality route");
   assert(Array.isArray(health.apiRoutes) && health.apiRoutes.includes("/api/climate-twin"), "health exposes /api/climate-twin route");
   assert(Array.isArray(health.apiRoutes) && health.apiRoutes.includes("/api/data-quality"), "health exposes /api/data-quality route");
@@ -135,6 +136,11 @@ try {
   assert(methodology.text.includes("WorldClim v2.1"), "/methodology mentions WorldClim v2.1");
   assert(methodology.text.includes("Fick & Hijmans 2017"), "/methodology cites Fick & Hijmans 2017");
   assert(methodology.text.includes("No fabricated") || methodology.text.includes("do not invent"), "/methodology carries no-fabricated-science copy");
+
+  const rankingsPage = await getText("/rankings");
+  assert(rankingsPage.res.status === 200, "GET /rankings returns 200");
+  assert(rankingsPage.text.includes("bounded climate rankings"), "/rankings carries bounded-ranking copy");
+  assert(rankingsPage.text.includes("not complete global"), "/rankings avoids complete-global claim");
 
   const dataQualityPage = await getText("/data-quality");
   assert(dataQualityPage.res.status === 200, "GET /data-quality returns 200");
@@ -156,6 +162,8 @@ try {
   const sitemap = await getText("/sitemap.xml");
   assert(sitemap.res.status === 200, "GET /sitemap.xml returns 200");
   assert(sitemap.text.includes("https://fupit.com/methodology"), "sitemap includes /methodology");
+  assert(sitemap.text.includes("https://fupit.com/rankings"), "sitemap includes /rankings");
+  assert(sitemap.text.includes("https://fupit.com/data-quality"), "sitemap includes /data-quality");
 
   const legacyProjection = await getText("/api/projections?locationId=1&year=2050");
   assert(legacyProjection.res.status === 410, "legacy /api/projections returns 410");
