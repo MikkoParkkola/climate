@@ -25,6 +25,10 @@ assert.match(source, /SSP3-7\.0 vs SSP1-2\.6/, "roadmap can show lower-vs-higher
 assert.match(source, /Load pathway contrast to add lower-vs-higher scenario deltas/, "roadmap discloses missing scenario deltas before contrast is loaded");
 assert.match(source, /Why this changed/, "result page renders the required why-this-changed section");
 assert.match(source, /What this means for daily life/, "result page renders the required daily-life interpretation section");
+assert.match(source, /What this does not mean/, "projection receipt renders the required caveat section");
+assert.match(source, /not a property-risk certificate/, "receipt caveat rejects property-risk interpretation");
+assert.match(source, /relocation recommendation/, "receipt caveat rejects relocation advice interpretation");
+assert.match(source, /parcel-scale exposure/, "receipt caveat discloses missing parcel-scale exposure");
 assert.match(source, /not a full causal attribution model/, "driver ranking caveats the attribution boundary");
 assert.match(source, /function ReceiptDetails\(/, "result page centralizes receipt disclosures in an accessible component");
 assert.match(source, /aria-label=\{`\$\{label\}: \$\{text\}`\}/, "receipt disclosure summaries expose their full text to assistive tech");

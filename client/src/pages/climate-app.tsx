@@ -2274,6 +2274,12 @@ export default function ClimateApp() {
           <p style={{ color: MUTED, fontSize: 9.5, lineHeight: 1.45, marginTop: 8, marginBottom: 12 }}>
             Raw JSON export includes the selected-year projection, the full annual trajectory, scenario, model version, uncertainty fields, and source trail returned by the grounded API.
           </p>
+          <div style={{ padding: "10px 12px", borderRadius: 8, border: `1px solid ${AMBER}38`, background: `${AMBER}10`, marginBottom: 12 }}>
+            <div style={{ fontSize: 10, color: AMBER, textTransform: "uppercase", letterSpacing: "0.06em", fontWeight: 800, marginBottom: 5 }}>What this does not mean</div>
+            <p style={{ margin: 0, fontSize: 11.5, lineHeight: 1.55, color: "rgba(255,255,255,0.76)" }}>
+              This is educational and research context, not a property-risk certificate, safety forecast, relocation recommendation, insurance model, medical advice, engineering assessment, or guarantee that this exact point will be livable or unlivable. Local adaptation, governance, health systems, wealth, migration, conflict, infrastructure, elevation, and parcel-scale exposure are outside this score.
+            </p>
+          </div>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(220px,1fr))", gap: 8 }}>
             {d!.sourceTrail.slice(0, 4).map((entry) => (
               <div key={entry.label} style={{ padding: "9px 10px", borderRadius: 8, background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.055)" }}>
