@@ -672,11 +672,11 @@ export default function ClimateApp() {
   // ── Landing ────────────────────────────────────────────────────────────────
   if (!trajectory) {
     return (
-      <div style={{ backgroundColor: BG, color: "white", minHeight: "100vh", fontFamily: "Inter, system-ui, sans-serif", display: "flex", flexDirection: "column" }}>
+      <div className="fupit-landing">
         <header style={{ background: "rgba(10,13,20,0.90)", borderBottom: `1px solid ${BORDER}`, backdropFilter: "blur(16px)" }}>
           <div style={{ maxWidth: 1200, margin: "0 auto", padding: "0 20px", height: 56, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
             <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-              <div style={{ width: 30, height: 30, borderRadius: 7, background: "linear-gradient(135deg,hsl(192,91%,36%),hsl(215,91%,50%))", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, fontWeight: 800, color: "white" }}>f</div>
+              <img src="/favicon.svg" alt="" width={30} height={30} style={{ width: 30, height: 30, borderRadius: 7, display: "block" }} />
               <span style={{ fontWeight: 700, fontSize: 17 }}>fupit</span>
             </div>
             <button onClick={() => (window.location.href = "/comparison")}
@@ -687,15 +687,15 @@ export default function ClimateApp() {
           </div>
         </header>
 
-        <main style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "40px 20px" }}>
-          <div style={{ maxWidth: 600, width: "100%", textAlign: "center" }}>
+        <main className="fupit-landing-main">
+          <div className="fupit-landing-content">
             <div style={{ display: "inline-block", padding: "4px 12px", borderRadius: 20, border: `1px solid ${BORDER}`, background: CARD, fontSize: 11, color: ACCENT, marginBottom: 20, letterSpacing: "0.05em" }}>
               CMIP6 · IPCC AR6 · NASA Sea Level
             </div>
-            <h1 style={{ fontSize: 42, fontWeight: 800, lineHeight: 1.1, marginBottom: 14 }}>
+            <h1 className="fupit-landing-title">
               Everywhere's getting worse.<br />Just not equally.
             </h1>
-            <p style={{ fontSize: 15, color: MUTED, marginBottom: 32, lineHeight: 1.6 }}>
+            <p className="fupit-landing-copy" style={{ fontSize: 15, color: MUTED, marginBottom: 32, lineHeight: 1.6 }}>
               Watch any place on Earth heat up, year by year from now to 2100 — and compare them side by side to find where stays livable long enough to matter. Where do you want to grow old? Where will your kids?
             </p>
 
@@ -795,7 +795,7 @@ export default function ClimateApp() {
       <header style={{ background: "rgba(10,13,20,0.90)", borderBottom: `1px solid ${BORDER}`, backdropFilter: "blur(16px)", position: "sticky", top: 0, zIndex: 50 }}>
         <div style={{ maxWidth: 1200, margin: "0 auto", padding: "0 20px", height: 48, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            <div style={{ width: 28, height: 28, borderRadius: 6, background: "linear-gradient(135deg,hsl(192,91%,36%),hsl(215,91%,50%))", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 800, color: "white" }}>f</div>
+            <img src="/favicon.svg" alt="" width={28} height={28} style={{ width: 28, height: 28, borderRadius: 6, display: "block" }} />
             <span style={{ fontWeight: 700, fontSize: 16 }}>fupit</span>
             <div style={{ width: 1, height: 14, background: BORDER }} />
             <span style={{ fontSize: 13 }}>{selectedLocation?.name}</span>
