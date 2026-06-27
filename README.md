@@ -22,9 +22,11 @@ npm run dev
 npm run build
 npm run start
 npm run check
+npm run verify:live
 ```
 
 `DATABASE_URL` is required for the production server path because the API reads and writes `climate_model_cache`.
+`npm run verify:live` checks the public deployment by default; set `FUPIT_BASE_URL=http://localhost:5000` for a local built server, `FUPIT_SKIP_TRAJECTORY=1` when that local server has no Postgres, or `FUPIT_REQUIRE_FRESH=1` with a new land coordinate to prove a post-purge forecast was generated instead of read from cache.
 
 ## Key docs
 

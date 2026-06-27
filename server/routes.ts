@@ -305,8 +305,30 @@ function makeSeoHandler(page: SeoPage) {
   };
 }
 
+function readBuildInfo() {
+  try {
+    const file = path.resolve(import.meta.dirname, "build-info.json");
+    return JSON.parse(fs.readFileSync(file, "utf-8")) as {
+      commit?: string | null;
+      shortCommit?: string | null;
+      branch?: string | null;
+      builtAt?: string | null;
+    };
+  } catch {
+    return null;
+  }
+}
+
 export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/health", (_req, res) => {
+    const buildInfo = readBuildInfo();
+    const deploymentCommit =
+      process.env.REPLIT_GIT_SHA ||
+      process.env.GIT_COMMIT_SHA ||
+      process.env.COMMIT_SHA ||
+      buildInfo?.commit ||
+      null;
+
     res.json({
       ok: true,
       app: "fupit",
@@ -318,11 +340,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       seoBase: SEO_BASE,
       routes: ["/", "/comparison", "/methodology"],
       deployment: {
-        commit:
-          process.env.REPLIT_GIT_SHA ||
-          process.env.GIT_COMMIT_SHA ||
-          process.env.COMMIT_SHA ||
-          null,
+        commit: deploymentCommit,
+        build: buildInfo,
         id: process.env.REPLIT_DEPLOYMENT_ID || null,
       },
     });
