@@ -8,7 +8,7 @@ deeper context is in `docs/PLAN.md` ("Phase 4 handoff") and `docs/architecture/`
 
 Supersedes the older "not merged" and "cleanup pending" notes below where they conflict.
 
-- `main` includes the grounded engine work through `3636727`.
+- `main` includes the grounded engine/cache/SEO work through `e25bd8d`.
 - Cleanup is done: `cbottle_runner.py` and `conflict_area.txt` are deleted, `threat_model.md`
   points at `server/routes.ts`, and the root `README.md` exists.
 - New cache guard added after `7dbc5ed`: `climate_model_cache` payloads are wrapped with
@@ -21,9 +21,19 @@ Supersedes the older "not merged" and "cleanup pending" notes below where they c
   grounded-grid version. Manual `TRUNCATE climate_model_cache;` is still acceptable and
   cleaner during Replit deploy, but the next republished app should also self-purge
   incompatible legacy rows before serving.
-- Last public checks still showed `GET /methodology` returning 404 on `fupit.com`, and
-  `GET /api/projections?locationId=1&year=2050` returning HTTP 200 with old fabricated
-  legacy fields. Autoscale had not been republished with the route/cache fixes yet.
+- `e25bd8d` fixes public crawler metadata in repo: canonical/OG/schema URLs now use
+  `https://fupit.com`, `/methodology` has first-byte semantic HTML, and
+  `robots.txt`/`sitemap.xml`/`llms.txt` include `/methodology`.
+- Local production validation after `e25bd8d`: `npm run check`, `npm run build`, and
+  `GET /methodology` on the built server returned 200 with
+  `https://fupit.com/methodology` canonical plus visible methodology content.
+- Last public checks after pushing `e25bd8d` still showed stale Replit code:
+  `GET /methodology` returned 404, `robots.txt`/`sitemap.xml` still used
+  `climate-projections.replit.app`, and
+  `GET /api/projections?locationId=1&year=2050` returned HTTP 200 with old fabricated
+  legacy fields. The Replit connector resolved app `Climate`
+  (`ca8b5a3c-22fd-42ca-93bd-08c367a8c1dc`) but its Agent paused without deploying or
+  giving DB access. Autoscale still needs a manual republish and cache purge/verification.
 
 ## ✅ UPDATE (end of session) — data steps DONE, only deploy seam left
 
