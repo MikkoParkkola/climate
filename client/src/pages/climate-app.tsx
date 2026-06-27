@@ -152,6 +152,19 @@ interface ClimateAnalogMatch {
   floodDelta: number;
 }
 
+interface ScenarioContrastRow {
+  id: ScenarioId;
+  label: string;
+  role: string;
+  caption: string;
+  tempChange: number;
+  ipccDelta: number;
+  heatDays: number;
+  precipChange: number;
+  score: number;
+  category: string;
+}
+
 // ── Math helpers ─────────────────────────────────────────────────────────────
 function lerp(a: number, b: number, t: number) {
   return a + (b - a) * Math.max(0, Math.min(1, t));
@@ -358,6 +371,30 @@ function scenarioInfo(id?: string): { id: ScenarioId; label: string; caption: st
   return SCENARIOS.find((s) => s.id === id) ?? SCENARIOS.find((s) => s.id === DEFAULT_SCENARIO)!;
 }
 
+function scenarioRole(id: ScenarioId): string {
+  if (id === "ssp126") return "Lower-warming comparison";
+  if (id === "ssp245") return "Current-policy-adjacent reference";
+  if (id === "ssp370") return "Higher-warming stress case";
+  return "Very-high, lower-likelihood stress test";
+}
+
+function contrastSnapshot(points: ProjectionPoint[], year: number, scenarioId: ScenarioId): ScenarioContrastRow {
+  const info = scenarioInfo(scenarioId);
+  const score = Math.max(0, Math.min(100, Math.round(interpScalar(points, year, (p) => p.habitability.score))));
+  return {
+    id: scenarioId,
+    label: info.label,
+    role: scenarioRole(scenarioId),
+    caption: info.caption,
+    tempChange: interpScalar(points, year, (p) => p.temperature.anomaly),
+    ipccDelta: interpScalar(points, year, (p) => p.temperature.ipcc_calibrated?.anomaly ?? p.temperature.anomaly),
+    heatDays: Math.max(0, Math.round(interpScalar(points, year, (p) => p.extremes.heat_stress_days))),
+    precipChange: interpScalar(points, year, (p) => p.precipitation.anomaly_percent),
+    score,
+    category: categoryFor(score),
+  };
+}
+
 function jsonFileSlug(value: string): string {
   return value.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 72) || "location";
 }
@@ -562,6 +599,9 @@ export default function ClimateApp() {
   const [rawJsonCopied, setRawJsonCopied] = useState(false);
   const [analogCatalog, setAnalogCatalog] = useState<AnalogCatalog | null>(null);
   const [analogError, setAnalogError] = useState<string | null>(null);
+  const [scenarioContrast, setScenarioContrast] = useState<Partial<Record<ScenarioId, ProjectionPoint[]>> | null>(null);
+  const [scenarioContrastLoading, setScenarioContrastLoading] = useState(false);
+  const [scenarioContrastError, setScenarioContrastError] = useState<string | null>(null);
   const resultsRef = useRef<HTMLDivElement>(null);
   const deepLinkRunRef = useRef(false);
 
@@ -661,34 +701,55 @@ export default function ClimateApp() {
     setShowSuggestions(false);
   };
 
+  const fetchTrajectory = async (targetLocation: LocationOption, scenarioOverride: ScenarioId): Promise<ProjectionPoint[]> => {
+    const response = await fetch("/api/climate-trajectory", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ coordinates: { lat: targetLocation.lat, lng: targetLocation.lng }, years: CHECKPOINTS, scenario: scenarioOverride }),
+    });
+    if (!response.ok) {
+      let detail = response.statusText;
+      try { const e = await response.json(); detail = e.message || detail; } catch { /* ignore */ }
+      throw new Error(detail);
+    }
+    const data = await response.json();
+    if (data.success && data.data?.points?.length) {
+      return [...data.data.points].sort((a: ProjectionPoint, b: ProjectionPoint) => a.year - b.year);
+    }
+    throw new Error("Invalid response from climate model.");
+  };
+
   const generate = async (locationOverride?: LocationOption, scenarioOverride: ScenarioId = scenario) => {
     const targetLocation = locationOverride ?? selectedLocation;
     if (!targetLocation) { setError("Please select a location from the suggestions."); return; }
     setError(null);
     setIsLoading(true);
     setTrajectory(null);
+    setScenarioContrast(null);
+    setScenarioContrastError(null);
     try {
-      const response = await fetch("/api/climate-trajectory", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ coordinates: { lat: targetLocation.lat, lng: targetLocation.lng }, years: CHECKPOINTS, scenario: scenarioOverride }),
-      });
-      if (!response.ok) {
-        let detail = response.statusText;
-        try { const e = await response.json(); detail = e.message || detail; } catch { /* ignore */ }
-        throw new Error(detail);
-      }
-      const data = await response.json();
-      if (data.success && data.data?.points?.length) {
-        const points: ProjectionPoint[] = [...data.data.points].sort((a: ProjectionPoint, b: ProjectionPoint) => a.year - b.year);
-        setTrajectory(points);
-      } else {
-        throw new Error("Invalid response from climate model.");
-      }
+      setTrajectory(await fetchTrajectory(targetLocation, scenarioOverride));
     } catch (err) {
       setError(err instanceof Error ? err.message : "Network error. Please check your connection.");
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const loadScenarioContrast = async () => {
+    if (!selectedLocation || !trajectory || scenarioContrastLoading) return;
+    setScenarioContrastLoading(true);
+    setScenarioContrastError(null);
+    try {
+      const next: Partial<Record<ScenarioId, ProjectionPoint[]>> = { [scenario]: trajectory };
+      for (const row of SCENARIOS) {
+        if (!next[row.id]) next[row.id] = await fetchTrajectory(selectedLocation, row.id);
+      }
+      setScenarioContrast(next);
+    } catch (err) {
+      setScenarioContrastError(err instanceof Error ? err.message : "Scenario contrast could not be loaded.");
+    } finally {
+      setScenarioContrastLoading(false);
     }
   };
 
@@ -713,6 +774,8 @@ export default function ClimateApp() {
     setError(null);
     setShareCopied(false);
     setRawJsonCopied(false);
+    setScenarioContrast(null);
+    setScenarioContrastError(null);
     window.history.replaceState(null, "", "/");
   };
 
@@ -838,6 +901,35 @@ export default function ClimateApp() {
     if (!analogCatalog || !selectedLocation || !d) return null;
     return findClimateAnalog(analogCatalog, selectedLocation, displayYear, d);
   }, [analogCatalog, selectedLocation, d, displayYear]);
+
+  const scenarioContrastRows = useMemo(() => {
+    if (!scenarioContrast) return [];
+    return SCENARIOS
+      .map((row) => {
+        const points = scenarioContrast[row.id];
+        return points ? contrastSnapshot(points, displayYear, row.id) : null;
+      })
+      .filter((row): row is ScenarioContrastRow => row !== null);
+  }, [scenarioContrast, displayYear]);
+
+  const scenarioContrastTakeaway = useMemo(() => {
+    const low = scenarioContrastRows.find((row) => row.id === "ssp126");
+    const high = scenarioContrastRows.find((row) => row.id === "ssp370");
+    if (!low || !high) return null;
+    const tempGap = high.tempChange - low.tempChange;
+    const heatGap = high.heatDays - low.heatDays;
+    const scoreGap = high.score - low.score;
+    const scorePhrase = scoreGap < 0
+      ? `${Math.abs(scoreGap)} points lower`
+      : scoreGap > 0
+        ? `${scoreGap} points higher`
+        : "about the same";
+    return {
+      low,
+      high,
+      text: `By ${displayYear}, raw warming differs by ${signedNumber(tempGap, 1)}°C between ${low.label} and ${high.label} at this location, with ${signedNumber(heatGap, 0)} heat-stress days per year and habitability ${scorePhrase}.`,
+    };
+  }, [scenarioContrastRows, displayYear]);
 
   const scoreStory = useMemo(() => {
     if (!trajectory || !d) return null;
@@ -1281,6 +1373,73 @@ export default function ClimateApp() {
                 ? <> All <strong style={{ color: RED }}>{crossedTips}</strong> modeled tipping points have already been crossed by this point.</>
               : <> No modeled tipping points are crossed at this horizon.</>}
           </p>
+        </div>
+
+        <div style={{ ...card, padding: 18, marginBottom: 14, borderLeft: `3px solid ${BLUE}` }}>
+          <div style={{ display: "flex", justifyContent: "space-between", gap: 14, alignItems: "flex-start", flexWrap: "wrap", marginBottom: 12 }}>
+            <div style={{ flex: "1 1 420px" }}>
+              <h2 style={{ fontSize: 12, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.07em", color: MUTED }}>Scenario contrast · same location</h2>
+              <p style={{ fontSize: 12.5, color: "rgba(255,255,255,0.68)", lineHeight: 1.6, margin: "6px 0 0" }}>
+                Compare lower-warming, current-policy-adjacent, and higher-warming pathways for {placeName} without changing the selected place. These are pathway references, not predictions.
+              </p>
+            </div>
+            <button
+              onClick={loadScenarioContrast}
+              disabled={scenarioContrastLoading || isLoading}
+              title="Fetch the same annual checkpoints for each supported SSP scenario"
+              style={{ display: "inline-flex", alignItems: "center", gap: 7, padding: "8px 12px", borderRadius: 7, border: `1px solid ${BLUE}55`, background: scenarioContrastRows.length > 0 ? `${BLUE}12` : `${BLUE}22`, color: "white", fontSize: 12, fontWeight: 800, cursor: scenarioContrastLoading || isLoading ? "wait" : "pointer", opacity: scenarioContrastLoading || isLoading ? 0.72 : 1 }}
+            >
+              {scenarioContrastLoading ? <Loader2 style={{ width: 13, height: 13, animation: "spin 1s linear infinite" }} /> : <GitCompare style={{ width: 13, height: 13 }} />}
+              {scenarioContrastLoading ? "Loading pathways" : scenarioContrastRows.length > 0 ? "Refresh pathways" : "Load pathway contrast"}
+            </button>
+          </div>
+
+          {scenarioContrastError && (
+            <div style={{ padding: "9px 11px", borderRadius: 8, border: `1px solid ${RED}35`, background: `${RED}12`, color: "#fca5a5", fontSize: 12, marginBottom: 10 }}>
+              {scenarioContrastError}
+            </div>
+          )}
+
+          {scenarioContrastTakeaway ? (
+            <p style={{ margin: "0 0 12px", fontSize: 13.5, lineHeight: 1.65, color: "rgba(255,255,255,0.88)" }}>
+              <strong style={{ color: BLUE }}>Local pathway gap:</strong>{" "}
+              {scenarioContrastTakeaway.text} This is the concrete local difference between lower and higher warming, not a claim that one pathway is guaranteed.
+            </p>
+          ) : (
+            <p style={{ margin: 0, fontSize: 12.5, lineHeight: 1.6, color: MUTED }}>
+              Load the contrast to see how the same year changes under each supported SSP. The current forecast stays on {shownScenario.label}; the comparison only adds context.
+            </p>
+          )}
+
+          {scenarioContrastRows.length > 0 && (
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(205px, 1fr))", gap: 10 }}>
+              {scenarioContrastRows.map((row) => {
+                const rowScoreColor = scoreColor(row.score);
+                const active = row.id === shownScenario.id;
+                return (
+                  <div key={row.id} title="Same location and selected year; values interpolate from the annual trajectory returned by /api/climate-trajectory." style={{ border: `1px solid ${active ? `${ACCENT}66` : BORDER}`, background: active ? `${ACCENT}10` : "rgba(255,255,255,0.035)", borderRadius: 8, padding: 11 }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", gap: 8, alignItems: "flex-start", marginBottom: 8 }}>
+                      <div>
+                        <div style={{ fontSize: 13, fontWeight: 800, color: "white" }}>{row.label}</div>
+                        <div style={{ fontSize: 10, color: active ? ACCENT : MUTED, marginTop: 2 }}>{row.role}</div>
+                      </div>
+                      {active && <span style={{ fontSize: 9, color: ACCENT, border: `1px solid ${ACCENT}44`, borderRadius: 999, padding: "2px 6px", textTransform: "uppercase", letterSpacing: "0.05em" }}>shown</span>}
+                    </div>
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 7 }}>
+                      <div><div style={{ fontSize: 9, color: MUTED }}>Raw warming</div><div style={{ fontSize: 13, fontWeight: 800, color: RED }}>{signedNumber(row.tempChange, 1)}°C</div></div>
+                      <div><div style={{ fontSize: 9, color: MUTED }}>IPCC assessed</div><div style={{ fontSize: 13, fontWeight: 800, color: AMBER }}>{signedNumber(row.ipccDelta, 1)}°C</div></div>
+                      <div><div style={{ fontSize: 9, color: MUTED }}>Heat stress</div><div style={{ fontSize: 13, fontWeight: 800, color: ORANGE }}>{row.heatDays}/yr</div></div>
+                      <div><div style={{ fontSize: 9, color: MUTED }}>Rainfall</div><div style={{ fontSize: 13, fontWeight: 800, color: BLUE }}>{signedNumber(row.precipChange, 1)}%</div></div>
+                    </div>
+                    <div style={{ marginTop: 9, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
+                      <span style={{ fontSize: 10, color: MUTED }}>{row.category}</span>
+                      <span style={{ fontSize: 15, fontWeight: 900, color: rowScoreColor }}>{row.score}/100</span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
 
         {scoreStory && (
