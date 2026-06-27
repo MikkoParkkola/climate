@@ -190,6 +190,18 @@ interface ShareStory {
   clipboardText: string;
 }
 
+type LearningPromptAction = "pathways" | "twin" | "comparison";
+
+interface LearningPrompt {
+  eyebrow: string;
+  question: string;
+  detail: string;
+  action: LearningPromptAction;
+  actionLabel: string;
+  receipt: string;
+  disabled?: boolean;
+}
+
 // ── Math helpers ─────────────────────────────────────────────────────────────
 function lerp(a: number, b: number, t: number) {
   return a + (b - a) * Math.max(0, Math.min(1, t));
@@ -1370,6 +1382,54 @@ export default function ClimateApp() {
     };
   }, [selectedLocation, d, scoreStory, shareUrl, climateAnalog, analogCatalog, shownScenario.label, displayYear]);
 
+  const learningPrompts = useMemo<LearningPrompt[]>(() => {
+    if (!selectedLocation || !d || !scoreStory) return [];
+    const shortPlace = selectedLocation.city || selectedLocation.name.split(",")[0] || selectedLocation.name;
+    const topDriver = scoreStory.scoreDrivers[0];
+    return [
+      {
+        eyebrow: "Pathway question",
+        question: `How different is ${shortPlace} under lower vs higher warming by ${displayYear}?`,
+        detail: scenarioContrastTakeaway
+          ? scenarioContrastTakeaway.text
+          : `Load the SSP pathways to compare ${shortPlace}'s local warming, heat-stress days, rainfall, and score in the same selected year.`,
+        action: "pathways",
+        actionLabel: scenarioContrastRows.length > 0 ? "Refresh pathways" : "Load pathways",
+        receipt: "Uses the same coordinates and /api/climate-trajectory annual checkpoints across the supported SSP scenarios.",
+      },
+      {
+        eyebrow: "Twin question",
+        question: climateAnalog
+          ? `Where does ${shortPlace}'s ${displayYear} climate stop resembling ${climateAnalog.candidate.name}?`
+          : `Which current-day indexed city is closest to ${shortPlace}'s ${displayYear} climate?`,
+        detail: climateAnalog
+          ? `Start with the gaps: ${signedNumber(climateAnalog.annualTempDelta, 1)}°C average temperature, ${signedNumber(climateAnalog.annualPrecipDelta, 0)} mm rainfall, and ${signedNumber(climateAnalog.heatDaysDelta, 0)} heat-stress days versus the catalog city.`
+          : `The bounded climate-twin catalog is ${analogCatalog ? "loaded; nearest match is still resolving" : "loading"}.`,
+        action: "twin",
+        actionLabel: climateAnalog ? "Open twin city" : "Twin loading",
+        disabled: !climateAnalog,
+        receipt: "Uses the bounded climate-twin catalog generated from grounded_model.py; it is not a global analog search.",
+      },
+      {
+        eyebrow: "Side-by-side question",
+        question: `Would ${shortPlace}'s story look better or worse than another place you care about?`,
+        detail: topDriver
+          ? `Compare the trend driver "${topDriver.label}" against another location, then check whether heat, rainfall, or habitability is actually driving the difference.`
+          : "Compare another location against this same year and scenario to see whether the main signal changes place by place.",
+        action: "comparison",
+        actionLabel: "Open comparison",
+        receipt: "The comparison view uses the same grounded forecast endpoint and scenario selector; it is for learning, not ranking safe havens.",
+      },
+    ];
+  }, [selectedLocation, d, scoreStory, displayYear, scenarioContrastTakeaway, scenarioContrastRows.length, climateAnalog, analogCatalog]);
+
+  const openClimateTwinCity = () => {
+    if (!climateAnalog) return;
+    const c = climateAnalog.candidate;
+    const loc: LocationOption = { name: `${c.name}, ${c.country}`, city: c.name, country: c.country, lat: c.lat, lng: c.lng };
+    window.location.href = forecastUrl(loc, analogCatalog?.catalogYear ?? CURRENT_FORECAST_YEAR, analogCatalog?.scenario ?? DEFAULT_SCENARIO, true);
+  };
+
   useEffect(() => {
     if (!trajectory || !selectedLocation) return;
     window.history.replaceState(null, "", forecastUrl(selectedLocation, displayYear, scenario, true));
@@ -1959,11 +2019,7 @@ export default function ClimateApp() {
                   </p>
                 </div>
                 <button
-                  onClick={() => {
-                    const c = climateAnalog.candidate;
-                    const loc: LocationOption = { name: `${c.name}, ${c.country}`, city: c.name, country: c.country, lat: c.lat, lng: c.lng };
-                    window.location.href = forecastUrl(loc, analogCatalog?.catalogYear ?? CURRENT_FORECAST_YEAR, analogCatalog?.scenario ?? DEFAULT_SCENARIO, true);
-                  }}
+                  onClick={openClimateTwinCity}
                   style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "8px 12px", borderRadius: 7, border: `1px solid ${PURPLE}55`, background: `${PURPLE}16`, color: "white", fontSize: 12, fontWeight: 700, cursor: "pointer" }}
                 >
                   <ExternalLink style={{ width: 13, height: 13 }} />
@@ -2033,6 +2089,50 @@ export default function ClimateApp() {
                   <div style={{ fontSize: 12.5, lineHeight: 1.55, color: "rgba(255,255,255,0.82)" }}>{item.text}</div>
                 </div>
               ))}
+            </div>
+          </div>
+        )}
+
+        {learningPrompts.length > 0 && (
+          <div style={{ ...card, padding: 18, marginBottom: 14, borderLeft: `3px solid ${BLUE}` }}>
+            <div style={{ display: "flex", justifyContent: "space-between", gap: 12, alignItems: "flex-start", flexWrap: "wrap", marginBottom: 12 }}>
+              <div style={{ flex: "1 1 440px" }}>
+                <h2 style={{ fontSize: 12, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.07em", color: MUTED }}>Questions to test next</h2>
+                <p style={{ margin: "6px 0 0", fontSize: 12.5, color: "rgba(255,255,255,0.68)", lineHeight: 1.6 }}>
+                  A useful forecast should change what you compare. These prompts reuse the same grounded fields and routes, so the next click stays inspectable.
+                </p>
+              </div>
+              <ReceiptDetails label="scope" text="Prompts are generated from the visible forecast, scenario contrast, and bounded climate-twin catalog. They are learning prompts, not advice to move, invest, insure, or rank safe havens." />
+            </div>
+
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(230px, 1fr))", gap: 10 }}>
+              {learningPrompts.map((prompt) => {
+                const busy = prompt.action === "pathways" && scenarioContrastLoading;
+                const disabled = prompt.disabled || busy;
+                const accent = prompt.action === "twin" ? PURPLE : prompt.action === "comparison" ? ACCENT : BLUE;
+                return (
+                  <div key={prompt.eyebrow} style={{ border: `1px solid ${BORDER}`, borderRadius: 8, padding: 12, background: "rgba(255,255,255,0.032)" }}>
+                    <div style={{ fontSize: 9, color: accent, textTransform: "uppercase", letterSpacing: "0.07em", fontWeight: 850, marginBottom: 7 }}>{prompt.eyebrow}</div>
+                    <div style={{ fontSize: 14, lineHeight: 1.45, fontWeight: 800, color: "white", marginBottom: 7 }}>{prompt.question}</div>
+                    <p style={{ margin: 0, fontSize: 12, lineHeight: 1.55, color: "rgba(255,255,255,0.72)" }}>{prompt.detail}</p>
+                    <div style={{ marginTop: 10, display: "flex", gap: 8, alignItems: "center", justifyContent: "space-between", flexWrap: "wrap" }}>
+                      <ReceiptDetails label="receipt" text={prompt.receipt} />
+                      <button
+                        disabled={disabled}
+                        onClick={() => {
+                          if (prompt.action === "pathways") { void loadScenarioContrast(); return; }
+                          if (prompt.action === "twin") { openClimateTwinCity(); return; }
+                          window.location.href = "/comparison";
+                        }}
+                        style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "7px 10px", borderRadius: 7, border: `1px solid ${accent}55`, background: `${accent}16`, color: "white", fontSize: 11.5, fontWeight: 800, cursor: disabled ? "not-allowed" : "pointer", opacity: disabled ? 0.55 : 1 }}
+                      >
+                        {busy ? <Loader2 style={{ width: 12, height: 12, animation: "spin 1s linear infinite" }} /> : prompt.action === "comparison" ? <GitCompare style={{ width: 12, height: 12 }} /> : <ExternalLink style={{ width: 12, height: 12 }} />}
+                        {busy ? "Loading" : prompt.actionLabel}
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           </div>
         )}

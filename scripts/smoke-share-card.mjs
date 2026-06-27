@@ -20,6 +20,14 @@ assert.match(source, /image\/png/, "share image renderer emits a PNG social imag
 assert.match(source, /Download image/, "share card exposes the generated image control");
 assert.match(source, /TOP LOCAL DRIVER/, "social image includes the key local trend driver");
 assert.match(source, /CLIMATE TWIN/, "social image includes the climate-twin analog");
+assert.match(source, /const learningPrompts = useMemo<LearningPrompt\[\]>/, "result page derives grounded comparison prompts from the visible forecast");
+assert.match(source, /Questions to test next/, "result page renders comparison prompts for follow-up learning");
+assert.match(source, /Pathway question/, "learning prompts include a scenario-pathway comparison");
+assert.match(source, /Twin question/, "learning prompts include a climate-twin comparison");
+assert.match(source, /Side-by-side question/, "learning prompts include a location comparison");
+assert.match(source, /void loadScenarioContrast\(\)/, "pathway prompt reuses the existing scenario contrast flow");
+assert.match(source, /window\.location\.href = "\/comparison"/, "side-by-side prompt reuses the comparison view");
+assert.match(source, /not advice to move, invest, insure, or rank safe havens/, "learning prompts include a non-advisory scope caveat");
 assert.match(source, /bounded climate-twin catalog/, "share card discloses bounded analog catalog coverage");
 assert.match(source, /no unregistered enrichments/, "share card forbids unregistered enrichment claims");
 assert.match(source, /no safe-city claim/, "share card forbids safe-city claims");
