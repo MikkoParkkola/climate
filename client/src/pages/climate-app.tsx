@@ -725,6 +725,7 @@ export default function ClimateApp() {
   const [exporting, setExporting] = useState(false);
   const [playing, setPlaying] = useState(false);
   const [shareCopied, setShareCopied] = useState(false);
+  const [shareStoryCopied, setShareStoryCopied] = useState(false);
   const [rawJsonCopied, setRawJsonCopied] = useState(false);
   const [analogCatalog, setAnalogCatalog] = useState<AnalogCatalog | null>(null);
   const [analogError, setAnalogError] = useState<string | null>(null);
@@ -1181,29 +1182,68 @@ export default function ClimateApp() {
   const selectedScenario = scenarioInfo(scenario);
   const shownScenario = scenarioInfo(d?.scenario ?? scenario);
   const shareUrl = useMemo(() => selectedLocation ? forecastUrl(selectedLocation, displayYear, scenario, true) : "", [selectedLocation, displayYear, scenario]);
+  const shareStory = useMemo(() => {
+    if (!selectedLocation || !d || !scoreStory || !shareUrl) return null;
+    const shortPlace = selectedLocation.city || selectedLocation.name.split(",")[0] || selectedLocation.name;
+    const topDriver = scoreStory.scoreDrivers[0];
+    const headline = climateAnalog
+      ? `${shortPlace} in ${displayYear} looks most like ${climateAnalog.candidate.name}, ${climateAnalog.candidate.country} today`
+      : `${shortPlace} in ${displayYear}: grounded fupit climate story`;
+    const metricLine = `${shownScenario.label}: raw warming ${signedNumber(d.tempChange, 1)}°C from ${BASELINE_YEAR}, ${d.heatDays} heat-stress days/yr, habitability ${d.score}/100 (${d.category}).`;
+    const driverLine = topDriver
+      ? `Top visible score driver: ${topDriver.label} ${topDriver.movement}, ${signedNumber(topDriver.effect, 1)} score points.`
+      : "Top visible score driver: no single score component moved enough to dominate this horizon.";
+    const analogLine = climateAnalog
+      ? `Current-day climate twin: ${climateAnalog.candidate.name}, ${climateAnalog.candidate.country}; distance ${climateAnalog.distance.toFixed(2)} standardized climate units across ${climateAnalog.comparedCount} bounded-catalog cities.`
+      : `Current-day climate twin: bounded climate-twin catalog ${analogCatalog ? `${analogCatalog.candidateCount} cities loaded; match still resolving` : "loading"}.`;
+    const caveat = "Educational projection only. The share text uses already visible grounded fields and the bounded climate-twin catalog, with no unregistered enrichments and no safe-city claim.";
+    const text = [metricLine, driverLine, analogLine, caveat].join("\n");
+    return {
+      headline,
+      metricLine,
+      driverLine,
+      analogLine,
+      caveat,
+      text,
+      clipboardText: `${headline}\n${text}\n${shareUrl}`,
+    };
+  }, [selectedLocation, d, scoreStory, shareUrl, climateAnalog, analogCatalog, shownScenario.label, displayYear]);
 
   useEffect(() => {
     if (!trajectory || !selectedLocation) return;
     window.history.replaceState(null, "", forecastUrl(selectedLocation, displayYear, scenario, true));
   }, [trajectory, selectedLocation, displayYear, scenario]);
 
+  const copyShareStory = async () => {
+    if (!shareStory) return;
+    await copyToClipboard(shareStory.clipboardText);
+    setShareStoryCopied(true);
+    window.setTimeout(() => setShareStoryCopied(false), 1800);
+  };
+
   const shareForecast = async () => {
     if (!selectedLocation || !shareUrl) return;
-    const title = `${selectedLocation.name} climate forecast to ${displayYear}`;
-    const text = d
-      ? `${selectedLocation.name} in ${displayYear} under ${shownScenario.label}: ${d.avgTemp.toFixed(1)}°C average, ${d.score}/100 habitability, grounded by fupit.`
-      : `Explore ${selectedLocation.name}'s grounded climate forecast to 2100 on fupit.`;
+    const title = shareStory?.headline ?? `${selectedLocation.name} climate forecast to ${displayYear}`;
+    const text = shareStory?.text ?? (
+      d
+        ? `${selectedLocation.name} in ${displayYear} under ${shownScenario.label}: ${d.avgTemp.toFixed(1)}°C average, ${d.score}/100 habitability, grounded by fupit.`
+        : `Explore ${selectedLocation.name}'s grounded climate forecast to 2100 on fupit.`
+    );
     try {
       if (navigator.share) {
         await navigator.share({ title, text, url: shareUrl });
       } else {
-        await copyToClipboard(shareUrl);
+        await copyToClipboard(shareStory?.clipboardText ?? shareUrl);
+        if (shareStory) setShareStoryCopied(true);
         setShareCopied(true);
+        if (shareStory) window.setTimeout(() => setShareStoryCopied(false), 1800);
         window.setTimeout(() => setShareCopied(false), 1800);
       }
     } catch {
-      await copyToClipboard(shareUrl);
+      await copyToClipboard(shareStory?.clipboardText ?? shareUrl);
+      if (shareStory) setShareStoryCopied(true);
       setShareCopied(true);
+      if (shareStory) window.setTimeout(() => setShareStoryCopied(false), 1800);
       window.setTimeout(() => setShareCopied(false), 1800);
     }
   };
@@ -1774,6 +1814,46 @@ export default function ClimateApp() {
             </p>
           )}
         </div>
+
+        {shareStory && (
+          <div style={{ ...card, padding: 18, marginBottom: 14, borderLeft: `3px solid ${ACCENT}` }}>
+            <div style={{ display: "flex", justifyContent: "space-between", gap: 12, alignItems: "flex-start", flexWrap: "wrap", marginBottom: 12 }}>
+              <div style={{ minWidth: 0, flex: "1 1 420px" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", marginBottom: 8 }}>
+                  <Share2 style={{ width: 15, height: 15, color: ACCENT }} />
+                  <h2 style={{ fontSize: 12, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.07em", color: MUTED }}>Shareable climate story</h2>
+                  <ReceiptDetails label="receipt" text={shareStory.caveat} />
+                </div>
+                <p style={{ margin: 0, fontSize: 16, fontWeight: 800, lineHeight: 1.45, color: "white" }}>{shareStory.headline}</p>
+                <p style={{ margin: "8px 0 0", fontSize: 12.5, lineHeight: 1.6, color: "rgba(255,255,255,0.76)" }}>
+                  {shareStory.metricLine}
+                </p>
+              </div>
+              <div style={{ display: "flex", gap: 8, flexWrap: "wrap", justifyContent: "flex-end" }}>
+                <button onClick={shareForecast} style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "8px 12px", borderRadius: 7, border: `1px solid ${ACCENT}55`, background: `${ACCENT}18`, color: "white", fontSize: 12, fontWeight: 800, cursor: "pointer" }}>
+                  <Share2 style={{ width: 13, height: 13 }} />
+                  Share story
+                </button>
+                <button onClick={copyShareStory} style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "8px 12px", borderRadius: 7, border: `1px solid ${shareStoryCopied ? GREEN : BORDER}`, background: shareStoryCopied ? `${GREEN}18` : "rgba(255,255,255,0.035)", color: shareStoryCopied ? GREEN : "white", fontSize: 12, fontWeight: 800, cursor: "pointer" }}>
+                  {shareStoryCopied ? <Check style={{ width: 13, height: 13 }} /> : <Share2 style={{ width: 13, height: 13 }} />}
+                  {shareStoryCopied ? "Copied story" : "Copy story"}
+                </button>
+              </div>
+            </div>
+
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 9 }}>
+              {[
+                { label: "Trend driver", text: shareStory.driverLine, color: AMBER },
+                { label: "Climate twin", text: shareStory.analogLine, color: PURPLE },
+              ].map((item) => (
+                <div key={item.label} style={{ background: "rgba(255,255,255,0.035)", border: `1px solid ${BORDER}`, borderRadius: 8, padding: 10 }}>
+                  <div style={{ fontSize: 10, color: item.color, textTransform: "uppercase", letterSpacing: "0.06em", fontWeight: 800, marginBottom: 5 }}>{item.label}</div>
+                  <div style={{ fontSize: 12.5, lineHeight: 1.55, color: "rgba(255,255,255,0.82)" }}>{item.text}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* KPI Strip */}
         <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 10, marginBottom: 14 }}>
