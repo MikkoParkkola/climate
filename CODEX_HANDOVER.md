@@ -8,7 +8,7 @@ deeper context is in `docs/PLAN.md` ("Phase 4 handoff") and `docs/architecture/`
 
 Supersedes the older "not merged" and "cleanup pending" notes below where they conflict.
 
-- `main` includes the grounded engine/cache/SEO/health work through `e59ee80`.
+- `main` includes the grounded engine/cache/SEO/health/share/scenario work through `efdc9ad`.
 - Cleanup is done: `cbottle_runner.py` and `conflict_area.txt` are deleted, `threat_model.md`
   points at `server/routes.ts`, and the root `README.md` exists.
 - New cache guard added after `7dbc5ed`: `climate_model_cache` payloads are wrapped with
@@ -32,6 +32,15 @@ Supersedes the older "not merged" and "cleanup pending" notes below where they c
   `modelCacheVersion: "grounded-grid-i16-v1:0dc3f9d188e4d757"`,
   `cachePurge: "startup-incompatible-delete-enabled"`, and
   `legacyProjectionEndpoints: "410-gone"`.
+- Current local deploy-readiness validation after `efdc9ad`: `npm run ci` passes
+  (`tsc`, production build, five-city grounded model contract smoke, batched trajectory
+  smoke, non-default `ssp585` trajectory smoke, and year >2100 rejection). `npm run
+  verify:live` still correctly fails before deploy because public `/api/health` serves the
+  old HTML shell.
+- `npm run verify:live` now sends non-default `scenario: "ssp585"` by default and asserts
+  the returned point plus `metadata.scenario` match, so the post-deploy smoke proves scenario
+  propagation instead of only the default `ssp245` path. Override with
+  `FUPIT_SMOKE_SCENARIO=ssp245` or `--scenario ssp245` if needed.
 - Last public checks after pushing `e59ee80` still showed stale Replit code:
   `GET /api/health` returned the old SPA HTML shell, `GET /methodology` returned 404,
   `robots.txt`/`sitemap.xml` still used `climate-projections.replit.app`, and

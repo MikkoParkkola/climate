@@ -43,6 +43,7 @@ const skipTrajectory = args.has("--skip-trajectory") || process.env.FUPIT_SKIP_T
 const lat = Number(args.get("--lat") ?? process.env.FUPIT_SMOKE_LAT ?? 60.17);
 const lng = Number(args.get("--lng") ?? process.env.FUPIT_SMOKE_LNG ?? 24.94);
 const year = Number(args.get("--year") ?? process.env.FUPIT_SMOKE_YEAR ?? 2050);
+const scenario = String(args.get("--scenario") ?? process.env.FUPIT_SMOKE_SCENARIO ?? "ssp585");
 const expectedCacheVersion = expectedModelCacheVersion();
 
 const failures = [];
@@ -151,7 +152,7 @@ try {
         "content-type": "application/json",
         "user-agent": "fupit-live-release-verifier/1.0",
       },
-      body: JSON.stringify({ coordinates: { lat, lng }, years: [year] }),
+      body: JSON.stringify({ coordinates: { lat, lng }, years: [year], scenario }),
     });
     const trajectoryText = await trajectoryRes.text();
     assert(trajectoryRes.status === 200, "POST /api/climate-trajectory returns 200");
@@ -164,6 +165,8 @@ try {
     const point = trajectory.data?.points?.[0];
     assert(Boolean(point), "trajectory has first point");
     assert(point?.year === year, `trajectory first point year=${year}`);
+    assert(point?.scenario === scenario, `trajectory point scenario=${scenario}`);
+    assert(point?.metadata?.scenario === scenario, `trajectory metadata scenario=${scenario}`);
     assert(typeof point?.habitability?.score === "number", "habitability.score is numeric");
     assert(Array.isArray(point?.temperature?.monthly) && point.temperature.monthly.length === 12, "temperature.monthly has length 12");
     assert(Array.isArray(point?.precipitation?.monthly) && point.precipitation.monthly.length === 12, "precipitation.monthly has length 12");
