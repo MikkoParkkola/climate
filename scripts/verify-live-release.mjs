@@ -120,7 +120,9 @@ try {
   assert(health.cachePurge === "startup-incompatible-delete-enabled", "startup cache purge enabled");
   assert(health.legacyProjectionEndpoints === "410-gone", "health marks legacy projection endpoints gone");
   assert(Array.isArray(health.routes) && health.routes.includes("/methodology"), "health exposes /methodology route");
+  assert(Array.isArray(health.routes) && health.routes.includes("/data-quality"), "health exposes /data-quality route");
   assert(Array.isArray(health.apiRoutes) && health.apiRoutes.includes("/api/climate-twin"), "health exposes /api/climate-twin route");
+  assert(Array.isArray(health.apiRoutes) && health.apiRoutes.includes("/api/data-quality"), "health exposes /api/data-quality route");
   assert(Array.isArray(health.retiredEndpoints) && health.retiredEndpoints.includes("/api/user/keys"), "health exposes retired API-key endpoint guard");
   assert(Array.isArray(health.supportedScenarios) && health.supportedScenarios.includes("ssp126"), "health exposes supported full-forecast scenarios");
   assert(Array.isArray(health.supportedScenarios) && !health.supportedScenarios.includes("ssp119"), "health excludes SSP1-1.9 from full forecasts");
@@ -133,6 +135,19 @@ try {
   assert(methodology.text.includes("WorldClim v2.1"), "/methodology mentions WorldClim v2.1");
   assert(methodology.text.includes("Fick & Hijmans 2017"), "/methodology cites Fick & Hijmans 2017");
   assert(methodology.text.includes("No fabricated") || methodology.text.includes("do not invent"), "/methodology carries no-fabricated-science copy");
+
+  const dataQualityPage = await getText("/data-quality");
+  assert(dataQualityPage.res.status === 200, "GET /data-quality returns 200");
+  assert(dataQualityPage.text.includes("fupit data quality"), "/data-quality carries data-quality heading");
+  assert(dataQualityPage.text.includes("artifact hashes"), "/data-quality mentions artifact hashes");
+
+  const { json: dataQuality } = await getJson("/api/data-quality");
+  assert(dataQuality.version === "data-quality-v1", "data-quality API version is data-quality-v1");
+  assert(Array.isArray(dataQuality.artifacts) && dataQuality.artifacts.length >= 7, "data-quality API exposes artifact hashes");
+  assert(dataQuality.sourceRegistry?.rowCount >= 1, "data-quality API exposes source-registry rows");
+  assert(dataQuality.trajectoryAudit?.resultCount === 52, "data-quality API exposes trajectory audit matrix");
+  assert(dataQuality.trajectoryAudit?.trendReviewCount > 0, "data-quality API exposes trend-review flags");
+  assert(String(dataQuality.limitations ?? "").includes("Replit deployment"), "data-quality API discloses live-deploy limitation");
 
   const robots = await getText("/robots.txt");
   assert(robots.res.status === 200, "GET /robots.txt returns 200");
