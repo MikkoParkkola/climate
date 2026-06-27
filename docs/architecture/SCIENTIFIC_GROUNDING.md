@@ -55,16 +55,18 @@ this — global-mean ΔT at 2100 (vs 1995–2014, validated 2026-06-26):
 | SSP3-7.0 | +3.70 °C | ~+2.75 °C | ~+0.9 °C |
 | SSP5-8.5 | +4.77 °C | ~+3.55 °C | ~+1.2 °C |
 
-**Product decision: surface both numbers and the gap; default to the IPCC-calibrated value.**
-This is the honesty thesis made literal — show the model consensus, the IPCC correction, and
-how much the models are tuned down, so users understand the two are not the same.
+**Product decision: surface both numbers and the gap; default to the raw CMIP6 model consensus.**
+This is the honesty thesis made literal — show the model consensus, the IPCC assessed
+correction, and how much the models are tuned down, so users understand the two are not
+the same and can judge the pathway themselves.
 
 **Method (Phase 4/5):**
 - The ingest batch stores the **raw ensemble mean + spread** per cell (no change — it already does).
 - A thin **calibration layer** computes a per-(scenario, decade) scaling factor
   `k = AR6_assessed_global / raw_ensemble_global` (area-weighted, using the anchor table above
   expressed vs 1995–2014) and stores it. `calibrated_delta = k × raw_delta`.
-- Serve `{ modelConsensus, ipccCalibrated, adjustment, adjustmentPct, modelSpread, method, source }`.
+- Serve the existing temperature headline from raw CMIP6 and include
+  `{ model_consensus, ipcc_calibrated, adjustment_c, calibration_factor, modelSpread, method, source }`.
 - **Scope honesty:** temperature has clean AR6 assessed anchors → calibrate it. Precipitation /
   other variables have **no** comparable single assessed anchor → show as "model consensus
   + spread," labeled as such; do **not** fabricate a calibration we cannot ground

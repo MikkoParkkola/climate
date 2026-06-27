@@ -4,9 +4,10 @@ grounded_model.py — the grounded forecast engine (replaces cbottle_runner.py).
 
 Reads compact grid exports with numpy + gzip + json ONLY (no xarray/netCDF at
 serve time — light prod deps), and emits the SAME projection JSON contract the app
-already consumes. Every value traces to a real source: CMIP6 ensemble deltas
-(IPCC-calibrated for temperature), WorldClim observed monthly baseline where
-available, AR6 regional sea level, CMIP6 ETCCDI extreme indices for risk.
+already consumes. Every value traces to a real source: raw CMIP6 ensemble deltas,
+IPCC assessed temperature calibration reported alongside the raw model consensus,
+WorldClim observed monthly baseline where available, AR6 regional sea level,
+CMIP6 ETCCDI extreme indices for risk.
 
 NO fabricated coefficients. Where the grid has no data (a gap), the field is null,
 never invented. Absolute = observed/model baseline + modeled delta (delta/change-
@@ -33,8 +34,8 @@ MAX_FORECAST_YEAR = 2100
 SOURCE_TRAIL = [
     {
         "label": "Temperature",
-        "source": "CMIP6 ScenarioMIP ensemble, IPCC AR6 calibrated",
-        "method": "observed monthly baseline where available plus calibrated ensemble anomaly",
+        "source": "CMIP6 ScenarioMIP ensemble, with IPCC AR6 assessed calibration reported alongside",
+        "method": "headline value is observed monthly baseline where available plus raw ensemble anomaly; IPCC assessed anomaly is returned separately",
         "citation": "IPCC AR6 WGI SPM Table SPM.1; CMIP6 / Eyring et al. 2016",
     },
     {
@@ -258,12 +259,16 @@ def habitability(mean_temp, annual_precip, heat_nights, drought_risk, flood_risk
 
 def project(lat, lng, year, scenario=DEFAULT_SCENARIO):
     k = calibration_k(scenario, year)
-    # monthly absolute = baseline monthly + annual delta (temp: calibrated)
-    t_delta = sample("temperature", scenario, "mean", lat, lng, year) * k
-    t_std = sample("temperature", scenario, "std", lat, lng, year) * k
+    # monthly absolute = baseline monthly + annual delta.
+    # Headline temperature is the raw CMIP6 model consensus. IPCC assessed
+    # calibration is exposed separately instead of silently lowering/raising it.
+    t_delta_raw = sample("temperature", scenario, "mean", lat, lng, year)
+    t_std_raw = sample("temperature", scenario, "std", lat, lng, year)
+    t_delta_ipcc = t_delta_raw * k
+    t_std_ipcc = t_std_raw * k
     p_delta = sample("precipitation", scenario, "mean", lat, lng, year)        # percent
     p_std = sample("precipitation", scenario, "std", lat, lng, year)          # percent
-    monthly_t, monthly_p = [], []
+    monthly_t, monthly_t_ipcc, monthly_p = [], [], []
     observed_t_months = 0
     observed_p_months = 0
     for m in range(1, 13):
@@ -275,11 +280,14 @@ def project(lat, lng, year, scenario=DEFAULT_SCENARIO):
         bp = obs_bp if not np.isnan(obs_bp) else model_bp
         observed_t_months += 0 if np.isnan(obs_bt) else 1
         observed_p_months += 0 if np.isnan(obs_bp) else 1
-        monthly_t.append(bt + t_delta if not np.isnan(bt) else float("nan"))
+        monthly_t.append(bt + t_delta_raw if not np.isnan(bt) and not np.isnan(t_delta_raw) else float("nan"))
+        monthly_t_ipcc.append(bt + t_delta_ipcc if not np.isnan(bt) and not np.isnan(t_delta_ipcc) else float("nan"))
         monthly_p.append(bp * (1 + p_delta / 100.0) if not np.isnan(bp) and not np.isnan(p_delta) else float("nan"))
     mt = [x for x in monthly_t if not np.isnan(x)]
+    mt_ipcc = [x for x in monthly_t_ipcc if not np.isnan(x)]
     mp = [x for x in monthly_p if not np.isnan(x)]
     annual_mean = float(np.mean(mt)) if mt else None
+    annual_mean_ipcc = float(np.mean(mt_ipcc)) if mt_ipcc else None
     annual_total = float(np.sum(mp)) if mp else None
 
     # ── extremes -> serve-time absolute risk (baseline + delta vs cited threshold)
@@ -306,7 +314,8 @@ def project(lat, lng, year, scenario=DEFAULT_SCENARIO):
     slr_low_cm = None if np.isnan(slr_low) else slr_low * 100.0
     slr_high_cm = None if np.isnan(slr_high) else slr_high * 100.0
 
-    t_spread = None if np.isnan(t_std) else abs(t_std)
+    t_spread = None if np.isnan(t_std_raw) else abs(t_std_raw)
+    t_spread_ipcc = None if np.isnan(t_std_ipcc) else abs(t_std_ipcc)
     p_spread_pct = None if np.isnan(p_std) else abs(p_std)
     precip_spread_mm = None if annual_total is None or p_spread_pct is None else annual_total * p_spread_pct / 100.0
 
@@ -327,14 +336,34 @@ def project(lat, lng, year, scenario=DEFAULT_SCENARIO):
         "temperature": {
             "annual_mean": _num(annual_mean),
             "monthly": [_num(x) for x in monthly_t], "monthly_labels": MONTHS,
-            "anomaly": _num(t_delta),
+            "anomaly": _num(t_delta_raw),
             "min": _num(min(mt)) if mt else None, "max": _num(max(mt)) if mt else None,
             "seasonal_amplitude": _num(max(mt) - min(mt)) if mt else None,
+            "model_consensus": {
+                "annual_mean": _num(annual_mean),
+                "monthly": [_num(x) for x in monthly_t],
+                "anomaly": _num(t_delta_raw),
+                "source": "raw CMIP6 ScenarioMIP ensemble mean",
+                "method": "observed or model monthly baseline plus raw CMIP6 ensemble anomaly",
+            },
+            "ipcc_calibrated": {
+                "annual_mean": _num(annual_mean_ipcc),
+                "monthly": [_num(x) for x in monthly_t_ipcc],
+                "anomaly": _num(t_delta_ipcc),
+                "adjustment_c": _num(t_delta_ipcc - t_delta_raw) if not np.isnan(t_delta_ipcc) and not np.isnan(t_delta_raw) else None,
+                "calibration_factor": _num(k),
+                "uncertainty": {
+                    "annual_mean_low": _num(annual_mean_ipcc - t_spread_ipcc) if annual_mean_ipcc is not None and t_spread_ipcc is not None else None,
+                    "annual_mean_high": _num(annual_mean_ipcc + t_spread_ipcc) if annual_mean_ipcc is not None and t_spread_ipcc is not None else None,
+                    "anomaly_spread": _num(t_spread_ipcc),
+                },
+                "method": "same baseline plus CMIP6 ensemble anomaly scaled to IPCC AR6 assessed global warming ranges",
+            },
             "uncertainty": {
                 "annual_mean_low": _num(annual_mean - t_spread) if annual_mean is not None and t_spread is not None else None,
                 "annual_mean_high": _num(annual_mean + t_spread) if annual_mean is not None and t_spread is not None else None,
                 "anomaly_spread": _num(t_spread),
-                "method": "CMIP6 ensemble standard deviation, scaled by the same IPCC AR6 calibration factor as the mean anomaly",
+                "method": "raw CMIP6 ensemble standard deviation around the uncalibrated ensemble anomaly",
             },
         },
         "precipitation": {
@@ -374,9 +403,9 @@ def project(lat, lng, year, scenario=DEFAULT_SCENARIO):
         },
         "habitability": {"score": round(score, 1), "category": category(score), "breakdown": breakdown},
         "metadata": {
-            "model": "fupit grounded engine (CMIP6/IPCC AR6)", "model_version": "grounded-v1",
-            "resolution": "1.0 degree", "confidence": "CMIP6 ensemble spread + AR6 likely ranges reported",
-            "data_source": "WorldClim v2.1 observed baseline where available + CMIP6 ScenarioMIP + IPCC AR6 (temp IPCC-calibrated) + AR6 sea level + CMIP6 ETCCDI extremes",
+            "model": "fupit grounded engine (raw CMIP6 + IPCC AR6 context)", "model_version": "grounded-v2",
+            "resolution": "1.0 degree", "confidence": "raw CMIP6 ensemble spread with IPCC AR6 assessed ranges reported separately",
+            "data_source": "WorldClim v2.1 observed baseline where available + raw CMIP6 ScenarioMIP + IPCC AR6 temperature context + AR6 sea level + CMIP6 ETCCDI extremes",
             "baseline": "WorldClim v2.1 10 arc-minute observed climatology (1970-2000) where available; CMIP6 1995-2014 model baseline fallback",
             "baseline_source": {
                 "temperature": baseline_temperature,
@@ -386,10 +415,13 @@ def project(lat, lng, year, scenario=DEFAULT_SCENARIO):
                 "observed_citation": observed_source.get("citation"),
                 "delta_reference_period": "CMIP6 deltas are relative to 1995-2014; baseline-period difference is disclosed, not hidden",
             },
-            "projection_method": "delta/change-factor; observed or model baseline + ensemble delta; serve-time risk thresholds",
+            "projection_method": "delta/change-factor; observed or model baseline + raw CMIP6 ensemble delta; IPCC assessed temperature calibration is contextual, not the hidden headline; serve-time risk thresholds",
             "scenario": scenario,
             "uncertainty": {
                 "temperature_anomaly_spread_c": _num(t_spread),
+                "temperature_ipcc_calibrated_anomaly_c": _num(t_delta_ipcc),
+                "temperature_ipcc_adjustment_c": _num(t_delta_ipcc - t_delta_raw) if not np.isnan(t_delta_ipcc) and not np.isnan(t_delta_raw) else None,
+                "temperature_ipcc_calibration_factor": _num(k),
                 "precipitation_anomaly_spread_pct": _num(p_spread_pct),
                 "sea_level_low_cm": _num(slr_low_cm),
                 "sea_level_high_cm": _num(slr_high_cm),

@@ -17,13 +17,19 @@ const CYAN = "hsl(192,91%,46%)";
 const card: React.CSSProperties = { backgroundColor: CARD, border: `1px solid ${BORDER}`, borderRadius: 12, backdropFilter: "blur(12px)" };
 
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-const CHECKPOINTS = [2025, 2050, 2075, 2100];
+const BASELINE_YEAR = 2025;
+const MAX_YEAR = 2100;
+const CURRENT_FORECAST_YEAR = Math.min(MAX_YEAR, Math.max(BASELINE_YEAR + 1, new Date().getFullYear()));
+const FIVE_YEAR_CHECKPOINTS = Array.from({ length: 15 }, (_, i) => 2030 + i * 5).filter((year) => year >= CURRENT_FORECAST_YEAR);
+const CHECKPOINTS = Array.from(new Set([BASELINE_YEAR, CURRENT_FORECAST_YEAR, ...FIVE_YEAR_CHECKPOINTS])).sort((a, b) => a - b);
+const YEAR_TICKS = CHECKPOINTS;
+const QUICK_YEAR_BUTTONS = Array.from(new Set([CURRENT_FORECAST_YEAR, 2030, 2050, 2075, 2100].filter((year) => year >= CURRENT_FORECAST_YEAR)));
 const SCENARIOS = [
-  { id: "ssp119", label: "SSP1-1.9", caption: "very low emissions" },
-  { id: "ssp126", label: "SSP1-2.6", caption: "low emissions" },
-  { id: "ssp245", label: "SSP2-4.5", caption: "middle of the road" },
-  { id: "ssp370", label: "SSP3-7.0", caption: "high emissions" },
-  { id: "ssp585", label: "SSP5-8.5", caption: "very high emissions" },
+  { id: "ssp119", label: "SSP1-1.9", caption: "very low emissions; aggressive mitigation" },
+  { id: "ssp126", label: "SSP1-2.6", caption: "low emissions; strong mitigation" },
+  { id: "ssp245", label: "SSP2-4.5", caption: "middle path; current-policy-adjacent reference" },
+  { id: "ssp370", label: "SSP3-7.0", caption: "high emissions; weak mitigation stress case" },
+  { id: "ssp585", label: "SSP5-8.5", caption: "very high emissions; low-likelihood stress test" },
 ] as const;
 type ScenarioId = (typeof SCENARIOS)[number]["id"];
 const DEFAULT_SCENARIO: ScenarioId = "ssp245";
@@ -47,6 +53,16 @@ interface ProjectionPoint {
     anomaly: number;
     min: number;
     max: number;
+    model_consensus?: { annual_mean?: number; monthly?: number[]; anomaly?: number; source?: string; method?: string };
+    ipcc_calibrated?: {
+      annual_mean?: number;
+      monthly?: number[];
+      anomaly?: number;
+      adjustment_c?: number;
+      calibration_factor?: number;
+      uncertainty?: { annual_mean_low?: number; annual_mean_high?: number; anomaly_spread?: number };
+      method?: string;
+    };
     uncertainty?: { annual_mean_low?: number; annual_mean_high?: number; anomaly_spread?: number; method?: string };
   };
   precipitation: {
@@ -92,6 +108,9 @@ interface ProjectionPoint {
     projection_method?: string;
     uncertainty?: {
       temperature_anomaly_spread_c?: number;
+      temperature_ipcc_calibrated_anomaly_c?: number;
+      temperature_ipcc_adjustment_c?: number;
+      temperature_ipcc_calibration_factor?: number;
       precipitation_anomaly_spread_pct?: number;
       sea_level_low_cm?: number;
       sea_level_high_cm?: number;
@@ -321,7 +340,7 @@ function linkLocationFromParams(): { location: LocationOption; year?: number; sc
       country: params.get("country") || "",
       city: name.split(",")[0] || name,
     },
-    year: Number.isInteger(year) && year >= 2025 && year <= 2100 ? year : undefined,
+    year: Number.isInteger(year) && year >= BASELINE_YEAR && year <= MAX_YEAR ? year : undefined,
     scenario: parseScenario(params.get("scenario")),
     autoRun: params.get("run") === "1",
   };
@@ -342,9 +361,9 @@ async function copyToClipboard(text: string): Promise<void> {
   document.body.removeChild(el);
 }
 
-// First year (2025–2100) at which an interpolated metric crosses a threshold.
+// First year at which an interpolated metric crosses a threshold.
 function crossYear(points: ProjectionPoint[], threshold: number, dir: "above" | "below", get: (p: ProjectionPoint) => number): number | null {
-  for (let y = 2025; y <= 2100; y++) {
+  for (let y = BASELINE_YEAR; y <= MAX_YEAR; y++) {
     const v = interpScalar(points, y, get);
     if (dir === "above" ? v >= threshold : v <= threshold) return y;
   }
@@ -363,7 +382,7 @@ function TrendChart({
   const VW = 100, VH = 56, px = 1, py = 5, bH = 9;
   const cW = VW - px * 2, cH = VH - py - bH;
   const mn = Math.min(...values), mx = Math.max(...values), rng = mx - mn || 1;
-  const xOf = (yr: number) => px + ((yr - 2025) / 75) * cW;
+  const xOf = (yr: number) => px + ((yr - BASELINE_YEAR) / (MAX_YEAR - BASELINE_YEAR)) * cW;
   const yOf = (v: number) => py + cH - ((v - mn) / rng) * cH;
 
   const curV = interpArr(years, values, year);
@@ -457,7 +476,7 @@ function PrecipBars({ vals }: { vals: number[] }) {
 function ScoreSparkline({ years, data, color, year }: { years: number[]; data: number[]; color: string; year: number }) {
   const W = 80, H = 22;
   const mn = Math.min(...data), mx = Math.max(...data), rng = mx - mn || 1;
-  const xOf = (yr: number) => ((yr - 2025) / 75) * W;
+  const xOf = (yr: number) => ((yr - BASELINE_YEAR) / (MAX_YEAR - BASELINE_YEAR)) * W;
   const yOf = (v: number) => H - ((v - mn) / rng) * H * 0.88 + H * 0.06;
   const pts = data.map((v, i) => `${xOf(years[i])},${yOf(v)}`).join(" ");
   const cx = xOf(year);
@@ -476,7 +495,7 @@ export default function ClimateApp() {
   const [selectedLocation, setSelectedLocation] = useState<LocationOption | null>(null);
   const [suggestions, setSuggestions] = useState<LocationOption[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
-  const [year, setYear] = useState(2050);
+  const [year, setYear] = useState(CURRENT_FORECAST_YEAR);
   const [scenario, setScenario] = useState<ScenarioId>(DEFAULT_SCENARIO);
   const [trajectory, setTrajectory] = useState<ProjectionPoint[] | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -496,7 +515,7 @@ export default function ClimateApp() {
 
   useEffect(() => {
     let cancelled = false;
-    fetch("/climate-analog-catalog.2025.json")
+    fetch("/climate-analog-catalog.current.json")
       .then((response) => {
         if (!response.ok) throw new Error("catalog_unavailable");
         return response.json();
@@ -551,16 +570,16 @@ export default function ClimateApp() {
     return () => clearInterval(id);
   }, [isLoading]);
 
-  // Auto-glide the year slider 2025 → 2100 so users can watch the climate evolve.
+  // Auto-glide the year slider from the current forecast year to 2100.
   useEffect(() => {
     if (!playing) return;
     let raf = 0;
     let last = performance.now();
-    const SPEED = (2100 - 2025) / 11000; // years per ms → full sweep ≈ 11s
+    const SPEED = (MAX_YEAR - CURRENT_FORECAST_YEAR) / 11000; // years per ms -> full sweep approx 11s
     const tick = (now: number) => {
       const dt = Math.min(now - last, 100); // clamp big gaps (tab refocus)
       last = now;
-      setYear((y) => Math.min(2100, y + dt * SPEED));
+      setYear((y) => Math.min(MAX_YEAR, y + dt * SPEED));
       raf = requestAnimationFrame(tick);
     };
     raf = requestAnimationFrame(tick);
@@ -569,12 +588,12 @@ export default function ClimateApp() {
 
   // Stop playback once the timeline reaches the end.
   useEffect(() => {
-    if (playing && year >= 2100) setPlaying(false);
+    if (playing && year >= MAX_YEAR) setPlaying(false);
   }, [playing, year]);
 
   const togglePlay = () => {
     if (playing) { setPlaying(false); return; }
-    if (year >= 2099.5) setYear(2025); // replay from the start
+    if (year >= MAX_YEAR - 0.5) setYear(CURRENT_FORECAST_YEAR); // replay from the current forecast start
     setPlaying(true);
   };
 
@@ -693,6 +712,10 @@ export default function ClimateApp() {
     const pts = trajectory;
     const avgTemp = interpScalar(pts, year, (p) => p.temperature.annual_mean);
     const tempChange = interpScalar(pts, year, (p) => p.temperature.anomaly);
+    const ipccTemp = interpScalar(pts, year, (p) => p.temperature.ipcc_calibrated?.annual_mean ?? p.temperature.annual_mean);
+    const ipccDelta = interpScalar(pts, year, (p) => p.temperature.ipcc_calibrated?.anomaly ?? p.temperature.anomaly);
+    const ipccAdjustment = interpScalar(pts, year, (p) => p.temperature.ipcc_calibrated?.adjustment_c ?? 0);
+    const calibrationFactor = interpScalar(pts, year, (p) => p.temperature.ipcc_calibrated?.calibration_factor ?? 1);
     const annualPrecip = Math.max(0, Math.round(interpScalar(pts, year, (p) => p.precipitation.annual_total)));
     const precipChange = interpScalar(pts, year, (p) => p.precipitation.anomaly_percent);
     const heatDays = Math.max(0, Math.round(interpScalar(pts, year, (p) => p.extremes.heat_stress_days)));
@@ -727,7 +750,7 @@ export default function ClimateApp() {
     const feedbacks = np.atmospheric_physics?.feedback_mechanisms ?? [];
 
     return {
-      avgTemp, tempChange, annualPrecip, precipChange, heatDays, baseHeatDays, drought, flood, seaLevel,
+      avgTemp, tempChange, ipccTemp, ipccDelta, ipccAdjustment, calibrationFactor, annualPrecip, precipChange, heatDays, baseHeatDays, drought, flood, seaLevel,
       score, category, monthlyTemps, monthlyPrecip, minIdx, maxIdx, wetIdx, dryIdx, breakdown,
       np, sensitivity, sensLabel, sensColor, feedbacks,
       circulation: np.atmospheric_physics?.circulation_pattern,
@@ -894,11 +917,11 @@ export default function ClimateApp() {
 
             {isLoading && (
               <div style={{ marginTop: 18, fontSize: 13, color: MUTED }}>
-                Sampling grounded CMIP6/IPCC grid — checkpoint {Math.min(loadingStep + 1, CHECKPOINTS.length)}/{CHECKPOINTS.length} ({CHECKPOINTS[loadingStep]})
+                Sampling grounded CMIP6/IPCC grid — 5-year checkpoint {Math.min(loadingStep + 1, CHECKPOINTS.length)}/{CHECKPOINTS.length} ({CHECKPOINTS[loadingStep]})
                 <div style={{ marginTop: 10, height: 4, background: "rgba(255,255,255,0.08)", borderRadius: 2, overflow: "hidden" }}>
                   <div style={{ height: "100%", background: ACCENT, borderRadius: 2, width: `${((loadingStep + 1) / CHECKPOINTS.length) * 100}%`, transition: "width 0.4s ease" }} />
                 </div>
-                <div style={{ marginTop: 6, fontSize: 11, color: "rgba(255,255,255,0.35)" }}>Sampling 4 checkpoint years (~15s) so the slider can glide between them.</div>
+                <div style={{ marginTop: 6, fontSize: 11, color: "rgba(255,255,255,0.35)" }}>Sampling {BASELINE_YEAR} as the baseline, {CURRENT_FORECAST_YEAR} as the current start, then every 5 years to {MAX_YEAR}.</div>
               </div>
             )}
             {error && <div style={{ marginTop: 16, padding: "10px 14px", borderRadius: 8, background: `${RED}14`, border: `1px solid ${RED}30`, color: "#fca5a5", fontSize: 13 }}>{error}</div>}
@@ -971,12 +994,12 @@ export default function ClimateApp() {
       <div style={{ position: "sticky", top: 48, zIndex: 45, background: "rgba(8,11,18,0.97)", borderBottom: `1px solid ${BORDER}`, backdropFilter: "blur(20px)" }}>
         <div style={{ maxWidth: 1200, margin: "0 auto", padding: "10px 20px 18px" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-            <button onClick={togglePlay} title={playing ? "Pause" : "Play 2025 → 2100"} aria-label={playing ? "Pause timeline" : "Play timeline"}
+            <button onClick={togglePlay} title={playing ? "Pause" : `Play ${CURRENT_FORECAST_YEAR} to ${MAX_YEAR}`} aria-label={playing ? "Pause timeline" : "Play timeline"}
               style={{ display: "flex", alignItems: "center", justifyContent: "center", width: 34, height: 34, borderRadius: "50%", flexShrink: 0, cursor: "pointer", color: playing ? ACCENT : "white", border: `1px solid ${playing ? ACCENT : "rgba(255,255,255,0.18)"}`, background: playing ? `${ACCENT}22` : CARD, transition: "all 0.2s ease" }}>
               {playing ? <Pause style={{ width: 15, height: 15 }} /> : <Play style={{ width: 15, height: 15, marginLeft: 1 }} />}
             </button>
             <div style={{ display: "flex", gap: 4 }}>
-              {[2025, 2030, 2050, 2075, 2100].map((y) => (
+              {QUICK_YEAR_BUTTONS.map((y) => (
                 <button key={y} onClick={() => setYearManual(y)}
                   style={{ padding: "3px 8px", borderRadius: 5, border: `1px solid ${displayYear === y ? ACCENT : "rgba(255,255,255,0.12)"}`, background: displayYear === y ? `${ACCENT}18` : "transparent", color: displayYear === y ? ACCENT : MUTED, fontSize: 11, fontWeight: displayYear === y ? 700 : 400, cursor: "pointer" }}>
                   {y}
@@ -986,15 +1009,15 @@ export default function ClimateApp() {
             <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 0 }}>
               <div style={{ position: "relative" }}>
                 <div style={{ position: "absolute", top: 8, left: 0, right: 0, height: 4, borderRadius: 2, pointerEvents: "none", background: `linear-gradient(to right, ${GREEN} 0%, ${AMBER} 40%, ${ORANGE} 65%, ${RED} 100%)`, opacity: 0.3 }} />
-                <input type="range" min={2025} max={2100} step={0.1} value={year}
+                <input type="range" min={BASELINE_YEAR} max={MAX_YEAR} step={0.1} value={year}
                   onChange={(e) => setYearManual(Number(e.target.value))}
                   style={{ width: "100%", cursor: "pointer", accentColor: ACCENT, position: "relative", zIndex: 1, margin: 0, display: "block" }} />
               </div>
               <div style={{ display: "flex", justifyContent: "space-between", padding: "0 8px", marginTop: 1 }}>
-                {Array.from({ length: 16 }, (_, i) => 2025 + i * 5).map((y) => (
+                {YEAR_TICKS.map((y) => (
                   <div key={y} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 1 }}>
                     <div style={{ width: 1, height: y % 25 === 0 ? 6 : 3, background: y % 25 === 0 ? MUTED : "rgba(255,255,255,0.18)" }} />
-                    {y % 25 === 0 && <span style={{ fontSize: 8, color: MUTED, whiteSpace: "nowrap" }}>{y}</span>}
+                    {(y === CURRENT_FORECAST_YEAR || y % 25 === 0) && <span style={{ fontSize: 8, color: MUTED, whiteSpace: "nowrap" }}>{y}</span>}
                   </div>
                 ))}
               </div>
@@ -1038,11 +1061,11 @@ export default function ClimateApp() {
               </div>
             </div>
             <div style={{ textAlign: "right" }}>
-              <div style={{ fontSize: 10, color: MUTED, textTransform: "uppercase", marginBottom: 4 }}>Warming Scenario</div>
+              <div style={{ fontSize: 10, color: MUTED, textTransform: "uppercase", marginBottom: 4 }}>Raw model consensus</div>
               <div style={{ fontSize: 20, fontWeight: 700, color: RED }}>{shownScenario.label}</div>
               <div style={{ fontSize: 10, color: MUTED, marginTop: 2 }}>{shownScenario.caption}</div>
               <div style={{ fontSize: 26, fontWeight: 800, color: RED, marginTop: 2 }}>+{d!.tempChange.toFixed(1)}°C</div>
-              <div style={{ fontSize: 11, color: MUTED }}>vs baseline</div>
+              <div style={{ fontSize: 11, color: MUTED }}>vs baseline · IPCC assessed {d!.ipccDelta >= 0 ? "+" : ""}{d!.ipccDelta.toFixed(1)}°C</div>
             </div>
           </div>
         </div>
@@ -1054,8 +1077,9 @@ export default function ClimateApp() {
             <h2 style={{ fontSize: 12, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.07em", color: MUTED }}>Climate Outlook · {displayYear}</h2>
           </div>
           <p style={{ fontSize: 14.5, lineHeight: 1.75, color: "rgba(255,255,255,0.9)", margin: 0 }}>
-            By <strong style={{ color: "white" }}>{displayYear}</strong>, {placeName} is projected to be{" "}
-            <strong style={{ color: RED }}>+{d!.tempChange.toFixed(1)}°C warmer</strong> than its baseline. Heat-stress days{" "}
+            By <strong style={{ color: "white" }}>{displayYear}</strong>, {placeName}'s raw CMIP6 ensemble projection is{" "}
+            <strong style={{ color: RED }}>+{d!.tempChange.toFixed(1)}°C warmer</strong> than its baseline; the IPCC-assessed calibrated anomaly is{" "}
+            <strong style={{ color: AMBER }}>{d!.ipccDelta >= 0 ? "+" : ""}{d!.ipccDelta.toFixed(1)}°C</strong>. Heat-stress days{" "}
             <strong style={{ color: ORANGE }}>{heatDelta >= 0 ? "rise" : "fall"} from {d!.baseHeatDays} to {d!.heatDays}/yr</strong>, annual rainfall shifts{" "}
             <strong style={{ color: BLUE }}>{d!.precipChange >= 0 ? "+" : ""}{d!.precipChange.toFixed(1)}%</strong>, and overall habitability sits at{" "}
             <strong style={{ color: sc }}>{d!.score}/100 ({d!.category})</strong>.
@@ -1098,7 +1122,7 @@ export default function ClimateApp() {
                   onClick={() => {
                     const c = climateAnalog.candidate;
                     const loc: LocationOption = { name: `${c.name}, ${c.country}`, city: c.name, country: c.country, lat: c.lat, lng: c.lng };
-                    window.location.href = forecastUrl(loc, analogCatalog?.catalogYear ?? 2025, analogCatalog?.scenario ?? DEFAULT_SCENARIO, true);
+                    window.location.href = forecastUrl(loc, analogCatalog?.catalogYear ?? CURRENT_FORECAST_YEAR, analogCatalog?.scenario ?? DEFAULT_SCENARIO, true);
                   }}
                   style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "8px 12px", borderRadius: 7, border: `1px solid ${PURPLE}55`, background: `${PURPLE}16`, color: "white", fontSize: 12, fontWeight: 700, cursor: "pointer" }}
                 >
@@ -1176,7 +1200,7 @@ export default function ClimateApp() {
             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
               <span style={{ fontSize: 16 }}>📈</span>
               <h2 style={{ fontSize: 15, fontWeight: 700 }}>Metric Trajectories</h2>
-              <span style={{ fontSize: 10, color: MUTED, marginLeft: 4 }}>2025 → 2100</span>
+              <span style={{ fontSize: 10, color: MUTED, marginLeft: 4 }}>{BASELINE_YEAR} baseline to {MAX_YEAR}</span>
             </div>
             <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 10, color: MUTED }}>
               <div style={{ width: 14, height: 1.5, borderTop: `1.5px dashed ${ACCENT}`, opacity: 0.7 }} />
@@ -1348,8 +1372,14 @@ export default function ClimateApp() {
               {
                 label: "Temperature range",
                 value: d!.tempLow != null && d!.tempHigh != null ? `${d!.tempLow.toFixed(1)}–${d!.tempHigh.toFixed(1)}°C` : "—",
-                sub: d!.tempSpread != null ? `±${d!.tempSpread.toFixed(1)}°C ensemble spread` : "spread unavailable",
+                sub: d!.tempSpread != null ? `raw CMIP6 ±${d!.tempSpread.toFixed(1)}°C ensemble spread` : "spread unavailable",
                 color: RED,
+              },
+              {
+                label: "IPCC assessed temp",
+                value: `${d!.ipccTemp.toFixed(1)}°C`,
+                sub: `anomaly ${d!.ipccDelta >= 0 ? "+" : ""}${d!.ipccDelta.toFixed(1)}°C; adjustment ${d!.ipccAdjustment >= 0 ? "+" : ""}${d!.ipccAdjustment.toFixed(1)}°C; k=${d!.calibrationFactor.toFixed(2)}`,
+                color: AMBER,
               },
               {
                 label: "Precipitation range",
@@ -1447,7 +1477,7 @@ export default function ClimateApp() {
               </div>
               <span style={{ fontSize: 13, fontWeight: 700, color: sc }}>{d!.category}</span>
               <ScoreSparkline years={traj!.years} data={traj!.score} color={sc} year={year} />
-              <div style={{ fontSize: 8, color: MUTED }}>2025 → 2100 trajectory</div>
+              <div style={{ fontSize: 8, color: MUTED }}>{BASELINE_YEAR} baseline to {MAX_YEAR} trajectory</div>
             </div>
             {d!.breakdown.length > 0 && (
               <div style={{ flex: 1, minWidth: 280 }}>

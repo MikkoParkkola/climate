@@ -184,10 +184,10 @@ const SEO_PAGES: Record<string, SeoPage> = {
     path: "/comparison",
     title: "fupit — compare climate by location",
     description:
-      "Compare side-by-side climate projections for up to 10 locations. Slide through 2025–2100 to watch temperature, precipitation, risk, and habitability diverge in real time.",
+      "Compare side-by-side climate projections for up to 10 locations. Slide from the current year to 2100, with a 2025 baseline reference, to watch temperature, precipitation, risk, and habitability diverge in real time.",
     bodyHtml: `<main aria-label="Page introduction">
   <h1>fupit — compare climate by location</h1>
-  <p>Compare side-by-side climate projections for up to 10 locations. Slide through 2025–2100 to watch temperature, precipitation, risk, and habitability diverge in real time.</p>
+  <p>Compare side-by-side climate projections for up to 10 locations. Slide from the current year to 2100, with a 2025 baseline reference, to watch temperature, precipitation, risk, and habitability diverge in real time.</p>
   <h2>What you can compare</h2>
   <ul>
     <li>Average temperature and temperature change across locations</li>
@@ -210,7 +210,7 @@ const SEO_PAGES: Record<string, SeoPage> = {
   <p>Every value on fupit traces to real climate science. We do not invent coefficients or warming rates. Where we cannot ground a number, we leave it blank rather than guess.</p>
   <h2>Forecast sources</h2>
   <ul>
-    <li>Temperature and precipitation change: CMIP6 model output behind the IPCC Sixth Assessment Report, aggregated by scenario and decade.</li>
+    <li>Temperature and precipitation change: raw CMIP6 model output behind the IPCC Sixth Assessment Report, aggregated by scenario and decade.</li>
     <li>Present-day baseline: WorldClim v2.1 observed monthly climatology (1970-2000, 10 arc-minutes) where available, with CMIP6 historical climatology as fallback.</li>
     <li>Sea-level rise: IPCC AR6 regional projections.</li>
     <li>Heat, drought, and flood risk: CMIP6 ETCCDI extreme-climate indices scored against documented thresholds.</li>
@@ -218,7 +218,8 @@ const SEO_PAGES: Record<string, SeoPage> = {
   </ul>
   <h2>Honesty rules</h2>
   <ul>
-    <li>Temperature is shown with the IPCC-calibrated value as the headline and raw CMIP6 model consensus available for comparison.</li>
+    <li>Temperature is shown with raw CMIP6 model consensus as the headline; the IPCC-calibrated value, adjustment, and calibration factor are shown for comparison.</li>
+    <li>SSP2-4.5 is the default middle-path reference; SSP5-8.5 is available as a very-high-emissions stress test, not as a business-as-usual claim.</li>
     <li>Precipitation is shown as model consensus plus spread because there is no equivalent single assessed calibration anchor.</li>
     <li>Risk scores expose the raw physical quantity next to the 0 to 100 score.</li>
   </ul>
@@ -661,7 +662,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         lat: z.coerce.number().min(-90).max(90),
         lng: z.coerce.number().min(-180).max(180),
       }),
-      years: z.array(z.coerce.number().int().min(MIN_FORECAST_YEAR).max(MAX_FORECAST_YEAR)).min(1).max(5),
+      // Baseline year + current forecast year + 5-year cadence to 2100 is
+      // currently 17 points; leave headroom for targeted audits without
+      // reopening the full-browser-e2e timeout trap.
+      years: z.array(z.coerce.number().int().min(MIN_FORECAST_YEAR).max(MAX_FORECAST_YEAR)).min(1).max(20),
       scenario: z.enum(CLIMATE_SCENARIOS).default(DEFAULT_CLIMATE_SCENARIO),
     });
 

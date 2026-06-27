@@ -393,7 +393,7 @@ export default function ComprehensiveClimateReport() {
                 <div className="mt-6 space-y-4">
                   <div>
                     <Label htmlFor="year-input" className="text-sm font-medium">
-                      Select any year from 2025 to 2100
+                      Select the current year through 2100, or 2025 as the baseline reference
                     </Label>
                     <div className="flex gap-4 items-center mt-2">
                       <Input

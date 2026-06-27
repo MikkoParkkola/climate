@@ -10,9 +10,8 @@ export default function PreviewBanner() {
     <div
       role="alert"
       style={{
-        position: "sticky",
-        top: 0,
-        zIndex: 50,
+        position: "relative",
+        zIndex: 30,
         display: "flex",
         alignItems: "center",
         justifyContent: "space-between",

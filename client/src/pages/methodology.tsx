@@ -56,11 +56,22 @@ export default function Methodology() {
             <p>
               Some CMIP6 models run warmer than the observational record and paleoclimate
               evidence support. The IPCC did not simply average the raw models; it adjusted
-              its assessed warming toward observations. We do the same: for temperature we
-              show both the raw model average and the IPCC-calibrated value, and default to
-              the calibrated one. Precipitation has no comparable single assessed anchor,
-              so we show it as model average plus spread, labeled as such.
+              its assessed warming toward observations. We do not hide that adjustment in
+              the headline number. For temperature, the default value shown in the app is
+              the raw CMIP6 model consensus; the IPCC-calibrated value, calibration factor,
+              and adjustment are shown beside it. Precipitation has no comparable single
+              assessed anchor, so we show it as model average plus spread, labeled as such.
               We do not fabricate a calibration we cannot ground.
+            </p>
+
+            <h2>Scenario roles, not political probability</h2>
+            <p>
+              The app keeps all five SSP pathways selectable because they answer different
+              scientific questions. SSP2-4.5 is the default middle-path reference and is
+              closest to many current-policy central estimates, but it is not a promise.
+              SSP5-8.5 remains available as a very-high-emissions stress test, not as
+              "business as usual." We cite the scenario and show the raw output so readers
+              can judge the pathway instead of being forced into a single narrative.
             </p>
 
             <h2>Risk thresholds (exact bands)</h2>
@@ -109,8 +120,9 @@ export default function Methodology() {
               <li>
                 The observed baseline uses WorldClim's 1970 to 2000 climatology, while
                 CMIP6 deltas are referenced to 1995 to 2014. We disclose that period
-                mismatch in the projection receipt instead of hiding it. The <em>change</em>
-                signal is kept observation-constrained through the IPCC calibration.
+                mismatch in the projection receipt instead of hiding it. The raw CMIP6
+                <em> change</em> signal is the headline; the IPCC-calibrated version is
+                reported as an assessed comparison value.
               </li>
               <li>
                 The extreme-index dataset is marked by its providers as no longer actively
@@ -126,7 +138,8 @@ export default function Methodology() {
             <p className="text-gray-500">
               Sources: WorldClim v2.1 (Fick & Hijmans 2017); IPCC AR6 Working Group I;
               CMIP6 (Eyring et al. 2016); ETCCDI indices (Sillmann et al. 2013); IPCC
-              AR6 sea-level projections.
+              AR6 sea-level projections; Climate Action Tracker thermometer; Hausfather
+              &amp; Peters 2020 on high-emissions scenario framing.
             </p>
           </CardContent>
         </Card>

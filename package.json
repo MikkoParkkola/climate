@@ -9,8 +9,9 @@
     "start": "NODE_ENV=production node dist/index.js",
     "check": "tsc",
     "smoke:model": "node scripts/smoke-grounded-model.mjs",
+    "audit:trajectories": "node scripts/audit-trajectories.mjs",
     "verify:live": "node scripts/verify-live-release.mjs",
-    "ci": "npm run check && npm run build && npm run smoke:model",
+    "ci": "npm run check && npm run build && npm run smoke:model && npm run audit:trajectories",
     "db:push": "drizzle-kit push"
   },
   "dependencies": {

@@ -10,6 +10,11 @@ const gridPath = path.join(repoRoot, "data", "grid.i16.gz");
 const manifestPath = path.join(repoRoot, "data", "manifest.json");
 const worldclimPath = path.join(repoRoot, "data", "worldclim10m.i16.gz");
 const worldclimManifestPath = path.join(repoRoot, "data", "worldclim10m.manifest.json");
+const baselineYear = 2025;
+const maxYear = 2100;
+const currentForecastYear = Math.min(maxYear, Math.max(baselineYear + 1, new Date().getFullYear()));
+const fiveYearCheckpoints = Array.from({ length: 15 }, (_, i) => 2030 + i * 5).filter((year) => year >= currentForecastYear);
+const trajectoryYears = Array.from(new Set([baselineYear, currentForecastYear, ...fiveYearCheckpoints])).sort((a, b) => a - b);
 
 const samples = [
   { name: "Helsinki", lat: 60.17, lng: 24.94 },
@@ -31,6 +36,13 @@ const requiredPaths = [
   "temperature.min",
   "temperature.max",
   "temperature.seasonal_amplitude",
+  "temperature.model_consensus.annual_mean",
+  "temperature.model_consensus.anomaly",
+  "temperature.ipcc_calibrated.annual_mean",
+  "temperature.ipcc_calibrated.anomaly",
+  "temperature.ipcc_calibrated.adjustment_c",
+  "temperature.ipcc_calibrated.calibration_factor",
+  "temperature.ipcc_calibrated.uncertainty.anomaly_spread",
   "temperature.uncertainty.annual_mean_low",
   "temperature.uncertainty.annual_mean_high",
   "temperature.uncertainty.anomaly_spread",
@@ -194,6 +206,10 @@ function validateProjection(sample, projection, expectedYear = 2050, expectedSce
   assert(projection.metadata.scenario === expectedScenario, `${sample.name} metadata scenario mismatch`);
   assert(Array.isArray(projection.temperature.monthly), `${sample.name} temperature.monthly missing`);
   assert(projection.temperature.monthly.length === 12, `${sample.name} temperature.monthly length is not 12`);
+  assert(Array.isArray(projection.temperature.model_consensus.monthly), `${sample.name} temperature.model_consensus.monthly missing`);
+  assert(projection.temperature.model_consensus.monthly.length === 12, `${sample.name} temperature.model_consensus.monthly length is not 12`);
+  assert(Array.isArray(projection.temperature.ipcc_calibrated.monthly), `${sample.name} temperature.ipcc_calibrated.monthly missing`);
+  assert(projection.temperature.ipcc_calibrated.monthly.length === 12, `${sample.name} temperature.ipcc_calibrated.monthly length is not 12`);
   assert(Array.isArray(projection.temperature.monthly_labels), `${sample.name} temperature.monthly_labels missing`);
   assert(projection.temperature.monthly_labels.length === 12, `${sample.name} temperature.monthly_labels length is not 12`);
   assert(Array.isArray(projection.precipitation.monthly), `${sample.name} precipitation.monthly missing`);
@@ -207,6 +223,9 @@ function validateProjection(sample, projection, expectedYear = 2050, expectedSce
   assert(projection.habitability.score >= 0 && projection.habitability.score <= 100, `${sample.name} habitability score out of range`);
   assert(projection.temperature.uncertainty.annual_mean_low <= projection.temperature.annual_mean, `${sample.name} temperature uncertainty low above mean`);
   assert(projection.temperature.uncertainty.annual_mean_high >= projection.temperature.annual_mean, `${sample.name} temperature uncertainty high below mean`);
+  assert(projection.temperature.model_consensus.annual_mean === projection.temperature.annual_mean, `${sample.name} raw model consensus not used as temperature headline`);
+  assert(projection.temperature.model_consensus.anomaly === projection.temperature.anomaly, `${sample.name} raw model consensus anomaly not used as headline anomaly`);
+  assert(projection.temperature.ipcc_calibrated.calibration_factor > 0, `${sample.name} invalid IPCC calibration factor`);
   assert(projection.precipitation.uncertainty.annual_total_low <= projection.precipitation.annual_total, `${sample.name} precipitation uncertainty low above total`);
   assert(projection.precipitation.uncertainty.annual_total_high >= projection.precipitation.annual_total, `${sample.name} precipitation uncertainty high below total`);
   assert(projection.extremes.detail.uncertainty.sea_level_low_cm <= projection.extremes.sea_level_rise_cm, `${sample.name} sea-level low above median`);
@@ -244,7 +263,6 @@ const results = samples.map((sample) => {
 
 validateKnownRegressions(results);
 
-const trajectoryYears = [2025, 2050, 2075, 2100];
 const trajectorySample = samples[0];
 const trajectory = runTrajectory(pythonBin, trajectorySample, trajectoryYears);
 assert(
@@ -258,12 +276,13 @@ trajectory.points.forEach((point, index) => {
   validateProjection(trajectorySample, point, trajectoryYears[index]);
 });
 
-const highScenarioTrajectory = runTrajectory(pythonBin, trajectorySample, [2025, 2050], "ssp585");
+const highScenarioYears = [baselineYear, currentForecastYear];
+const highScenarioTrajectory = runTrajectory(pythonBin, trajectorySample, highScenarioYears, "ssp585");
 assert(highScenarioTrajectory.scenario === "ssp585", "non-default trajectory scenario mismatch");
 assert(Array.isArray(highScenarioTrajectory.points), "non-default trajectory points missing");
 assert(highScenarioTrajectory.points.length === 2, "non-default trajectory point count mismatch");
 highScenarioTrajectory.points.forEach((point, index) => {
-  validateProjection(trajectorySample, point, [2025, 2050][index], "ssp585");
+  validateProjection(trajectorySample, point, highScenarioYears[index], "ssp585");
 });
 
 assertInvalidYearRejected(pythonBin);

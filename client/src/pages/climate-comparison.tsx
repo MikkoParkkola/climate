@@ -30,7 +30,13 @@ const PALETTE = [
 ];
 
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-const CHECKPOINTS = [2025, 2050, 2075, 2100];
+const BASELINE_YEAR = 2025;
+const MAX_YEAR = 2100;
+const CURRENT_FORECAST_YEAR = Math.min(MAX_YEAR, Math.max(BASELINE_YEAR + 1, new Date().getFullYear()));
+const FIVE_YEAR_CHECKPOINTS = Array.from({ length: 15 }, (_, i) => 2030 + i * 5).filter((year) => year >= CURRENT_FORECAST_YEAR);
+const CHECKPOINTS = Array.from(new Set([BASELINE_YEAR, CURRENT_FORECAST_YEAR, ...FIVE_YEAR_CHECKPOINTS])).sort((a, b) => a - b);
+const YEAR_TICKS = CHECKPOINTS;
+const QUICK_YEAR_BUTTONS = Array.from(new Set([CURRENT_FORECAST_YEAR, 2030, 2050, 2075, 2100].filter((year) => year >= CURRENT_FORECAST_YEAR)));
 
 // ── Types ────────────────────────────────────────────────────────────────────
 interface ClimateLocation {
@@ -384,7 +390,7 @@ function argClosest(vals: number[], target: number): number {
 export default function ClimateComparison({ onBack }: ClimateComparisonProps) {
   const [selectedLocations, setSelectedLocations] = useState<ClimateLocation[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
-  const [year, setYear] = useState(2050);
+  const [year, setYear] = useState(CURRENT_FORECAST_YEAR);
   const [trajectories, setTrajectories] = useState<Trajectory[]>([]);
   const [isComparing, setIsComparing] = useState(false);
   const [logs, setLogs] = useState<string[]>([]);
@@ -640,7 +646,7 @@ export default function ClimateComparison({ onBack }: ClimateComparisonProps) {
               )}
 
               <p className="text-xs text-gray-500">
-                The model runs at {CHECKPOINTS.join(", ")} per location, then the slider glides smoothly between those real data points.
+                The model runs {BASELINE_YEAR} as a baseline, {CURRENT_FORECAST_YEAR} as the current start, then every 5 years to {MAX_YEAR} per location.
               </p>
             </CardContent>
           </Card>
@@ -715,7 +721,7 @@ export default function ClimateComparison({ onBack }: ClimateComparisonProps) {
             <div style={{ maxWidth: 1280, margin: "0 auto", padding: "10px 20px 20px" }}>
               <div style={{ display: "flex", alignItems: "center", gap: 14, flexWrap: "wrap" }}>
                 <div style={{ display: "flex", gap: 4 }}>
-                  {[2025, 2030, 2050, 2075, 2100].map((y) => (
+                  {QUICK_YEAR_BUTTONS.map((y) => (
                     <button
                       key={y}
                       onClick={() => setYear(y)}
@@ -739,8 +745,8 @@ export default function ClimateComparison({ onBack }: ClimateComparisonProps) {
                     <div style={{ position: "absolute", top: 8, left: 0, right: 0, height: 4, borderRadius: 2, pointerEvents: "none", background: `linear-gradient(to right, ${GREEN} 0%, ${AMBER} 40%, ${ORANGE} 65%, ${RED} 100%)`, opacity: 0.35 }} />
                     <input
                       type="range"
-                      min="2025"
-                      max="2100"
+                      min={BASELINE_YEAR}
+                      max={MAX_YEAR}
                       step="1"
                       value={year}
                       onChange={(e) => setYear(Number(e.target.value))}
@@ -749,10 +755,10 @@ export default function ClimateComparison({ onBack }: ClimateComparisonProps) {
                     />
                   </div>
                   <div style={{ display: "flex", justifyContent: "space-between", padding: "0 8px", marginTop: 1 }}>
-                    {[2025, 2030, 2035, 2040, 2045, 2050, 2055, 2060, 2065, 2070, 2075, 2080, 2085, 2090, 2095, 2100].map((y) => (
+                    {YEAR_TICKS.map((y) => (
                       <div key={y} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 1 }}>
                         <div style={{ width: 1, height: y % 25 === 0 ? 6 : 3, background: y % 25 === 0 ? MUTED : "rgba(255,255,255,0.18)" }} />
-                        {y % 25 === 0 && <span style={{ fontSize: 8, color: MUTED, whiteSpace: "nowrap" }}>{y}</span>}
+                        {(y === CURRENT_FORECAST_YEAR || y % 25 === 0) && <span style={{ fontSize: 8, color: MUTED, whiteSpace: "nowrap" }}>{y}</span>}
                       </div>
                     ))}
                   </div>
@@ -788,7 +794,7 @@ export default function ClimateComparison({ onBack }: ClimateComparisonProps) {
                     </div>
                     <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 2, marginBottom: 10 }}>
                       <Sparkline data={trajScores[ci].scores} years={trajScores[ci].years} color={t.color} year={year} />
-                      <div style={{ fontSize: 8, color: MUTED }}>2025→2100 trajectory</div>
+                      <div style={{ fontSize: 8, color: MUTED }}>{BASELINE_YEAR} baseline to {MAX_YEAR}</div>
                     </div>
                     <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 4, borderTop: `1px solid ${BORDER}`, paddingTop: 10 }}>
                       {[
@@ -820,7 +826,7 @@ export default function ClimateComparison({ onBack }: ClimateComparisonProps) {
             {/* Habitability Score Trajectory */}
             <div style={{ ...card, padding: 18, marginBottom: 14 }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12, flexWrap: "wrap", gap: 8 }}>
-                <h3 style={{ fontSize: 15, fontWeight: 700 }}>📈 Habitability Score Trajectory (2025–2100)</h3>
+                <h3 style={{ fontSize: 15, fontWeight: 700 }}>📈 Habitability Score Trajectory ({BASELINE_YEAR} baseline to {MAX_YEAR})</h3>
                 <div style={{ display: "flex", gap: 10, fontSize: 10, flexWrap: "wrap" }}>
                   {trajectories.map((t, i) => (
                     <div key={i} style={{ display: "flex", alignItems: "center", gap: 4 }}>
@@ -832,7 +838,7 @@ export default function ClimateComparison({ onBack }: ClimateComparisonProps) {
               </div>
               <TrajectoryChart trajectories={trajScores} colors={colors} year={year} />
               <div style={{ marginTop: 8, padding: "8px 12px", background: `${ACCENT}08`, border: `1px solid ${ACCENT}20`, borderRadius: 8, fontSize: 10, color: MUTED }}>
-                💡 The vertical cyan line tracks the year slider. Lines connect the real model runs at {CHECKPOINTS.join(", ")}.
+                💡 The vertical cyan line tracks the year slider. Lines connect {BASELINE_YEAR}, {CURRENT_FORECAST_YEAR}, and 5-year model runs through {MAX_YEAR}.
               </div>
             </div>
 

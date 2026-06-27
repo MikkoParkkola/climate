@@ -1,4 +1,4 @@
-export const MODEL_CACHE_VERSION = "grounded-grid-i16-v1:0dc3f9d188e4d757";
+export const MODEL_CACHE_VERSION = "grounded-grid-i16-v2-raw-temp-headline:0dc3f9d188e4d757";
 
 type ModelCacheEnvelope = {
   __cache: {
