@@ -13,6 +13,13 @@ assert.match(source, /componentScoreEffect/, "storyline adjusts contribution and
 assert.match(source, /scoreDrivers[\s\S]*?sort\(\(a, b\) => Math\.abs\(b\.effect\) - Math\.abs\(a\.effect\)\)/, "storyline ranks drivers by absolute score effect");
 assert.match(source, /Math\.abs\(driver\.effect\) >= 0\.05/, "storyline filters out near-zero driver movement before ranking");
 assert.match(source, /perDecade/, "storyline exposes per-decade trend rates, not only endpoint deltas");
+assert.match(source, /lowValues\?: number\[\]/, "trend charts accept low/high uncertainty series");
+assert.match(source, /const rangeD = hasRange/, "trend charts render a visual uncertainty band when low/high series are present");
+assert.match(source, /temperature\.uncertainty\?\.annual_mean_low/, "temperature chart uses grounded temperature low/high uncertainty fields");
+assert.match(source, /precipitation\.uncertainty\?\.annual_total_low/, "precipitation chart uses grounded precipitation low/high uncertainty fields");
+assert.match(source, /sea_level_low_cm/, "sea-level context chart uses grounded AR6 low/high context fields");
+assert.match(source, /Translucent bands show grounded low-high ranges/, "chart legend explains range bands only appear where comparable uncertainty fields exist");
+assert.match(source, /<ReceiptDetails label="range" text=\{uncertaintyLabel\} \/>/, "range bands expose keyboard and touch accessible method receipts");
 assert.match(source, /const roadmapItems = useMemo/, "result page derives a living-conditions roadmap from the selected trajectory");
 assert.match(source, /ROADMAP_YEARS/, "roadmap includes the current year and decade waypoints through 2100");
 assert.match(source, /Roadmap · current year to 2100/, "result page renders the required roadmap section");

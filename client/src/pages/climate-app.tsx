@@ -724,28 +724,43 @@ interface TrendZone { from: number; to: number; color: string }
 
 function TrendChart({
   years, values, year, label, unit, color, decimals = 0, thresholdY, zones, fillOpacity = 0.1,
+  lowValues, highValues, uncertaintyLabel,
 }: {
   years: number[]; values: number[]; year: number; label: string; unit: string; color: string;
   decimals?: number; thresholdY?: number; zones?: TrendZone[]; fillOpacity?: number;
+  lowValues?: number[]; highValues?: number[]; uncertaintyLabel?: string;
 }) {
   const VW = 100, VH = 56, px = 1, py = 5, bH = 9;
   const cW = VW - px * 2, cH = VH - py - bH;
-  const mn = Math.min(...values), mx = Math.max(...values), rng = mx - mn || 1;
+  const hasRange = lowValues?.length === values.length && highValues?.length === values.length &&
+    lowValues.every(Number.isFinite) && highValues.every(Number.isFinite);
+  const rangeLow = hasRange ? lowValues!.map((v, i) => Math.min(v, highValues![i])) : [];
+  const rangeHigh = hasRange ? lowValues!.map((v, i) => Math.max(v, highValues![i])) : [];
+  const scaleValues = hasRange ? [...values, ...rangeLow, ...rangeHigh] : values;
+  const mn = Math.min(...scaleValues), mx = Math.max(...scaleValues), rng = mx - mn || 1;
   const xOf = (yr: number) => px + ((yr - BASELINE_YEAR) / (MAX_YEAR - BASELINE_YEAR)) * cW;
   const yOf = (v: number) => py + cH - ((v - mn) / rng) * cH;
+  const fmt = (v: number) => (decimals > 0 ? v.toFixed(decimals) : Math.round(v).toString());
 
   const curV = interpArr(years, values, year);
+  const curLow = hasRange ? interpArr(years, rangeLow, year) : null;
+  const curHigh = hasRange ? interpArr(years, rangeHigh, year) : null;
   const mrkX = xOf(year);
   const mrkY = yOf(curV);
   const pts = values.map((v, i) => `${xOf(years[i]).toFixed(2)},${yOf(v).toFixed(2)}`).join(" ");
   const areaD = `M${xOf(years[0]).toFixed(2)},${(py + cH).toFixed(2)}` +
     values.map((v, i) => ` L${xOf(years[i]).toFixed(2)},${yOf(v).toFixed(2)}`).join("") +
     ` L${xOf(years[years.length - 1]).toFixed(2)},${(py + cH).toFixed(2)}Z`;
+  const rangeD = hasRange
+    ? `M${rangeHigh.map((v, i) => `${xOf(years[i]).toFixed(2)},${yOf(v).toFixed(2)}`).join(" L")} ` +
+      `L${rangeLow.map((v, i) => `${xOf(years[i]).toFixed(2)},${yOf(v).toFixed(2)}`).reverse().join(" L")}Z`
+    : "";
 
   const callW = 26, callH = 11;
   const cxPos = mrkX + 2 + callW > VW - px ? mrkX - 2 - callW : mrkX + 2;
   const cyPos = Math.max(0, Math.min(VH - bH - callH, mrkY - callH / 2));
-  const displayV = decimals > 0 ? curV.toFixed(decimals) : Math.round(curV).toString();
+  const displayV = fmt(curV);
+  const displayRange = hasRange && curLow !== null && curHigh !== null ? `${fmt(curLow)}-${fmt(curHigh)}${unit}` : null;
 
   return (
     <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column" }}>
@@ -755,6 +770,7 @@ function TrendChart({
           if (clampedHi <= clampedLo) return null;
           return <rect key={zi} x={px} y={yOf(clampedHi)} width={cW} height={yOf(clampedLo) - yOf(clampedHi)} fill={z.color} opacity="0.14" />;
         })}
+        {hasRange && <path d={rangeD} fill={color} opacity="0.18" />}
         <path d={areaD} fill={color} opacity={fillOpacity} />
         {[0.33, 0.67].map((f) => {
           const yy = py + f * cH;
@@ -765,6 +781,9 @@ function TrendChart({
         )}
         <polyline points={pts} fill="none" stroke={color} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
         <line x1={mrkX} y1={py} x2={mrkX} y2={py + cH} stroke={ACCENT} strokeWidth="0.9" strokeDasharray="2.5 2" opacity="0.85" />
+        {hasRange && curLow !== null && curHigh !== null && (
+          <line x1={mrkX} y1={yOf(curHigh)} x2={mrkX} y2={yOf(curLow)} stroke={color} strokeWidth="2.2" strokeLinecap="round" opacity="0.32" />
+        )}
         <circle cx={mrkX} cy={mrkY} r="2.4" fill={color} stroke="white" strokeWidth="0.9" />
         <rect x={cxPos} y={cyPos} width={callW} height={callH} rx="2" fill="rgba(6,9,16,0.88)" stroke={color} strokeWidth="0.5" />
         <text x={cxPos + callW / 2} y={cyPos + callH - 2.5} textAnchor="middle" fill="white" fontSize="5.5" fontWeight="700">{displayV}{unit}</text>
@@ -772,9 +791,15 @@ function TrendChart({
           <text key={i} x={xOf(yr)} y={VH - 0.5} textAnchor="middle" fill={MUTED} fontSize="4.8">{yr}</text>
         ))}
       </svg>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 2, padding: "0 1px" }}>
-        <span style={{ fontSize: 9, color: MUTED, textTransform: "uppercase", letterSpacing: "0.05em" }}>{label}</span>
-        <span style={{ fontSize: 10, fontWeight: 700, color, fontFamily: "monospace" }}>{displayV}{unit}</span>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 6, marginTop: 2, padding: "0 1px" }}>
+        <span style={{ minWidth: 0, display: "inline-flex", alignItems: "center", gap: 5, flexWrap: "wrap" }}>
+          <span style={{ fontSize: 9, color: MUTED, textTransform: "uppercase", letterSpacing: "0.05em" }}>{label}</span>
+          {hasRange && uncertaintyLabel && <ReceiptDetails label="range" text={uncertaintyLabel} />}
+        </span>
+        <span style={{ fontSize: 10, fontWeight: 700, color, fontFamily: "monospace", textAlign: "right", flexShrink: 0 }}>
+          {displayV}{unit}
+          {displayRange && <span style={{ display: "block", fontSize: 8, color: MUTED, fontWeight: 600 }}>range {displayRange}</span>}
+        </span>
       </div>
     </div>
   );
@@ -1078,10 +1103,16 @@ export default function ClimateApp() {
     return {
       years,
       temp: trajectory.map((p) => p.temperature.annual_mean),
+      tempLow: trajectory.map((p) => p.temperature.uncertainty?.annual_mean_low ?? p.temperature.annual_mean),
+      tempHigh: trajectory.map((p) => p.temperature.uncertainty?.annual_mean_high ?? p.temperature.annual_mean),
       precip: trajectory.map((p) => p.precipitation.annual_total),
+      precipLow: trajectory.map((p) => p.precipitation.uncertainty?.annual_total_low ?? p.precipitation.annual_total),
+      precipHigh: trajectory.map((p) => p.precipitation.uncertainty?.annual_total_high ?? p.precipitation.annual_total),
       heat: trajectory.map((p) => p.extremes.heat_stress_days),
       score: trajectory.map((p) => p.habitability.score),
       sea: trajectory.map((p) => p.extremes.sea_level_rise_cm ?? 0),
+      seaLow: trajectory.map((p) => p.extremes.detail?.uncertainty?.sea_level_low_cm ?? p.metadata?.uncertainty?.sea_level_low_cm ?? p.extremes.sea_level_rise_cm ?? 0),
+      seaHigh: trajectory.map((p) => p.extremes.detail?.uncertainty?.sea_level_high_cm ?? p.metadata?.uncertainty?.sea_level_high_cm ?? p.extremes.sea_level_rise_cm ?? 0),
       drought: trajectory.map((p) => riskScore(p.extremes.drought_risk)),
     };
   }, [trajectory]);
@@ -2061,9 +2092,32 @@ export default function ClimateApp() {
             </div>
           </div>
           <div style={{ display: "flex", gap: 12 }}>
-            <TrendChart years={traj!.years} values={traj!.temp} year={year} label="Temperature" unit="°C" color={RED} decimals={1} thresholdY={18} />
+            <TrendChart
+              years={traj!.years}
+              values={traj!.temp}
+              lowValues={traj!.tempLow}
+              highValues={traj!.tempHigh}
+              year={year}
+              label="Temperature"
+              unit="°C"
+              color={RED}
+              decimals={1}
+              thresholdY={18}
+              uncertaintyLabel="Shaded band uses temperature.uncertainty.annual_mean_low/high from the grounded API for this location, year range, and scenario."
+            />
             <div style={{ width: 1, background: BORDER, alignSelf: "stretch", flexShrink: 0 }} />
-            <TrendChart years={traj!.years} values={traj!.precip} year={year} label="Precipitation" unit="mm" color={BLUE} decimals={0} />
+            <TrendChart
+              years={traj!.years}
+              values={traj!.precip}
+              lowValues={traj!.precipLow}
+              highValues={traj!.precipHigh}
+              year={year}
+              label="Precipitation"
+              unit="mm"
+              color={BLUE}
+              decimals={0}
+              uncertaintyLabel="Shaded band uses precipitation.uncertainty.annual_total_low/high from the grounded API. Local precipitation trends can have larger model disagreement and direction changes."
+            />
             <div style={{ width: 1, background: BORDER, alignSelf: "stretch", flexShrink: 0 }} />
             <TrendChart years={traj!.years} values={traj!.heat} year={year} label="Heat Days" unit="d" color={ORANGE} decimals={0} thresholdY={15} />
             <div style={{ width: 1, background: BORDER, alignSelf: "stretch", flexShrink: 0 }} />
@@ -2073,12 +2127,24 @@ export default function ClimateApp() {
                 { from: 60, to: 70, color: AMBER }, { from: 40, to: 60, color: ORANGE }, { from: 0, to: 40, color: RED },
               ]} />
             <div style={{ width: 1, background: BORDER, alignSelf: "stretch", flexShrink: 0 }} />
-            <TrendChart years={traj!.years} values={traj!.sea} year={year} label="Sea-level context" unit="cm" color={CYAN} decimals={0} thresholdY={50} />
+            <TrendChart
+              years={traj!.years}
+              values={traj!.sea}
+              lowValues={traj!.seaLow}
+              highValues={traj!.seaHigh}
+              year={year}
+              label="Sea-level context"
+              unit="cm"
+              color={CYAN}
+              decimals={0}
+              thresholdY={50}
+              uncertaintyLabel="Shaded band uses AR6 regional sea-level low/high context returned by the API; it is not a parcel-level coastal exposure assessment."
+            />
             <div style={{ width: 1, background: BORDER, alignSelf: "stretch", flexShrink: 0 }} />
             <TrendChart years={traj!.years} values={traj!.drought} year={year} label="Drought Risk" unit="%" color={AMBER} decimals={0} thresholdY={50} />
           </div>
           <div style={{ marginTop: 12, padding: "6px 10px", background: `${ACCENT}07`, border: `1px solid ${ACCENT}18`, borderRadius: 8, fontSize: 10, color: MUTED }}>
-            💡 Drag the year slider to move the marker across all six charts simultaneously and see how each metric evolves. Dashed horizontal lines mark critical thresholds.
+            💡 Drag the year slider to move the marker across all six charts simultaneously and see how each metric evolves. Translucent bands show grounded low-high ranges where the API exposes comparable uncertainty fields; dashed horizontal lines mark critical thresholds.
           </div>
         </div>
 
