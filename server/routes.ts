@@ -584,13 +584,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
     // Round to a ~0.01° (~1 km) grid so the same location — or a near-identical
     // one — reuses a previously cached model run instead of re-spawning Python.
-    //
-    // NOTE ON CACHE INVALIDATION: the cache key is (latKey, lngKey, year) only —
-    // it does NOT encode the climate model/scenario version. Cached projections
-    // are kept indefinitely. If grounded_model.py's model, scenario, or output
-    // semantics ever change, the cached rows become stale; invalidate them by
-    // truncating the `climate_model_cache` table (or add a version column to the
-    // key) as part of that change.
+    // Storage also checks the JSON payload's grounded-grid cache version; old
+    // unversioned cbottle-era rows read as misses and are overwritten.
     const round2 = (n: number) => Math.round(n * 100) / 100;
     const latKey = round2(coordinates.lat);
     const lngKey = round2(coordinates.lng);

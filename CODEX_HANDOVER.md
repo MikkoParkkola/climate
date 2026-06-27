@@ -4,6 +4,21 @@
 Read this top to bottom once, then execute the checklist. Everything you need is here;
 deeper context is in `docs/PLAN.md` ("Phase 4 handoff") and `docs/architecture/`.
 
+## ✅ UPDATE (Codex 2026-06-27) — code pushed, deploy/cache still not complete
+
+Supersedes the older "not merged" and "cleanup pending" notes below where they conflict.
+
+- `main` includes the grounded engine work through `7dbc5ed`.
+- Cleanup is done: `cbottle_runner.py` and `conflict_area.txt` are deleted, `threat_model.md`
+  points at `server/routes.ts`, and the root `README.md` exists.
+- New cache guard added after `7dbc5ed`: `climate_model_cache` payloads are wrapped with
+  `MODEL_CACHE_VERSION = "grounded-grid-i16-v1:0dc3f9d188e4d757"`. Old unversioned
+  cbottle-era rows read as cache misses and are overwritten on first recompute after deploy.
+- This **does not** remove fabricated rows from prod storage. `TRUNCATE climate_model_cache;`
+  remains required during the Replit production deploy.
+- Last public checks still showed `GET /methodology` returning 404 on `fupit.com` and the
+  Replit deployment URL, so autoscale had not been republished with the route fix yet.
+
 ## ✅ UPDATE (end of session) — data steps DONE, only deploy seam left
 
 Since first writing this, the data pipeline FINISHED and was validated. Concretely:
@@ -193,12 +208,14 @@ be purged or the app serves the old lies for already-cached locations:
 ```sql
 TRUNCATE climate_model_cache;
 ```
-Run that against the prod Postgres (Replit DB) as part of deploy. (Alternatively add a
-model-version column to the cache key — see the cache note at `server/routes.ts` ~L589.)
+Run that against the prod Postgres (Replit DB) as part of deploy. The code now has a
+JSON payload cache-version guard, so old unversioned rows will not be served after deploy,
+but truncation is still required to remove fabricated artifacts from prod storage.
 Then merge `docs/grounded-forecast-plan` → `main` and deploy via Replit autoscale
 (`npm run build` then `npm run start`, per `.replit`).
 
 ### Step 7 — cleanup (after Step 5 proves the swap works)
+Historical checklist: this cleanup is now done on `main`.
 - `git rm cbottle_runner.py` (the fabricated engine — gone once grounded is proven).
 - Fix `threat_model.md`: it references `server/routes-simple.ts` which doesn't exist; the
   live file is `server/routes.ts`.
