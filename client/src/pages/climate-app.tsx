@@ -65,6 +65,10 @@ function interpScalar(points: ProjectionPoint[], year: number, get: (p: Projecti
   return get(last);
 }
 
+function riskScore(value: number): number {
+  return Math.max(0, Math.min(100, value));
+}
+
 // Interpolate parallel year/value arrays at an arbitrary year.
 function interpArr(years: number[], values: number[], year: number): number {
   if (values.length === 0) return 0;
@@ -458,7 +462,7 @@ export default function ClimateApp() {
       heat: trajectory.map((p) => p.extremes.heat_stress_days),
       score: trajectory.map((p) => p.habitability.score),
       sea: trajectory.map((p) => p.extremes.sea_level_rise_cm ?? 0),
-      drought: trajectory.map((p) => p.extremes.drought_risk * 100),
+      drought: trajectory.map((p) => riskScore(p.extremes.drought_risk)),
     };
   }, [trajectory]);
 
@@ -472,8 +476,8 @@ export default function ClimateApp() {
     const precipChange = interpScalar(pts, year, (p) => p.precipitation.anomaly_percent);
     const heatDays = Math.max(0, Math.round(interpScalar(pts, year, (p) => p.extremes.heat_stress_days)));
     const baseHeatDays = Math.round(pts[0].extremes.heat_stress_days);
-    const drought = Math.max(0, Math.min(100, Math.round(interpScalar(pts, year, (p) => p.extremes.drought_risk * 100))));
-    const flood = Math.max(0, Math.min(100, Math.round(interpScalar(pts, year, (p) => p.extremes.flood_risk * 100))));
+    const drought = Math.round(riskScore(interpScalar(pts, year, (p) => p.extremes.drought_risk)));
+    const flood = Math.round(riskScore(interpScalar(pts, year, (p) => p.extremes.flood_risk)));
     const seaLevel = Math.max(0, Math.round(interpScalar(pts, year, (p) => p.extremes.sea_level_rise_cm ?? 0)));
     const score = Math.max(0, Math.min(100, Math.round(interpScalar(pts, year, (p) => p.habitability.score))));
     const category = categoryFor(score);
@@ -534,7 +538,7 @@ export default function ClimateApp() {
       { icon: "🌡️", label: "Heat stress exceeds 15 days/yr", year: crossYear(trajectory, 15, "above", (p) => p.extremes.heat_stress_days) },
       { icon: "⚠️", label: "Habitability drops below 70 (Fair territory)", year: crossYear(trajectory, 70, "below", (p) => p.habitability.score) },
       { icon: "🌊", label: "Sea level rise exceeds 50 cm", year: crossYear(trajectory, 50, "above", (p) => p.extremes.sea_level_rise_cm ?? 0) },
-      { icon: "💧", label: "Drought risk exceeds 50%", year: crossYear(trajectory, 50, "above", (p) => p.extremes.drought_risk * 100) },
+      { icon: "💧", label: "Drought risk exceeds 50%", year: crossYear(trajectory, 50, "above", (p) => riskScore(p.extremes.drought_risk)) },
     ];
     return items.sort((a, b) => (a.year ?? Infinity) - (b.year ?? Infinity));
   }, [trajectory]);

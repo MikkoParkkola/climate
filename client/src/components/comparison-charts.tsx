@@ -52,6 +52,10 @@ export default function ComparisonCharts({ data, targetYear }: ComparisonChartsP
     return fullName.split(',')[0];
   };
 
+  const riskScore = (value: number | undefined) => {
+    return Math.max(0, Math.min(100, value || 0));
+  };
+
   // Temperature Comparison Bar Chart
   const TemperatureComparison = () => {
     const maxTemp = Math.max(...data.map(d => Math.max(d.temperature.max || 0, d.temperature.annual_mean || 0)));
@@ -323,14 +327,14 @@ export default function ComparisonCharts({ data, targetYear }: ComparisonChartsP
                       {getLocationName(item.location.name)}
                     </span>
                     <span className="text-xs font-bold">
-                      {((item.extremes.drought_risk || 0) * 100).toFixed(1)}%
+                      {riskScore(item.extremes.drought_risk).toFixed(1)}%
                     </span>
                   </div>
                   <div className="relative h-3 bg-gray-100 rounded">
                     <div
                       className="absolute left-0 top-0 h-full rounded transition-all duration-500"
                       style={{
-                        width: `${(item.extremes.drought_risk || 0) * 100}%`,
+                        width: `${riskScore(item.extremes.drought_risk)}%`,
                         backgroundColor: colors[index]
                       }}
                     />
@@ -349,14 +353,14 @@ export default function ComparisonCharts({ data, targetYear }: ComparisonChartsP
                       {getLocationName(item.location.name)}
                     </span>
                     <span className="text-xs font-bold">
-                      {((item.extremes.flood_risk || 0) * 100).toFixed(1)}%
+                      {riskScore(item.extremes.flood_risk).toFixed(1)}%
                     </span>
                   </div>
                   <div className="relative h-3 bg-gray-100 rounded">
                     <div
                       className="absolute left-0 top-0 h-full rounded transition-all duration-500"
                       style={{
-                        width: `${(item.extremes.flood_risk || 0) * 100}%`,
+                        width: `${riskScore(item.extremes.flood_risk)}%`,
                         backgroundColor: colors[index]
                       }}
                     />

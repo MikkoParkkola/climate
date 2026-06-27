@@ -104,6 +104,10 @@ function interpScalar(points: ProjectionPoint[], year: number, get: (p: Projecti
   return get(last);
 }
 
+function riskScore(value: number): number {
+  return Math.max(0, Math.min(100, value));
+}
+
 function categoryFor(score: number) {
   return score >= 85 ? "Excellent" : score >= 70 ? "Good" : score >= 60 ? "Fair" : score >= 40 ? "Poor" : "Severe";
 }
@@ -119,8 +123,8 @@ function computeSnapshot(traj: Trajectory, year: number): Snapshot {
   const precip = Math.max(0, Math.round(interpScalar(pts, year, (p) => p.precipitation.annual_total)));
   const heatDays = Math.max(0, Math.round(interpScalar(pts, year, (p) => p.extremes.heat_stress_days)));
   const score = Math.max(0, Math.min(100, Math.round(interpScalar(pts, year, (p) => p.habitability.score))));
-  const drought = Math.max(0, Math.min(100, Math.round(interpScalar(pts, year, (p) => p.extremes.drought_risk * 100))));
-  const flood = Math.max(0, Math.min(100, Math.round(interpScalar(pts, year, (p) => p.extremes.flood_risk * 100))));
+  const drought = Math.round(riskScore(interpScalar(pts, year, (p) => p.extremes.drought_risk)));
+  const flood = Math.round(riskScore(interpScalar(pts, year, (p) => p.extremes.flood_risk)));
   const seaLevel = Math.max(0, Math.round(interpScalar(pts, year, (p) => p.extremes.sea_level_rise_cm ?? 0)));
   const monthlyTemps = Array.from({ length: 12 }, (_, m) =>
     interpScalar(pts, year, (p) => p.temperature.monthly?.[m] ?? p.temperature.annual_mean),
