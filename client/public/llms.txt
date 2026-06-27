@@ -6,6 +6,9 @@ fupit is a free public web application that lets anyone search for a location on
 
 Numbers must be traceable to source data and documented methods. If a value cannot be grounded, fupit should omit it rather than fabricate it.
 
+Source repository: https://github.com/MikkoParkkola/climate
+Builder profile: https://github.com/MikkoParkkola
+
 ## Priority Pages
 
 / : Single-location climate projection tool — search for a city or place and explore its projected future climate across multiple decades and emissions scenarios.

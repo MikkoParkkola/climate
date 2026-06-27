@@ -44,14 +44,16 @@
           "@id": "https://fupit.com/#website",
           "name": "fupit",
           "url": "https://fupit.com/",
-          "description": "Climate projections for any place on Earth, year by year to 2100. Compare locations to find where stays livable."
+          "description": "Climate projections for any place on Earth, year by year to 2100. Compare locations to find where stays livable.",
+          "sameAs": ["https://github.com/MikkoParkkola/climate"]
         },
         {
           "@type": "Organization",
           "@id": "https://fupit.com/#org",
           "name": "fupit",
           "url": "https://fupit.com/",
-          "logo": "https://fupit.com/favicon.svg"
+          "logo": "https://fupit.com/favicon.svg",
+          "sameAs": ["https://github.com/MikkoParkkola/climate", "https://github.com/MikkoParkkola"]
         },
         {
           "@type": "WebApplication",
@@ -63,6 +65,9 @@
           "description": "Climate projections for any place on Earth, year by year to 2100. Compare locations to find where stays livable — then help f*** up the forecast.",
           "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
           "publisher": { "@id": "https://fupit.com/#org" },
+          "creator": { "@type": "Person", "name": "Mikko Parkkola", "url": "https://github.com/MikkoParkkola" },
+          "sameAs": ["https://github.com/MikkoParkkola/climate", "https://github.com/MikkoParkkola"],
+          "codeRepository": "https://github.com/MikkoParkkola/climate",
           "featureList": [
             "Search any location worldwide by city name or coordinates",
             "View projected average temperature and temperature change",
@@ -83,7 +88,7 @@
          the title, meta description, canonical, OG, Twitter, this script tag,
          and semantic root body for the requested route, so social crawlers and
          search engines receive route-specific content on the first HTTP byte. -->
-    <script type="application/ld+json" id="page-schema">{"@context":"https://schema.org","@type":"WebPage","name":"fupit — see where the climate is still livable","description":"Climate projections for any place on Earth, year by year to 2100. Compare locations to find where stays livable — then help f*** up the forecast.","url":"https://fupit.com/","isPartOf":{"@id":"https://fupit.com/#website"}}</script>
+    <script type="application/ld+json" id="page-schema">{"@context":"https://schema.org","@type":"WebPage","name":"fupit — see where the climate is still livable","description":"Climate projections for any place on Earth, year by year to 2100. Compare locations to find where stays livable — then help f*** up the forecast.","url":"https://fupit.com/","isPartOf":{"@id":"https://fupit.com/#website"},"author":{"@type":"Person","name":"Mikko Parkkola","url":"https://github.com/MikkoParkkola"},"sameAs":["https://github.com/MikkoParkkola/climate"]}</script>
   </head>
   <body>
     <div id="root"></div>
@@ -109,7 +114,7 @@
         </ul>
         <h2>How It Works</h2>
         <p>fupit serves projections from a grounded CMIP6/IPCC grid, with NASA/IPCC sea-level data and ETCCDI extreme-climate indices. Select a target year between now and 2100, enter a location, and receive detailed projections with a habitability score from 0 to 100.</p>
-        <p><a href="/comparison">Compare multiple locations side-by-side</a> or read <a href="/methodology">the full methodology</a>.</p>
+        <p><a href="/comparison">Compare multiple locations side-by-side</a>, read <a href="/methodology">the full methodology</a>, or inspect <a href="https://github.com/MikkoParkkola/climate">the source on GitHub</a>.</p>
         <p><strong>Note:</strong> This application requires JavaScript to run. Please enable JavaScript in your browser.</p>
       </main>
     </noscript>

@@ -115,6 +115,8 @@ async function runClimateModel(
 // Social crawlers and search engines do not run the React app, so each public
 // route needs distinct head tags in the initial HTML response.
 const SEO_BASE = "https://fupit.com";
+const GITHUB_PROFILE_URL = "https://github.com/MikkoParkkola";
+const GITHUB_REPO_URL = "https://github.com/MikkoParkkola/climate";
 
 interface SeoPage {
   path: string;
@@ -142,7 +144,7 @@ const SEO_PAGES: Record<string, SeoPage> = {
   </ul>
   <h2>How it works</h2>
   <p>fupit serves projections from a grounded CMIP6/IPCC grid, with NASA/IPCC sea-level data and ETCCDI extreme-climate indices. The method is public so every served number can be traced to a source.</p>
-  <p><a href="/comparison">Compare multiple locations side by side</a> or read <a href="/methodology">the full methodology</a>.</p>
+  <p><a href="/comparison">Compare multiple locations side by side</a>, read <a href="/methodology">the full methodology</a>, or inspect <a href="${GITHUB_REPO_URL}">the source on GitHub</a>.</p>
 </main>`,
   },
   comparison: {
@@ -187,7 +189,7 @@ const SEO_PAGES: Record<string, SeoPage> = {
     <li>Risk scores expose the raw physical quantity next to the 0 to 100 score.</li>
   </ul>
   <p>Sources: IPCC AR6 Working Group I; CMIP6; ETCCDI indices; IPCC AR6 sea-level projections.</p>
-  <p><a href="/">Return to fupit</a>.</p>
+  <p><a href="/">Return to fupit</a> or inspect <a href="${GITHUB_REPO_URL}">the source on GitHub</a>.</p>
 </main>`,
   },
 };
@@ -209,6 +211,13 @@ function pageSchema(page: SeoPage) {
       operatingSystem: "All",
       offers: { "@type": "Offer", price: "0", priceCurrency: "USD" },
       publisher: { "@id": `${SEO_BASE}/#org` },
+      creator: {
+        "@type": "Person",
+        name: "Mikko Parkkola",
+        url: GITHUB_PROFILE_URL,
+      },
+      sameAs: [GITHUB_REPO_URL, GITHUB_PROFILE_URL],
+      codeRepository: GITHUB_REPO_URL,
     };
   }
   return {
@@ -222,6 +231,12 @@ function pageSchema(page: SeoPage) {
       name: "fupit",
       url: `${SEO_BASE}/`,
     },
+    author: {
+      "@type": "Person",
+      name: "Mikko Parkkola",
+      url: GITHUB_PROFILE_URL,
+    },
+    sameAs: [GITHUB_REPO_URL],
   };
 }
 
