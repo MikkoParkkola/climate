@@ -27,6 +27,10 @@ on the first try.
   ['push', \`https://x-access-token:${token}@github.com/Owner/repo.git\`,
   'main:refs/heads/main'])`. Redact the token from any logged output. This leaves
   the `origin` remote URL clean.
+- Do NOT use `git -c http.extraHeader='AUTHORIZATION: bearer <token>' push origin`
+  — it does not authenticate the connector token and git falls back to prompting,
+  failing with `could not read Username for 'https://github.com'`. Use the
+  `x-access-token:<token>@` URL form instead.
 - The main-agent **bash** tool blocks anything that writes under `.git/`
   (e.g. `git config`, `git commit`, even `rm .git/config.lock`) as a "destructive
   git operation." Do those filesystem touches via the code_execution sandbox

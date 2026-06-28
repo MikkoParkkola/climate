@@ -39,9 +39,14 @@ at those paths. Install via Nix (`installSystemDependencies(["chromium"])`) and
 run the command with `CHROME_BIN=$(command -v chromium)` set, or it fails with
 "no Chrome binary found".
 
-## Re-verify after every pull
-The geocoding + empty-input fix has historically been **local-only** and absent
-from GitHub `origin/main` (main still calls `storage.searchClimateLocations` and
-`Number(params.get("lat"))`). After each pull, re-verify: Prague/Kyiv resolve via
-`/api/locations/search`, and a fresh load shows the search placeholder rather than
-a bogus "0.0000, 0.0000". (Moot once the fix is pushed to GitHub.)
+## Geocoding/input fix — now upstream (was local-only)
+Earlier the geocoding + empty-input fix was local-only. That is resolved:
+upstream independently added server-side Open-Meteo geocoding (drop city-table
+dependency) and removed Python from the serving path (Node-only forecasts), and
+the `client/src/pages/climate-app.tsx` `linkLocationFromParams` null-guard was
+pushed on top. Local `main` and `origin/main` are in sync. Note routes.ts is now
+owned upstream — do not re-introduce a local geocoding stopgap; take theirs.
+
+As a routine post-pull smoke test, still confirm: Prague/Kyiv resolve via
+`/api/locations/search`, short queries return `[]`, and a fresh load shows the
+search placeholder rather than a bogus "0.0000, 0.0000".
