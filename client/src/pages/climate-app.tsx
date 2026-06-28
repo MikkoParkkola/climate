@@ -2422,13 +2422,21 @@ export default function ClimateApp() {
                   onChange={(e) => setYearManual(Number(e.target.value))}
                   style={{ width: "100%", cursor: "pointer", accentColor: ACCENT, position: "relative", zIndex: 1, margin: 0, display: "block" }} />
               </div>
-              <div style={{ display: "flex", justifyContent: "space-between", padding: "0 8px", marginTop: 1 }}>
-                {YEAR_TICKS.map((y) => (
-                  <div key={y} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 1 }}>
-                    <div style={{ width: 1, height: y % 25 === 0 ? 6 : 3, background: y % 25 === 0 ? MUTED : "rgba(255,255,255,0.18)" }} />
-                    {(y === CURRENT_FORECAST_YEAR || y % 25 === 0) && <span style={{ fontSize: 8, color: MUTED, whiteSpace: "nowrap" }}>{y}</span>}
-                  </div>
-                ))}
+              <div style={{ position: "relative", height: 16, marginTop: 1 }}>
+                {YEAR_TICKS.map((y) => {
+                  // Position each tick by its true year fraction so it lines up with the
+                  // linear slider thumb. The +(0.5-frac)*THUMB term corrects for the native
+                  // range thumb inset (its center travels ~half a thumb-width in from each edge).
+                  const frac = (y - BASELINE_YEAR) / (MAX_YEAR - BASELINE_YEAR);
+                  const THUMB = 16;
+                  const major = y % 25 === 0;
+                  return (
+                    <div key={y} style={{ position: "absolute", top: 0, left: `calc(${frac * 100}% + ${(0.5 - frac) * THUMB}px)`, transform: "translateX(-50%)", display: "flex", flexDirection: "column", alignItems: "center", gap: 1 }}>
+                      <div style={{ width: 1, height: major ? 6 : 3, background: major ? MUTED : "rgba(255,255,255,0.18)" }} />
+                      {(y === CURRENT_FORECAST_YEAR || major) && <span style={{ fontSize: 8, color: MUTED, whiteSpace: "nowrap" }}>{y}</span>}
+                    </div>
+                  );
+                })}
               </div>
             </div>
             <div style={{ display: "flex", gap: 7 }}>
