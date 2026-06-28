@@ -3252,6 +3252,8 @@ export default function ClimateApp() {
               {reportSaved ? <Check size={11} /> : <Download size={11} />} {reportSaved ? "Saved report" : "Download report"}
             </button>
           </div>
+          <details>
+            <summary style={{ cursor: "pointer", listStyle: "none", fontSize: 10, color: MUTED, textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 12 }}>Full receipt — every range, baseline & source ▾</summary>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(145px,1fr))", gap: 10, marginBottom: 12 }}>
             {[
               {
@@ -3331,6 +3333,7 @@ export default function ClimateApp() {
               </div>
             ))}
           </div>
+          </details>
         </div>
 
         {/* Tipping Points */}
