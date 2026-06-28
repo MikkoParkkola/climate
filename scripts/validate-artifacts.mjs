@@ -30,6 +30,7 @@ for (const relativePath of [
   "data/population-centers.natural-earth-110m.json",
   "data/rankings.curated-cities.json",
   "data/rankings.natural-earth-populated-places.json",
+  "data/rankings.natural-earth-country-population-weighted.json",
   "data/trajectory-audit-summary.json",
   "data/observed-baseline-audit.json",
   "docs/VALIDATION_REPORT.md",
@@ -45,6 +46,7 @@ assert(Array.isArray(registry.rows) && registry.rows.length >= 10, "source regis
 const sourceIds = new Set(registry.rows.map((row) => row.sourceId));
 assert(sourceIds.has("ipcc-ar6-amoc"), "AMOC/Gulf Stream context source row missing");
 assert(sourceIds.has("natural-earth-populated-places-110m-v5"), "Natural Earth population-place source row missing");
+assert(sourceIds.has("natural-earth-country-population-weighted-v1"), "Natural Earth country aggregate source row missing");
 const requireRegisteredSources = (ids, context) => {
   assert(Array.isArray(ids) && ids.length > 0, `${context} source ids missing`);
   for (const sourceId of ids) {
@@ -100,10 +102,12 @@ for (const place of populatedPlaces.places) {
 const rankingArtifacts = [
   readJson("data/rankings.curated-cities.json"),
   readJson("data/rankings.natural-earth-populated-places.json"),
+  readJson("data/rankings.natural-earth-country-population-weighted.json"),
 ];
 const rankingCatalogs = new Set(rankingArtifacts.map((artifact) => artifact.catalog));
 assert(rankingCatalogs.has("curated_cities"), "curated ranking catalog missing");
 assert(rankingCatalogs.has("natural_earth_populated_places_110m"), "Natural Earth ranking catalog missing");
+assert(rankingCatalogs.has("natural_earth_country_population_place_weighted"), "Natural Earth country aggregate ranking catalog missing");
 
 let rankingEntryCount = 0;
 for (const rankings of rankingArtifacts) {
@@ -119,6 +123,13 @@ for (const rankings of rankingArtifacts) {
     assert(["highest", "lowest"].includes(entry.direction), "ranking direction invalid");
     assert(Array.isArray(entry.rows) && entry.rows.length > 0, "ranking rows missing");
     requireRegisteredSources(entry.sourceIds, "ranking");
+    if (entry.catalog === "natural_earth_country_population_place_weighted") {
+      assert(entry.placeSampleSize >= 50, "country aggregate place sample size missing");
+      assert(entry.caveats.some((caveat) => caveat.includes("not a complete national exposure")), "country aggregate caveat missing");
+      assert(entry.rows.every((row) => row.country === "country aggregate"), "country aggregate rows must be labelled");
+      assert(entry.rows.every((row) => Number.isFinite(row.placeCount) && row.placeCount >= 1), "country aggregate place counts missing");
+      assert(entry.rows.every((row) => Array.isArray(row.includedPlaces) && row.includedPlaces.length === row.placeCount), "country aggregate included place lists missing");
+    }
   }
 }
 

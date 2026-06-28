@@ -189,6 +189,23 @@
       "method": "Rows with pop_max >= 3,000,000 are used as a bounded population-place ranking catalog. Climate values still come from the grounded fupit grid, not from Natural Earth.",
       "displayPolicy": "show-with-bounded-catalog-caveat",
       "reviewedAt": "2026-06-28"
+    },
+    {
+      "sourceId": "natural-earth-country-population-weighted-v1",
+      "provider": "fupit derived catalog from Natural Earth",
+      "version": "natural-earth-vector 1:110m populated places simple, pop_max aggregate v1",
+      "stableUrl": "https://www.naturalearthdata.com/downloads/110m-cultural-vectors/110m-populated-places/",
+      "citation": "Derived country aggregate from Natural Earth populated places simple dataset using pop_max weights.",
+      "license": "Derived from Natural Earth public-domain map data; attribution requested but not required.",
+      "commercialReuse": "allowed",
+      "redistribution": "allowed-with-attribution-requested",
+      "variables": ["country name", "included populated-place points", "pop_max weighted climate metric aggregate"],
+      "spatialResolution": "country aggregate over included 1:110m populated-place points",
+      "temporalResolution": "static catalog weights; climate values inherit ranking artifact years",
+      "scenarioCoverage": "not scenario data; used only to aggregate precomputed grounded ranking metrics by scenario/year",
+      "method": "For each country represented by at least one included Natural Earth populated place, metric values are weighted across included points using the pop_max attribute.",
+      "displayPolicy": "show-with-country-aggregate-caveat",
+      "reviewedAt": "2026-06-28"
     }
   ]
 }

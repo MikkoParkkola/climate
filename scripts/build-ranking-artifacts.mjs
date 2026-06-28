@@ -45,6 +45,19 @@ const catalogSpecs = [
     ],
   },
 ];
+const countryAggregateSpec = {
+  catalog: "natural_earth_country_population_place_weighted",
+  label: "Country aggregates, Natural Earth populated places weighted by pop_max",
+  output: "rankings.natural-earth-country-population-weighted.json",
+  sourceIds: ["natural-earth-country-population-weighted-v1", "natural-earth-populated-places-110m-v5"],
+  caveats: [
+    "Country aggregates are population-place weighted across Natural Earth 1:110m point features with pop_max >= 3,000,000.",
+    "This is not a complete national exposure, rural exposure, area-average, or GHSL population-weighted country ranking.",
+    "Countries without an included Natural Earth populated place are excluded from this bounded artifact.",
+    "Ranks omit adaptation capacity, governance, health systems, wealth, migration, conflict, and local infrastructure.",
+    "Do not interpret a high rank as a safe country, climate haven, or complete global winner/loser claim.",
+  ],
+};
 const metricSpecs = [
   {
     metric: "habitability_score",
@@ -122,10 +135,73 @@ function rowId(row) {
   return `${row.name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "")}-${row.country.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "")}`;
 }
 
+function weightedMean(values) {
+  let weighted = 0;
+  let total = 0;
+  for (const { value, weight } of values) {
+    if (!Number.isFinite(value) || !Number.isFinite(weight) || weight <= 0) continue;
+    weighted += value * weight;
+    total += weight;
+  }
+  return total > 0 ? weighted / total : null;
+}
+
+function buildCountryRows(rows, spec) {
+  const groups = new Map();
+  for (const row of rows) {
+    const value = spec.value(row);
+    if (!Number.isFinite(value) || !row.country) continue;
+    const weight = Number.isFinite(row.population) && row.population > 0 ? row.population : 1;
+    const uncertainty = spec.uncertainty(row);
+    const current = groups.get(row.country) ?? {
+      country: row.country,
+      values: [],
+      lows: [],
+      highs: [],
+      lats: [],
+      lngs: [],
+      population: 0,
+      places: [],
+    };
+    current.values.push({ value, weight });
+    if (Number.isFinite(uncertainty?.low)) current.lows.push({ value: uncertainty.low, weight });
+    if (Number.isFinite(uncertainty?.high)) current.highs.push({ value: uncertainty.high, weight });
+    current.lats.push({ value: row.lat, weight });
+    current.lngs.push({ value: row.lng, weight });
+    current.population += weight;
+    current.places.push(row.name);
+    groups.set(row.country, current);
+  }
+
+  return Array.from(groups.values())
+    .map((group) => {
+      const value = weightedMean(group.values);
+      if (!Number.isFinite(value)) return null;
+      const low = weightedMean(group.lows);
+      const high = weightedMean(group.highs);
+      return {
+        name: group.country,
+        country: "country aggregate",
+        lat: weightedMean(group.lats) ?? 0,
+        lng: weightedMean(group.lngs) ?? 0,
+        population: group.population,
+        populationField: "pop_max weighted included places",
+        placeCount: group.places.length,
+        includedPlaces: group.places.sort((a, b) => a.localeCompare(b)),
+        inclusionReason: `Population-place weighted aggregate from ${group.places.length} Natural Earth populated place${group.places.length === 1 ? "" : "s"} with pop_max >= 3000000.`,
+        value,
+        uncertainty: Number.isFinite(low) && Number.isFinite(high)
+          ? { low: Number(low.toFixed(2)), high: Number(high.toFixed(2)) }
+          : {},
+      };
+    })
+    .filter(Boolean);
+}
+
 function buildRows(rows, spec, direction, catalogSpec) {
   const ranked = rows
     .map((row) => {
-      const value = spec.value(row);
+      const value = Number.isFinite(row.value) ? row.value : spec.value(row);
       return {
         rank: 0,
         id: rowId(row),
@@ -135,10 +211,12 @@ function buildRows(rows, spec, direction, catalogSpec) {
         lng: row.lng,
         population: row.population,
         populationField: row.populationField,
+        placeCount: row.placeCount,
+        includedPlaces: row.includedPlaces,
         inclusionReason: row.inclusionReason,
         value,
         unit: spec.unit,
-        uncertainty: spec.uncertainty(row),
+        uncertainty: row.uncertainty ?? spec.uncertainty(row),
         sourceReceipt: [...catalogSpec.sourceIds, ...spec.sourceIds],
       };
     })
@@ -149,35 +227,72 @@ function buildRows(rows, spec, direction, catalogSpec) {
   return ranked;
 }
 
+function buildRankingEntriesForRows(rows, catalogSpec) {
+  const entries = [];
+  for (const spec of metricSpecs) {
+    for (const direction of ["highest", "lowest"]) {
+      const rankedRows = buildRows(rows, spec, direction, catalogSpec);
+      if (rankedRows.length === 0) continue;
+      const sourceIds = [...catalogSpec.sourceIds, ...spec.sourceIds];
+      entries.push({ spec, direction, rankedRows, sourceIds });
+    }
+  }
+  return entries;
+}
+
+const countryEntries = [];
+let countryCatalogSize = 0;
+
 for (const catalogSpec of catalogSpecs) {
   const entries = [];
   for (const scenario of scenarios) {
     for (const year of years) {
       const rows = runRankings(year, scenario, catalogSpec);
-      for (const spec of metricSpecs) {
-        for (const direction of ["highest", "lowest"]) {
-          const rankedRows = buildRows(rows, spec, direction, catalogSpec);
-          if (rankedRows.length === 0) {
-            continue;
+      for (const { spec, direction, rankedRows, sourceIds } of buildRankingEntriesForRows(rows, catalogSpec)) {
+        entries.push({
+          methodVersion: modelVersion,
+          sourceRegistryVersion,
+          catalog: catalogSpec.catalog,
+          catalogLabel: catalogSpec.label,
+          catalogSize: rows.length,
+          scenario,
+          year,
+          metric: spec.metric,
+          label: spec.label,
+          direction,
+          unit: spec.unit,
+          rows: rankedRows,
+          exclusions: rows.length === 0 ? ["No catalog rows available"] : [],
+          caveats: catalogSpec.caveats,
+          sourceIds,
+        });
+      }
+
+      if (catalogSpec.catalog === "natural_earth_populated_places_110m") {
+        const countryRowsByMetric = new Map(metricSpecs.map((spec) => [spec.metric, buildCountryRows(rows, spec)]));
+        countryCatalogSize = Math.max(countryCatalogSize, countryRowsByMetric.get(metricSpecs[0].metric)?.length ?? 0);
+        for (const spec of metricSpecs) {
+          const countryRows = countryRowsByMetric.get(spec.metric) ?? [];
+          for (const { direction, rankedRows, sourceIds } of buildRankingEntriesForRows(countryRows, countryAggregateSpec).filter((entry) => entry.spec.metric === spec.metric)) {
+            countryEntries.push({
+              methodVersion: modelVersion,
+              sourceRegistryVersion,
+              catalog: countryAggregateSpec.catalog,
+              catalogLabel: countryAggregateSpec.label,
+              catalogSize: countryRows.length,
+              placeSampleSize: rows.length,
+              scenario,
+              year,
+              metric: spec.metric,
+              label: spec.label,
+              direction,
+              unit: spec.unit,
+              rows: rankedRows,
+              exclusions: countryRows.length === 0 ? ["No country aggregates available"] : [],
+              caveats: countryAggregateSpec.caveats,
+              sourceIds,
+            });
           }
-          const sourceIds = [...catalogSpec.sourceIds, ...spec.sourceIds];
-          entries.push({
-            methodVersion: modelVersion,
-            sourceRegistryVersion,
-            catalog: catalogSpec.catalog,
-            catalogLabel: catalogSpec.label,
-            catalogSize: rows.length,
-            scenario,
-            year,
-            metric: spec.metric,
-            label: spec.label,
-            direction,
-            unit: spec.unit,
-            rows: rankedRows,
-            exclusions: rows.length === 0 ? ["No catalog rows available"] : [],
-            caveats: catalogSpec.caveats,
-            sourceIds,
-          });
         }
       }
     }
@@ -197,3 +312,18 @@ for (const catalogSpec of catalogSpecs) {
   writeFileSync(outPath, `${JSON.stringify(artifact, null, 2)}\n`);
   console.log(`wrote ${path.relative(repoRoot, outPath)} with ${entries.length} ranking slices`);
 }
+
+const countryArtifact = {
+  methodVersion: modelVersion,
+  sourceRegistryVersion,
+  generatedAt: new Date().toISOString(),
+  catalog: countryAggregateSpec.catalog,
+  catalogLabel: countryAggregateSpec.label,
+  catalogSourceIds: countryAggregateSpec.sourceIds,
+  countryCount: countryCatalogSize,
+  entries: countryEntries,
+};
+
+const countryOutPath = path.join(repoRoot, "data", countryAggregateSpec.output);
+writeFileSync(countryOutPath, `${JSON.stringify(countryArtifact, null, 2)}\n`);
+console.log(`wrote ${path.relative(repoRoot, countryOutPath)} with ${countryEntries.length} ranking slices`);

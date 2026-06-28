@@ -27,6 +27,8 @@ type RankingRow = {
   lng: number;
   population?: number;
   populationField?: string;
+  placeCount?: number;
+  includedPlaces?: string[];
   inclusionReason?: string;
   value: number;
   unit: string;
@@ -39,6 +41,8 @@ type RankingEntry = {
   sourceRegistryVersion: string;
   catalog: string;
   catalogSize: number;
+  catalogLabel?: string;
+  placeSampleSize?: number;
   scenario: string;
   year: number;
   metric: string;
@@ -67,6 +71,7 @@ function rankingPaths(): string[] {
   return [
     "rankings.curated-cities.json",
     "rankings.natural-earth-populated-places.json",
+    "rankings.natural-earth-country-population-weighted.json",
   ].map((file) => path.resolve(import.meta.dirname, "..", "data", file));
 }
 

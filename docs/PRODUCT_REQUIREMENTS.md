@@ -220,6 +220,12 @@ prevents downstream misuse.
 The app should include global top-10 lists for cities, population centers, and countries where
 the catalog/source supports the claim.
 
+Current implementation status: `/rankings` supports curated example places, Natural Earth
+1:110m populated places with `pop_max >= 3,000,000`, and a bounded country aggregate derived
+from those included Natural Earth points weighted by `pop_max`. That country aggregate is not
+full national exposure, rural exposure, area-average climate, or GHSL population-weighted
+country exposure.
+
 Required ranking dimensions:
 
 - Year and scenario.
@@ -326,9 +332,11 @@ Acceptance criteria:
 
 - Ranking endpoint/UI supports top-10 lists by metric, year, scenario, and catalog type.
 - Every ranking row links to a source receipt and explains why the location is included.
-- Country rankings are population-weighted or explicitly labelled as country-average where appropriate.
+- Country rankings are population-weighted, population-place weighted, or explicitly labelled as country-average where appropriate.
 - City/population-center rankings use an auditable catalog such as GHSL urban centers,
   Natural Earth populated places, or a documented curated list.
+- Bounded country aggregates must disclose the included-place sample size, weighting field,
+  excluded countries, and why the result is not full national exposure.
 - The ranking view includes uncertainty or "weak signal" labels and never hides tied or
   near-tied values behind false precision.
 
@@ -383,7 +391,7 @@ The app is public-launch ready when:
 9. Add scenario comparison small multiples for all key metrics. Status: implemented in the result-page scenario contrast with raw warming, IPCC assessed warming, heat-stress days, rainfall change, drought risk, flood risk, sea-level context, and habitability score; each panel discloses same-coordinate SSP trajectories and annual interpolation between grounded checkpoints.
 10. Add transparent score sensitivity: show how habitability changes when weights are adjusted or hidden. Status: implemented in the result-page explainability section as an interactive what-if over the visible habitability breakdown; checkboxes hide components, sliders adjust already-weighted component multipliers, and the panel discloses the clamp formula plus missing-domain limits.
 11. Add a source/license registry table for all enrichment datasets before new metrics are exposed. Status: implemented on `/data-quality` for the current `data/source-registry.json` rows, including license, commercial reuse, redistribution, method, coverage, display policy, and the rule that unregistered sources cannot produce public metrics/rankings/exports.
-12. Add global top-10 rankings for urban centers, countries, and population-weighted regions.
+12. Add global top-10 rankings for urban centers, countries, and population-weighted regions. Status: partially implemented with curated-city rankings, Natural Earth populated-place rankings, and a Natural Earth-derived country aggregate weighted across included `pop_max >= 3,000,000` populated-place points. True GHSL urban-center, full national exposure, rural exposure, and population-weighted regional/country artifacts remain future work.
 13. Add freshwater risk using a legally compatible global dataset with baseline/future indicators.
 14. Add biodiversity pressure using documented datasets or transparent climate/habitat proxies.
 15. Add AMOC/Gulf Stream regional context layer with confidence labels and no deterministic local correction.

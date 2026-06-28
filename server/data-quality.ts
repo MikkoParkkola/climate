@@ -13,6 +13,7 @@ type RankingArtifact = {
   entries: Array<{
     catalog: string;
     catalogSize: number;
+    placeSampleSize?: number;
     scenario: string;
     year: number;
     metric: string;
@@ -75,6 +76,7 @@ function loadRankingArtifacts(): RankingArtifact[] {
   return [
     "data/rankings.curated-cities.json",
     "data/rankings.natural-earth-populated-places.json",
+    "data/rankings.natural-earth-country-population-weighted.json",
   ].map((relativePath) => readJson<RankingArtifact>(relativePath));
 }
 
@@ -160,6 +162,7 @@ export function loadDataQuality(): Record<string, unknown> {
       artifactInfo("data/population-centers.natural-earth-110m.json"),
       artifactInfo("data/rankings.curated-cities.json"),
       artifactInfo("data/rankings.natural-earth-populated-places.json"),
+      artifactInfo("data/rankings.natural-earth-country-population-weighted.json"),
       artifactInfo("data/trajectory-audit-summary.json"),
       artifactInfo("data/observed-baseline-audit.json"),
     ],

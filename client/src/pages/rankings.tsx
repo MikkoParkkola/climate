@@ -27,6 +27,11 @@ const CATALOGS = [
     label: "Population places",
     description: "Natural Earth 1:110m populated places with pop_max >= 3 million.",
   },
+  {
+    id: "natural_earth_country_population_place_weighted",
+    label: "Country aggregates",
+    description: "Country aggregates from included Natural Earth places, weighted by pop_max; not full national exposure.",
+  },
 ] as const;
 
 const METRICS = [
@@ -45,6 +50,7 @@ type Ranking = {
   sourceRegistryVersion: string;
   catalog: string;
   catalogSize: number;
+  placeSampleSize?: number;
   scenario: string;
   year: number;
   metric: string;
@@ -60,6 +66,8 @@ type Ranking = {
     lng: number;
     population?: number;
     populationField?: string;
+    placeCount?: number;
+    includedPlaces?: string[];
     inclusionReason?: string;
     value: number;
     unit: string;
@@ -122,8 +130,9 @@ export default function RankingsPage() {
             <h1 className="text-3xl font-bold">Top-10 climate signals in bounded place catalogs</h1>
             <p className="mt-2 max-w-3xl text-slate-600">
               These lists are teaching examples from documented bounded catalogs, including a
-              curated example set and a Natural Earth population-place catalog. They are not
-              climate-haven, safety, or complete winner/loser lists.
+              curated example set, a Natural Earth population-place catalog, and a bounded
+              country aggregate derived from those places. They are not climate-haven,
+              safety, full national-exposure, or complete winner/loser lists.
             </p>
           </div>
         </header>
@@ -189,7 +198,12 @@ export default function RankingsPage() {
             <section className="grid gap-3 sm:grid-cols-3">
               <div className="rounded border border-slate-200 bg-white px-3 py-2">
                 <div className="text-xs uppercase tracking-wide text-slate-500">Catalog</div>
-                <div className="mt-1 font-semibold">{data.catalog.replace(/_/g, " ")} · {data.catalogSize} places</div>
+                <div className="mt-1 font-semibold">
+                  {data.catalog.replace(/_/g, " ")} · {data.catalogSize} {data.catalog.includes("country") ? "countries" : "places"}
+                </div>
+                {Number.isFinite(data.placeSampleSize) && (
+                  <div className="text-xs text-slate-500">from {Number(data.placeSampleSize).toLocaleString()} included populated places</div>
+                )}
               </div>
               <div className="rounded border border-slate-200 bg-white px-3 py-2">
                 <div className="text-xs uppercase tracking-wide text-slate-500">Metric</div>
@@ -234,11 +248,19 @@ export default function RankingsPage() {
                         <tr key={row.id} className="border-t border-slate-100">
                           <td className="px-3 py-2 font-semibold">#{row.rank}</td>
                           <td className="px-3 py-2">
-                            <div className="font-medium">{row.name}, {row.country}</div>
+                            <div className="font-medium">
+                              {row.country === "country aggregate" ? row.name : `${row.name}, ${row.country}`}
+                            </div>
                             <div className="text-xs text-slate-500">{row.lat.toFixed(2)}, {row.lng.toFixed(2)}</div>
                             {Number.isFinite(row.population) && (
                               <div className="text-xs text-slate-500">
                                 Catalog {row.populationField ?? "population"} {Number(row.population).toLocaleString()}
+                              </div>
+                            )}
+                            {Number.isFinite(row.placeCount) && (
+                              <div className="text-xs text-slate-500">
+                                {row.placeCount} included place{row.placeCount === 1 ? "" : "s"}
+                                {row.includedPlaces?.length ? `: ${row.includedPlaces.slice(0, 5).join(", ")}${row.includedPlaces.length > 5 ? ", ..." : ""}` : ""}
                               </div>
                             )}
                             {row.inclusionReason && (
@@ -282,8 +304,9 @@ export default function RankingsPage() {
                   </dl>
                   <p className="flex gap-2 text-xs text-slate-500">
                     <Info className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden />
-                    Natural Earth population-place rankings are still a bounded basemap catalog, not GHSL urban centers,
-                    not country rankings, and not population-weighted exposure.
+                    Natural Earth place rankings are bounded basemap catalogs, not GHSL urban centers
+                    and not population-weighted exposure. The country aggregate catalog is population-place
+                    weighted across included points only, not full national exposure.
                   </p>
                 </CardContent>
               </Card>

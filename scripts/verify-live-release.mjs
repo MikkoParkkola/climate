@@ -169,9 +169,27 @@ try {
   assert(naturalRanking.rows.every((row) => Number.isFinite(row.population) && row.population >= 3_000_000), "Natural Earth ranking rows expose population threshold metadata");
   assert(Array.isArray(naturalRanking.caveats) && naturalRanking.caveats.some((caveat) => caveat.includes("pop_max >= 3,000,000")), "Natural Earth ranking API exposes bounded-catalog caveat");
 
+  const { json: countryRanking } = await getJson("/api/climate/global-rankings?catalog=natural_earth_country_population_place_weighted&scenario=ssp245&year=2050&metric=heat_stress_days&direction=highest&limit=10");
+  assert(countryRanking.catalog === "natural_earth_country_population_place_weighted", "country aggregate ranking API uses bounded country catalog");
+  assert(countryRanking.catalogSize >= 25, "country aggregate ranking API discloses catalog size");
+  assert(countryRanking.placeSampleSize >= 50, "country aggregate ranking API discloses place sample size");
+  assert(Array.isArray(countryRanking.rows) && countryRanking.rows.length === 10, "country aggregate ranking API returns top 10 rows");
+  assert(
+    Array.isArray(countryRanking.sourceIds) &&
+      countryRanking.sourceIds.includes("natural-earth-country-population-weighted-v1") &&
+      countryRanking.sourceIds.includes("natural-earth-populated-places-110m-v5"),
+    "country aggregate ranking API exposes source IDs",
+  );
+  assert(countryRanking.rows.every((row) => row.country === "country aggregate" && row.placeCount >= 1), "country aggregate ranking rows expose included-place counts");
+  assert(
+    Array.isArray(countryRanking.caveats) &&
+      countryRanking.caveats.some((caveat) => caveat.includes("not a complete national exposure")),
+    "country aggregate ranking API exposes national-exposure caveat",
+  );
+
   const { json: sourceRegistry } = await getJson("/api/source-registry");
   assert(sourceRegistry.version === "source-registry-v1", "source-registry API version is source-registry-v1");
-  assert(Array.isArray(sourceRegistry.rows) && sourceRegistry.rows.length >= 11, "source-registry API exposes current source rows");
+  assert(Array.isArray(sourceRegistry.rows) && sourceRegistry.rows.length >= 12, "source-registry API exposes current source rows");
   assert(
     sourceRegistry.rows.some(
       (row) =>
@@ -196,6 +214,14 @@ try {
     ),
     "source-registry API exposes Natural Earth population-place row",
   );
+  assert(
+    sourceRegistry.rows.some(
+      (row) =>
+        row.sourceId === "natural-earth-country-population-weighted-v1" &&
+        row.displayPolicy === "show-with-country-aggregate-caveat",
+    ),
+    "source-registry API exposes Natural Earth country aggregate row",
+  );
 
   const dataQualityPage = await getText("/data-quality");
   assert(dataQualityPage.res.status === 200, "GET /data-quality returns 200");
@@ -205,7 +231,7 @@ try {
   const { json: dataQuality } = await getJson("/api/data-quality");
   assert(dataQuality.version === "data-quality-v1", "data-quality API version is data-quality-v1");
   assert(Array.isArray(dataQuality.artifacts) && dataQuality.artifacts.length >= 10, "data-quality API exposes artifact hashes");
-  assert(dataQuality.sourceRegistry?.rowCount >= 11, "data-quality API exposes complete source-registry rows");
+  assert(dataQuality.sourceRegistry?.rowCount >= 12, "data-quality API exposes complete source-registry rows");
   assert(
     dataQuality.sourceRegistry?.rows?.some(
       (row) =>
@@ -230,12 +256,26 @@ try {
     ),
     "data-quality API exposes Natural Earth population-place row",
   );
-  assert(dataQuality.rankings?.catalogCount === 2, "data-quality API exposes two ranking catalogs");
+  assert(
+    dataQuality.sourceRegistry?.rows?.some(
+      (row) =>
+        row.sourceId === "natural-earth-country-population-weighted-v1" &&
+        row.displayPolicy === "show-with-country-aggregate-caveat",
+    ),
+    "data-quality API exposes Natural Earth country aggregate row",
+  );
+  assert(dataQuality.rankings?.catalogCount >= 3, "data-quality API exposes three ranking catalogs");
   assert(
     dataQuality.rankings?.catalogs?.some(
       (catalog) => catalog.catalog === "natural_earth_populated_places_110m" && catalog.catalogSize >= 50,
     ),
     "data-quality API exposes Natural Earth ranking catalog coverage",
+  );
+  assert(
+    dataQuality.rankings?.catalogs?.some(
+      (catalog) => catalog.catalog === "natural_earth_country_population_place_weighted" && catalog.catalogSize >= 25,
+    ),
+    "data-quality API exposes country aggregate ranking catalog coverage",
   );
   assert(dataQuality.defaultScenarioPolicy?.scenario === "ssp245", "data-quality API exposes default scenario policy scenario");
   assert(
