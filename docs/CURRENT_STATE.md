@@ -7,8 +7,8 @@ aspirations or historical handoff notes.
 
 The fabricated legacy runner has been removed. The default serving path now uses the
 TypeScript in-process grid engine in `server/grounded-node-model.ts`, backed by compact
-artifacts in `data/`. `grounded_model.py` remains as an explicit `CLIMATE_GRID_ENGINE=python`
-fallback and parity oracle for one release.
+artifacts in `data/`. The runtime Python serving subprocess has been removed; `grounded_model.py`
+remains only as the offline ranking-artifact builder and the parity oracle the Node engine is tested against.
 
 The app is locally validated with a production build and a Postgres-backed endpoint smoke.
 Public Replit readiness is still an operational state to verify after republish and production
@@ -21,8 +21,8 @@ cache purge/version-guard proof.
 - `server/routes.ts` uses the Node grid engine by default for trajectory and climate-twin cache
   fills, serves precomputed ranking artifacts, exposes `GET /api/source-registry`, and returns
   410 for retired legacy projection routes.
-- `grounded_model.py` remains available through `CLIMATE_GRID_ENGINE=python` for rollback and
-  parity checks; it is not the default request path.
+- `grounded_model.py` no longer serves requests (runtime subprocess removed); it remains the
+  offline ranking-artifact builder and parity oracle only.
 - `climate_model_cache` identity includes rounded coordinates, year, scenario, cache version, and
   source-registry version. Old unwrapped or mismatched rows are treated as misses and purged by
   the startup guard.
@@ -44,8 +44,8 @@ cache purge/version-guard proof.
 - The single-location projection receipt offers raw JSON and a Markdown educational summary
   export built from visible forecast fields, annual roadmap, climate twin, source trail, and
   missing-domain caveats.
-- Express 5 API with request validation, rate limits, an in-process Node forecast path, bounded
-  Python fallback concurrency, and a durable Postgres response cache.
+- Express 5 API with request validation, rate limits, an in-process Node forecast path (no
+  request-time subprocess), and a durable Postgres response cache.
 - Drizzle schema in `shared/schema.ts` as the database type source of truth.
 - The cache-and-serve pattern, with stricter cache identity and version guards.
 - Public methodology and source-trail direction: every visible number must map to a registered
@@ -106,8 +106,8 @@ Local validation on 2026-06-27:
 
 ## Known future work
 
-- Keep Python fallback for one release while live Replit verification proves the Node default
-  path under production cache/database conditions.
+- [DONE] Python serving fallback removed; the Node path is the only serving engine. Live Replit
+  verification of that path under production cache/database conditions is still pending.
 - Add country, GHSL urban-center, and population-weighted exposure ranking artifacts when catalog
   and license review are complete.
 - Add freshwater, biodiversity, agriculture, fire-weather, infrastructure, and AMOC/context

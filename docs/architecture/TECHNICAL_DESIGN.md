@@ -49,8 +49,8 @@ Reference: Replit Autoscale Deployments documentation: https://docs.replit.com/r
 
 - `server/grounded-node-model.ts` reads the compact grid and observed baseline artifacts through
   the TypeScript grid reader.
-- `grounded_model.py` reads the same artifacts only as the `CLIMATE_GRID_ENGINE=python`
-  fallback/parity oracle.
+- `grounded_model.py` reads the same artifacts only as the offline ranking-artifact
+  builder and the parity oracle the Node engine is tested against; it no longer serves requests.
 - Compact artifacts are small enough for Replit image startup:
   - `data/grid.i16.gz`: about 35 MB.
   - `data/worldclim10m.i16.gz`: about 16 MB.
@@ -202,7 +202,7 @@ Cons:
 - 60-second timeout protects the server but creates user-visible failures under bursts.
 - Rankings can spawn Python and should not do live catalog computation under load.
 
-Use only for explicit fallback (`CLIMATE_GRID_ENGINE=python`) and smoke/parity verification.
+Use only for offline ranking-artifact builds and smoke/parity verification; it no longer serves live requests.
 
 ### Option B - Node.js In-Process Grid Reader
 
@@ -225,9 +225,10 @@ Implementation sequence:
 1. Write `server/climate-grid-loader.ts` to read `manifest.json`, `grid.i16.gz`, and `worldclim10m.i16.gz`.
 2. Write pure functions for coordinate sampling, temporal interpolation, scenario selection, and risk-score assembly.
 3. Add contract tests comparing Node output to `grounded_model.py` for Helsinki, London, Singapore, Mumbai, Cairo, Manaus, Amsterdam, Bangkok, New York, and San Francisco.
-4. Switch trajectory generation to Node grid service as the default; keep
-   `CLIMATE_GRID_ENGINE=python` as the rollback path for one release.
-5. Remove Python fallback after live parity, cache, and Replit performance proof pass.
+4. [DONE] Node grid service is the only serving engine; the `CLIMATE_GRID_ENGINE`
+   switch and the runtime Python subprocess were removed.
+5. [DONE] Python serving fallback removed; `grounded_model.py` is retained only as the
+   offline ranking-artifact builder and parity oracle.
 
 ### Option C - Postgres Grid Table
 
@@ -389,12 +390,12 @@ Good enough for initial public release:
 
 - Replit Autoscale origin serves app and API.
 - Neon/Postgres stores durable response cache.
-- Node in-process grid reader serves normal forecast misses; Python fallback remains protected by
-  response cache, rate limits, and max two subprocesses.
+- Node in-process grid reader serves every forecast miss; the runtime Python serving
+  subprocess has been removed (no spawn in the request path).
 - Precompute rankings if exposing rankings prominently.
 
-Risk: an uncached viral spike can still pressure Postgres/cache writes and cold starts. Forcing
-`CLIMATE_GRID_ENGINE=python` would reintroduce subprocess saturation and should be rollback-only.
+Risk: an uncached viral spike can still pressure Postgres/cache writes and cold starts. The runtime Python serving subprocess has been removed, eliminating that
+subprocess-saturation path entirely.
 
 ### Consumer-grade Replit Target
 
@@ -424,7 +425,7 @@ Replit remains the origin; CDN absorbs read spikes.
 
 ### Phase 0 - Document and Guard
 
-- Keep Python fallback available, but make the Node grid engine the default.
+- [DONE] Node grid engine is the only serving engine; runtime Python serving removed.
 - Add this design doc.
 - Add health/build artifact checks.
 - Keep live deploy verification explicit.
@@ -452,14 +453,14 @@ Replit remains the origin; CDN absorbs read spikes.
   `grounded_model.py` on the real grid and WorldClim artifacts.
 - Switch trajectory API to the Node grid service by default after full projected
   response parity exists. `npm run smoke:node-model` covers the full-response
-  parity matrix; `CLIMATE_GRID_ENGINE=python` remains the explicit rollback path
-  while live Replit proof is pending.
+  parity matrix; the runtime Python serving path has been removed, so `grounded_model.py`
+  remains only as the offline builder and parity oracle.
 - Guard the local scale target with `npm run smoke:node-performance`, which
   warms the in-process grid reader, runs fixture trajectories across scenarios,
   validates the returned contract has no nulls, and asserts warm p95 stays under
   the 500 ms Node target unless `FUPIT_NODE_TRAJECTORY_P95_MS` is explicitly
   overridden for slower hardware.
-- Keep Python fallback for one release only.
+- [DONE] Python serving fallback removed; `grounded_model.py` retained as offline builder + parity oracle only.
 
 ### Phase 4 - Enrichments
 

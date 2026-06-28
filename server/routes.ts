@@ -1,6 +1,5 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
-import { spawn } from "child_process";
 import fs from "fs";
 import path from "path";
 import { storage } from "./storage";
@@ -12,13 +11,10 @@ import { getRanking, rankingQuerySchema } from "./precomputed-rankings";
 import { loadSourceRegistry } from "./source-registry";
 import { loadDataQuality } from "./data-quality";
 import { climateTwinQuerySchema, findClimateTwin, loadClimateAnalogCatalog } from "./climate-twin";
-import { getClimateGridEngine } from "./climate-grid-engine";
 import { climateTrajectory, projectClimate } from "./grounded-node-model";
 
-const MAX_PYTHON_CONCURRENT = 2;
-const PYTHON_TIMEOUT_MS = 60_000;
-const PYTHON_BIN = process.env.PYTHON_BIN || "python";
-let activePythonProcesses = 0;
+// Forecasts run in-process via the Node grid engine (grounded-node-model.ts);
+// the legacy Python serving subprocess has been removed.
 
 const RATE_LIMIT_WINDOW_MS = 60_000;
 const RATE_LIMIT_MAX_PER_WINDOW = 10;
@@ -83,81 +79,6 @@ async function geocodePlaces(query: string, signal?: AbortSignal): Promise<Geoco
   });
 }
 
-// Bounded concurrency for the Python fallback. Normal forecast requests use the
-// in-process Node grid engine unless CLIMATE_GRID_ENGINE=python is set.
-const pythonQueue: Array<() => void> = [];
-
-function acquirePythonSlot(): Promise<void> {
-  return new Promise((resolve) => {
-    if (activePythonProcesses < MAX_PYTHON_CONCURRENT) {
-      activePythonProcesses++;
-      resolve();
-    } else {
-      pythonQueue.push(resolve);
-    }
-  });
-}
-
-function releasePythonSlot(): void {
-  const next = pythonQueue.shift();
-  if (next) {
-    // Hand the slot directly to the next waiter; count stays unchanged.
-    next();
-  } else {
-    activePythonProcesses = Math.max(0, activePythonProcesses - 1);
-  }
-}
-
-// Runs grounded_model.py with bounded concurrency and returns parsed JSON.
-async function runGroundedModel(args: string[]): Promise<any> {
-  await acquirePythonSlot();
-  return new Promise((resolve, reject) => {
-    let killed = false;
-    let settled = false;
-    // grounded_model.py is offline (reads the compact CMIP6/IPCC grid in data/)
-    // and is used only when CLIMATE_GRID_ENGINE=python selects the fallback.
-    const python = spawn(PYTHON_BIN, [
-      "grounded_model.py",
-      ...args,
-    ]);
-
-    const killTimer = setTimeout(() => {
-      killed = true;
-      python.kill("SIGKILL");
-    }, PYTHON_TIMEOUT_MS);
-
-    let output = "";
-    python.stdout.on("data", (data: Buffer) => {
-      output += data.toString();
-    });
-    python.stderr.on("data", (_data: Buffer) => {
-      // Intentionally discarded — stderr may contain internal paths or secrets
-    });
-
-    python.on("close", (code: number | null) => {
-      clearTimeout(killTimer);
-      releasePythonSlot();
-      if (settled) return;
-      settled = true;
-      if (killed) return reject(new Error("timeout"));
-      if (code !== 0) return reject(new Error("model_failed"));
-      try {
-        resolve(JSON.parse(output));
-      } catch {
-        reject(new Error("parse_error"));
-      }
-    });
-
-    python.on("error", (err: Error) => {
-      clearTimeout(killTimer);
-      releasePythonSlot();
-      if (settled) return;
-      settled = true;
-      console.error("Failed to start grounded_model.py:", err.message);
-      reject(new Error("spawn_error"));
-    });
-  });
-}
 
 // Runs the climate model for a single (lat, lng, year). Kept as a narrow wrapper
 // for legacy call sites and single-year cache fills.
@@ -167,30 +88,18 @@ async function runClimateModel(
   year: number,
   scenario = DEFAULT_CLIMATE_SCENARIO,
 ): Promise<any> {
-  if (getClimateGridEngine() === "node") {
-    return projectClimate(lat, lng, year, scenario);
-  }
-  return runGroundedModel([lat.toString(), lng.toString(), year.toString(), scenario]);
+  return projectClimate(lat, lng, year, scenario);
 }
 
-// Runs the climate model for multiple checkpoint years in one Python process so
-// the compact grid is loaded once for an uncached trajectory.
+// Runs the climate model for multiple checkpoint years. The in-process Node grid
+// engine loads the compact grid once and projects every year in one call.
 async function runClimateTrajectory(
   lat: number,
   lng: number,
   years: number[],
   scenario = DEFAULT_CLIMATE_SCENARIO,
 ): Promise<any> {
-  if (getClimateGridEngine() === "node") {
-    return climateTrajectory(lat, lng, years, scenario);
-  }
-  return runGroundedModel([
-    "--trajectory",
-    lat.toString(),
-    lng.toString(),
-    years.join(","),
-    scenario,
-  ]);
+  return climateTrajectory(lat, lng, years, scenario);
 }
 
 function projectionScenario(projection: unknown): string | undefined {
@@ -448,8 +357,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       ok: true,
       app: "fupit",
       service: "climate-api",
-      engine: getClimateGridEngine() === "node" ? "grounded-node-model.ts" : "grounded_model.py",
-      gridEngine: getClimateGridEngine(),
+      engine: "grounded-node-model.ts",
+      gridEngine: "node",
       modelCacheVersion: MODEL_CACHE_VERSION,
       sourceRegistryVersion: SOURCE_REGISTRY_VERSION,
       databaseConfigured,
@@ -595,8 +504,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/climate/export-comparison", (_req, res) => retiredFeatureGone(res));
 
   // POST /api/climate-projection — compatibility single-year projection route.
-  // Keep the old response envelope, but route through the configured grounded
-  // engine so CLIMATE_GRID_ENGINE=node and Python queueing apply here too.
+  // Keeps the old response envelope, routed through the in-process Node grid engine.
   app.post("/api/climate-projection", async (req, res) => {
     const clientIp = ((req.ip ?? "") || (req.socket?.remoteAddress ?? "unknown")).replace(/^::ffff:/, "");
     if (!checkRateLimit(clientIp)) {
@@ -638,32 +546,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("climate-projection model error:", msg);
       return res.status(500).json({ message: "Climate model failed. Please try again." });
     }
-
-    activePythonProcesses++;
-    let killed = false;
-    let responded = false;
-
-    const python = spawn(PYTHON_BIN, [
-      "grounded_model.py",
-      coordinates.lat.toString(),
-      coordinates.lng.toString(),
-      year.toString(),
-    ]);
-
-    const killTimer = setTimeout(() => {
-      killed = true;
-      python.kill("SIGKILL");
-    }, PYTHON_TIMEOUT_MS);
-
-    let output = "";
-
-    python.stdout.on("data", (data: Buffer) => {
-      output += data.toString();
-    });
-
-    python.stderr.on("data", (_data: Buffer) => {
-      // Intentionally discarded — stderr may contain internal paths or secrets
-    });
 
   });
 
