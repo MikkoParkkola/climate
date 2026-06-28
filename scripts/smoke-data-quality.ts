@@ -26,6 +26,7 @@ assert.equal(report.validationReport.historicalObservationHindcast, "pending");
 assert.equal(report.validationReport.observedBaselineCrossCheck, "passed");
 assert.ok(report.validationReport.blockers.some((blocker: string) => blocker.includes("No NOAA/ERA5/station")));
 assert.ok(report.validationReport.trendReviewSummary.some((item: any) => item.kind === "precipStep" && item.count >= 1));
+assert.ok(report.executableChecks.includes("npm run smoke:node-performance"));
 assert.ok(report.limitations.some((limit: string) => limit.includes("Replit deployment")));
 assert.ok(report.limitations.some((limit: string) => limit.includes("quantified AMOC")));
 

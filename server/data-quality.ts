@@ -215,6 +215,7 @@ export function loadDataQuality(): Record<string, unknown> {
       "npm run validate:artifacts",
       "npm run smoke:grid-reader",
       "npm run smoke:node-model",
+      "npm run smoke:node-performance",
       "npm run smoke:observed-baseline",
       "npm run smoke:model",
       "npm run smoke:validation-report",

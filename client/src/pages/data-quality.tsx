@@ -235,6 +235,22 @@ export default function DataQualityPage() {
 
               <Card>
                 <CardContent className="space-y-3 pt-6">
+                  <div className="flex items-center gap-2">
+                    <FileCheck2 className="h-5 w-5 text-blue-700" aria-hidden />
+                    <h2 className="text-xl font-semibold">Executable checks</h2>
+                  </div>
+                  <ul className="space-y-2 text-sm">
+                    {data.executableChecks.map((check) => (
+                      <li key={check} className="rounded border border-slate-200 bg-white px-3 py-2 font-mono text-xs text-slate-700">
+                        {check}
+                      </li>
+                    ))}
+                  </ul>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardContent className="space-y-3 pt-6">
                   <h2 className="text-xl font-semibold">Known limits</h2>
                   <ul className="list-disc space-y-1 pl-5 text-sm text-slate-600">
                     {data.limitations.map((limit) => <li key={limit}>{limit}</li>)}
