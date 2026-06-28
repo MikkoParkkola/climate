@@ -31,7 +31,7 @@ Assumptions for this scan:
 - **Production entry points**: `server/index.ts`, `server/routes.ts`, `server/vite.ts`, `client/src/App.tsx`, `client/src/pages/climate-app.tsx`, `client/src/pages/climate-comparison.tsx`.
 - **Highest-risk code areas**: subprocess execution in `server/routes.ts`, Python CLI parsing in `grounded_model.py`, any secret handling in `/api/config`, and any future live DB-backed user-key routes.
 - **Public surfaces**: `/api/config`, `/api/locations/search`, `/api/climate-projection`, `/api/climate/global-rankings`, `/`, `/comparison`.
-- **Dev-only or currently non-live areas**: `artifacts/mockup-sandbox/`, Vite dev middleware behavior, and currently unmounted `server/routes.ts`.
+- **Dev-only or currently non-live areas**: `artifacts/mockup-sandbox/`, Vite dev middleware behavior, and any mockup or legacy scaffolding not wired into `server/index.ts`.
 
 ## Threat Categories
 

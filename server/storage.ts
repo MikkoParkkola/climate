@@ -6,7 +6,12 @@ import {
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, gte, lte, ilike, or, sql } from "drizzle-orm";
-import { MODEL_CACHE_VERSION, unwrapModelProjectionFromCache, wrapModelProjectionForCache } from "./model-cache-version";
+import {
+  MODEL_CACHE_VERSION,
+  SOURCE_REGISTRY_VERSION,
+  unwrapModelProjectionFromCache,
+  wrapModelProjectionForCache,
+} from "./model-cache-version";
 
 // ── Safe JSON parsing ────────────────────────────────────────────────────────
 function safeJsonParse<T = unknown>(val: string | null | undefined): T | undefined {
@@ -27,6 +32,10 @@ function deserializeProjection(projection: ClimateProjection): ClimateProjection
   };
 }
 
+function sqlStringLiteral(value: string): string {
+  return `'${value.replace(/'/g, "''")}'`;
+}
+
 // ── Interface ────────────────────────────────────────────────────────────────
 export interface IStorage {
   getUser(id: number): Promise<User | undefined>;
@@ -44,8 +53,8 @@ export interface IStorage {
   getClimateProjectionsByLocation(locationId: number): Promise<ClimateProjection[]>;
 
   // Raw model-output cache, versioned inside the JSON payload.
-  getCachedModelProjection(latKey: number, lngKey: number, year: number): Promise<unknown | undefined>;
-  saveModelProjection(latKey: number, lngKey: number, year: number, projection: unknown): Promise<void>;
+  getCachedModelProjection(latKey: number, lngKey: number, year: number, scenario: string): Promise<unknown | undefined>;
+  saveModelProjection(latKey: number, lngKey: number, year: number, scenario: string, projection: unknown): Promise<void>;
   purgeIncompatibleModelCache(): Promise<number>;
 
   createLocationComparison(userId: number, name: string, locationIds: number[], year: number): Promise<unknown>;
@@ -54,6 +63,32 @@ export interface IStorage {
 
 // ── Implementation ────────────────────────────────────────────────────────────
 export class DatabaseStorage implements IStorage {
+  private modelCacheSchemaReady: Promise<void> | undefined;
+
+  private ensureModelCacheSchema(): Promise<void> {
+    if (!this.modelCacheSchemaReady) {
+      this.modelCacheSchemaReady = (async () => {
+        await db.execute(sql`
+          ALTER TABLE climate_model_cache
+          ADD COLUMN IF NOT EXISTS scenario text NOT NULL DEFAULT 'ssp245'
+        `);
+        await db.execute(sql`
+          ALTER TABLE climate_model_cache
+          ADD COLUMN IF NOT EXISTS cache_version text NOT NULL DEFAULT ${sql.raw(sqlStringLiteral(MODEL_CACHE_VERSION))}
+        `);
+        await db.execute(sql`
+          ALTER TABLE climate_model_cache
+          ADD COLUMN IF NOT EXISTS source_registry_version text NOT NULL DEFAULT ${sql.raw(sqlStringLiteral(SOURCE_REGISTRY_VERSION))}
+        `);
+        await db.execute(sql`DROP INDEX IF EXISTS cmc_coord_year_idx`);
+        await db.execute(sql`
+          CREATE UNIQUE INDEX IF NOT EXISTS cmc_identity_idx
+          ON climate_model_cache (lat_key, lng_key, year, scenario, cache_version)
+        `);
+      })();
+    }
+    return this.modelCacheSchemaReady;
+  }
 
   // ── Users ────────────────────────────────────────────────────────────────
   async getUser(id: number): Promise<User | undefined> {
@@ -170,7 +205,8 @@ export class DatabaseStorage implements IStorage {
   }
 
   // ── Raw model-output cache ─────────────────────────────────────────────────
-  async getCachedModelProjection(latKey: number, lngKey: number, year: number): Promise<unknown | undefined> {
+  async getCachedModelProjection(latKey: number, lngKey: number, year: number, scenario: string): Promise<unknown | undefined> {
+    await this.ensureModelCacheSchema();
     const [row] = await db
       .select()
       .from(climateModelCache)
@@ -179,30 +215,61 @@ export class DatabaseStorage implements IStorage {
           eq(climateModelCache.latKey, latKey),
           eq(climateModelCache.lngKey, lngKey),
           eq(climateModelCache.year, year),
+          eq(climateModelCache.scenario, scenario),
+          eq(climateModelCache.cacheVersion, MODEL_CACHE_VERSION),
+          eq(climateModelCache.sourceRegistryVersion, SOURCE_REGISTRY_VERSION),
         )
       )
       .limit(1);
-    return row ? unwrapModelProjectionFromCache(safeJsonParse(row.projection)) : undefined;
+    return row ? unwrapModelProjectionFromCache(safeJsonParse(row.projection), scenario) : undefined;
   }
 
-  async saveModelProjection(latKey: number, lngKey: number, year: number, projection: unknown): Promise<void> {
+  async saveModelProjection(latKey: number, lngKey: number, year: number, scenario: string, projection: unknown): Promise<void> {
+    await this.ensureModelCacheSchema();
     // Overwrite on conflict so an old unversioned cbottle-era row cannot keep a
-    // grounded projection from replacing it under the same rounded coordinate.
-    const cachedProjection = JSON.stringify(wrapModelProjectionForCache(projection));
+    // grounded projection from replacing it under the same rounded coordinate,
+    // scenario, and cache version.
+    const cachedProjection = JSON.stringify(wrapModelProjectionForCache(projection, scenario));
     await db
       .insert(climateModelCache)
-      .values({ latKey, lngKey, year, projection: cachedProjection, createdAt: new Date() })
+      .values({
+        latKey,
+        lngKey,
+        year,
+        scenario,
+        cacheVersion: MODEL_CACHE_VERSION,
+        sourceRegistryVersion: SOURCE_REGISTRY_VERSION,
+        projection: cachedProjection,
+        createdAt: new Date(),
+      })
       .onConflictDoUpdate({
-        target: [climateModelCache.latKey, climateModelCache.lngKey, climateModelCache.year],
-        set: { projection: cachedProjection, createdAt: new Date() },
+        target: [
+          climateModelCache.latKey,
+          climateModelCache.lngKey,
+          climateModelCache.year,
+          climateModelCache.scenario,
+          climateModelCache.cacheVersion,
+        ],
+        set: {
+          sourceRegistryVersion: SOURCE_REGISTRY_VERSION,
+          projection: cachedProjection,
+          createdAt: new Date(),
+        },
       });
   }
 
   async purgeIncompatibleModelCache(): Promise<number> {
-    const currentEnvelopePrefix = `{"__cache":{"modelVersion":"${MODEL_CACHE_VERSION}"`;
+    await this.ensureModelCacheSchema();
+    const modelVersionNeedle = `%"modelVersion":"${MODEL_CACHE_VERSION}"%`;
+    const sourceRegistryNeedle = `%"sourceRegistryVersion":"${SOURCE_REGISTRY_VERSION}"%`;
     const deleted = await db
       .delete(climateModelCache)
-      .where(sql`left(${climateModelCache.projection}, ${currentEnvelopePrefix.length}) <> ${currentEnvelopePrefix}`)
+      .where(sql`
+        ${climateModelCache.cacheVersion} <> ${MODEL_CACHE_VERSION}
+        OR ${climateModelCache.sourceRegistryVersion} <> ${SOURCE_REGISTRY_VERSION}
+        OR ${climateModelCache.projection} NOT LIKE ${modelVersionNeedle}
+        OR ${climateModelCache.projection} NOT LIKE ${sourceRegistryNeedle}
+      `)
       .returning({ id: climateModelCache.id });
     return deleted.length;
   }

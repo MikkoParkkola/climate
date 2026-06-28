@@ -10,6 +10,11 @@ const gridPath = path.join(repoRoot, "data", "grid.i16.gz");
 const manifestPath = path.join(repoRoot, "data", "manifest.json");
 const worldclimPath = path.join(repoRoot, "data", "worldclim10m.i16.gz");
 const worldclimManifestPath = path.join(repoRoot, "data", "worldclim10m.manifest.json");
+const baselineYear = 2025;
+const maxYear = 2100;
+const currentForecastYear = Math.min(maxYear, Math.max(baselineYear + 1, new Date().getFullYear()));
+const fiveYearCheckpoints = Array.from({ length: 15 }, (_, i) => 2030 + i * 5).filter((year) => year >= currentForecastYear);
+const trajectoryYears = Array.from(new Set([baselineYear, currentForecastYear, ...fiveYearCheckpoints])).sort((a, b) => a - b);
 
 const samples = [
   { name: "Helsinki", lat: 60.17, lng: 24.94 },
@@ -31,6 +36,13 @@ const requiredPaths = [
   "temperature.min",
   "temperature.max",
   "temperature.seasonal_amplitude",
+  "temperature.model_consensus.annual_mean",
+  "temperature.model_consensus.anomaly",
+  "temperature.ipcc_calibrated.annual_mean",
+  "temperature.ipcc_calibrated.anomaly",
+  "temperature.ipcc_calibrated.adjustment_c",
+  "temperature.ipcc_calibrated.calibration_factor",
+  "temperature.ipcc_calibrated.uncertainty.anomaly_spread",
   "temperature.uncertainty.annual_mean_low",
   "temperature.uncertainty.annual_mean_high",
   "temperature.uncertainty.anomaly_spread",
@@ -47,6 +59,15 @@ const requiredPaths = [
   "extremes.drought_risk",
   "extremes.flood_risk",
   "extremes.sea_level_rise_cm",
+  "extremes.detail.humid_heat.max_monthly_mean_wet_bulb_c",
+  "extremes.detail.humid_heat.max_month",
+  "extremes.detail.humid_heat.relative_humidity_anomaly_percent_points",
+  "extremes.detail.humid_heat.relative_humidity_spread_percent_points",
+  "extremes.detail.humid_heat.domain_clipped_months",
+  "extremes.detail.humid_heat.temperature_domain_warning_months",
+  "extremes.detail.humid_heat.source_id",
+  "extremes.detail.humid_heat.method",
+  "extremes.detail.humid_heat.caveat",
   "extremes.detail.uncertainty.sea_level_low_cm",
   "extremes.detail.uncertainty.sea_level_high_cm",
   "habitability.score",
@@ -65,10 +86,22 @@ const requiredPaths = [
   "metadata.baseline",
   "metadata.baseline_source.temperature",
   "metadata.baseline_source.precipitation",
+  "metadata.baseline_source.humidity",
+  "metadata.baseline_source.observed_temperature_months",
+  "metadata.baseline_source.observed_precipitation_months",
+  "metadata.baseline_source.observed_annual_temperature_c",
+  "metadata.baseline_source.observed_annual_precipitation_mm",
   "metadata.baseline_source.delta_reference_period",
+  "metadata.projection_year_basis.requested_year",
+  "metadata.projection_year_basis.source_year_low",
+  "metadata.projection_year_basis.source_year_high",
+  "metadata.projection_year_basis.mode",
+  "metadata.projection_year_basis.cadence",
+  "metadata.projection_year_basis.note",
   "metadata.projection_method",
   "metadata.uncertainty.temperature_anomaly_spread_c",
   "metadata.uncertainty.precipitation_anomaly_spread_pct",
+  "metadata.uncertainty.relative_humidity_anomaly_spread_percent_points",
   "metadata.uncertainty.sea_level_low_cm",
   "metadata.uncertainty.sea_level_high_cm",
 ];
@@ -138,6 +171,57 @@ function runTrajectory(pythonBin, sample, years, scenario = "ssp245") {
   }
 }
 
+function runRankings(pythonBin, year = 2050, scenario = "ssp245", catalog = undefined) {
+  const args = [modelPath, "--rankings", String(year), scenario];
+  if (catalog) {
+    args.push(catalog);
+  }
+  const result = spawnSync(pythonBin, args, {
+    cwd: repoRoot,
+    encoding: "utf8",
+    maxBuffer: 16 * 1024 * 1024,
+  });
+  if (result.error) {
+    throw result.error;
+  }
+  if (result.status !== 0) {
+    throw new Error(`rankings process failed with exit ${result.status}: ${result.stderr || result.stdout}`);
+  }
+  try {
+    return JSON.parse(result.stdout);
+  } catch (error) {
+    throw new Error(`rankings output was not valid JSON: ${error.message}`);
+  }
+}
+
+function validateNaturalEarthRankings(pythonBin) {
+  const payload = runRankings(pythonBin, 2050, "ssp245", "population-centers.natural-earth-110m.json");
+  assert(payload.year === 2050, "Natural Earth rankings year mismatch");
+  assert(payload.scenario === "ssp245", "Natural Earth rankings scenario mismatch");
+  assert(Array.isArray(payload.rankings), "Natural Earth rankings missing rankings array");
+  assert(payload.rankings.length >= 50, "Natural Earth rankings catalog unexpectedly small");
+
+  payload.rankings.forEach((row, index) => {
+    assert(row.id, `Natural Earth rankings row ${index} missing id`);
+    assert(row.name, `Natural Earth rankings row ${index} missing name`);
+    assert(Number.isFinite(row.lat), `Natural Earth rankings row ${index} missing latitude`);
+    assert(Number.isFinite(row.lng), `Natural Earth rankings row ${index} missing longitude`);
+    assert(Number.isFinite(row.population), `Natural Earth rankings row ${index} missing population`);
+    assert(row.population >= 3_000_000, `Natural Earth rankings row ${index} below pop_max threshold`);
+    assert(row.populationField === "pop_max", `Natural Earth rankings row ${index} missing population field disclosure`);
+    assert(
+      String(row.inclusionReason || "").includes("Natural Earth 1:110m"),
+      `Natural Earth rankings row ${index} missing catalog inclusion reason`,
+    );
+    assert(Number.isFinite(row.temperature?.annual_mean), `Natural Earth rankings row ${index} missing annual temperature`);
+    assert(Number.isFinite(row.precipitation?.annual_total), `Natural Earth rankings row ${index} missing precipitation total`);
+    assert(Number.isFinite(row.extremes?.heat_stress_days), `Natural Earth rankings row ${index} missing heat stress days`);
+    assert(Number.isFinite(row.habitability?.score), `Natural Earth rankings row ${index} missing habitability score`);
+    assert(Array.isArray(row.metadata?.source_trail), `Natural Earth rankings row ${index} missing source trail`);
+    assert(row.metadata.source_trail.length >= 4, `Natural Earth rankings row ${index} source trail incomplete`);
+  });
+}
+
 function assertInvalidYearRejected(pythonBin) {
   const invalidYear = "2200";
   const commands = [
@@ -172,6 +256,39 @@ function assertInvalidYearRejected(pythonBin) {
   }
 }
 
+function assertUnsupportedFullScenarioRejected(pythonBin) {
+  const commands = [
+    {
+      label: "single projection",
+      args: [modelPath, "60.17", "24.94", "2050", "ssp119"],
+    },
+    {
+      label: "trajectory projection",
+      args: [modelPath, "--trajectory", "60.17", "24.94", "2025,2050", "ssp119"],
+    },
+    {
+      label: "rankings projection",
+      args: [modelPath, "--rankings", "2050", "ssp119"],
+    },
+  ];
+
+  for (const command of commands) {
+    const result = spawnSync(pythonBin, command.args, {
+      cwd: repoRoot,
+      encoding: "utf8",
+      maxBuffer: 2 * 1024 * 1024,
+    });
+    if (result.error) {
+      throw result.error;
+    }
+    assert(result.status !== 0, `${command.label} accepted unsupported full-forecast scenario ssp119`);
+    assert(
+      result.stderr.includes("SSP1-1.9 lacks grounded ETCCDI"),
+      `${command.label} rejection did not explain the missing ETCCDI source: ${result.stderr || result.stdout}`,
+    );
+  }
+}
+
 function findPython() {
   const candidates = [process.env.PYTHON_BIN, "python3", "python"].filter(Boolean);
   for (const candidate of candidates) {
@@ -194,12 +311,32 @@ function validateProjection(sample, projection, expectedYear = 2050, expectedSce
   assert(projection.metadata.scenario === expectedScenario, `${sample.name} metadata scenario mismatch`);
   assert(Array.isArray(projection.temperature.monthly), `${sample.name} temperature.monthly missing`);
   assert(projection.temperature.monthly.length === 12, `${sample.name} temperature.monthly length is not 12`);
+  assert(Array.isArray(projection.temperature.model_consensus.monthly), `${sample.name} temperature.model_consensus.monthly missing`);
+  assert(projection.temperature.model_consensus.monthly.length === 12, `${sample.name} temperature.model_consensus.monthly length is not 12`);
+  assert(Array.isArray(projection.temperature.ipcc_calibrated.monthly), `${sample.name} temperature.ipcc_calibrated.monthly missing`);
+  assert(projection.temperature.ipcc_calibrated.monthly.length === 12, `${sample.name} temperature.ipcc_calibrated.monthly length is not 12`);
   assert(Array.isArray(projection.temperature.monthly_labels), `${sample.name} temperature.monthly_labels missing`);
   assert(projection.temperature.monthly_labels.length === 12, `${sample.name} temperature.monthly_labels length is not 12`);
   assert(Array.isArray(projection.precipitation.monthly), `${sample.name} precipitation.monthly missing`);
   assert(projection.precipitation.monthly.length === 12, `${sample.name} precipitation.monthly length is not 12`);
   assert(Array.isArray(projection.precipitation.monthly_labels), `${sample.name} precipitation.monthly_labels missing`);
   assert(projection.precipitation.monthly_labels.length === 12, `${sample.name} precipitation.monthly_labels length is not 12`);
+  assert(Array.isArray(projection.extremes.detail.humid_heat.monthly_mean_wet_bulb_c), `${sample.name} humid heat monthly wet-bulb missing`);
+  assert(projection.extremes.detail.humid_heat.monthly_mean_wet_bulb_c.length === 12, `${sample.name} humid heat wet-bulb length is not 12`);
+  assert(Array.isArray(projection.extremes.detail.humid_heat.monthly_relative_humidity_percent), `${sample.name} humid heat monthly RH missing`);
+  assert(projection.extremes.detail.humid_heat.monthly_relative_humidity_percent.length === 12, `${sample.name} humid heat RH length is not 12`);
+  assert(
+    projection.extremes.detail.humid_heat.source_id === "stull-2011-wetbulb-approximation",
+    `${sample.name} humid heat source id mismatch`,
+  );
+  assert(
+    /Monthly mean wet-bulb/.test(projection.extremes.detail.humid_heat.caveat),
+    `${sample.name} humid heat caveat missing monthly-mean boundary`,
+  );
+  assert(
+    /not WBGT/.test(projection.extremes.detail.humid_heat.caveat),
+    `${sample.name} humid heat caveat missing WBGT boundary`,
+  );
 
   assert(projection.extremes.heat_stress_days >= 0 && projection.extremes.heat_stress_days <= 366, `${sample.name} heat_stress_days out of range`);
   assert(projection.extremes.drought_risk >= 0 && projection.extremes.drought_risk <= 100, `${sample.name} drought_risk out of 0-100 range`);
@@ -207,14 +344,34 @@ function validateProjection(sample, projection, expectedYear = 2050, expectedSce
   assert(projection.habitability.score >= 0 && projection.habitability.score <= 100, `${sample.name} habitability score out of range`);
   assert(projection.temperature.uncertainty.annual_mean_low <= projection.temperature.annual_mean, `${sample.name} temperature uncertainty low above mean`);
   assert(projection.temperature.uncertainty.annual_mean_high >= projection.temperature.annual_mean, `${sample.name} temperature uncertainty high below mean`);
+  assert(projection.temperature.model_consensus.annual_mean === projection.temperature.annual_mean, `${sample.name} raw model consensus not used as temperature headline`);
+  assert(projection.temperature.model_consensus.anomaly === projection.temperature.anomaly, `${sample.name} raw model consensus anomaly not used as headline anomaly`);
+  assert(projection.temperature.ipcc_calibrated.calibration_factor > 0, `${sample.name} invalid IPCC calibration factor`);
   assert(projection.precipitation.uncertainty.annual_total_low <= projection.precipitation.annual_total, `${sample.name} precipitation uncertainty low above total`);
   assert(projection.precipitation.uncertainty.annual_total_high >= projection.precipitation.annual_total, `${sample.name} precipitation uncertainty high below total`);
   assert(projection.extremes.detail.uncertainty.sea_level_low_cm <= projection.extremes.sea_level_rise_cm, `${sample.name} sea-level low above median`);
   assert(projection.extremes.detail.uncertainty.sea_level_high_cm >= projection.extremes.sea_level_rise_cm, `${sample.name} sea-level high below median`);
   assert(Array.isArray(projection.metadata.source_trail), `${sample.name} source trail missing`);
   assert(projection.metadata.source_trail.length >= 4, `${sample.name} source trail incomplete`);
+  assert(
+    projection.metadata.source_trail.some((entry) => entry.label === "Humid heat screen" && /Stull 2011/.test(entry.citation)),
+    `${sample.name} humid heat source trail missing`,
+  );
   assert(/WorldClim|CMIP6/.test(projection.metadata.baseline_source.temperature), `${sample.name} temperature baseline source missing provenance`);
   assert(/WorldClim|CMIP6/.test(projection.metadata.baseline_source.precipitation), `${sample.name} precipitation baseline source missing provenance`);
+  assert(projection.metadata.projection_year_basis.requested_year === expectedYear, `${sample.name} projection year basis requested year mismatch`);
+  assert(
+    /decadal 2030-2100/.test(projection.metadata.projection_year_basis.cadence),
+    `${sample.name} projection year cadence missing decadal-source disclosure`,
+  );
+  if (expectedYear < 2030) {
+    assert(
+      projection.metadata.projection_year_basis.mode === "clamped-earliest-source-year",
+      `${sample.name} pre-2030 projection should disclose earliest-source-year clamp`,
+    );
+    assert(projection.metadata.projection_year_basis.source_year_low === 2030, `${sample.name} pre-2030 source low should be 2030`);
+    assert(projection.metadata.projection_year_basis.source_year_high === 2030, `${sample.name} pre-2030 source high should be 2030`);
+  }
   projection.metadata.source_trail.forEach((entry, index) => {
     assert(entry.label && entry.source && entry.method && entry.citation, `${sample.name} source trail entry ${index} incomplete`);
   });
@@ -244,7 +401,6 @@ const results = samples.map((sample) => {
 
 validateKnownRegressions(results);
 
-const trajectoryYears = [2025, 2050, 2075, 2100];
 const trajectorySample = samples[0];
 const trajectory = runTrajectory(pythonBin, trajectorySample, trajectoryYears);
 assert(
@@ -258,15 +414,18 @@ trajectory.points.forEach((point, index) => {
   validateProjection(trajectorySample, point, trajectoryYears[index]);
 });
 
-const highScenarioTrajectory = runTrajectory(pythonBin, trajectorySample, [2025, 2050], "ssp585");
+const highScenarioYears = [baselineYear, currentForecastYear];
+const highScenarioTrajectory = runTrajectory(pythonBin, trajectorySample, highScenarioYears, "ssp585");
 assert(highScenarioTrajectory.scenario === "ssp585", "non-default trajectory scenario mismatch");
 assert(Array.isArray(highScenarioTrajectory.points), "non-default trajectory points missing");
 assert(highScenarioTrajectory.points.length === 2, "non-default trajectory point count mismatch");
 highScenarioTrajectory.points.forEach((point, index) => {
-  validateProjection(trajectorySample, point, [2025, 2050][index], "ssp585");
+  validateProjection(trajectorySample, point, highScenarioYears[index], "ssp585");
 });
 
 assertInvalidYearRejected(pythonBin);
+assertUnsupportedFullScenarioRejected(pythonBin);
+validateNaturalEarthRankings(pythonBin);
 
 for (const { sample, projection } of results) {
   console.log(
@@ -278,4 +437,6 @@ for (const { sample, projection } of results) {
 console.log(`grounded_model contract smoke passed for ${samples.length} cities using ${pythonBin}`);
 console.log(`grounded_model trajectory smoke passed for ${trajectorySample.name} years ${trajectoryYears.join(",")}`);
 console.log("grounded_model non-default scenario trajectory smoke passed for ssp585");
+console.log("grounded_model Natural Earth population-place ranking catalog smoke passed");
 console.log("grounded_model rejects forecast years beyond 2100");
+console.log("grounded_model rejects SSP1-1.9 full forecasts until ETCCDI extremes exist");

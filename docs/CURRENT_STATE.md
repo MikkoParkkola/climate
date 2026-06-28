@@ -1,48 +1,117 @@
-# Current State — honest baseline (2026-06-26)
+# Current State - grounded baseline (2026-06-27)
 
-A factual snapshot of what exists today, so plans build on truth, not the README's aspirations. Update when reality changes.
+A factual snapshot of what exists today, so plans build on truth instead of old README
+aspirations or historical handoff notes.
 
-## The headline: the "model" is not a model
+## Headline
 
-`cbottle_runner.py` (2,053 LOC) is named after NVIDIA's cBottle climate model and its comments cite "CBottle atmospheric physics" and "IPCC AR6" — but it contains **none of that**. It is a deterministic heuristic built from ~20 hand-picked constants.
+The fabricated legacy runner has been removed. The default serving path now uses the
+TypeScript in-process grid engine in `server/grounded-node-model.ts`, backed by compact
+artifacts in `data/`. `grounded_model.py` remains as an explicit `CLIMATE_GRID_ENGINE=python`
+fallback and parity oracle for one release.
 
-Evidence (`cbottle_runner.py`):
+The app is locally validated with a production build and a Postgres-backed endpoint smoke.
+Public Replit readiness is still an operational state to verify after republish and production
+cache purge/version-guard proof.
 
-```python
-# calculate_temperature_anomaly()  (line ~505)
-acceleration_factor = 1 + (years_ahead / 50.0) * 0.3   # invented "30% over 50y"
-if not is_coastal(latitude, longitude):
-    base_warming_rate *= 1.3                            # invented "continental x1.3"
-return base_warming_rate * acceleration_factor * (years_ahead / 10.0)
+## Grounded serving stack
 
-# get_regional_warming_rate()  — labeled "based on IPCC AR6", actually magic numbers
-if abs_lat > 60: return 0.4    # Arctic
+- `server/grounded-node-model.ts` reads `data/grid.i16.gz`, `data/manifest.json`, and the
+  observed baseline artifacts through the TypeScript grid reader.
+- `server/routes.ts` uses the Node grid engine by default for trajectory and climate-twin cache
+  fills, serves precomputed ranking artifacts, exposes `GET /api/source-registry`, and returns
+  410 for retired legacy projection routes.
+- `grounded_model.py` remains available through `CLIMATE_GRID_ENGINE=python` for rollback and
+  parity checks; it is not the default request path.
+- `climate_model_cache` identity includes rounded coordinates, year, scenario, cache version, and
+  source-registry version. Old unwrapped or mismatched rows are treated as misses and purged by
+  the startup guard.
+- `data/source-registry.json` is the source/license registry for served artifacts.
+- `data/rankings.curated-cities.json` and
+  `data/rankings.natural-earth-populated-places.json` power `/rankings` and
+  `GET /api/climate/global-rankings`. They are bounded curated-city and Natural Earth
+  population-place artifacts, not complete country, GHSL urban-center, or population-weighted
+  exposure rankings.
+- `client/public/climate-analog-catalog.current.json` powers the bounded climate-twin
+  communication feature and is included in artifact validation.
 
-# calculate_precipitation_anomaly()  — hardcoded +/- 1-2% per decade by latitude band
-```
+## What is real and worth keeping
 
-Confirmed by inspection:
-- **No** `torch`, `onnx`, Earth2Studio, NVIDIA API call, model weights, or diffusion code. Imports are only `sys, json, os, numpy, xarray, datetime, traceback`.
-- The single outbound call is a NOAA weather-station lookup for the present-day baseline (`https://www.ncdc.noaa.gov/cdo-web/api/v2/stations`).
-- The docstring admits it: *"Since Earth2Studio requires local installation and model weights, this implements the core climate downscaling logic."*
+- React/Vite app shell, comparison flow, source/methodology pages, SEO/static handlers, and
+  shareable UI scaffolding.
+- The comparison flow has an explicit scenario selector and a sticky year slider that no longer
+  reuses the single-location header offset.
+- The single-location projection receipt offers raw JSON and a Markdown educational summary
+  export built from visible forecast fields, annual roadmap, climate twin, source trail, and
+  missing-domain caveats.
+- Express 5 API with request validation, rate limits, an in-process Node forecast path, bounded
+  Python fallback concurrency, and a durable Postgres response cache.
+- Drizzle schema in `shared/schema.ts` as the database type source of truth.
+- The cache-and-serve pattern, with stricter cache identity and version guards.
+- Public methodology and source-trail direction: every visible number must map to a registered
+  source and method, or be suppressed.
+- Public repo hygiene now excludes tracked Replit mockup sandboxes and pasted local assets.
 
-**Implication:** every projection currently served is fabricated and labeled as science. This is the central problem the new plan fixes. Until then, treat all served climate numbers as untrustworthy.
+## API surface
 
-## What IS real and worth keeping
+Production-relevant surfaces include:
 
-- **App shell & UX**: React SPA, comparison, global rankings, sea-level map, CSV/PDF export, Leaflet maps — solid, reusable.
-- **Serving infrastructure**: rate limiting, bounded Python concurrency + queue, and `climate_model_cache` (rounded lat/lng/year grid, lossless JSON). The **cache-and-serve pattern is exactly right** for the real plan; only the thing producing the cached values changes.
-- **DB schema** (`shared/schema.ts`): tables for locations, projections, comparisons, model cache, users. Field set is reasonable; may need additions (scenario id, uncertainty bounds, provenance).
-- **SEO/SPA head injection**, security guardrails, and the project-local memory notes.
+- `GET /api/health`
+- `GET /api/source-registry`
+- `POST /api/climate-trajectory`
+- `POST /api/climate-projection`
+- `GET /api/climate/global-rankings`
+- `GET /methodology`
+- `GET /rankings`
+- `GET /data-quality`
+- `GET /`, `GET /comparison`, and static SPA assets
 
-## API surface (server/routes.ts, 1,703 LOC)
+Retired location-id legacy projection routes return 410 so they cannot serve old fabricated
+payloads after deployment.
 
-`/api/locations/search`, `/api/climate-projection`, `/api/climate-trajectory`, `/api/climate/global-rankings`, `/api/projections/*`, `/api/user/keys`, `/api/user/comparisons`, `/api/export/csv/*`, `/api/climate/export-comparison`, plus prod-only `/` and `/comparison` SEO handlers.
+## Current local validation
 
-## Drift / cleanup
+Local validation on 2026-06-27:
 
-- `threat_model.md` cites `server/routes-simple.ts` as production — file does not exist; live routes are `server/routes.ts`. Stale.
-- `conflict_area.txt` (root, ~7KB) — leftover merge-conflict artifact.
-- README absent at repo root.
-- **`npm run check` (tsc) does NOT pass on a clean checkout** — pre-existing, not introduced by current work. Errors are confined to **unrouted orphan pages** and loose types: `climate-dashboard.tsx` / `comprehensive-climate-report.tsx` / `enhanced-climate-dashboard.tsx` import a non-existent `@/components/habitability-ranking` (the real file is `habitability-ranking-refactored.tsx`); `sea-level-map.tsx` imports missing `react-leaflet`; `multi-location-comparison.tsx` + `api-key-manager.tsx` use loose `{}` types; `server/routes.ts:264` Date→string; `server/vite.ts:50` ServerOptions. **`npm run build` (Vite) is green** because only `/` and `/comparison` (→ `climate-app`, `climate-comparison`) reach the bundle. Treat build as the ship gate until tsc is cleaned up (own ticket; likely Phase 6).
+- `npm run ci` passes.
+- Production build passes.
+- Postgres-backed local smoke proves `/api/climate-trajectory` returns the required Helsinki
+  2050 contract for multiple scenarios with monthly arrays of length 12 and no nulls in required
+  fields.
+- Cache isolation proves the same coordinate/year stores separate `ssp245` and `ssp585` rows.
+- `/methodology` renders from the built server.
+- `/rankings` renders from the built server and the ranking API returns bounded top-10 rows with
+  catalog caveats.
+- `/data-quality` renders from the built server.
+- `npm run validate:artifacts` verifies ranking slices, the current climate-twin analog catalog,
+  registered source rows, trajectory-audit coverage, a 13-city NASA POWER/MERRA-2 external
+  observed-climatology baseline comparison, and validation-report sync.
+- `npm run smoke:educational-report` guards the Markdown educational summary export, source
+  receipts, annual roadmap, climate twin context, and no-safe-haven/no-unregistered-enrichment
+  caveats.
+- `npm run smoke:comparison-layout` guards the comparison slider offset and scenario propagation.
+- `npm run screenshots:capture` captures desktop/mobile PNG evidence for layered launch checks
+  using local Chrome headless; use `--include-single` only on a host with `DATABASE_URL`.
+- Legacy projection routes return HTTP 410.
+- `LICENSE` and `CONTRIBUTING.md` are present.
 
+## Remaining launch blockers
+
+- Replit autoscale must be republished from the current code.
+- Production `climate_model_cache` must be truncated, or live startup/version-guard proof must show
+  all incompatible rows are rejected and removed.
+- `npm run verify:live` and manual live smoke must pass against the public URL after republish.
+- Browser screenshots should be captured against the live republished app for desktop/mobile home,
+  single-location, comparison, rankings, methodology, and data-quality once the deployed build is current.
+
+## Known future work
+
+- Keep Python fallback for one release while live Replit verification proves the Node default
+  path under production cache/database conditions.
+- Add country, GHSL urban-center, and population-weighted exposure ranking artifacts when catalog
+  and license review are complete.
+- Add freshwater, biodiversity, agriculture, fire-weather, infrastructure, and AMOC/context
+  enrichments only after source/license registry approval.
+- Expand the current validation report beyond fixture trajectory checks, WorldClim baseline
+  audit, and NASA POWER observed-climatology baseline comparison into a true time-varying
+  projection-vs-observation hindcast matrix once historical projection targets are packaged.

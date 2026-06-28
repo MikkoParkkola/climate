@@ -1,0 +1,48 @@
+import assert from "node:assert/strict";
+import fs from "node:fs";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+
+const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+const appPath = path.join(repoRoot, "client", "src", "pages", "climate-app.tsx");
+const multiplesPath = path.join(repoRoot, "client", "src", "components", "scenario-small-multiples.tsx");
+const source = fs.readFileSync(appPath, "utf8");
+const multiplesSource = fs.readFileSync(multiplesPath, "utf8");
+
+assert.match(source, /const loadScenarioContrast = async/, "scenario contrast loads pathways on demand");
+assert.match(source, /for \(const row of SCENARIOS\)/, "scenario contrast covers all supported SSP scenarios");
+assert.match(source, /fetchTrajectory\(selectedLocation, row\.id\)/, "scenario contrast reuses the grounded trajectory API for the same location");
+assert.match(source, /Scenario contrast · same location/, "result page renders the scenario contrast section");
+assert.match(source, /Load pathway contrast/, "scenario contrast is user-triggered, not hidden or automatic");
+assert.match(source, /Lower-warming comparison/, "scenario roles explain lower-warming pathway framing");
+assert.match(source, /Current-policy-adjacent reference/, "scenario roles explain the default/reference framing");
+assert.match(source, /current-policy-reference-2025/, "scenario default has a visible versioned current-policy policy reference");
+assert.match(source, /UNEP current-policy and Climate Action Tracker/, "scenario default cites current-policy synthesis sources");
+assert.match(source, /2\.6 C and just below 3 C/, "scenario default explains the current-policy warming range behind SSP2-4.5 mapping");
+assert.match(source, /not a prediction or hidden scenario average/, "scenario default avoids prophecy and hidden-average framing");
+assert.match(source, /Higher-warming stress case/, "scenario roles explain high-warming stress framing");
+assert.match(source, /lower-likelihood stress test/, "scenario roles caveat SSP5-8.5 framing");
+assert.match(source, /Local pathway gap/, "scenario contrast gives a concrete local difference");
+assert.match(source, /not predictions/, "scenario contrast avoids declaring a scenario as prophecy");
+assert.match(source, /not a claim that one pathway is guaranteed/, "scenario contrast caveats the selected local gap");
+assert.match(source, /aria-describedby="scenario-contrast-receipt"/, "scenario contrast action links to an accessible method receipt");
+assert.match(source, /id="scenario-contrast-receipt"/, "scenario contrast method receipt is rendered near the action");
+assert.match(source, /<ReceiptDetails label="method" text="Fetches the same annual checkpoints/, "scenario contrast method receipt describes the grounded endpoint and same-coordinate comparison");
+assert.match(source, /<ReceiptDetails label="default" text=\{\`\$\{DEFAULT_SCENARIO_EXPLANATION\}/, "scenario contrast exposes the default-scenario method receipt");
+assert.doesNotMatch(source, /title="Fetch the same annual checkpoints/, "scenario contrast method receipt must not regress to hover-only title text");
+assert.match(source, /ScenarioSmallMultiples/, "scenario contrast renders small multiples when pathway data is loaded");
+assert.match(source, /scenarioSmallMultipleMetrics/, "scenario contrast builds a metric matrix from loaded pathway trajectories");
+assert.match(source, /point\.temperature\.anomaly/, "small multiples include raw CMIP6 warming");
+assert.match(source, /point\.temperature\.ipcc_calibrated\?\.anomaly/, "small multiples include IPCC assessed warming where exposed");
+assert.match(source, /point\.extremes\.heat_stress_days/, "small multiples include heat-stress days");
+assert.match(source, /point\.precipitation\.anomaly_percent/, "small multiples include rainfall change");
+assert.match(source, /point\.extremes\.drought_risk/, "small multiples include drought risk");
+assert.match(source, /point\.extremes\.flood_risk/, "small multiples include flood risk");
+assert.match(source, /point\.extremes\.sea_level_rise_cm/, "small multiples include sea-level context");
+assert.match(source, /point\.habitability\.score/, "small multiples include habitability score");
+assert.match(multiplesSource, /Scenario small multiples · all key metrics/, "small multiples section has an explicit all-key-metrics label");
+assert.match(multiplesSource, /annual values linearly interpolated between grounded API checkpoints/, "small multiples disclose annual interpolation between grounded checkpoints");
+assert.match(multiplesSource, /Selected-year values and receipt/, "small multiples expose keyboard/touch-accessible values and receipts");
+assert.doesNotMatch(multiplesSource, /safe haven|best place to live|guaranteed/i, "small multiples avoid safe-haven or guaranteed-outcome framing");
+
+console.log("scenario contrast smoke passed: same-location pathway comparison, caveats, accessible receipts, and all-key-metric small multiples guarded");

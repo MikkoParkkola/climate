@@ -4,9 +4,16 @@ import { spawn } from "child_process";
 import fs from "fs";
 import path from "path";
 import { storage } from "./storage";
-import { MODEL_CACHE_VERSION } from "./model-cache-version";
+import { DatabaseUnavailableError, isDatabaseConfigured } from "./db";
+import { MODEL_CACHE_VERSION, SOURCE_REGISTRY_VERSION } from "./model-cache-version";
 import { insertClimateLocationSchema } from "@shared/schema";
 import { z } from "zod";
+import { getRanking, rankingQuerySchema } from "./precomputed-rankings";
+import { loadSourceRegistry } from "./source-registry";
+import { loadDataQuality } from "./data-quality";
+import { climateTwinQuerySchema, findClimateTwin, loadClimateAnalogCatalog } from "./climate-twin";
+import { getClimateGridEngine } from "./climate-grid-engine";
+import { climateTrajectory, projectClimate } from "./grounded-node-model";
 
 const MAX_PYTHON_CONCURRENT = 2;
 const PYTHON_TIMEOUT_MS = 60_000;
@@ -18,7 +25,10 @@ const RATE_LIMIT_MAX_PER_WINDOW = 10;
 const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
 const MIN_FORECAST_YEAR = 2024;
 const MAX_FORECAST_YEAR = 2100;
-const CLIMATE_SCENARIOS = ["ssp119", "ssp126", "ssp245", "ssp370", "ssp585"] as const;
+// SSP1-1.9 temperature/precipitation layers exist in the artifact, but the
+// ETCCDI extremes source has no SSP1-1.9. Full habitability forecasts therefore
+// reject it instead of serving missing heat/drought/flood penalties.
+const CLIMATE_SCENARIOS = ["ssp126", "ssp245", "ssp370", "ssp585"] as const;
 const DEFAULT_CLIMATE_SCENARIO = "ssp245";
 
 function checkRateLimit(ip: string): boolean {
@@ -33,58 +43,19 @@ function checkRateLimit(ip: string): boolean {
   return true;
 }
 
-// Resolves any place on Earth by English name via the Open-Meteo geocoding API
-// (free, key-less, global). Replaces the old seeded-city DB lookup so cities like
-// Prague or Kyiv resolve too. Returns a shape the client expects: { name, lat,
-// lng, latitude, longitude, country, city, state }.
-interface GeocodeResult {
-  name: string;
-  lat: number;
-  lng: number;
-  latitude: number;
-  longitude: number;
-  country: string;
-  city: string;
-  state?: string;
+function isDatabaseUnavailable(error: unknown): boolean {
+  return error instanceof DatabaseUnavailableError ||
+    (error instanceof Error && error.name === "DatabaseUnavailableError");
 }
 
-async function geocodePlaces(query: string): Promise<GeocodeResult[]> {
-  const url =
-    "https://geocoding-api.open-meteo.com/v1/search" +
-    `?name=${encodeURIComponent(query)}&count=10&language=en&format=json`;
-
-  const response = await fetch(url, { signal: AbortSignal.timeout(8000) });
-  if (!response.ok) {
-    throw new Error(`Geocoding upstream returned ${response.status}`);
-  }
-  const data = (await response.json()) as { results?: any[] };
-  const results = Array.isArray(data.results) ? data.results : [];
-
-  return results
-    .filter((r) => Number.isFinite(r?.latitude) && Number.isFinite(r?.longitude))
-    .map((r) => {
-      // Build "City, Region, Country", dropping blanks and consecutive dupes
-      // (e.g. avoids "Prague, Prague, Czechia" → "Prague, Czechia").
-      const parts = [r.name, r.admin1, r.country].filter(
-        (p): p is string => typeof p === "string" && p.trim().length > 0,
-      );
-      const display = parts.filter((p, i) => i === 0 || p !== parts[i - 1]);
-      return {
-        name: display.join(", "),
-        lat: r.latitude,
-        lng: r.longitude,
-        latitude: r.latitude,
-        longitude: r.longitude,
-        country: r.country || "",
-        city: r.name || "",
-        state: r.admin1 || undefined,
-      };
-    });
+function databaseUnavailable(res: any) {
+  return res.status(503).json({
+    message: "Database is not configured; this endpoint requires DATABASE_URL.",
+  });
 }
 
-// Bounded concurrency for the Python climate model. Callers acquire a slot
-// before spawning and release it when the process settles. Waiters queue
-// (instead of failing) so multi-year trajectory requests glide to completion.
+// Bounded concurrency for the Python fallback. Normal forecast requests use the
+// in-process Node grid engine unless CLIMATE_GRID_ENGINE=python is set.
 const pythonQueue: Array<() => void> = [];
 
 function acquirePythonSlot(): Promise<void> {
@@ -114,7 +85,8 @@ async function runGroundedModel(args: string[]): Promise<any> {
   return new Promise((resolve, reject) => {
     let killed = false;
     let settled = false;
-    // grounded_model.py is offline (reads the compact CMIP6/IPCC grid in data/).
+    // grounded_model.py is offline (reads the compact CMIP6/IPCC grid in data/)
+    // and is used only when CLIMATE_GRID_ENGINE=python selects the fallback.
     const python = spawn(PYTHON_BIN, [
       "grounded_model.py",
       ...args,
@@ -166,6 +138,9 @@ async function runClimateModel(
   year: number,
   scenario = DEFAULT_CLIMATE_SCENARIO,
 ): Promise<any> {
+  if (getClimateGridEngine() === "node") {
+    return projectClimate(lat, lng, year, scenario);
+  }
   return runGroundedModel([lat.toString(), lng.toString(), year.toString(), scenario]);
 }
 
@@ -177,6 +152,9 @@ async function runClimateTrajectory(
   years: number[],
   scenario = DEFAULT_CLIMATE_SCENARIO,
 ): Promise<any> {
+  if (getClimateGridEngine() === "node") {
+    return climateTrajectory(lat, lng, years, scenario);
+  }
   return runGroundedModel([
     "--trajectory",
     lat.toString(),
@@ -191,6 +169,10 @@ function projectionScenario(projection: unknown): string | undefined {
   const p = projection as { scenario?: unknown; metadata?: { scenario?: unknown } };
   const scenario = p.metadata?.scenario ?? p.scenario;
   return typeof scenario === "string" ? scenario : undefined;
+}
+
+function roundCacheKey(n: number): number {
+  return Math.round(n * 100) / 100;
 }
 
 // ── SEO: per-route HTML head injection (production only) ────────────────────
@@ -233,10 +215,10 @@ const SEO_PAGES: Record<string, SeoPage> = {
     path: "/comparison",
     title: "fupit — compare climate by location",
     description:
-      "Compare side-by-side climate projections for up to 10 locations. Slide through 2025–2100 to watch temperature, precipitation, risk, and habitability diverge in real time.",
+      "Compare side-by-side climate projections for up to 10 locations. Slide from the current year to 2100, with a 2025 baseline reference, to watch temperature, precipitation, risk, and habitability diverge in real time.",
     bodyHtml: `<main aria-label="Page introduction">
   <h1>fupit — compare climate by location</h1>
-  <p>Compare side-by-side climate projections for up to 10 locations. Slide through 2025–2100 to watch temperature, precipitation, risk, and habitability diverge in real time.</p>
+  <p>Compare side-by-side climate projections for up to 10 locations. Slide from the current year to 2100, with a 2025 baseline reference, to watch temperature, precipitation, risk, and habitability diverge in real time.</p>
   <h2>What you can compare</h2>
   <ul>
     <li>Average temperature and temperature change across locations</li>
@@ -259,19 +241,61 @@ const SEO_PAGES: Record<string, SeoPage> = {
   <p>Every value on fupit traces to real climate science. We do not invent coefficients or warming rates. Where we cannot ground a number, we leave it blank rather than guess.</p>
   <h2>Forecast sources</h2>
   <ul>
-    <li>Temperature and precipitation change: CMIP6 model output behind the IPCC Sixth Assessment Report, aggregated by scenario and decade.</li>
+    <li>Temperature and precipitation change: raw CMIP6 model output behind the IPCC Sixth Assessment Report, aggregated by scenario and decade.</li>
     <li>Present-day baseline: WorldClim v2.1 observed monthly climatology (1970-2000, 10 arc-minutes) where available, with CMIP6 historical climatology as fallback.</li>
     <li>Sea-level rise: IPCC AR6 regional projections.</li>
     <li>Heat, drought, and flood risk: CMIP6 ETCCDI extreme-climate indices scored against documented thresholds.</li>
+    <li>Humid heat screen: CMIP6 relative humidity and monthly mean temperature through the Stull 2011 wet-bulb approximation; not WBGT or daily humid-heat days.</li>
+    <li>Cold-season context: monthly mean temperature months at or below 0°C; not daily freeze days, freeze-thaw, heating demand, crop damage, pests, or health risk.</li>
+    <li>Climate twin: nearest present-day city in the indexed catalog by standardized monthly temperature and precipitation distance from grounded model output.</li>
   </ul>
   <h2>Honesty rules</h2>
   <ul>
-    <li>Temperature is shown with the IPCC-calibrated value as the headline and raw CMIP6 model consensus available for comparison.</li>
+    <li>Temperature is shown with raw CMIP6 model consensus as the headline; the IPCC-calibrated value, adjustment, and calibration factor are shown for comparison.</li>
+    <li>SSP2-4.5 is the default middle-path reference; SSP5-8.5 is available as a very-high-emissions stress test, not as a business-as-usual claim.</li>
     <li>Precipitation is shown as model consensus plus spread because there is no equivalent single assessed calibration anchor.</li>
     <li>Risk scores expose the raw physical quantity next to the 0 to 100 score.</li>
   </ul>
-  <p>Sources: WorldClim v2.1 (Fick & Hijmans 2017); IPCC AR6 Working Group I; CMIP6; ETCCDI indices; IPCC AR6 sea-level projections.</p>
+  <p>Sources: WorldClim v2.1 (Fick & Hijmans 2017); IPCC AR6 Working Group I; CMIP6; ETCCDI indices; Stull 2011 wet-bulb approximation; IPCC AR6 sea-level projections.</p>
   <p><a href="/">Return to fupit</a> or inspect <a href="${GITHUB_REPO_URL}">the source on GitHub</a>.</p>
+</main>`,
+  },
+  dataQuality: {
+    path: "/data-quality",
+    title: "fupit data quality — source and validation evidence",
+    description:
+      "Current fupit build evidence: artifact hashes, source registry, ranking catalog coverage, trajectory-audit coverage, trend-review flags, and known limitations.",
+    bodyHtml: `<main aria-label="Data quality">
+  <h1>fupit data quality</h1>
+  <p>This page reports the evidence behind the current packaged build: model/cache version, source-registry version, artifact hashes, ranking catalog coverage, annual trajectory-audit coverage, and known limitations.</p>
+  <h2>What it proves</h2>
+  <ul>
+    <li>Which immutable climate artifacts are packaged with the app.</li>
+    <li>Which source registry rows approve visible metrics and rankings.</li>
+    <li>How much of the bounded ranking catalogs and trajectory audit matrix is covered.</li>
+    <li>Which living-condition enrichment domains are partial, context-only, or withheld until grounded data exists.</li>
+    <li>Which trend-review flags still require human scientific review.</li>
+  </ul>
+  <h2>Enrichment readiness ledger</h2>
+  <p>The data-quality report marks humid heat, sea-level relevance, and cold-season context as partial, AMOC as context-only, and freshwater, daily cold stress, fire weather, agriculture, infrastructure, and biodiversity as withheld until a registered source and method exist.</p>
+  <p>Use this page with <a href="/methodology">the methodology</a> and <a href="${GITHUB_REPO_URL}">the source repository</a>. It does not prove that the public Replit deployment has already been republished or that production cache purge has been completed.</p>
+</main>`,
+  },
+  rankings: {
+    path: "/rankings",
+    title: "fupit rankings — bounded climate signal lists",
+    description:
+      "Top-10 climate signal rankings from bounded curated-city, Natural Earth population-place, and Natural Earth-derived country aggregate artifacts, with catalog size, caveats, source receipts, and no safe-city claims.",
+    bodyHtml: `<main aria-label="Rankings">
+  <h1>fupit bounded climate rankings</h1>
+  <p>Compare precomputed climate signals across the documented curated-city catalog, a Natural Earth population-place catalog, and a bounded country aggregate weighted across included populated places. Rankings are educational examples, not complete global, full national exposure, population-weighted, or climate-haven lists.</p>
+  <h2>Available dimensions</h2>
+  <ul>
+    <li>Habitability score, heat stress, drought pressure, heavy-rain flood pressure, warming anomaly, and regional sea-level rise.</li>
+    <li>Scenario and year controls using the same grounded CMIP6/IPCC artifact as the forecast API.</li>
+    <li>Catalog size, caveats, exclusions, method version, and source IDs for every list.</li>
+  </ul>
+  <p><a href="/data-quality">Inspect data-quality evidence</a>, read <a href="/methodology">the methodology</a>, or return to <a href="/">the map</a>.</p>
 </main>`,
   },
 };
@@ -383,6 +407,7 @@ function readBuildInfo() {
 export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/health", (_req, res) => {
     const buildInfo = readBuildInfo();
+    const databaseConfigured = isDatabaseConfigured();
     const deploymentCommit =
       process.env.REPLIT_GIT_SHA ||
       process.env.GIT_COMMIT_SHA ||
@@ -394,12 +419,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
       ok: true,
       app: "fupit",
       service: "climate-api",
-      engine: "grounded_model.py",
+      engine: getClimateGridEngine() === "node" ? "grounded-node-model.ts" : "grounded_model.py",
+      gridEngine: getClimateGridEngine(),
       modelCacheVersion: MODEL_CACHE_VERSION,
-      cachePurge: "startup-incompatible-delete-enabled",
+      sourceRegistryVersion: SOURCE_REGISTRY_VERSION,
+      databaseConfigured,
+      cachePurge: databaseConfigured ? "startup-incompatible-delete-enabled" : "skipped-no-database",
       legacyProjectionEndpoints: "410-gone",
+      retiredEndpoints: [
+        "/api/projections",
+        "/api/export/csv/:locationId/:year",
+        "/api/user/keys",
+        "/api/user/comparisons",
+        "/api/climate/multi-comparison",
+        "/api/climate/export-comparison",
+      ],
+      supportedScenarios: [...CLIMATE_SCENARIOS],
       seoBase: SEO_BASE,
-      routes: ["/", "/comparison", "/methodology"],
+      routes: ["/", "/comparison", "/rankings", "/methodology", "/data-quality"],
+      apiRoutes: [
+        "/api/health",
+        "/api/source-registry",
+        "/api/data-quality",
+        "/api/climate-trajectory",
+        "/api/climate-twin",
+        "/api/climate/global-rankings",
+      ],
       deployment: {
         commit: deploymentCommit,
         build: buildInfo,
@@ -438,6 +483,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const results = await geocodePlaces(query);
       res.json(results);
     } catch (error) {
+      if (isDatabaseUnavailable(error)) return databaseUnavailable(res);
       console.error("Error searching locations:", error);
       res.status(502).json({ message: "Failed to search locations" });
     }
@@ -460,6 +506,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const location = await storage.createClimateLocation(locationData);
       res.json(location);
     } catch (error) {
+      if (isDatabaseUnavailable(error)) return databaseUnavailable(res);
       console.error("Error creating location:", error);
       if (error instanceof z.ZodError) {
         return res.status(400).json({ message: "Invalid location data", errors: error.errors });
@@ -471,73 +518,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
   const legacyProjectionGone = (res: any) => res.status(410).json({
     message: "Legacy location-id projection endpoints are retired. Use /api/climate-trajectory for grounded CMIP6/IPCC projections.",
   });
+  const retiredFeatureGone = (res: any) => res.status(410).json({
+    message: "This legacy endpoint is retired. Use /api/climate-trajectory, /api/climate-twin, /api/climate/global-rankings, or /api/source-registry for grounded public data.",
+  });
 
   // Climate projection routes
   app.get("/api/projections", (_req, res) => legacyProjectionGone(res));
   app.get("/api/projections/:locationId/:year", (_req, res) => legacyProjectionGone(res));
   app.get("/api/projections/:locationId", (_req, res) => legacyProjectionGone(res));
 
-  // Export data routes
-  app.get("/api/export/csv/:locationId/:year", async (req, res) => {
-    try {
-      const locationId = parseInt(req.params.locationId);
-      const year = parseInt(req.params.year);
-      
-      const location = await storage.getClimateLocation(locationId);
-      const projection = await storage.getClimateProjection(locationId, year);
-      
-      if (!location || !projection) {
-        return res.status(404).json({ message: "Data not found" });
-      }
-      
-      const csvData = generateCSV(location, projection);
-      
-      res.setHeader('Content-Type', 'text/csv');
-      res.setHeader('Content-Disposition', `attachment; filename="climate-projection-${location.name}-${year}.csv"`);
-      res.send(csvData);
-    } catch (error) {
-      console.error("Error exporting CSV:", error);
-      res.status(500).json({ message: "Failed to export CSV" });
-    }
-  });
-
-  // API Key Management Routes
-  app.get("/api/user/keys", async (req, res) => {
-    try {
-      const userId = 1; // Demo user - in production would come from auth
-      const user = await storage.getUser(userId);
-      
-      if (!user) {
-        return res.status(404).json({ message: "User not found" });
-      }
-
-      res.json({
-        nvidiaApiKey: !!user.nvidiaApiKey,
-        cbottleApiKey: !!user.cbottleApiKey,
-      });
-    } catch (error) {
-      console.error("Error fetching user keys:", error);
-      res.status(500).json({ message: "Failed to fetch API keys" });
-    }
-  });
-
-  app.put("/api/user/keys", async (req, res) => {
-    try {
-      const { nvidiaApiKey, cbottleApiKey } = req.body;
-      const userId = 1; // Demo user
-      
-      const user = await storage.updateUserApiKeys(userId, nvidiaApiKey, cbottleApiKey);
-      
-      res.json({
-        message: "API keys updated successfully",
-        nvidiaApiKey: !!user.nvidiaApiKey,
-        cbottleApiKey: !!user.cbottleApiKey,
-      });
-    } catch (error) {
-      console.error("Error updating API keys:", error);
-      res.status(500).json({ message: "Failed to update API keys" });
-    }
-  });
+  app.get("/api/export/csv/:locationId/:year", (_req, res) => retiredFeatureGone(res));
+  app.get("/api/user/keys", (_req, res) => retiredFeatureGone(res));
+  app.put("/api/user/keys", (_req, res) => retiredFeatureGone(res));
 
   // Multi-location comparison endpoint
   app.get("/api/climate/multi-comparison", async (req, res) => {
@@ -562,57 +554,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Save user comparison
-  app.post("/api/user/comparisons", async (req, res) => {
-    try {
-      const { name, locationIds, year } = req.body;
-      const userId = 1; // Demo user
-      
-      const comparison = await storage.createLocationComparison(userId, name, locationIds, year);
-      res.json(comparison);
-    } catch (error) {
-      console.error("Error saving comparison:", error);
-      res.status(500).json({ message: "Failed to save comparison" });
-    }
-  });
+  app.post("/api/user/comparisons", (_req, res) => retiredFeatureGone(res));
+  app.get("/api/user/comparisons", (_req, res) => retiredFeatureGone(res));
+  app.post("/api/climate/export-comparison", (_req, res) => retiredFeatureGone(res));
 
-  // Get user comparisons
-  app.get("/api/user/comparisons", async (req, res) => {
-    try {
-      const userId = 1; // Demo user
-      const comparisons = await storage.getUserComparisons(userId);
-      res.json(comparisons);
-    } catch (error) {
-      console.error("Error fetching comparisons:", error);
-      res.status(500).json({ message: "Failed to fetch comparisons" });
-    }
-  });
-
-  // PDF Export endpoint
-  app.post("/api/climate/export-comparison", async (req, res) => {
-    try {
-      const { locationIds, year, name } = req.body;
-      
-      const pdfData = await generateComparisonPDF(locationIds, year, name);
-      
-      res.json({ 
-        downloadUrl: `/tmp/${pdfData.filename}`,
-        message: "PDF generated successfully" 
-      });
-    } catch (error) {
-      console.error("Error generating PDF:", error);
-      res.status(500).json({ message: "Failed to generate PDF" });
-    }
-  });
-
-  // POST /api/climate-projection — securely spawns Python runner with validated args
+  // POST /api/climate-projection — compatibility single-year projection route.
+  // Keep the old response envelope, but route through the configured grounded
+  // engine so CLIMATE_GRID_ENGINE=node and Python queueing apply here too.
   app.post("/api/climate-projection", async (req, res) => {
     const clientIp = ((req.ip ?? "") || (req.socket?.remoteAddress ?? "unknown")).replace(/^::ffff:/, "");
     if (!checkRateLimit(clientIp)) {
       return res.status(429).json({ message: "Too many requests. Please try again later." });
-    }
-    if (activePythonProcesses >= MAX_PYTHON_CONCURRENT) {
-      return res.status(503).json({ message: "Server busy. Please try again shortly." });
     }
 
     const bodySchema = z.object({
@@ -622,6 +574,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         lng: z.coerce.number().min(-180).max(180),
       }),
       year: z.coerce.number().int().min(MIN_FORECAST_YEAR).max(MAX_FORECAST_YEAR),
+      scenario: z.enum(CLIMATE_SCENARIOS).default(DEFAULT_CLIMATE_SCENARIO),
       apiKey: z.string().max(500).optional(),
     });
 
@@ -632,9 +585,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
 
     const { coordinates, year, apiKey: clientApiKey } = parsed.data;
-    // grounded_model.py is offline (reads the compact CMIP6/IPCC grid in data/)
-    // and needs no API key. clientApiKey is accepted but ignored for compatibility.
+    const scenario = parsed.data.scenario;
+    // The grounded grid engine is offline and needs no API key.
+    // clientApiKey is accepted but ignored for compatibility.
     void clientApiKey;
+
+    try {
+      const result = await runClimateModel(coordinates.lat, coordinates.lng, year, scenario);
+      return res.json({ success: true, data: result });
+    } catch (err) {
+      if (isDatabaseUnavailable(err)) return databaseUnavailable(res);
+      const msg = (err as Error).message;
+      if (msg === "timeout") {
+        return res.status(504).json({ message: "Climate model timed out. Please try again." });
+      }
+      console.error("climate-projection model error:", msg);
+      return res.status(500).json({ message: "Climate model failed. Please try again." });
+    }
 
     activePythonProcesses++;
     let killed = false;
@@ -662,35 +629,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Intentionally discarded — stderr may contain internal paths or secrets
     });
 
-    python.on("close", (code: number | null) => {
-      clearTimeout(killTimer);
-      releasePythonSlot();
-      if (responded) return;
-      responded = true;
-      if (killed) {
-        return res.status(504).json({ message: "Climate model timed out. Please try again." });
-      }
-      if (code !== 0) {
-        console.error("grounded_model.py exited with non-zero code:", code);
-        return res.status(500).json({ message: "Climate model failed. Please try again." });
-      }
-      try {
-        const result = JSON.parse(output);
-        res.json({ success: true, data: result });
-      } catch {
-        console.error("Failed to parse grounded_model.py output");
-        res.status(500).json({ message: "Failed to parse climate model output." });
-      }
-    });
-
-    python.on("error", (err: Error) => {
-      clearTimeout(killTimer);
-      releasePythonSlot();
-      if (responded) return;
-      responded = true;
-      console.error("Failed to start grounded_model.py:", err.message);
-      res.status(500).json({ message: "Climate model unavailable." });
-    });
   });
 
   // POST /api/climate-trajectory — runs the model at multiple checkpoint years
@@ -708,7 +646,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         lat: z.coerce.number().min(-90).max(90),
         lng: z.coerce.number().min(-180).max(180),
       }),
-      years: z.array(z.coerce.number().int().min(MIN_FORECAST_YEAR).max(MAX_FORECAST_YEAR)).min(1).max(5),
+      // Baseline year + current forecast year + 5-year cadence to 2100 is
+      // currently 17 points; leave headroom for targeted audits without
+      // reopening the full-browser-e2e timeout trap.
+      years: z.array(z.coerce.number().int().min(MIN_FORECAST_YEAR).max(MAX_FORECAST_YEAR)).min(1).max(20),
       scenario: z.enum(CLIMATE_SCENARIOS).default(DEFAULT_CLIMATE_SCENARIO),
     });
 
@@ -723,19 +664,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
     const years = Array.from(new Set(parsed.data.years)).sort((a, b) => a - b);
 
     // Round to a ~0.01° (~1 km) grid so the same location — or a near-identical
-    // one — reuses a previously cached model run instead of re-spawning Python.
+    // one — reuses a previously cached grounded-model run.
     // Storage also checks the JSON payload's grounded-grid cache version; old
     // unversioned cbottle-era rows read as misses and are overwritten.
-    const round2 = (n: number) => Math.round(n * 100) / 100;
-    const latKey = round2(coordinates.lat);
-    const lngKey = round2(coordinates.lng);
+    const latKey = roundCacheKey(coordinates.lat);
+    const lngKey = roundCacheKey(coordinates.lng);
 
     try {
       const pointsByYear = new Map<number, any>();
       const missingYears: number[] = [];
       let cachedCount = 0;
       for (const year of years) {
-        const cached = await storage.getCachedModelProjection(latKey, lngKey, year);
+        const cached = await storage.getCachedModelProjection(latKey, lngKey, year, scenario);
         if (cached && projectionScenario(cached) === scenario) {
           cachedCount++;
           pointsByYear.set(year, { year, cached: true, ...(cached as object) });
@@ -745,13 +685,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       if (missingYears.length > 0) {
-        // grounded_model.py is offline — no API key needed for any location.
+        // The grounded grid engine is offline — no API key needed for any location.
         const trajectory = await runClimateTrajectory(coordinates.lat, coordinates.lng, missingYears, scenario);
         const projectedPoints = Array.isArray(trajectory?.points) ? trajectory.points : [];
         for (const projection of projectedPoints) {
           const year = Number(projection?.year);
           if (!missingYears.includes(year)) continue;
-          await storage.saveModelProjection(latKey, lngKey, year, projection);
+          await storage.saveModelProjection(latKey, lngKey, year, scenario, projection);
           pointsByYear.set(year, { year, cached: false, ...projection });
         }
         for (const year of missingYears) {
@@ -764,6 +704,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const points = years.map((year) => pointsByYear.get(year));
       res.json({ success: true, data: { coordinates, points, cachedCount } });
     } catch (err) {
+      if (isDatabaseUnavailable(err)) return databaseUnavailable(res);
       const msg = (err as Error).message;
       if (msg === "timeout") {
         return res.status(504).json({ message: "Climate model timed out. Please try again." });
@@ -773,72 +714,108 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // GET /api/climate-twin - bounded current-day analog lookup. The target
+  // projection is grounded grid output; the candidate set is the registered
+  // current analog catalog, not an unbounded global search.
+  app.get("/api/climate-twin", async (req, res) => {
+    const clientIp = ((req.ip ?? "") || (req.socket?.remoteAddress ?? "unknown")).replace(/^::ffff:/, "");
+    if (!checkRateLimit(clientIp)) {
+      return res.status(429).json({ message: "Too many requests. Please try again later." });
+    }
+
+    const parsed = climateTwinQuerySchema.safeParse(req.query);
+    if (!parsed.success) {
+      return res.status(400).json({ message: "Invalid request parameters", errors: parsed.error.issues });
+    }
+
+    const { lat, lng, year, scenario, catalog, limit } = parsed.data;
+    if (catalog !== "current") {
+      return res.status(404).json({
+        message: "No climate twin catalog for those parameters.",
+        availableCatalogs: ["current"],
+      });
+    }
+
+    const latKey = roundCacheKey(lat);
+    const lngKey = roundCacheKey(lng);
+
+    try {
+      let projection = await storage.getCachedModelProjection(latKey, lngKey, year, scenario);
+      let cachedProjection = Boolean(projection && projectionScenario(projection) === scenario);
+
+      if (!cachedProjection) {
+        projection = await runClimateModel(lat, lng, year, scenario);
+        await storage.saveModelProjection(latKey, lngKey, year, scenario, projection);
+        cachedProjection = false;
+      }
+
+      const twin = findClimateTwin({
+        catalog: loadClimateAnalogCatalog(),
+        projection: projection as Parameters<typeof findClimateTwin>[0]["projection"],
+        lat,
+        lng,
+        year,
+        scenario,
+        limit,
+      });
+
+      if (!twin) {
+        return res.status(422).json({ message: "Climate twin could not be computed from the current catalog." });
+      }
+
+      res
+        .set("Cache-Control", "public, max-age=300")
+        .json({ success: true, data: { ...twin, cachedProjection } });
+    } catch (err) {
+      if (isDatabaseUnavailable(err)) return databaseUnavailable(res);
+      const msg = (err as Error).message;
+      if (msg === "timeout") {
+        return res.status(504).json({ message: "Climate model timed out. Please try again." });
+      }
+      console.error("climate-twin failed:", msg);
+      res.status(500).json({ message: "Climate twin failed. Please try again." });
+    }
+  });
+
+  app.get("/api/source-registry", (_req, res) => {
+    try {
+      res
+        .set("Cache-Control", "public, max-age=300")
+        .json(loadSourceRegistry());
+    } catch (err) {
+      console.error("source-registry failed:", (err as Error).message);
+      res.status(500).json({ message: "Source registry unavailable." });
+    }
+  });
+
+  app.get("/api/data-quality", (_req, res) => {
+    try {
+      res
+        .set("Cache-Control", "public, max-age=300")
+        .json(loadDataQuality());
+    } catch (err) {
+      console.error("data-quality failed:", (err as Error).message);
+      res.status(500).json({ message: "Data-quality report unavailable." });
+    }
+  });
+
   // Global habitability rankings endpoint
   app.get("/api/climate/global-rankings", async (req, res) => {
     const clientIp = ((req.ip ?? "") || (req.socket?.remoteAddress ?? "unknown")).replace(/^::ffff:/, "");
     if (!checkRateLimit(clientIp)) {
       return res.status(429).json({ message: "Too many requests. Please try again later." });
     }
-    if (activePythonProcesses >= MAX_PYTHON_CONCURRENT) {
-      return res.status(503).json({ message: "Server busy. Please try again shortly." });
+    const parsed = rankingQuerySchema.safeParse(req.query);
+    if (!parsed.success) {
+      return res.status(400).json({ message: "Invalid request parameters", errors: parsed.error.issues });
     }
-
-    const rawYear = req.query.year === undefined ? 2050 : Number(req.query.year);
-    if (!Number.isInteger(rawYear) || rawYear < MIN_FORECAST_YEAR || rawYear > MAX_FORECAST_YEAR) {
-      return res.status(400).json({ message: "Invalid request parameters" });
+    const ranking = getRanking(parsed.data);
+    if (!ranking) {
+      return res.status(404).json({ message: "No precomputed ranking for those parameters." });
     }
-    const year = rawYear;
-
-    activePythonProcesses++;
-    let killed = false;
-    let responded = false;
-
-    const python = spawn(PYTHON_BIN, ["grounded_model.py", "--rankings", year.toString()]);
-
-    const killTimer = setTimeout(() => {
-      killed = true;
-      python.kill("SIGKILL");
-    }, PYTHON_TIMEOUT_MS);
-
-    let output = "";
-
-    python.stdout.on("data", (data: Buffer) => {
-      output += data.toString();
-    });
-
-    python.stderr.on("data", (_data: Buffer) => {
-      // Intentionally discarded — do not expose internal diagnostics to callers
-    });
-
-    python.on("close", (code: number | null) => {
-      clearTimeout(killTimer);
-      releasePythonSlot();
-      if (responded) return;
-      responded = true;
-      if (killed) {
-        return res.status(504).json({ message: "Rankings computation timed out. Please try again." });
-      }
-      if (code !== 0) {
-        console.error("grounded_model.py --rankings exited with code:", code);
-        return res.status(500).json({ message: "Failed to generate global rankings." });
-      }
-      try {
-        const rankings = JSON.parse(output);
-        res.json(rankings);
-      } catch {
-        console.error("Failed to parse global rankings output");
-        res.status(500).json({ message: "Failed to parse rankings data." });
-      }
-    });
-
-    python.on("error", (err: Error) => {
-      clearTimeout(killTimer);
-      releasePythonSlot();
-      if (responded) return;
-      responded = true;
-      console.error("Failed to start grounded_model.py --rankings:", err.message);
-      res.status(500).json({ message: "Rankings service unavailable." });
-    });
+    res
+      .set("Cache-Control", "public, max-age=300")
+      .json(ranking);
   });
 
   // Semantic content for each known public route.
@@ -926,7 +903,7 @@ window.__vite_plugin_react_preamble_installed__ = true
   // through to express.static, and any that are not found on disk then fall
   // through to the narrowed /{*any} fallback in server/vite.ts which also
   // returns 404 for non-SPA paths.
-  const KNOWN_SPA_ROUTES_404 = new Set(["/", "/comparison", "/methodology"]);
+  const KNOWN_SPA_ROUTES_404 = new Set(["/", "/comparison", "/rankings", "/methodology", "/data-quality"]);
   const VITE_INTERNAL_PREFIXES = ["/api/", "/@", "/src/", "/node_modules/", "/__mockup", "/__vite"];
   const isDev = process.env.NODE_ENV !== "production";
   const NOT_FOUND_HTML_404 = `<!DOCTYPE html>
@@ -964,56 +941,4 @@ window.__vite_plugin_react_preamble_installed__ = true
 
   const httpServer = createServer(app);
   return httpServer;
-}
-
-async function generateComparisonPDF(locationIds: number[], year: number, name: string) {
-  // Simplified PDF generation - in production use libraries like PDFKit or Puppeteer
-  const filename = `climate-comparison-${year}-${Date.now()}.pdf`;
-  const content = `Climate Comparison Report\n\nName: ${name}\nYear: ${year}\nLocations: ${locationIds.join(', ')}\n\nGenerated on: ${new Date().toISOString()}`;
-  
-  return {
-    filename,
-    content,
-    path: `/tmp/${filename}`
-  };
-}
-
-function generateCSV(location: any, projection: any): string {
-  const headers = [
-    'Location',
-    'Latitude',
-    'Longitude',
-    'Projection Year',
-    'Average Temperature (°C)',
-    'Temperature Change (°C)',
-    'Annual Precipitation (mm)',
-    'Precipitation Change (mm)',
-    'Humidity (%)',
-    'Humidity Change (%)',
-    'Sea Level (m)',
-    'Sea Level Change (m)',
-    'Heat Stress Risk (0-100)',
-    'Drought Risk (0-100)',
-    'Flooding Risk (0-100)',
-  ];
-
-  const row = [
-    location.name,
-    location.latitude,
-    location.longitude,
-    projection.projectionYear,
-    projection.averageTemperature,
-    projection.temperatureChange,
-    projection.annualPrecipitation,
-    projection.precipitationChange,
-    projection.humidity,
-    projection.humidityChange,
-    projection.seaLevel,
-    projection.seaLevelChange,
-    projection.heatStressRisk,
-    projection.droughtRisk,
-    projection.floodingRisk,
-  ];
-
-  return [headers.join(','), row.join(',')].join('\n');
 }

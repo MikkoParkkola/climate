@@ -30,7 +30,24 @@ const PALETTE = [
 ];
 
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-const CHECKPOINTS = [2025, 2050, 2075, 2100];
+const BASELINE_YEAR = 2025;
+const MAX_YEAR = 2100;
+const CURRENT_FORECAST_YEAR = Math.min(MAX_YEAR, Math.max(BASELINE_YEAR + 1, new Date().getFullYear()));
+const FIVE_YEAR_CHECKPOINTS = Array.from({ length: 15 }, (_, i) => 2030 + i * 5).filter((year) => year >= CURRENT_FORECAST_YEAR);
+const CHECKPOINTS = Array.from(new Set([BASELINE_YEAR, CURRENT_FORECAST_YEAR, ...FIVE_YEAR_CHECKPOINTS])).sort((a, b) => a - b);
+const YEAR_TICKS = CHECKPOINTS;
+const QUICK_YEAR_BUTTONS = Array.from(new Set([CURRENT_FORECAST_YEAR, 2030, 2050, 2075, 2100].filter((year) => year >= CURRENT_FORECAST_YEAR)));
+const SCENARIOS = [
+  { id: "ssp126", label: "SSP1-2.6", caption: "low emissions; strong mitigation" },
+  { id: "ssp245", label: "SSP2-4.5", caption: "middle path; current-policy-adjacent reference" },
+  { id: "ssp370", label: "SSP3-7.0", caption: "high emissions; weak mitigation stress case" },
+  { id: "ssp585", label: "SSP5-8.5", caption: "very high emissions; low-likelihood stress test" },
+] as const;
+type ScenarioId = (typeof SCENARIOS)[number]["id"];
+const DEFAULT_SCENARIO: ScenarioId = "ssp245";
+const DEFAULT_SCENARIO_POLICY_VERSION = "current-policy-reference-2025";
+const DEFAULT_SCENARIO_EXPLANATION =
+  "Default reference: 2025 UNEP current-policy and Climate Action Tracker policies/action estimates put end-century warming roughly between 2.6 C and just below 3 C, so fupit maps the reference case to the closest fully grounded SSP pathway. It is a versioned reference, not a prediction or hidden scenario average.";
 
 // ── Types ────────────────────────────────────────────────────────────────────
 interface ClimateLocation {
@@ -156,6 +173,14 @@ function shortName(loc: ClimateLocation) {
   return loc.city || loc.name.split(",")[0];
 }
 
+function scenarioInfo(id: ScenarioId) {
+  return SCENARIOS.find((scenario) => scenario.id === id) ?? SCENARIOS.find((scenario) => scenario.id === DEFAULT_SCENARIO)!;
+}
+
+function parseScenario(id: string): ScenarioId {
+  return (SCENARIOS.some((scenario) => scenario.id === id) ? id : DEFAULT_SCENARIO) as ScenarioId;
+}
+
 // ── Mini components ────────────────────────────────────────────────────────
 function ScoreRing({ score, color }: { score: number; color: string }) {
   const r = 44;
@@ -212,7 +237,7 @@ function Sparkline({ data, years, color, year, w = 80, h = 22 }: { data: number[
 function TrajectoryChart({ trajectories, colors, year }: { trajectories: { years: number[]; scores: number[] }[]; colors: string[]; year: number }) {
   const W = 660, H = 180, px = 32, py = 12;
   const cW = W - px * 2, cH = H - py * 2 - 16;
-  const xp = (yr: number) => px + ((yr - 2025) / 75) * cW;
+  const xp = (yr: number) => px + ((yr - BASELINE_YEAR) / (MAX_YEAR - BASELINE_YEAR)) * cW;
   const yp = (s: number) => py + cH - (s / 100) * cH;
   const curX = xp(year);
   return (
@@ -235,7 +260,7 @@ function TrajectoryChart({ trajectories, colors, year }: { trajectories: { years
           </g>
         );
       })}
-      {[2025, 2050, 2075, 2100].map((y) => (
+      {[BASELINE_YEAR, 2050, 2075, MAX_YEAR].map((y) => (
         <text key={y} x={xp(y)} y={H - 1} textAnchor="middle" fill={MUTED} fontSize="9">{y}</text>
       ))}
       <text x={curX} y={py - 3} textAnchor="middle" fill={ACCENT} fontSize="9" fontWeight="700">{year}</text>
@@ -384,7 +409,8 @@ function argClosest(vals: number[], target: number): number {
 export default function ClimateComparison({ onBack }: ClimateComparisonProps) {
   const [selectedLocations, setSelectedLocations] = useState<ClimateLocation[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
-  const [year, setYear] = useState(2050);
+  const [year, setYear] = useState(CURRENT_FORECAST_YEAR);
+  const [scenario, setScenario] = useState<ScenarioId>(DEFAULT_SCENARIO);
   const [trajectories, setTrajectories] = useState<Trajectory[]>([]);
   const [isComparing, setIsComparing] = useState(false);
   const [logs, setLogs] = useState<string[]>([]);
@@ -395,6 +421,12 @@ export default function ClimateComparison({ onBack }: ClimateComparisonProps) {
 
   const addLog = (message: string) => {
     setLogs((prev) => [...prev, `${new Date().toLocaleTimeString()}: ${message}`]);
+  };
+
+  const changeScenario = (nextScenario: ScenarioId) => {
+    setScenario(nextScenario);
+    setTrajectories([]);
+    addLog(`Scenario changed to ${scenarioInfo(nextScenario).label}; run comparison again`);
   };
 
   // Search for locations
@@ -423,6 +455,7 @@ export default function ClimateComparison({ onBack }: ClimateComparisonProps) {
           body: JSON.stringify({
             coordinates: { lat: location.lat, lng: location.lng },
             years: CHECKPOINTS,
+            scenario,
           }),
         });
         if (!response.ok) {
@@ -489,7 +522,7 @@ export default function ClimateComparison({ onBack }: ClimateComparisonProps) {
     }
     setIsComparing(true);
     setTrajectories([]);
-    addLog(`Starting comparison for ${selectedLocations.length} locations (real model, ${CHECKPOINTS.length} checkpoints each)`);
+    addLog(`Starting ${scenarioInfo(scenario).label} comparison for ${selectedLocations.length} locations (real model, ${CHECKPOINTS.length} checkpoints each)`);
     compareLocationsMutation.mutate();
   };
 
@@ -501,6 +534,7 @@ export default function ClimateComparison({ onBack }: ClimateComparisonProps) {
   );
   const colors = trajectories.map((t) => t.color);
   const names = trajectories.map((t) => shortName(t.location));
+  const selectedScenario = scenarioInfo(scenario);
 
   const ranked = useMemo(
     () => snapshots.map((s, i) => ({ s, i })).sort((a, b) => b.s.score - a.s.score),
@@ -513,7 +547,7 @@ export default function ClimateComparison({ onBack }: ClimateComparisonProps) {
         { label: "Annual Mean", vals: snapshots.map((d) => `${d.temp.toFixed(1)}°C`), winnerIdx: argClosest(snapshots.map((d) => d.temp), 14) },
         { label: "Warmest Month", vals: snapshots.map((d) => `${Math.max(...d.monthlyTemps).toFixed(1)}°C`), winnerIdx: argMin(snapshots.map((d) => Math.max(...d.monthlyTemps))) },
         { label: "Coldest Month", vals: snapshots.map((d) => `${Math.min(...d.monthlyTemps).toFixed(1)}°C`), winnerIdx: argClosest(snapshots.map((d) => Math.min(...d.monthlyTemps)), 5) },
-        { label: "Change vs 2025", vals: snapshots.map((d) => `${d.temp - d.baseTemp >= 0 ? "+" : ""}${(d.temp - d.baseTemp).toFixed(1)}°`), winnerIdx: argMin(snapshots.map((d) => d.temp - d.baseTemp)) },
+        { label: `Change vs ${BASELINE_YEAR}`, vals: snapshots.map((d) => `${d.temp - d.baseTemp >= 0 ? "+" : ""}${(d.temp - d.baseTemp).toFixed(1)}°`), winnerIdx: argMin(snapshots.map((d) => d.temp - d.baseTemp)) },
       ]
     : [];
 
@@ -522,7 +556,7 @@ export default function ClimateComparison({ onBack }: ClimateComparisonProps) {
         { label: "Annual Total", vals: snapshots.map((d) => `${d.precip}mm`), winnerIdx: argClosest(snapshots.map((d) => d.precip), 750) },
         { label: "Wettest Month", vals: snapshots.map((d) => `${Math.max(...d.monthlyPrecip)}mm`), winnerIdx: argClosest(snapshots.map((d) => Math.max(...d.monthlyPrecip)), 80) },
         {
-          label: "Change vs 2025",
+          label: `Change vs ${BASELINE_YEAR}`,
           vals: snapshots.map((d) => {
             const delta = d.basePrecip ? ((d.precip / d.basePrecip) - 1) * 100 : 0;
             return `${delta >= 0 ? "+" : ""}${delta.toFixed(1)}%`;
@@ -585,9 +619,30 @@ export default function ClimateComparison({ onBack }: ClimateComparisonProps) {
                   </p>
                 </div>
               </div>
-              <Badge variant="outline" className="text-lg px-3 py-1">
-                {selectedLocations.length}/10 locations
-              </Badge>
+              <div className="flex items-center gap-3 flex-wrap justify-end">
+                <div className="flex flex-col gap-1 min-w-[220px]">
+                  <Label htmlFor="comparison-scenario" className="text-xs text-gray-400">Scenario</Label>
+                  <select
+                    id="comparison-scenario"
+                    value={scenario}
+                    onChange={(e) => changeScenario(parseScenario(e.target.value))}
+                    disabled={isComparing}
+                    className="h-9 rounded-md border border-slate-700 bg-slate-950 px-3 text-sm font-semibold text-white"
+                    aria-label="Climate comparison scenario"
+                  >
+                    {SCENARIOS.map((s) => <option key={s.id} value={s.id}>{s.label}</option>)}
+                  </select>
+                  <span className="text-xs text-gray-400">{selectedScenario.caption}</span>
+                  {scenario === DEFAULT_SCENARIO && (
+                    <span className="text-xs leading-5 text-gray-500">
+                      {DEFAULT_SCENARIO_EXPLANATION} Version: {DEFAULT_SCENARIO_POLICY_VERSION}.
+                    </span>
+                  )}
+                </div>
+                <Badge variant="outline" className="text-lg px-3 py-1">
+                  {selectedLocations.length}/10 locations
+                </Badge>
+              </div>
             </div>
           </CardHeader>
         </Card>
@@ -640,7 +695,7 @@ export default function ClimateComparison({ onBack }: ClimateComparisonProps) {
               )}
 
               <p className="text-xs text-gray-500">
-                The model runs at {CHECKPOINTS.join(", ")} per location, then the slider glides smoothly between those real data points.
+                The model runs {BASELINE_YEAR} as a baseline, {CURRENT_FORECAST_YEAR} as the current start, then every 5 years to {MAX_YEAR} per location.
               </p>
             </CardContent>
           </Card>
@@ -715,7 +770,7 @@ export default function ClimateComparison({ onBack }: ClimateComparisonProps) {
             <div style={{ maxWidth: 1280, margin: "0 auto", padding: "10px 20px 20px" }}>
               <div style={{ display: "flex", alignItems: "center", gap: 14, flexWrap: "wrap" }}>
                 <div style={{ display: "flex", gap: 4 }}>
-                  {[2025, 2030, 2050, 2075, 2100].map((y) => (
+                  {QUICK_YEAR_BUTTONS.map((y) => (
                     <button
                       key={y}
                       onClick={() => setYear(y)}
@@ -739,8 +794,8 @@ export default function ClimateComparison({ onBack }: ClimateComparisonProps) {
                     <div style={{ position: "absolute", top: 8, left: 0, right: 0, height: 4, borderRadius: 2, pointerEvents: "none", background: `linear-gradient(to right, ${GREEN} 0%, ${AMBER} 40%, ${ORANGE} 65%, ${RED} 100%)`, opacity: 0.35 }} />
                     <input
                       type="range"
-                      min="2025"
-                      max="2100"
+                      min={BASELINE_YEAR}
+                      max={MAX_YEAR}
                       step="1"
                       value={year}
                       onChange={(e) => setYear(Number(e.target.value))}
@@ -749,10 +804,10 @@ export default function ClimateComparison({ onBack }: ClimateComparisonProps) {
                     />
                   </div>
                   <div style={{ display: "flex", justifyContent: "space-between", padding: "0 8px", marginTop: 1 }}>
-                    {[2025, 2030, 2035, 2040, 2045, 2050, 2055, 2060, 2065, 2070, 2075, 2080, 2085, 2090, 2095, 2100].map((y) => (
+                    {YEAR_TICKS.map((y) => (
                       <div key={y} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 1 }}>
                         <div style={{ width: 1, height: y % 25 === 0 ? 6 : 3, background: y % 25 === 0 ? MUTED : "rgba(255,255,255,0.18)" }} />
-                        {y % 25 === 0 && <span style={{ fontSize: 8, color: MUTED, whiteSpace: "nowrap" }}>{y}</span>}
+                        {(y === CURRENT_FORECAST_YEAR || y % 25 === 0) && <span style={{ fontSize: 8, color: MUTED, whiteSpace: "nowrap" }}>{y}</span>}
                       </div>
                     ))}
                   </div>
@@ -788,7 +843,7 @@ export default function ClimateComparison({ onBack }: ClimateComparisonProps) {
                     </div>
                     <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 2, marginBottom: 10 }}>
                       <Sparkline data={trajScores[ci].scores} years={trajScores[ci].years} color={t.color} year={year} />
-                      <div style={{ fontSize: 8, color: MUTED }}>2025→2100 trajectory</div>
+                      <div style={{ fontSize: 8, color: MUTED }}>{BASELINE_YEAR} baseline to {MAX_YEAR}</div>
                     </div>
                     <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 4, borderTop: `1px solid ${BORDER}`, paddingTop: 10 }}>
                       {[
@@ -820,7 +875,7 @@ export default function ClimateComparison({ onBack }: ClimateComparisonProps) {
             {/* Habitability Score Trajectory */}
             <div style={{ ...card, padding: 18, marginBottom: 14 }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12, flexWrap: "wrap", gap: 8 }}>
-                <h3 style={{ fontSize: 15, fontWeight: 700 }}>📈 Habitability Score Trajectory (2025–2100)</h3>
+                <h3 style={{ fontSize: 15, fontWeight: 700 }}>📈 Habitability Score Trajectory ({BASELINE_YEAR} baseline to {MAX_YEAR})</h3>
                 <div style={{ display: "flex", gap: 10, fontSize: 10, flexWrap: "wrap" }}>
                   {trajectories.map((t, i) => (
                     <div key={i} style={{ display: "flex", alignItems: "center", gap: 4 }}>
@@ -832,7 +887,7 @@ export default function ClimateComparison({ onBack }: ClimateComparisonProps) {
               </div>
               <TrajectoryChart trajectories={trajScores} colors={colors} year={year} />
               <div style={{ marginTop: 8, padding: "8px 12px", background: `${ACCENT}08`, border: `1px solid ${ACCENT}20`, borderRadius: 8, fontSize: 10, color: MUTED }}>
-                💡 The vertical cyan line tracks the year slider. Lines connect the real model runs at {CHECKPOINTS.join(", ")}.
+                💡 The vertical cyan line tracks the year slider. Lines connect {BASELINE_YEAR}, {CURRENT_FORECAST_YEAR}, and 5-year model runs through {MAX_YEAR}.
               </div>
             </div>
 
@@ -873,7 +928,7 @@ export default function ClimateComparison({ onBack }: ClimateComparisonProps) {
                       </div>
                       <div style={{ display: "flex", gap: 6, marginTop: 5, flexWrap: "wrap" }}>
                         <span style={{ fontSize: 10, padding: "1px 6px", background: `${t.color}18`, color: t.color, border: `1px solid ${t.color}30`, borderRadius: 4 }}>
-                          {delta >= 0 ? "+" : ""}{delta} pts vs 2025
+                          {delta >= 0 ? "+" : ""}{delta} pts vs {BASELINE_YEAR}
                         </span>
                         <span style={{ fontSize: 10, padding: "1px 6px", background: BORDER, color: MUTED, borderRadius: 4 }}>{d.category}</span>
                       </div>

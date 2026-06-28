@@ -1,5 +1,7 @@
 node_modules
 dist
+__pycache__/
+*.pyc
 .DS_Store
 server/public
 vite.config.ts.*
@@ -10,3 +12,11 @@ ingest/sealevel_raw/
 ingest/cache/
 ingest/export/grid.i16.gz
 ingest/export/manifest.json
+
+# Local agent skill bundles; project memory notes remain tracked under .agents/memory/
+.agents/skills/
+
+# Local scratch/design artifacts from Replit or agent sessions. Keep public repo
+# history focused on production code, grounded data, and documentation.
+artifacts/
+attached_assets/

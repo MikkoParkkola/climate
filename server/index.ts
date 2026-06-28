@@ -1,6 +1,7 @@
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { storage } from "./storage";
+import { isDatabaseConfigured } from "./db";
 import { setupVite, serveStatic, log } from "./vite";
 
 const app = express();
@@ -38,13 +39,17 @@ app.use((req, res, next) => {
 });
 
 (async () => {
-  try {
-    const purgedRows = await storage.purgeIncompatibleModelCache();
-    if (purgedRows > 0) {
-      log(`purged ${purgedRows} incompatible climate_model_cache rows`);
+  if (isDatabaseConfigured()) {
+    try {
+      const purgedRows = await storage.purgeIncompatibleModelCache();
+      if (purgedRows > 0) {
+        log(`purged ${purgedRows} incompatible climate_model_cache rows`);
+      }
+    } catch (err) {
+      log(`failed to purge incompatible climate_model_cache rows: ${(err as Error).message}`);
     }
-  } catch (err) {
-    log(`failed to purge incompatible climate_model_cache rows: ${(err as Error).message}`);
+  } else {
+    log("DATABASE_URL is not set; skipping climate_model_cache purge and serving DB-free routes only");
   }
 
   const server = await registerRoutes(app);
