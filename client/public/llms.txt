@@ -15,7 +15,7 @@ Builder profile: https://github.com/MikkoParkkola
 /comparison : Multi-location climate comparison page — compare climate projections side-by-side for two or more locations to understand regional differences.
 /rankings : Bounded top-10 ranking page — compares precomputed climate signals across a documented curated-city catalog with source receipts and caveats.
 /methodology : Methodology and source page — explains CMIP6/IPCC data, IPCC calibration, sea-level inputs, ETCCDI extremes, risk thresholds, habitability scoring, and known limitations.
-/data-quality : Build evidence page — reports current artifact hashes, source-registry rows, ranking catalog coverage, trajectory-audit coverage, validation-report status, trend-review flags, and known launch limitations.
+/data-quality : Build evidence page — reports current artifact hashes, source-registry rows, default-scenario policy source IDs, ranking catalog coverage, trajectory-audit coverage, validation-report status, trend-review flags, and known launch limitations.
 
 ## Audience
 General public, researchers, journalists, educators, planners, and policymakers interested in how climate change may affect specific locations.

@@ -160,7 +160,30 @@ try {
   const { json: dataQuality } = await getJson("/api/data-quality");
   assert(dataQuality.version === "data-quality-v1", "data-quality API version is data-quality-v1");
   assert(Array.isArray(dataQuality.artifacts) && dataQuality.artifacts.length >= 7, "data-quality API exposes artifact hashes");
-  assert(dataQuality.sourceRegistry?.rowCount >= 1, "data-quality API exposes source-registry rows");
+  assert(dataQuality.sourceRegistry?.rowCount >= 10, "data-quality API exposes complete source-registry rows");
+  assert(
+    dataQuality.sourceRegistry?.rows?.some(
+      (row) =>
+        row.sourceId === "unep-egr-2025-current-policies" &&
+        row.displayPolicy === "show-as-policy-context-no-local-correction",
+    ),
+    "data-quality API exposes UNEP current-policy source row",
+  );
+  assert(
+    dataQuality.sourceRegistry?.rows?.some(
+      (row) =>
+        row.sourceId === "cat-2025-warming-projections" &&
+        row.displayPolicy === "show-as-policy-context-no-local-correction",
+    ),
+    "data-quality API exposes CAT warming-projection source row",
+  );
+  assert(dataQuality.defaultScenarioPolicy?.scenario === "ssp245", "data-quality API exposes default scenario policy scenario");
+  assert(
+    Array.isArray(dataQuality.defaultScenarioPolicy?.sourceIds) &&
+      dataQuality.defaultScenarioPolicy.sourceIds.includes("unep-egr-2025-current-policies") &&
+      dataQuality.defaultScenarioPolicy.sourceIds.includes("cat-2025-warming-projections"),
+    "data-quality API exposes default scenario policy source IDs",
+  );
   assert(dataQuality.trajectoryAudit?.resultCount === 52, "data-quality API exposes trajectory audit matrix");
   assert(dataQuality.trajectoryAudit?.trendReviewCount > 0, "data-quality API exposes trend-review flags");
   assert(String(dataQuality.limitations ?? "").includes("Replit deployment"), "data-quality API discloses live-deploy limitation");

@@ -39,7 +39,7 @@ for (const relativePath of [
 
 const registry = readJson("data/source-registry.json");
 assert(registry.version === sourceRegistryVersion, "source registry version mismatch");
-assert(Array.isArray(registry.rows) && registry.rows.length >= 6, "source registry rows incomplete");
+assert(Array.isArray(registry.rows) && registry.rows.length >= 10, "source registry rows incomplete");
 const sourceIds = new Set(registry.rows.map((row) => row.sourceId));
 assert(sourceIds.has("ipcc-ar6-amoc"), "AMOC/Gulf Stream context source row missing");
 const requireRegisteredSources = (ids, context) => {
@@ -48,6 +48,7 @@ const requireRegisteredSources = (ids, context) => {
     assert(sourceIds.has(sourceId), `${context} uses unregistered source id ${sourceId}`);
   }
 };
+const getSourceRow = (sourceId) => registry.rows.find((row) => row.sourceId === sourceId);
 
 const manifest = readJson("data/manifest.json");
 assert(manifest.methodVersion === modelVersion, "grid manifest method version mismatch");
@@ -62,6 +63,18 @@ assert(
     manifest.defaultScenarioPolicyBasis.includes("not a prediction or hidden scenario average"),
   "grid manifest default scenario policy basis incomplete",
 );
+assert(
+  JSON.stringify(manifest.defaultScenarioPolicySourceIds) ===
+    JSON.stringify(["unep-egr-2025-current-policies", "cat-2025-warming-projections"]),
+  "grid manifest default scenario policy source ids mismatch",
+);
+requireRegisteredSources(manifest.defaultScenarioPolicySourceIds, "default scenario policy");
+for (const sourceId of manifest.defaultScenarioPolicySourceIds) {
+  assert(
+    getSourceRow(sourceId)?.displayPolicy === "show-as-policy-context-no-local-correction",
+    `default scenario policy source ${sourceId} must be policy context only`,
+  );
+}
 assert(
   JSON.stringify(manifest.supportedFullForecastScenarios) === JSON.stringify(["ssp126", "ssp245", "ssp370", "ssp585"]),
   "grid manifest supported full-forecast scenarios mismatch",

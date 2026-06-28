@@ -100,6 +100,7 @@ export function loadDataQuality(): Record<string, unknown> {
     defaultScenario: string;
     defaultScenarioPolicyVersion: string;
     defaultScenarioPolicyBasis: string;
+    defaultScenarioPolicySourceIds: string[];
     supportedFullForecastScenarios: string[];
     artifactHashes?: Record<string, string>;
     grid: { nlat: number; nlon: number; dlat: number; dlon: number };
@@ -178,6 +179,7 @@ export function loadDataQuality(): Record<string, unknown> {
       scenario: primaryManifest.defaultScenario,
       policyVersion: primaryManifest.defaultScenarioPolicyVersion,
       basis: primaryManifest.defaultScenarioPolicyBasis,
+      sourceIds: primaryManifest.defaultScenarioPolicySourceIds,
       supportedFullForecastScenarios: primaryManifest.supportedFullForecastScenarios,
       gridHash: primaryManifest.artifactHashes?.[primaryManifest.binary],
     },

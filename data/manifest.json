@@ -7,6 +7,10 @@
   "defaultScenario": "ssp245",
   "defaultScenarioPolicyVersion": "current-policy-reference-2025",
   "defaultScenarioPolicyBasis": "2025 UNEP current-policy and Climate Action Tracker policies/action estimates put end-century warming roughly between 2.6 C and just below 3 C; the app maps the reference case to the closest fully grounded SSP pathway and treats it as a reference, not a prediction or hidden scenario average.",
+  "defaultScenarioPolicySourceIds": [
+    "unep-egr-2025-current-policies",
+    "cat-2025-warming-projections"
+  ],
   "supportedFullForecastScenarios": [
     "ssp126",
     "ssp245",

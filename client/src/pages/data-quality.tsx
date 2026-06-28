@@ -23,6 +23,7 @@ type DataQuality = {
     scenario: string;
     policyVersion: string;
     basis: string;
+    sourceIds: string[];
     supportedFullForecastScenarios: string[];
     gridHash?: string;
   };
@@ -151,6 +152,9 @@ export default function DataQualityPage() {
                   <Stat label="Policy version" value={data.defaultScenarioPolicy.policyVersion} />
                   <Stat label="Forecast scenarios" value={data.defaultScenarioPolicy.supportedFullForecastScenarios.join(", ")} />
                 </div>
+                <p className="break-words text-xs text-slate-500">
+                  Policy context sources: {data.defaultScenarioPolicy.sourceIds.join(", ")}
+                </p>
                 {data.defaultScenarioPolicy.gridHash && (
                   <p className="break-all text-xs text-slate-500">Primary grid hash: {data.defaultScenarioPolicy.gridHash}</p>
                 )}
