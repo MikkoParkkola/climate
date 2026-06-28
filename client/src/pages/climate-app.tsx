@@ -873,11 +873,11 @@ interface TrendZone { from: number; to: number; color: string }
 
 function TrendChart({
   years, values, year, label, unit, color, decimals = 0, thresholdY, zones, fillOpacity = 0.1,
-  lowValues, highValues, uncertaintyLabel, scenarioLabel,
+  lowValues, highValues, uncertaintyLabel, scenarioLabel, thresholdLabel,
 }: {
   years: number[]; values: number[]; year: number; label: string; unit: string; color: string;
   decimals?: number; thresholdY?: number; zones?: TrendZone[]; fillOpacity?: number;
-  lowValues?: number[]; highValues?: number[]; uncertaintyLabel?: string; scenarioLabel?: string;
+  lowValues?: number[]; highValues?: number[]; uncertaintyLabel?: string; scenarioLabel?: string; thresholdLabel?: string;
 }) {
   const VW = 100, VH = 56, px = 1, py = 5, bH = 9;
   const cW = VW - px * 2, cH = VH - py - bH;
@@ -915,6 +915,8 @@ function TrendChart({
   const cyPos = Math.max(0, Math.min(VH - bH - callH, mrkY - callH / 2));
   const displayV = fmt(curV);
   const displayRange = hasRange && curLow !== null && curHigh !== null ? `${fmt(curLow)}-${fmt(curHigh)}${unit}` : null;
+  const thresholdInRange = thresholdY !== undefined && thresholdY >= mn && thresholdY <= mx;
+  const thresholdTextY = thresholdInRange ? Math.max(py + 4, Math.min(py + cH - 1, yOf(thresholdY!) - 1)) : 0;
   const sourceYears = new Set(years);
   const axisYears = Array.from(new Set([BASELINE_YEAR, CURRENT_FORECAST_YEAR, 2050, 2075, MAX_YEAR]))
     .filter((yr) => yr >= BASELINE_YEAR && yr <= MAX_YEAR);
@@ -936,7 +938,7 @@ function TrendChart({
       <svg
         viewBox={`0 0 ${VW} ${VH}`}
         role="img"
-        aria-label={`${label} trend from ${BASELINE_YEAR} to ${MAX_YEAR}${scenarioLabel ? `, ${scenarioLabel}` : ""}. Displayed yearly points are linearly interpolated between grounded API checkpoints.`}
+        aria-label={`${label} trend from ${BASELINE_YEAR} to ${MAX_YEAR}${scenarioLabel ? `, ${scenarioLabel}` : ""}. Displayed yearly points are linearly interpolated between grounded API checkpoints.${thresholdLabel ? ` Threshold marker: ${thresholdLabel}.` : ""}`}
         style={{ width: "100%", height: 80, display: "block" }}
       >
         <title>{`${label} trend. Hover plotted yearly points for values; open the values disclosure below for keyboard and touch access.`}</title>
@@ -951,8 +953,16 @@ function TrendChart({
           const yy = py + f * cH;
           return <line key={f} x1={px} y1={yy} x2={px + cW} y2={yy} stroke="rgba(255,255,255,0.04)" strokeWidth="0.5" />;
         })}
-        {thresholdY !== undefined && thresholdY >= mn && thresholdY <= mx && (
-          <line x1={px} y1={yOf(thresholdY)} x2={px + cW} y2={yOf(thresholdY)} stroke={RED} strokeWidth="0.7" strokeDasharray="2 1.5" opacity="0.6" />
+        {thresholdInRange && (
+          <g>
+            <title>{thresholdLabel ?? `Threshold marker at ${withUnit(thresholdY!)}`}</title>
+            <line x1={px} y1={yOf(thresholdY!)} x2={px + cW} y2={yOf(thresholdY!)} stroke={RED} strokeWidth="0.7" strokeDasharray="2 1.5" opacity="0.6" />
+            {thresholdLabel && (
+              <text x={VW - px - 0.5} y={thresholdTextY} textAnchor="end" fill={RED} fontSize="4.5" fontWeight="700">
+                {thresholdLabel}
+              </text>
+            )}
+          </g>
         )}
         <polyline points={pts} fill="none" stroke={color} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
         <line x1={mrkX} y1={py} x2={mrkX} y2={py + cH} stroke={ACCENT} strokeWidth="0.9" strokeDasharray="2.5 2" opacity="0.85" />
@@ -984,6 +994,7 @@ function TrendChart({
           {scenarioLabel && <span style={{ fontSize: 8, color: MUTED, border: `1px solid ${BORDER}`, borderRadius: 999, padding: "1px 5px" }}>{scenarioLabel}</span>}
           <ChartValuesDetails label={label} rows={valueRows} />
           {hasRange && uncertaintyLabel && <ReceiptDetails label="range" text={uncertaintyLabel} />}
+          {thresholdLabel && <ReceiptDetails label="threshold" text={`Dashed marker: ${thresholdLabel}. It is a chart reference for the displayed metric, not a property-level or safety-critical decision boundary.`} />}
         </span>
         <span style={{ fontSize: 10, fontWeight: 700, color, fontFamily: "monospace", textAlign: "right", flexShrink: 0 }}>
           {displayV}{unit}
@@ -1305,6 +1316,7 @@ export default function ClimateApp() {
       seaLow: trajectory.map((p) => p.extremes.detail?.uncertainty?.sea_level_low_cm ?? p.metadata?.uncertainty?.sea_level_low_cm ?? p.extremes.sea_level_rise_cm ?? 0),
       seaHigh: trajectory.map((p) => p.extremes.detail?.uncertainty?.sea_level_high_cm ?? p.metadata?.uncertainty?.sea_level_high_cm ?? p.extremes.sea_level_rise_cm ?? 0),
       drought: trajectory.map((p) => riskScore(p.extremes.drought_risk)),
+      flood: trajectory.map((p) => riskScore(p.extremes.flood_risk)),
     };
   }, [trajectory]);
 
@@ -2509,7 +2521,7 @@ export default function ClimateApp() {
               <span>= selected year marker (synced with slider above)</span>
             </div>
           </div>
-          <div style={{ display: "flex", gap: 12 }}>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(145px,1fr))", gap: 12 }}>
             <TrendChart
               years={traj!.years}
               values={traj!.temp}
@@ -2524,7 +2536,6 @@ export default function ClimateApp() {
               scenarioLabel={shownScenario.label}
               uncertaintyLabel="Shaded band uses temperature.uncertainty.annual_mean_low/high from the grounded API for this location, year range, and scenario."
             />
-            <div style={{ width: 1, background: BORDER, alignSelf: "stretch", flexShrink: 0 }} />
             <TrendChart
               years={traj!.years}
               values={traj!.precip}
@@ -2538,16 +2549,13 @@ export default function ClimateApp() {
               scenarioLabel={shownScenario.label}
               uncertaintyLabel="Shaded band uses precipitation.uncertainty.annual_total_low/high from the grounded API. Local precipitation trends can have larger model disagreement and direction changes."
             />
-            <div style={{ width: 1, background: BORDER, alignSelf: "stretch", flexShrink: 0 }} />
             <TrendChart years={traj!.years} values={traj!.heat} year={year} label="Heat Days" unit="d" color={ORANGE} decimals={0} thresholdY={15} scenarioLabel={shownScenario.label} />
-            <div style={{ width: 1, background: BORDER, alignSelf: "stretch", flexShrink: 0 }} />
             <TrendChart years={traj!.years} values={traj!.score} year={year} label="Habitability" unit="" color={sc} decimals={0}
               scenarioLabel={shownScenario.label}
               zones={[
                 { from: 85, to: 100, color: GREEN }, { from: 70, to: 85, color: "#4ade80" },
                 { from: 60, to: 70, color: AMBER }, { from: 40, to: 60, color: ORANGE }, { from: 0, to: 40, color: RED },
               ]} />
-            <div style={{ width: 1, background: BORDER, alignSelf: "stretch", flexShrink: 0 }} />
             <TrendChart
               years={traj!.years}
               values={traj!.sea}
@@ -2559,14 +2567,37 @@ export default function ClimateApp() {
               color={CYAN}
               decimals={0}
               thresholdY={50}
+              thresholdLabel="50 cm regional context"
               scenarioLabel={shownScenario.label}
               uncertaintyLabel="Shaded band uses AR6 regional sea-level low/high context returned by the API; it is not a parcel-level coastal exposure assessment."
             />
-            <div style={{ width: 1, background: BORDER, alignSelf: "stretch", flexShrink: 0 }} />
-            <TrendChart years={traj!.years} values={traj!.drought} year={year} label="Drought Risk" unit="%" color={AMBER} decimals={0} thresholdY={50} scenarioLabel={shownScenario.label} />
+            <TrendChart
+              years={traj!.years}
+              values={traj!.drought}
+              year={year}
+              label="Drought Risk"
+              unit="%"
+              color={AMBER}
+              decimals={0}
+              thresholdY={50}
+              thresholdLabel="50% elevated risk"
+              scenarioLabel={shownScenario.label}
+            />
+            <TrendChart
+              years={traj!.years}
+              values={traj!.flood}
+              year={year}
+              label="Flood Risk"
+              unit="%"
+              color={BLUE}
+              decimals={0}
+              thresholdY={50}
+              thresholdLabel="50% elevated risk"
+              scenarioLabel={shownScenario.label}
+            />
           </div>
           <div style={{ marginTop: 12, padding: "6px 10px", background: `${ACCENT}07`, border: `1px solid ${ACCENT}18`, borderRadius: 8, fontSize: 10, color: MUTED }}>
-            💡 Drag the year slider to move the marker across all six charts simultaneously and see how each metric evolves. Hover plotted years for values, or open values for keyboard/touch access. Translucent bands show grounded low-high ranges where the API exposes comparable uncertainty fields; dashed horizontal lines mark critical thresholds.
+            💡 Drag the year slider to move the marker across all seven charts simultaneously and see how each metric evolves. Hover plotted years for values, or open values for keyboard/touch access. Translucent bands show grounded low-high ranges where the API exposes comparable uncertainty fields; labeled dashed horizontal lines mark documented risk/context thresholds.
           </div>
         </div>
 
