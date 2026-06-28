@@ -56,5 +56,20 @@ assert.match(source, /Raw CMIP6 model-consensus annual_mean and anomaly/, "tempe
 assert.match(source, /groundwater, reservoirs, demand, or local drainage capacity/, "precipitation KPI discloses missing local water-system factors");
 assert.match(source, /climate screening indicator, not medical or occupational-safety advice/, "heat-stress KPI has a non-advisory receipt");
 assert.match(source, /not a safety certificate or relocation recommendation/, "habitability KPI caveats interpretation");
+assert.match(source, /tropical_nights_per_year\?: number/, "risk cards type the raw ETCCDI tropical-nights value");
+assert.match(source, /consecutive_dry_days\?: number/, "risk cards type the raw ETCCDI consecutive-dry-days value");
+assert.match(source, /max_5day_precip_mm\?: number/, "risk cards type the raw ETCCDI Rx5day value");
+assert.match(source, /function interpOptionalScalar/, "optional raw ETCCDI values are not fabricated when absent");
+assert.match(source, /if \(av == null \|\| bv == null\) return undefined/, "optional raw ETCCDI interpolation fails closed when bracket data is missing");
+assert.match(source, /const drySpellDays = interpOptionalScalar\(pts, year, \(p\) => p\.extremes\.detail\?\.consecutive_dry_days\)/, "missing drought raw detail is not defaulted to zero");
+assert.match(source, /const maxFiveDayRain = interpOptionalScalar\(pts, year, \(p\) => p\.extremes\.detail\?\.max_5day_precip_mm\)/, "missing flood raw detail is not defaulted to zero");
+assert.match(source, /Heat stress uses the grounded ETCCDI tropical-nights layer/, "heat-stress risk card exposes its source receipt");
+assert.match(source, /Drought risk uses ETCCDI consecutive dry days/, "drought risk card exposes its source receipt");
+assert.match(source, /Flood risk uses ETCCDI Rx5day/, "flood risk card exposes its source receipt");
+assert.match(source, /Sea-level context uses the registered NASA\/IPCC AR6 regional sea-level layer/, "sea-level context card exposes its source receipt");
+assert.match(source, /dry-spell days.*raw/, "drought risk card shows the raw dry-spell quantity alongside the score");
+assert.match(source, /mm Rx5day.*raw/, "flood risk card shows the raw Rx5day quantity alongside the score");
+assert.match(source, /It is not a parcel flood map or insurance loss estimate/, "flood receipt rejects parcel and insurance interpretations");
+assert.match(source, /\/\* Risk & Extremes \*\/[\s\S]*?repeat\(auto-fit,minmax\(170px,1fr\)\)/, "risk cards remain responsive after adding receipts");
 
-console.log("storyline smoke passed: roadmap, explainability sections, annual trend point values, and accessible receipts guarded");
+console.log("storyline smoke passed: roadmap, explainability sections, annual trend point values, risk receipts, and accessible receipts guarded");

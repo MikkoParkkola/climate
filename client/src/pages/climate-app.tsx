@@ -77,6 +77,9 @@ interface ProjectionPoint {
     flood_risk: number;
     sea_level_rise_cm?: number;
     detail?: {
+      tropical_nights_per_year?: number;
+      consecutive_dry_days?: number;
+      max_5day_precip_mm?: number;
       uncertainty?: {
         tropical_nights_spread_days?: number;
         consecutive_dry_days_spread?: number;
@@ -84,6 +87,11 @@ interface ProjectionPoint {
         sea_level_low_cm?: number;
         sea_level_high_cm?: number;
         method?: string;
+      };
+      thresholds?: {
+        tropical_night_C?: number;
+        drought_max_cdd?: number;
+        flood_max_rx5_mm?: number;
       };
     };
   };
@@ -223,6 +231,33 @@ function interpScalar(points: ProjectionPoint[], year: number, get: (p: Projecti
   return get(last);
 }
 
+function interpOptionalScalar(points: ProjectionPoint[], year: number, get: (p: ProjectionPoint) => number | undefined): number | undefined {
+  if (points.length === 0) return undefined;
+  const first = points[0];
+  const firstValue = get(first);
+  if (year <= first.year) return firstValue;
+
+  const last = points[points.length - 1];
+  const lastValue = get(last);
+  if (year >= last.year) return lastValue;
+
+  for (let i = 0; i < points.length - 1; i++) {
+    const a = points[i];
+    const b = points[i + 1];
+    if (year >= a.year && year <= b.year) {
+      const av = get(a);
+      const bv = get(b);
+      if (year === a.year) return av;
+      if (year === b.year) return bv;
+      if (av == null || bv == null) return undefined;
+      const t = (year - a.year) / (b.year - a.year || 1);
+      return lerp(av, bv, t);
+    }
+  }
+
+  return undefined;
+}
+
 function riskScore(value: number): number {
   return Math.max(0, Math.min(100, value));
 }
@@ -256,6 +291,11 @@ function scoreColor(s: number) {
 function signedNumber(value: number, decimals = 1) {
   const rounded = value.toFixed(decimals);
   return value >= 0 ? `+${rounded}` : rounded;
+}
+
+function roundedValue(value: number | undefined | null, unit: string, decimals = 0): string {
+  if (value == null || !Number.isFinite(value)) return "not exposed";
+  return `${decimals > 0 ? value.toFixed(decimals) : Math.round(value).toString()}${unit}`;
 }
 
 function climateVector(monthlyTemps: number[], monthlyPrecip: number[]): number[] | null {
@@ -1256,6 +1296,9 @@ export default function ClimateApp() {
     const drought = Math.round(riskScore(interpScalar(pts, year, (p) => p.extremes.drought_risk)));
     const flood = Math.round(riskScore(interpScalar(pts, year, (p) => p.extremes.flood_risk)));
     const seaLevel = Math.max(0, Math.round(interpScalar(pts, year, (p) => p.extremes.sea_level_rise_cm ?? 0)));
+    const heatNightsRaw = interpOptionalScalar(pts, year, (p) => p.extremes.detail?.tropical_nights_per_year ?? p.extremes.heat_stress_days);
+    const drySpellDays = interpOptionalScalar(pts, year, (p) => p.extremes.detail?.consecutive_dry_days);
+    const maxFiveDayRain = interpOptionalScalar(pts, year, (p) => p.extremes.detail?.max_5day_precip_mm);
     const score = Math.max(0, Math.min(100, Math.round(interpScalar(pts, year, (p) => p.habitability.score))));
     const category = categoryFor(score);
     const monthlyTemps = Array.from({ length: 12 }, (_, m) => interpScalar(pts, year, (p) => p.temperature.monthly?.[m] ?? p.temperature.annual_mean));
@@ -1302,6 +1345,15 @@ export default function ClimateApp() {
       precipSpreadPct: np.precipitation.uncertainty?.anomaly_percent_spread,
       precipLow: np.precipitation.uncertainty?.annual_total_low,
       precipHigh: np.precipitation.uncertainty?.annual_total_high,
+      heatNightsRaw,
+      drySpellDays,
+      maxFiveDayRain,
+      heatNightsSpread: np.extremes.detail?.uncertainty?.tropical_nights_spread_days,
+      drySpellSpread: np.extremes.detail?.uncertainty?.consecutive_dry_days_spread,
+      maxFiveDayRainSpread: np.extremes.detail?.uncertainty?.max_5day_precip_spread_mm,
+      tropicalNightThreshold: np.extremes.detail?.thresholds?.tropical_night_C,
+      droughtMaxCdd: np.extremes.detail?.thresholds?.drought_max_cdd,
+      floodMaxRx5: np.extremes.detail?.thresholds?.flood_max_rx5_mm,
       seaLow: np.extremes.detail?.uncertainty?.sea_level_low_cm ?? np.metadata?.uncertainty?.sea_level_low_cm,
       seaHigh: np.extremes.detail?.uncertainty?.sea_level_high_cm ?? np.metadata?.uncertainty?.sea_level_high_cm,
       sourceTrail: np.metadata?.source_trail ?? [],
@@ -2248,7 +2300,7 @@ export default function ClimateApp() {
         )}
 
         {/* KPI Strip */}
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 10, marginBottom: 14 }}>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(170px,1fr))", gap: 10, marginBottom: 14 }}>
           <div style={{ ...card, padding: 14 }}>
             <div style={{ fontSize: 9, textTransform: "uppercase", letterSpacing: "0.08em", color: MUTED, marginBottom: 4 }}>Avg Temperature</div>
             <div style={{ display: "flex", alignItems: "baseline", gap: 5 }}>
@@ -2451,19 +2503,54 @@ export default function ClimateApp() {
         </div>
 
         {/* Risk & Extremes */}
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 10, marginBottom: 14 }}>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(170px,1fr))", gap: 10, marginBottom: 14 }}>
           {[
-            { label: "Heat Stress", value: d!.heatDays, unit: "days/yr", delta: `+${Math.max(0, d!.heatDays - d!.baseHeatDays)}d`, color: RED },
-            { label: "Drought Risk", value: `${d!.drought}%`, sub: d!.drought < 25 ? "Low" : d!.drought < 40 ? "Elevated" : "High", bar: d!.drought / 100, color: AMBER },
-            { label: "Flood Risk", value: `${d!.flood}%`, sub: d!.flood < 30 ? "Low" : d!.flood < 60 ? "Elevated" : "High", bar: d!.flood / 100, color: BLUE },
-            { label: "Sea-level context", value: `${d!.seaLevel}cm`, sub: "Regional AR6", color: CYAN },
-          ].map(({ label, value, unit, delta, sub, bar, color }) => (
+            {
+              label: "Heat Stress",
+              value: d!.heatDays,
+              unit: "days/yr",
+              delta: `+${Math.max(0, d!.heatDays - d!.baseHeatDays)}d`,
+              detail: `${roundedValue(d!.heatNightsRaw, " tropical nights/yr")} raw`,
+              color: RED,
+              receipt: `Heat stress uses the grounded ETCCDI tropical-nights layer for ${shownScenario.label}: nights per year with daily minimum temperature above ${d!.tropicalNightThreshold ?? 20}°C, linearly interpolated to the selected year. Ensemble spread: ${roundedValue(d!.heatNightsSpread, " days", 1)}. This is a climate screening indicator, not medical or occupational-safety advice.`,
+            },
+            {
+              label: "Drought Risk",
+              value: `${d!.drought}%`,
+              sub: d!.drought < 25 ? "Low" : d!.drought < 40 ? "Elevated" : "High",
+              detail: `${roundedValue(d!.drySpellDays, " dry-spell days")} raw`,
+              bar: d!.drought / 100,
+              color: AMBER,
+              receipt: `Drought risk uses ETCCDI consecutive dry days for ${shownScenario.label}: the longest spell with under 1 mm of rain. The displayed score maps 0 days to 0 and ${roundedValue(d!.droughtMaxCdd, " days")} to 100. Selected raw value: ${roundedValue(d!.drySpellDays, " days", 1)}; ensemble spread: ${roundedValue(d!.drySpellSpread, " days", 1)}. It does not model reservoirs, groundwater, water rights, or demand.`,
+            },
+            {
+              label: "Flood Risk",
+              value: `${d!.flood}%`,
+              sub: d!.flood < 30 ? "Low" : d!.flood < 60 ? "Elevated" : "High",
+              detail: `${roundedValue(d!.maxFiveDayRain, " mm Rx5day")} raw`,
+              bar: d!.flood / 100,
+              color: BLUE,
+              receipt: `Flood risk uses ETCCDI Rx5day for ${shownScenario.label}: maximum 5-day precipitation, a heavy-rain proxy used in IPCC AR6-style assessment. The displayed score maps 0 mm to 0 and ${roundedValue(d!.floodMaxRx5, " mm")} to 100. Selected raw value: ${roundedValue(d!.maxFiveDayRain, " mm", 1)}; ensemble spread: ${roundedValue(d!.maxFiveDayRainSpread, " mm", 1)}. It is not a parcel flood map or insurance loss estimate.`,
+            },
+            {
+              label: "Sea-level context",
+              value: `${d!.seaLevel}cm`,
+              sub: "Regional AR6",
+              detail: d!.seaLow != null && d!.seaHigh != null ? `${Math.round(d!.seaLow)}-${Math.round(d!.seaHigh)} cm range` : "range not exposed",
+              color: CYAN,
+              receipt: `Sea-level context uses the registered NASA/IPCC AR6 regional sea-level layer for ${shownScenario.label}. Selected range: ${d!.seaLow != null && d!.seaHigh != null ? `${Math.round(d!.seaLow)} to ${Math.round(d!.seaHigh)} cm` : "not exposed"}. This is regional context only; local exposure depends on elevation, coast distance, subsidence, tides, storm surge, and defenses.`,
+            },
+          ].map(({ label, value, unit, delta, sub, detail, bar, color, receipt }) => (
             <div key={label} style={{ ...card, padding: 14, borderTop: `2px solid ${color}` }}>
-              <div style={{ fontSize: 10, color: MUTED }}>{label}</div>
+              <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
+                <div style={{ fontSize: 10, color: MUTED }}>{label}</div>
+                <ReceiptDetails label="source" text={receipt} />
+              </div>
               <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", marginTop: 6 }}>
                 <div>
                   <span style={{ fontSize: 26, fontWeight: 700, color }}>{value}</span>
                   {unit && <span style={{ fontSize: 10, color: MUTED, display: "block", marginTop: -2 }}>{unit}</span>}
+                  {detail && <span style={{ fontSize: 9, color: MUTED, display: "block", marginTop: 4 }}>{detail}</span>}
                 </div>
                 {delta && <span style={{ fontSize: 10, padding: "2px 5px", background: `${RED}20`, color: RED, borderRadius: 4 }}>{delta}</span>}
                 {sub && <span style={{ fontSize: 10, fontWeight: 600, color }}>{sub}</span>}
