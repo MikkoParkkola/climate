@@ -31,13 +31,16 @@
     "smoke:data-quality": "tsx scripts/smoke-data-quality.ts",
     "smoke:db-free-release": "node scripts/smoke-db-free-release.mjs",
     "smoke:validation-report": "node scripts/smoke-validation-report.mjs",
+    "smoke:cache-purge-script": "node scripts/smoke-cache-purge-script.mjs",
     "smoke:model": "node scripts/smoke-grounded-model.mjs",
     "audit:observed-baseline": "tsx scripts/audit-observed-baseline.mjs",
     "audit:trajectories": "node scripts/audit-trajectories.mjs",
     "audit:public": "node scripts/audit-public-readiness.mjs",
     "screenshots:capture": "node scripts/capture-screenshots.mjs",
     "verify:live": "node scripts/verify-live-release.mjs",
-    "ci": "npm run check && npm run build && npm run audit:public && npm run smoke:db-free-release && npm run smoke:cache && npm run smoke:rankings && npm run smoke:twin && npm run smoke:comparison-layout && npm run smoke:projection-route && npm run smoke:raw-json && npm run smoke:storyline && npm run smoke:share-card && npm run smoke:educational-report && npm run smoke:guided-explainer && npm run smoke:scenario-contrast && npm run smoke:grid-reader && npm run smoke:node-model && npm run smoke:node-performance && npm run smoke:observed-baseline && npm run smoke:data-quality && npm run smoke:validation-report && npm run smoke:model && npm run audit:trajectories",
+    "db:purge-model-cache": "node scripts/purge-climate-model-cache.mjs",
+    "db:purge-model-cache:dry-run": "node scripts/purge-climate-model-cache.mjs --dry-run",
+    "ci": "npm run check && npm run build && npm run audit:public && npm run smoke:db-free-release && npm run smoke:cache && npm run smoke:rankings && npm run smoke:twin && npm run smoke:comparison-layout && npm run smoke:projection-route && npm run smoke:raw-json && npm run smoke:storyline && npm run smoke:share-card && npm run smoke:educational-report && npm run smoke:guided-explainer && npm run smoke:scenario-contrast && npm run smoke:grid-reader && npm run smoke:node-model && npm run smoke:node-performance && npm run smoke:observed-baseline && npm run smoke:data-quality && npm run smoke:cache-purge-script && npm run smoke:validation-report && npm run smoke:model && npm run audit:trajectories",
     "db:push": "drizzle-kit push"
   },
   "dependencies": {

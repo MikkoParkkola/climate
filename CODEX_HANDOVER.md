@@ -1,6 +1,6 @@
 # CODEX HANDOVER - fupit grounded serving
 
-**Updated:** 2026-06-27.
+**Updated:** 2026-06-28.
 
 This file is an operational handoff for agents working on the `climate` repo. Historical
 fabricated-engine notes were collapsed into `docs/CURRENT_STATE.md` and `docs/PLAN.md`; treat this
@@ -52,16 +52,36 @@ Additional Postgres-backed local smoke has proven:
 These require live Replit/prod database access:
 
 1. Republish the Replit Autoscale deployment from the current branch/main.
-2. Run `TRUNCATE climate_model_cache;` against production Postgres, or prove the live startup guard
-   rejected and removed every incompatible row before any public forecast was served.
-3. Run `npm run verify:live` against the public URL.
-4. Capture layered screenshot evidence:
+2. In the production Replit shell, confirm the cache purge target:
+
+```bash
+npm run db:purge-model-cache:dry-run
+```
+
+3. Immediately after republish, purge old fabricated cache rows from production Postgres:
+
+```bash
+FUPIT_CONFIRM_CACHE_PURGE=TRUNCATE_CLIMATE_MODEL_CACHE npm run db:purge-model-cache
+```
+
+Do not use raw SQL unless the guarded script cannot run. If raw SQL is required, execute only
+`TRUNCATE climate_model_cache;` against production Postgres and record the row count before and
+after. The guarded script is preferred because it fails closed when `DATABASE_URL` is missing and
+requires the explicit confirmation token above.
+
+4. Run `npm run verify:live` against the public URL:
+
+```bash
+FUPIT_REQUIRE_FRESH=1 npm run verify:live
+```
+
+5. Capture layered screenshot evidence:
 
 ```bash
 npm run screenshots:capture -- --base https://fupit.com --include-single --out artifacts/release-screenshots
 ```
 
-5. Manually smoke:
+6. Manually smoke:
 
 ```bash
 curl -s https://fupit.com/api/health | python3 -m json.tool

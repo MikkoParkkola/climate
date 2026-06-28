@@ -24,12 +24,14 @@ npm run start
 npm run check
 npm run audit:public
 npm run verify:live
+npm run db:purge-model-cache:dry-run
 ```
 
 `DATABASE_URL` is required for forecast/cache endpoints because the API reads and writes `climate_model_cache`.
 The built server can still boot without Postgres for read-only artifact routes such as `/api/health`,
 `/api/source-registry`, `/api/data-quality`, `/methodology`, and `/rankings`.
 `npm run verify:live` checks the public deployment by default; set `FUPIT_BASE_URL=http://localhost:5000` for a local built server, `FUPIT_SKIP_TRAJECTORY=1` when that local server has no Postgres, or `FUPIT_REQUIRE_FRESH=1` with a new land coordinate to prove a post-purge forecast was generated instead of read from cache. `npm run smoke:db-free-release` exercises the local read-only release verifier against a built server with `DATABASE_URL` unset.
+For the launch purge, first run `npm run db:purge-model-cache:dry-run` in the production Replit shell, then run `FUPIT_CONFIRM_CACHE_PURGE=TRUNCATE_CLIMATE_MODEL_CACHE npm run db:purge-model-cache` only after confirming that shell is connected to the production database.
 
 ## Key docs
 

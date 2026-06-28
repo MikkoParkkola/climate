@@ -246,6 +246,7 @@ const SEO_PAGES: Record<string, SeoPage> = {
     <li>Sea-level rise: IPCC AR6 regional projections.</li>
     <li>Heat, drought, and flood risk: CMIP6 ETCCDI extreme-climate indices scored against documented thresholds.</li>
     <li>Humid heat screen: CMIP6 relative humidity and monthly mean temperature through the Stull 2011 wet-bulb approximation; not WBGT or daily humid-heat days.</li>
+    <li>Cold-season context: monthly mean temperature months at or below 0°C; not daily freeze days, freeze-thaw, heating demand, crop damage, pests, or health risk.</li>
     <li>Climate twin: nearest present-day city in the indexed catalog by standardized monthly temperature and precipitation distance from grounded model output.</li>
   </ul>
   <h2>Honesty rules</h2>

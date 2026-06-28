@@ -146,6 +146,8 @@ try {
   assert(methodology.text.includes("Fick & Hijmans 2017"), "/methodology cites Fick & Hijmans 2017");
   assert(methodology.text.includes("Humid heat screen"), "/methodology exposes humid heat screen copy");
   assert(methodology.text.includes("Stull 2011"), "/methodology cites Stull 2011 wet-bulb source");
+  assert(methodology.text.includes("Cold-season context"), "/methodology exposes cold-season context copy");
+  assert(methodology.text.includes("daily freeze days"), "/methodology caveats cold-season context as non-daily");
   assert(methodology.text.includes("No fabricated") || methodology.text.includes("do not invent"), "/methodology carries no-fabricated-science copy");
 
   const rankingsPage = await getText("/rankings");
@@ -256,6 +258,23 @@ try {
   assert(
     dataQuality.enrichmentReadiness?.some((item) => item.key === "humid_heat" && item.status === "partial"),
     "data-quality API exposes partial humid heat readiness",
+  );
+  assert(
+    dataQuality.enrichmentReadiness?.some(
+      (item) =>
+        item.key === "cold_season_context" &&
+        item.status === "partial" &&
+        String(item.publicBehavior).includes("monthly-mean freeze-month"),
+    ),
+    "data-quality API exposes partial cold-season context readiness",
+  );
+  assert(
+    dataQuality.enrichmentReadiness?.some(
+      (item) =>
+        item.key === "cold_season_context" &&
+        String(item.missingForFullUse).includes("daily cold extreme indices"),
+    ),
+    "data-quality API keeps daily cold-stress gap explicit",
   );
   assert(
     dataQuality.enrichmentReadiness?.some((item) => item.key === "freshwater" && item.status === "withheld"),
