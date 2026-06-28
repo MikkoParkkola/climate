@@ -35,6 +35,7 @@
     "smoke:model": "node scripts/smoke-grounded-model.mjs",
     "audit:observed-baseline": "tsx scripts/audit-observed-baseline.mjs",
     "audit:trajectories": "node scripts/audit-trajectories.mjs",
+    "audit:hindcast": "python3 scripts/hindcast_validation.py",
     "audit:public": "node scripts/audit-public-readiness.mjs",
     "screenshots:capture": "node scripts/capture-screenshots.mjs",
     "verify:live": "node scripts/verify-live-release.mjs",
