@@ -1,3 +1,5 @@
 - [SPA per-route SEO injection](spa-seo-injection.md) — how `/` and `/comparison` get distinct crawler-visible head tags without SSR, and why it must be prod-only.
 - [Push/pull private GitHub repo](github-push-private-repo.md) — connector token (not a user PAT) for push/pull; bash blocks `.git` writes; restart the tsx dev server after pulling server changes.
 - [Real-model e2e timeouts](e2e-real-model-timeout.md) — runTest via code_execution hits the 10-min sandbox cap on flows that wait on the slow climate model; prefer layered verification.
+- [fupit release ritual](fupit-release-ritual.md) — pull GitHub → publish → 4 post-deploy cmds; why they run after publish, purge safety, chromium for screenshots, re-verify geocoding after each pull.
+- [Stale Vite cache after dep change](vite-cache-after-dep-change.md) — "Invalid hook call / multiple React" after a dep change is a stale node_modules/.vite pre-bundle; rm -rf it and restart.

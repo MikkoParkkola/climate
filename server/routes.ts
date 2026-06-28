@@ -54,6 +54,50 @@ function databaseUnavailable(res: any) {
   });
 }
 
+interface GeocodeResult {
+  name: string;
+  lat: number;
+  lng: number;
+  latitude: number;
+  longitude: number;
+  country: string;
+  city: string;
+  state?: string;
+}
+
+// Resolve any place on Earth by English name via the free, key-less Open-Meteo
+// geocoding API. Replaces the seeded-city DB lookup so cities like Prague and
+// Kyiv resolve too.
+async function geocodePlaces(query: string): Promise<GeocodeResult[]> {
+  const url =
+    "https://geocoding-api.open-meteo.com/v1/search" +
+    `?name=${encodeURIComponent(query)}&count=10&language=en&format=json`;
+  const upstream = await fetch(url, { signal: AbortSignal.timeout(8000) });
+  if (!upstream.ok) {
+    throw new Error(`Geocoding upstream returned ${upstream.status}`);
+  }
+  const payload = (await upstream.json()) as { results?: any[] };
+  const rows = Array.isArray(payload.results) ? payload.results : [];
+  return rows
+    .filter((r) => Number.isFinite(r?.latitude) && Number.isFinite(r?.longitude))
+    .map((r) => {
+      const parts = [r.name, r.admin1, r.country].filter(
+        (p: unknown): p is string => typeof p === "string" && p.trim().length > 0,
+      );
+      const display = parts.filter((p, i) => i === 0 || p !== parts[i - 1]);
+      return {
+        name: display.join(", "),
+        lat: r.latitude as number,
+        lng: r.longitude as number,
+        latitude: r.latitude as number,
+        longitude: r.longitude as number,
+        country: (r.country as string) || "",
+        city: (r.name as string) || "",
+        state: (r.admin1 as string) || undefined,
+      };
+    });
+}
+
 // Bounded concurrency for the Python fallback. Normal forecast requests use the
 // in-process Node grid engine unless CLIMATE_GRID_ENGINE=python is set.
 const pythonQueue: Array<() => void> = [];
