@@ -1,83 +1,36 @@
-/**
- * Pure climate data & math helpers extracted from climate-app.tsx.
- * No React dependencies. Safe for unit testing and reuse.
- */
+// ── Pure helpers extracted from climate-app.tsx (no JSX, no React) ──
+import {
+  ACCENT,
+  AMBER,
+  BASELINE_YEAR,
+  BLUE,
+  CYAN,
+  DEFAULT_SCENARIO,
+  FREEZING_MONTHLY_MEAN_C,
+  GREEN,
+  MAX_YEAR,
+  MUTED,
+  ORANGE,
+  PURPLE,
+  RED,
+  SCENARIOS,
+} from "./climate-constants";
+import type {
+  AnalogCandidate,
+  AnalogCatalog,
+  ClimateAnalogMatch,
+  CoastCoord,
+  CoastalProximityArtifact,
+  CoastalRelevance,
+  LocationOption,
+  ProjectionPoint,
+  RoadmapItem,
+  ScenarioContrastRow,
+  ScenarioId,
+} from "./climate-types";
 
-export type CoastCoord = [number, number];
-
-export type ProjectionPoint = {
-  year: number;
-  temperature: { annual_mean: number; anomaly: number; monthly?: number[]; ipcc_calibrated?: { anomaly: number } };
-  precipitation: { annual_total: number; anomaly_percent: number; monthly?: number[] };
-  extremes: { heat_stress_days: number; drought_risk: number; flood_risk: number; sea_level_rise_cm?: number; sea_level_applicable?: boolean };
-  habitability: { score: number; [key: string]: unknown };
-};
-
-export type AnalogCandidate = {
-  lat: number;
-  lng: number;
-  temperature: { annual_mean: number; monthly: number[] };
-  precipitation: { annual_total: number; monthly: number[] };
-  extremes: { heat_stress_days: number; drought_risk: number; flood_risk: number };
-};
-
-export type AnalogCatalog = { candidates: AnalogCandidate[]; catalogYear: number };
-
-export type ClimateAnalogMatch = {
-  candidate: AnalogCandidate;
-  distance: number;
-  comparedCount: number;
-  annualTempDelta: number;
-  annualPrecipDelta: number;
-  heatDaysDelta: number;
-  droughtDelta: number;
-  floodDelta: number;
-};
-
-export type CoastalRelevance = {
-  status: "unavailable" | "coastal" | "near_coastal" | "regional" | "inland";
-  label: string;
-  shortLabel: string;
-  summary: string;
-  receipt: string;
-  thresholdLabel: string;
-  isLocallyRelevant: boolean;
-  distanceKm?: number;
-};
-
-export type ScenarioContrastRow = {
-  id: string;
-  label: string;
-  role: string;
-  caption: string;
-  tempChange: number;
-  ipccDelta: number;
-  heatDays: number;
-  precipChange: number;
-  score: number;
-  category: string;
-};
-
-export type RoadmapItem = {
-  year: number;
-  tempChange: number;
-  heatDays: number;
-  coldMonths: number;
-  precipChange: number;
-  drought: number;
-  flood: number;
-  seaLevel: number;
-  seaLevelApplicable: boolean;
-  score: number;
-  category: string;
-  driver: { label: string; color: string; text: string };
-};
-
-const FREEZING_MONTHLY_MEAN_C = 0;
-const BASELINE_YEAR = 2025;
-const MAX_YEAR = 2100;
-
-export function lerp(a: number, b: number, t: number): number {
+// ── Math helpers ─────────────────────────────────────────────────────────────
+export function lerp(a: number, b: number, t: number) {
   return a + (b - a) * Math.max(0, Math.min(1, t));
 }
 
@@ -102,9 +55,11 @@ export function interpOptionalScalar(points: ProjectionPoint[], year: number, ge
   const first = points[0];
   const firstValue = get(first);
   if (year <= first.year) return firstValue;
+
   const last = points[points.length - 1];
   const lastValue = get(last);
   if (year >= last.year) return lastValue;
+
   for (let i = 0; i < points.length - 1; i++) {
     const a = points[i];
     const b = points[i + 1];
@@ -118,6 +73,7 @@ export function interpOptionalScalar(points: ProjectionPoint[], year: number, ge
       return lerp(av, bv, t);
     }
   }
+
   return undefined;
 }
 
@@ -125,6 +81,7 @@ export function riskScore(value: number): number {
   return Math.max(0, Math.min(100, value));
 }
 
+// Interpolate parallel year/value arrays at an arbitrary year.
 export function interpArr(years: number[], values: number[], year: number): number {
   if (values.length === 0) return 0;
   if (year <= years[0]) return values[0];
@@ -142,11 +99,15 @@ export function nearestPoint(points: ProjectionPoint[], year: number): Projectio
   return points.reduce((best, p) => (Math.abs(p.year - year) < Math.abs(best.year - year) ? p : best), points[0]);
 }
 
-export function categoryFor(score: number): string {
+export function categoryFor(score: number) {
   return score >= 85 ? "Excellent" : score >= 70 ? "Good" : score >= 60 ? "Fair" : score >= 40 ? "Poor" : "Severe";
 }
 
-export function signedNumber(value: number, decimals = 1): string {
+export function scoreColor(s: number) {
+  return s >= 85 ? GREEN : s >= 70 ? "#4ade80" : s >= 60 ? AMBER : s >= 40 ? ORANGE : RED;
+}
+
+export function signedNumber(value: number, decimals = 1) {
   const rounded = value.toFixed(decimals);
   return value >= 0 ? `+${rounded}` : rounded;
 }
@@ -156,6 +117,7 @@ export function roundedValue(value: number | undefined | null, unit: string, dec
   return `${decimals > 0 ? value.toFixed(decimals) : Math.round(value).toString()}${unit}`;
 }
 
+// ── Coastal proximity ────────────────────────────────────────────────────────
 export function normalizeLngDelta(candidateLng: number, originLng: number): number {
   let delta = candidateLng - originLng;
   while (delta > 180) delta -= 360;
@@ -178,9 +140,9 @@ export function distancePointToSegmentKm(lat: number, lng: number, a: CoastCoord
   return Math.hypot(ax + dx * t, ay + dy * t);
 }
 
-export function nearestCoastDistanceKm(lat: number, lng: number, lines: CoastCoord[][]): number | undefined {
+export function nearestCoastDistanceKm(lat: number, lng: number, artifact: CoastalProximityArtifact): number | undefined {
   let best = Infinity;
-  for (const line of lines) {
+  for (const line of artifact.lines) {
     for (let i = 0; i < line.length - 1; i++) {
       const distance = distancePointToSegmentKm(lat, lng, line[i], line[i + 1]);
       if (distance < best) best = distance;
@@ -195,9 +157,82 @@ export function formatDistanceKm(distanceKm: number | undefined): string {
   return distanceKm < 10 ? `${distanceKm.toFixed(1)} km` : `${Math.round(distanceKm)} km`;
 }
 
+export function coastalRelevanceFor(location: LocationOption, artifact: CoastalProximityArtifact): CoastalRelevance {
+  const distanceKm = nearestCoastDistanceKm(location.lat, location.lng, artifact);
+  const distanceText = formatDistanceKm(distanceKm);
+  const baseReceipt =
+    `Coarse nearest-coast distance is ${distanceText} using Natural Earth 1:110m coastline (${artifact.sourceId}). This gates wording only: no elevation, tides, storm surge, subsidence, coastal defenses, rivers, drainage, or parcel exposure are modeled.`;
+
+  if (distanceKm == null) {
+    return {
+      status: "unavailable",
+      label: "Coastal relevance not evaluated",
+      shortLabel: "not evaluated",
+      summary: "Coastal relevance could not be evaluated, so sea-level rise stays regional context only.",
+      receipt: baseReceipt,
+      thresholdLabel: "50 cm regional context",
+      isLocallyRelevant: false,
+    };
+  }
+
+  if (distanceKm <= artifact.coastalThresholdKm) {
+    return {
+      status: "coastal",
+      label: `Coastal relevance screen: within ${distanceText} of generalized coastline`,
+      shortLabel: `${distanceText} from coast`,
+      summary: `This location is within ${distanceText} of the generalized Natural Earth coastline, so regional sea-level rise is locally relevant enough to inspect, but it is still not a flood-exposure result.`,
+      receipt: baseReceipt,
+      thresholdLabel: "50 cm coastal context",
+      isLocallyRelevant: true,
+      distanceKm,
+    };
+  }
+
+  if (distanceKm <= artifact.nearCoastalThresholdKm) {
+    return {
+      status: "near_coastal",
+      label: `Near-coastal screen: ${distanceText} from generalized coastline`,
+      shortLabel: `${distanceText} from coast`,
+      summary: `This location is near the generalized coastline (${distanceText}), so sea-level rise is worth reading as a screening context, not as proof of exposure.`,
+      receipt: baseReceipt,
+      thresholdLabel: "50 cm near-coastal context",
+      isLocallyRelevant: false,
+      distanceKm,
+    };
+  }
+
+  if (distanceKm <= artifact.regionalThresholdKm) {
+    return {
+      status: "regional",
+      label: `Regional coastal context: ${distanceText} from generalized coastline`,
+      shortLabel: `${distanceText} from coast`,
+      summary: `This location is ${distanceText} from the generalized coastline, so sea-level rise is shown as broad regional context rather than local exposure.`,
+      receipt: baseReceipt,
+      thresholdLabel: "50 cm regional context",
+      isLocallyRelevant: false,
+      distanceKm,
+    };
+  }
+
+  return {
+    status: "inland",
+    label: `Inland screen: ${distanceText} from generalized coastline`,
+    shortLabel: `${distanceText} inland`,
+    summary: `This location is far inland by the coarse Natural Earth screen (${distanceText}), so sea-level rise should be treated as regional background context, not a local risk signal.`,
+    receipt: baseReceipt,
+    thresholdLabel: "50 cm regional context",
+    isLocallyRelevant: false,
+    distanceKm,
+  };
+}
+
+// ── Climate analog matching ──────────────────────────────────────────────────
 export function climateVector(monthlyTemps: number[], monthlyPrecip: number[]): number[] | null {
   if (monthlyTemps.length !== 12 || monthlyPrecip.length !== 12) return null;
-  const vals = [...monthlyTemps, ...monthlyPrecip.map((v) => Math.log1p(Math.max(0, v)))];
+  const vals = [
+    ...monthlyTemps,
+    ...monthlyPrecip.map((v) => Math.log1p(Math.max(0, v))),
+  ];
   return vals.every(Number.isFinite) ? vals : null;
 }
 
@@ -205,14 +240,13 @@ export function candidateClimateVector(candidate: AnalogCandidate): number[] | n
   return climateVector(candidate.temperature.monthly, candidate.precipitation.monthly);
 }
 
-export function sameCatalogPlace(candidate: AnalogCandidate, lat: number, lng: number): boolean {
-  return Math.abs(candidate.lat - lat) < 0.15 && Math.abs(candidate.lng - lng) < 0.15;
+export function sameCatalogPlace(candidate: AnalogCandidate, location: LocationOption): boolean {
+  return Math.abs(candidate.lat - location.lat) < 0.15 && Math.abs(candidate.lng - location.lng) < 0.15;
 }
 
 export function findClimateAnalog(
   catalog: AnalogCatalog,
-  lat: number,
-  lng: number,
+  location: LocationOption,
   year: number,
   snapshot: {
     monthlyTemps: number[];
@@ -229,6 +263,7 @@ export function findClimateAnalog(
     .filter((row): row is { candidate: AnalogCandidate; vector: number[] } => row.vector !== null);
   const target = climateVector(snapshot.monthlyTemps, snapshot.monthlyPrecip);
   if (!target || candidateRows.length === 0) return null;
+
   const dims = target.length;
   const means = Array.from({ length: dims }, (_, i) =>
     candidateRows.reduce((sum, row) => sum + row.vector[i], 0) / candidateRows.length,
@@ -237,9 +272,10 @@ export function findClimateAnalog(
     const variance = candidateRows.reduce((sum, row) => sum + (row.vector[i] - mean) ** 2, 0) / candidateRows.length;
     return Math.sqrt(variance) || 1;
   });
+
   const excludeSelf = year > catalog.catalogYear + 2;
   const scored = candidateRows
-    .filter((row) => !(excludeSelf && sameCatalogPlace(row.candidate, lat, lng)))
+    .filter((row) => !(excludeSelf && sameCatalogPlace(row.candidate, location)))
     .map((row) => {
       const squared = row.vector.reduce((sum, v, i) => {
         const z = (target[i] - v) / stds[i];
@@ -248,6 +284,7 @@ export function findClimateAnalog(
       return { candidate: row.candidate, distance: Math.sqrt(squared / dims) };
     })
     .sort((a, b) => a.distance - b.distance);
+
   const best = scored[0];
   if (!best) return null;
   const c = best.candidate;
@@ -263,25 +300,26 @@ export function findClimateAnalog(
   };
 }
 
-export function prettify(key: string): string {
+// ── Labels & narrative text ──────────────────────────────────────────────────
+export function prettify(key: string) {
   return key.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
-export function confidenceColor(c: string, colorMap: { RED: string; AMBER: string; GREEN: string }): string {
+export function confidenceColor(c: string) {
   const v = (c || "").toLowerCase();
-  if (v.includes("low")) return colorMap.RED;
-  if (v.includes("medium")) return colorMap.AMBER;
-  return colorMap.GREEN;
+  if (v.includes("low")) return RED;
+  if (v.includes("medium")) return AMBER;
+  return GREEN;
 }
 
-export function feedbackTag(text: string, colorMap: { CYAN: string; PURPLE: string; BLUE: string; GREEN: string; AMBER: string }): { icon: string; label: string; color: string } {
+export function feedbackTag(text: string): { icon: string; label: string; color: string } {
   const v = text.toLowerCase();
   const short = text.split(":")[0].trim();
-  if (v.includes("ice")) return { icon: "❄️", label: short, color: colorMap.CYAN };
-  if (v.includes("water vapor") || v.includes("moisture")) return { icon: "💧", label: short, color: colorMap.PURPLE };
-  if (v.includes("cloud")) return { icon: "☁️", label: short, color: colorMap.BLUE };
-  if (v.includes("vegetation") || v.includes("carbon")) return { icon: "🌱", label: short, color: colorMap.GREEN };
-  return { icon: "🔁", label: short, color: colorMap.AMBER };
+  if (v.includes("ice")) return { icon: "❄️", label: short, color: CYAN };
+  if (v.includes("water vapor") || v.includes("moisture")) return { icon: "💧", label: short, color: PURPLE };
+  if (v.includes("cloud")) return { icon: "☁️", label: short, color: BLUE };
+  if (v.includes("vegetation") || v.includes("carbon")) return { icon: "🌱", label: short, color: GREEN };
+  return { icon: "🔁", label: short, color: AMBER };
 }
 
 export function componentScoreEffect(key: string, delta: number): number {
@@ -372,13 +410,25 @@ export function circulationContextFor(lat?: number, lng?: number): { region: str
   return null;
 }
 
-export function contrastSnapshot(points: ProjectionPoint[], year: number, scenarioId: string, scenarios: any[], colors: { GREEN: string }): ScenarioContrastRow {
-  const info = scenarios.find((s) => s.id === scenarioId) || scenarios[0];
+// ── Scenario helpers ─────────────────────────────────────────────────────────
+export function scenarioInfo(id?: string): { id: ScenarioId; label: string; caption: string } {
+  return SCENARIOS.find((s) => s.id === id) ?? SCENARIOS.find((s) => s.id === DEFAULT_SCENARIO)!;
+}
+
+export function scenarioRole(id: ScenarioId): string {
+  if (id === "ssp126") return "Lower-warming comparison";
+  if (id === "ssp245") return "Current-policy-adjacent reference";
+  if (id === "ssp370") return "Higher-warming stress case";
+  return "Very-high, lower-likelihood stress test";
+}
+
+export function contrastSnapshot(points: ProjectionPoint[], year: number, scenarioId: ScenarioId): ScenarioContrastRow {
+  const info = scenarioInfo(scenarioId);
   const score = Math.max(0, Math.min(100, Math.round(interpScalar(points, year, (p) => p.habitability.score))));
   return {
     id: scenarioId,
     label: info.label,
-    role: scenarioId === "ssp126" ? "Lower-warming comparison" : scenarioId === "ssp245" ? "Current-policy-adjacent reference" : scenarioId === "ssp370" ? "Higher-warming stress case" : "Very-high, lower-likelihood stress test",
+    role: scenarioRole(scenarioId),
     caption: info.caption,
     tempChange: interpScalar(points, year, (p) => p.temperature.anomaly),
     ipccDelta: interpScalar(points, year, (p) => p.temperature.ipcc_calibrated?.anomaly ?? p.temperature.anomaly),
@@ -389,8 +439,138 @@ export function contrastSnapshot(points: ProjectionPoint[], year: number, scenar
   };
 }
 
-export function countMonthlyFreezeMonths(monthlyTemps: number[]): number {
-  return monthlyTemps.filter((value) => Number.isFinite(value) && value <= FREEZING_MONTHLY_MEAN_C).length;
+// ── Roadmap helpers ──────────────────────────────────────────────────────────
+export function roadmapDriver(current: Omit<RoadmapItem, "driver">, previous: Omit<RoadmapItem, "driver">): RoadmapItem["driver"] {
+  const heatDelta = current.heatDays - previous.heatDays;
+  const coldDelta = current.coldMonths - previous.coldMonths;
+  const droughtDelta = current.drought - previous.drought;
+  const floodDelta = current.flood - previous.flood;
+  const precipDelta = current.precipChange - previous.precipChange;
+  const scoreDelta = current.score - previous.score;
+  const candidates = [
+    {
+      weight: Math.abs(heatDelta) / 7,
+      label: "Heat",
+      color: ORANGE,
+      text: heatDelta >= 0
+        ? `heat-stress days rise by ${Math.round(heatDelta)} since the previous roadmap point`
+        : `heat-stress days ease by ${Math.abs(Math.round(heatDelta))} since the previous roadmap point`,
+    },
+    {
+      weight: Math.abs(coldDelta),
+      label: "Cold season",
+      color: coldDelta > 0 ? BLUE : GREEN,
+      text: coldDelta > 0
+        ? `monthly-mean freeze-season proxy gains ${coldDelta} ${coldDelta === 1 ? "month" : "months"}`
+        : `monthly-mean freeze-season proxy loses ${Math.abs(coldDelta)} ${Math.abs(coldDelta) === 1 ? "month" : "months"}`,
+    },
+    {
+      weight: Math.abs(droughtDelta) / 10,
+      label: "Drought",
+      color: droughtDelta >= 0 ? RED : GREEN,
+      text: droughtDelta >= 0
+        ? `drought pressure rises by ${Math.round(droughtDelta)} points`
+        : `drought pressure eases by ${Math.abs(Math.round(droughtDelta))} points`,
+    },
+    {
+      weight: Math.abs(floodDelta) / 10,
+      label: "Heavy rain",
+      color: floodDelta >= 0 ? BLUE : GREEN,
+      text: floodDelta >= 0
+        ? `heavy-rain/flood pressure rises by ${Math.round(floodDelta)} points`
+        : `heavy-rain/flood pressure eases by ${Math.abs(Math.round(floodDelta))} points`,
+    },
+    {
+      weight: Math.abs(precipDelta) / 8,
+      label: "Water",
+      color: BLUE,
+      text: `annual precipitation signal shifts ${signedNumber(precipDelta, 1)} percentage points`,
+    },
+    {
+      weight: Math.abs(scoreDelta) / 4,
+      label: "Score",
+      color: scoreDelta < 0 ? RED : GREEN,
+      text: scoreDelta < 0
+        ? `habitability score falls by ${Math.abs(Math.round(scoreDelta))} points`
+        : `habitability score rises by ${Math.round(scoreDelta)} points`,
+    },
+  ].sort((a, b) => b.weight - a.weight);
+  const top = candidates[0];
+  if (!top || top.weight < 0.15) {
+    return { label: "Stable", color: MUTED, text: "no single modeled signal changes sharply in this interval" };
+  }
+  return { label: top.label, color: top.color, text: top.text };
+}
+
+export function roadmapSnapshot(points: ProjectionPoint[], year: number, previous?: Omit<RoadmapItem, "driver">): RoadmapItem {
+  const score = Math.max(0, Math.min(100, Math.round(interpScalar(points, year, (p) => p.habitability.score))));
+  const monthlyTemps = Array.from({ length: 12 }, (_, month) => interpScalar(points, year, (p) => p.temperature.monthly?.[month] ?? p.temperature.annual_mean));
+  const base = {
+    year,
+    tempChange: interpScalar(points, year, (p) => p.temperature.anomaly),
+    heatDays: Math.max(0, Math.round(interpScalar(points, year, (p) => p.extremes.heat_stress_days))),
+    coldMonths: countMonthlyFreezeContext(monthlyTemps),
+    precipChange: interpScalar(points, year, (p) => p.precipitation.anomaly_percent),
+    drought: Math.round(riskScore(interpScalar(points, year, (p) => p.extremes.drought_risk))),
+    flood: Math.round(riskScore(interpScalar(points, year, (p) => p.extremes.flood_risk))),
+    seaLevel: Math.max(0, Math.round(interpScalar(points, year, (p) => p.extremes.sea_level_rise_cm ?? 0))),
+    seaLevelApplicable: points[0]?.extremes?.sea_level_applicable !== false,
+    score,
+    category: categoryFor(score),
+  };
+  return {
+    ...base,
+    driver: previous ? roadmapDriver(base, previous) : { label: "Baseline", color: ACCENT, text: "current roadmap start for this forecast" },
+  };
+}
+
+// ── URL & slug helpers ───────────────────────────────────────────────────────
+export function jsonFileSlug(value: string): string {
+  return value.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 72) || "location";
+}
+
+export function parseScenario(id: string | null): ScenarioId {
+  return (SCENARIOS.some((s) => s.id === id) ? id : DEFAULT_SCENARIO) as ScenarioId;
+}
+
+export function forecastUrl(location: LocationOption, year: number, scenario: ScenarioId, autoRun = true): string {
+  const url = new URL("/", window.location.origin);
+  url.searchParams.set("lat", location.lat.toFixed(4));
+  url.searchParams.set("lng", location.lng.toFixed(4));
+  url.searchParams.set("place", location.name);
+  if (location.country) url.searchParams.set("country", location.country);
+  url.searchParams.set("year", Math.round(year).toString());
+  url.searchParams.set("scenario", scenario);
+  if (autoRun) url.searchParams.set("run", "1");
+  return url.toString();
+}
+
+export function linkLocationFromParams(): { location: LocationOption; year?: number; scenario: ScenarioId; autoRun: boolean } | null {
+  const params = new URLSearchParams(window.location.search);
+  const latRaw = params.get("lat");
+  const lngRaw = params.get("lng");
+  if (latRaw === null || lngRaw === null || latRaw.trim() === "" || lngRaw.trim() === "") {
+    return null;
+  }
+  const lat = Number(latRaw);
+  const lng = Number(lngRaw);
+  if (!Number.isFinite(lat) || !Number.isFinite(lng) || lat < -90 || lat > 90 || lng < -180 || lng > 180) {
+    return null;
+  }
+  const name = params.get("place") || params.get("location") || `${lat.toFixed(4)}, ${lng.toFixed(4)}`;
+  const year = Number(params.get("year"));
+  return {
+    location: {
+      name,
+      lat,
+      lng,
+      country: params.get("country") || "",
+      city: name.split(",")[0] || name,
+    },
+    year: Number.isInteger(year) && year >= BASELINE_YEAR && year <= MAX_YEAR ? year : undefined,
+    scenario: parseScenario(params.get("scenario")),
+    autoRun: params.get("run") === "1",
+  };
 }
 
 export function crossYear(points: ProjectionPoint[], threshold: number, dir: "above" | "below", get: (p: ProjectionPoint) => number): number | null {
