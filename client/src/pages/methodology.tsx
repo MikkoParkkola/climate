@@ -119,6 +119,16 @@ export default function Methodology() {
               output, and the full breakdown is shown so you can see every component.
             </p>
 
+            <h2>Large-scale circulation context</h2>
+            <p>
+              For broad regions where it is relevant, the app may show an AMOC/Gulf Stream
+              context note. This uses IPCC AR6 Working Group I assessment language only:
+              the Atlantic Meridional Overturning Circulation is very likely to weaken
+              during the 21st century, while abrupt collapse before 2100 is not the central
+              IPCC assessment. fupit does not apply a local cooling correction, warming
+              correction, collapse date, or deterministic local impact from AMOC context.
+            </p>
+
             <h2>Honesty notes</h2>
             <ul>
               <li>

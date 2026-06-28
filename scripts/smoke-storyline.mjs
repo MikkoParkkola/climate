@@ -5,7 +5,9 @@ import { fileURLToPath } from "node:url";
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const appPath = path.join(repoRoot, "client", "src", "pages", "climate-app.tsx");
+const methodologyPath = path.join(repoRoot, "client", "src", "pages", "methodology.tsx");
 const source = fs.readFileSync(appPath, "utf8");
+const methodology = fs.readFileSync(methodologyPath, "utf8");
 
 assert.match(source, /const scoreStory = useMemo/, "storyline derives score-story data from the selected trajectory");
 assert.match(source, /baseline\.habitability\.breakdown/, "storyline compares selected score components to the baseline breakdown");
@@ -41,6 +43,13 @@ assert.match(source, /SSP3-7\.0 vs SSP1-2\.6/, "roadmap can show lower-vs-higher
 assert.match(source, /Load pathway contrast to add lower-vs-higher scenario deltas/, "roadmap discloses missing scenario deltas before contrast is loaded");
 assert.match(source, /Why this changed/, "result page renders the required why-this-changed section");
 assert.match(source, /What this means for daily life/, "result page renders the required daily-life interpretation section");
+assert.match(source, /function circulationContextFor/, "storyline can surface registered AMOC/Gulf Stream context for relevant broad regions");
+assert.match(source, /AMOC\/Gulf Stream context/, "daily-life section includes AMOC/Gulf Stream context when regionally relevant");
+assert.match(source, /very likely to weaken during this century/, "AMOC context states the expected weakening without hiding the science");
+assert.match(source, /not the central IPCC assessment/, "AMOC context caveats abrupt collapse before 2100");
+assert.match(source, /no deterministic local correction or collapse date is applied/, "AMOC context does not overclaim local correction or timing");
+assert.match(methodology, /Large-scale circulation context/, "methodology documents AMOC/Gulf Stream context");
+assert.match(methodology, /does not apply a local cooling correction/, "methodology rejects deterministic AMOC local correction");
 assert.match(source, /What this does not mean/, "projection receipt renders the required caveat section");
 assert.match(source, /not a property-risk certificate/, "receipt caveat rejects property-risk interpretation");
 assert.match(source, /relocation recommendation/, "receipt caveat rejects relocation advice interpretation");
@@ -71,5 +80,7 @@ assert.match(source, /dry-spell days.*raw/, "drought risk card shows the raw dry
 assert.match(source, /mm Rx5day.*raw/, "flood risk card shows the raw Rx5day quantity alongside the score");
 assert.match(source, /It is not a parcel flood map or insurance loss estimate/, "flood receipt rejects parcel and insurance interpretations");
 assert.match(source, /\/\* Risk & Extremes \*\/[\s\S]*?repeat\(auto-fit,minmax\(170px,1fr\)\)/, "risk cards remain responsive after adding receipts");
+assert.match(source, /Use the scenario contrast as a learning tool/, "scenario call to action stays educational rather than preachy");
+assert.doesNotMatch(source, /Everything you just saw is a dare/, "scenario call to action must not use preachy dare framing");
 
-console.log("storyline smoke passed: roadmap, explainability sections, annual trend point values, risk receipts, and accessible receipts guarded");
+console.log("storyline smoke passed: roadmap, explainability sections, annual trend point values, risk receipts, AMOC context, and accessible receipts guarded");

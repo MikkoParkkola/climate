@@ -35,6 +35,7 @@ const registry = readJson("data/source-registry.json");
 assert(registry.version === sourceRegistryVersion, "source registry version mismatch");
 assert(Array.isArray(registry.rows) && registry.rows.length >= 6, "source registry rows incomplete");
 const sourceIds = new Set(registry.rows.map((row) => row.sourceId));
+assert(sourceIds.has("ipcc-ar6-amoc"), "AMOC/Gulf Stream context source row missing");
 const requireRegisteredSources = (ids, context) => {
   assert(Array.isArray(ids) && ids.length > 0, `${context} source ids missing`);
   for (const sourceId of ids) {

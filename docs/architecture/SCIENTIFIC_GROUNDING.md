@@ -100,6 +100,7 @@ the same and can judge the pathway themselves.
 | Humidity / change | **Not currently served.** If added, use CMIP6 near-surface relative/specific humidity per SSP and label it as model consensus + spread; do not fabricate an assessed calibration. |
 | Sea level / coastal flooding | NASA AR6 Sea Level tool, per-location, per-SSP. |
 | Heat-stress / drought / flood risk | Derived from CMIP6 ETCCDI extreme indices (`ingest/fetch_extremes.py`) — **not** from mean fields. Scored at **serve time** against absolute cited thresholds. **See "Risk index grounding (serve-time)" below.** |
+| AMOC / Gulf Stream context | IPCC AR6 WGI assessment language only, shown as regional tail-risk context for broad relevant regions. No deterministic local correction, collapse date, or local impact number is applied. |
 | Habitability score & breakdown | Transparent weighted composite of the above — weights documented and shown to the user. Not a hidden black box. |
 | Comparable location | Nearest present-day analog by multivariate climate distance over grounded monthly temperature and log precipitation vectors, bounded to the registered current catalog and returned with catalog/source caveats. |
 | Uncertainty | Carried end-to-end as the AR6/CMIP6 model spread (range), shown in UI — never collapsed to false precision. |

@@ -72,6 +72,23 @@
       "reviewedAt": "2026-06-27"
     },
     {
+      "sourceId": "ipcc-ar6-amoc",
+      "provider": "IPCC AR6 Working Group I",
+      "version": "Sixth Assessment Report",
+      "stableUrl": "https://www.ipcc.ch/report/ar6/wg1/",
+      "citation": "IPCC AR6 WGI Summary for Policymakers assessment of Atlantic Meridional Overturning Circulation change.",
+      "license": "IPCC citation and reuse terms apply.",
+      "commercialReuse": "review-required",
+      "redistribution": "citation-required",
+      "variables": ["AMOC weakening confidence context"],
+      "spatialResolution": "large-scale circulation assessment context",
+      "temporalResolution": "21st-century assessment",
+      "scenarioCoverage": "qualitative AR6 assessment across emissions pathways",
+      "method": "Shown only as broad regional tail-risk context for relevant regions; not applied as a local deterministic correction.",
+      "displayPolicy": "show-as-context-no-local-correction",
+      "reviewedAt": "2026-06-28"
+    },
+    {
       "sourceId": "cmip6-etccdi",
       "provider": "Copernicus Climate Data Store / CMIP6 ETCCDI indicators",
       "version": "CDS CMIP6-derived climate extreme indices",

@@ -199,7 +199,7 @@ export function loadDataQuality(): Record<string, unknown> {
       "Production climate_model_cache still requires purge or live version-guard proof after deployment.",
       "Curated-city rankings are bounded examples, not complete global or country rankings.",
       "Trend review flags are intentionally visible for scientific review and are not automatically hidden by green CI.",
-      "Freshwater, biodiversity, agriculture, infrastructure, and AMOC context remain withheld until source-registry approval and implementation.",
+      "Freshwater, biodiversity, agriculture, infrastructure, and quantified AMOC local-impact layers remain withheld until source-registry approval and implementation.",
     ],
   };
 

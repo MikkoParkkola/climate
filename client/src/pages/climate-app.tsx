@@ -444,6 +444,17 @@ function precipitationLifeText(percent: number): string {
   return "The annual precipitation signal is weak at this horizon, so year-to-year variability and local water management may dominate lived experience.";
 }
 
+function circulationContextFor(lat?: number, lng?: number): { region: string } | null {
+  if (lat == null || lng == null || !Number.isFinite(lat) || !Number.isFinite(lng)) return null;
+  const europeNorthAtlantic = lat >= 35 && lat <= 72 && lng >= -35 && lng <= 45;
+  const arctic = lat >= 66;
+  const westAfricanMonsoon = lat >= 0 && lat <= 25 && lng >= -20 && lng <= 25;
+  if (arctic) return { region: "Arctic and North Atlantic" };
+  if (europeNorthAtlantic) return { region: "Europe and the North Atlantic" };
+  if (westAfricanMonsoon) return { region: "West African monsoon region" };
+  return null;
+}
+
 function scenarioInfo(id?: string): { id: ScenarioId; label: string; caption: string } {
   return SCENARIOS.find((s) => s.id === id) ?? SCENARIOS.find((s) => s.id === DEFAULT_SCENARIO)!;
 }
@@ -1470,7 +1481,7 @@ export default function ClimateApp() {
 
   const dailyLifeSignals = useMemo(() => {
     if (!d || !scoreStory) return [];
-    return [
+    const signals = [
       {
         label: "Heat, sleep, and cooling",
         value: `${d.heatDays}/yr`,
@@ -1500,7 +1511,18 @@ export default function ClimateApp() {
         receipt: "Sea-level data comes through the registered AR6/NASA source trail. This build has no coastal-exposure/elevation gate, so inland users should treat the number as regional context. Biodiversity and infrastructure text is educational context, not a quantified impact model.",
       },
     ];
-  }, [d, scoreStory]);
+    const circulation = circulationContextFor(selectedLocation?.lat, selectedLocation?.lng);
+    if (circulation) {
+      signals.push({
+        label: "AMOC/Gulf Stream context",
+        value: "regional tail risk",
+        color: PURPLE,
+        text: `For the ${circulation.region}, IPCC AR6 assesses that the Atlantic Meridional Overturning Circulation is very likely to weaken during this century. The app does not turn that into a local cooling or warming correction, because this build has no cited local AMOC impact layer.`,
+        receipt: "Uses the registered IPCC AR6 circulation context source. This row is broad regional context only: weakening is expected, abrupt collapse before 2100 is not the central IPCC assessment, and no deterministic local correction or collapse date is applied.",
+      });
+    }
+    return signals;
+  }, [d, scoreStory, selectedLocation?.lat, selectedLocation?.lng]);
 
   // Tipping points computed from real interpolated trajectory
   const tipping = useMemo(() => {
@@ -2773,7 +2795,7 @@ export default function ClimateApp() {
         <div style={{ maxWidth: 560, margin: "0 auto" }}>
           <h2 style={{ fontSize: 22, fontWeight: 800, marginBottom: 16, letterSpacing: "-0.01em" }}>A forecast isn't a fate.</h2>
           <p style={{ fontSize: 15, color: MUTED, lineHeight: 1.75, marginBottom: 28 }}>
-            Everything you just saw is a dare. Back the policies and the action that bend the line back up — cut emissions, vote it, fund it, build it — and watch a livable future redraw itself on the map. That's the whole point.
+            Use the scenario contrast as a learning tool: lower-warming pathways change the local roadmap, and higher-warming pathways show what gets harder. The point is to make those differences visible, not to treat any one pathway as fate.
           </p>
           <p style={{ fontSize: 24, fontWeight: 800, lineHeight: 1.3, marginBottom: 16, letterSpacing: "-0.02em" }}>
             Don't just find a better spot. F*** up the forecast.
