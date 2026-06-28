@@ -13,7 +13,9 @@ const shareCard = fs.readFileSync(path.join(repoRoot, "client", "src", "lib", "s
 const constants = fs.readFileSync(path.join(repoRoot, "client", "src", "lib", "climate-constants.ts"), "utf8");
 const types = fs.readFileSync(path.join(repoRoot, "client", "src", "lib", "climate-types.ts"), "utf8");
 const multiplesSource = fs.readFileSync(multiplesPath, "utf8");
-const all = [source, helpers, charts, shareCard, constants, types].join("\n");
+const derivations = fs.readFileSync(path.join(repoRoot, "client", "src", "lib", "climate-derivations.ts"), "utf8");
+const landing = fs.readFileSync(path.join(repoRoot, "client", "src", "components", "climate-landing.tsx"), "utf8");
+const all = [source, helpers, charts, shareCard, constants, types, derivations, landing].join("\n");
 
 assert.match(all, /const loadScenarioContrast = async/, "scenario contrast loads pathways on demand");
 assert.match(all, /for \(const row of SCENARIOS\)/, "scenario contrast covers all supported SSP scenarios");

@@ -15,7 +15,9 @@ const methodology = fs.readFileSync(methodologyPath, "utf8");
 const scoreSensitivity = fs.readFileSync(scoreSensitivityPath, "utf8");
 const helpers = fs.readFileSync(path.join(repoRoot, "client", "src", "lib", "climate-helpers.ts"), "utf8");
 const charts = fs.readFileSync(path.join(repoRoot, "client", "src", "components", "climate-charts.tsx"), "utf8");
-const all = [source, helpers, charts, shareCard, constants, types].join("\n");
+const derivations = fs.readFileSync(path.join(repoRoot, "client", "src", "lib", "climate-derivations.ts"), "utf8");
+const landing = fs.readFileSync(path.join(repoRoot, "client", "src", "components", "climate-landing.tsx"), "utf8");
+const all = [source, helpers, charts, shareCard, constants, types, derivations, landing].join("\n");
 
 assert.match(all, /const scoreStory = useMemo/, "storyline derives score-story data from the selected trajectory");
 assert.match(all, /baseline\.habitability\.breakdown/, "storyline compares selected score components to the baseline breakdown");
