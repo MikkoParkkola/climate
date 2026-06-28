@@ -14,11 +14,20 @@ assert.match(source, /scoreDrivers[\s\S]*?sort\(\(a, b\) => Math\.abs\(b\.effect
 assert.match(source, /Math\.abs\(driver\.effect\) >= 0\.05/, "storyline filters out near-zero driver movement before ranking");
 assert.match(source, /perDecade/, "storyline exposes per-decade trend rates, not only endpoint deltas");
 assert.match(source, /lowValues\?: number\[\]/, "trend charts accept low/high uncertainty series");
+assert.match(source, /const annualYears = Array\.from\(\{ length: MAX_YEAR - BASELINE_YEAR \+ 1 \}/, "trend charts render annual displayed points through 2100");
+assert.match(source, /interpArr\(years, values, yr\)/, "trend charts interpolate annual displayed values from grounded trajectory checkpoints");
+assert.match(source, /function ChartValuesDetails/, "trend charts expose a keyboard and touch accessible values disclosure");
+assert.match(source, /<ChartValuesDetails label=\{label\} rows=\{valueRows\} \/>/, "each trend chart wires the values disclosure");
+assert.match(source, /<title>\{pointLabel\(i\)\}<\/title>/, "each plotted year exposes a hover value title");
+assert.match(source, /linear interpolation between grounded API checkpoints/, "chart point labels disclose interpolation instead of pretending annual model granularity");
+assert.match(source, /scenarioLabel\?: string/, "trend charts can display the active scenario label");
+assert.match(source, /scenarioLabel=\{shownScenario\.label\}/, "metric trajectory charts pass the active scenario label");
 assert.match(source, /const rangeD = hasRange/, "trend charts render a visual uncertainty band when low/high series are present");
 assert.match(source, /temperature\.uncertainty\?\.annual_mean_low/, "temperature chart uses grounded temperature low/high uncertainty fields");
 assert.match(source, /precipitation\.uncertainty\?\.annual_total_low/, "precipitation chart uses grounded precipitation low/high uncertainty fields");
 assert.match(source, /sea_level_low_cm/, "sea-level context chart uses grounded AR6 low/high context fields");
 assert.match(source, /Translucent bands show grounded low-high ranges/, "chart legend explains range bands only appear where comparable uncertainty fields exist");
+assert.match(source, /Hover plotted years for values, or open values for keyboard\/touch access/, "chart legend explains hover and non-hover value access");
 assert.match(source, /<ReceiptDetails label="range" text=\{uncertaintyLabel\} \/>/, "range bands expose keyboard and touch accessible method receipts");
 assert.match(source, /const roadmapItems = useMemo/, "result page derives a living-conditions roadmap from the selected trajectory");
 assert.match(source, /ROADMAP_YEARS/, "roadmap includes the current year and decade waypoints through 2100");
@@ -48,4 +57,4 @@ assert.match(source, /groundwater, reservoirs, demand, or local drainage capacit
 assert.match(source, /climate screening indicator, not medical or occupational-safety advice/, "heat-stress KPI has a non-advisory receipt");
 assert.match(source, /not a safety certificate or relocation recommendation/, "habitability KPI caveats interpretation");
 
-console.log("storyline smoke passed: roadmap, explainability sections, trend rates, and accessible receipts guarded");
+console.log("storyline smoke passed: roadmap, explainability sections, annual trend point values, and accessible receipts guarded");

@@ -731,16 +731,86 @@ function ReceiptDetails({ label = "source", text }: { label?: string; text: stri
   );
 }
 
+function ChartValuesDetails({
+  label,
+  rows,
+}: {
+  label: string;
+  rows: { year: number; value: string; range?: string }[];
+}) {
+  return (
+    <details style={{ display: "inline-block", maxWidth: "100%" }}>
+      <summary
+        aria-label={`${label} annual values table`}
+        style={{
+          display: "inline-flex",
+          alignItems: "center",
+          minHeight: 18,
+          cursor: "pointer",
+          fontSize: 9,
+          textTransform: "uppercase",
+          letterSpacing: "0.06em",
+          color: MUTED,
+          border: `1px solid ${BORDER}`,
+          borderRadius: 999,
+          padding: "2px 6px",
+          userSelect: "none",
+        }}
+      >
+        values
+      </summary>
+      <div
+        role="note"
+        style={{
+          marginTop: 6,
+          maxWidth: 300,
+          maxHeight: 220,
+          overflow: "auto",
+          padding: "8px 9px",
+          border: `1px solid ${BORDER}`,
+          borderRadius: 8,
+          background: "rgba(6,9,16,0.94)",
+          color: "rgba(255,255,255,0.78)",
+          fontSize: 11,
+          lineHeight: 1.45,
+        }}
+      >
+        <div style={{ marginBottom: 6, color: MUTED }}>
+          Displayed yearly values are linearly interpolated between grounded API checkpoints.
+        </div>
+        <table style={{ width: "100%", borderCollapse: "collapse", fontVariantNumeric: "tabular-nums" }}>
+          <thead>
+            <tr>
+              <th style={{ textAlign: "left", color: MUTED, fontWeight: 600, padding: "2px 0" }}>Year</th>
+              <th style={{ textAlign: "right", color: MUTED, fontWeight: 600, padding: "2px 0" }}>Value</th>
+              <th style={{ textAlign: "right", color: MUTED, fontWeight: 600, padding: "2px 0" }}>Range</th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((row) => (
+              <tr key={row.year}>
+                <td style={{ padding: "2px 0", borderTop: `1px solid ${BORDER}` }}>{row.year}</td>
+                <td style={{ padding: "2px 0", borderTop: `1px solid ${BORDER}`, textAlign: "right", color: "white" }}>{row.value}</td>
+                <td style={{ padding: "2px 0", borderTop: `1px solid ${BORDER}`, textAlign: "right", color: row.range ? "white" : MUTED }}>{row.range || "n/a"}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </details>
+  );
+}
+
 // ── Charts ─────────────────────────────────────────────────────────────────
 interface TrendZone { from: number; to: number; color: string }
 
 function TrendChart({
   years, values, year, label, unit, color, decimals = 0, thresholdY, zones, fillOpacity = 0.1,
-  lowValues, highValues, uncertaintyLabel,
+  lowValues, highValues, uncertaintyLabel, scenarioLabel,
 }: {
   years: number[]; values: number[]; year: number; label: string; unit: string; color: string;
   decimals?: number; thresholdY?: number; zones?: TrendZone[]; fillOpacity?: number;
-  lowValues?: number[]; highValues?: number[]; uncertaintyLabel?: string;
+  lowValues?: number[]; highValues?: number[]; uncertaintyLabel?: string; scenarioLabel?: string;
 }) {
   const VW = 100, VH = 56, px = 1, py = 5, bH = 9;
   const cW = VW - px * 2, cH = VH - py - bH;
@@ -748,24 +818,29 @@ function TrendChart({
     lowValues.every(Number.isFinite) && highValues.every(Number.isFinite);
   const rangeLow = hasRange ? lowValues!.map((v, i) => Math.min(v, highValues![i])) : [];
   const rangeHigh = hasRange ? lowValues!.map((v, i) => Math.max(v, highValues![i])) : [];
-  const scaleValues = hasRange ? [...values, ...rangeLow, ...rangeHigh] : values;
+  const annualYears = Array.from({ length: MAX_YEAR - BASELINE_YEAR + 1 }, (_, i) => BASELINE_YEAR + i);
+  const annualValues = annualYears.map((yr) => interpArr(years, values, yr));
+  const annualLow = hasRange ? annualYears.map((yr) => interpArr(years, rangeLow, yr)) : [];
+  const annualHigh = hasRange ? annualYears.map((yr) => interpArr(years, rangeHigh, yr)) : [];
+  const scaleValues = hasRange ? [...annualValues, ...annualLow, ...annualHigh] : annualValues;
   const mn = Math.min(...scaleValues), mx = Math.max(...scaleValues), rng = mx - mn || 1;
   const xOf = (yr: number) => px + ((yr - BASELINE_YEAR) / (MAX_YEAR - BASELINE_YEAR)) * cW;
   const yOf = (v: number) => py + cH - ((v - mn) / rng) * cH;
   const fmt = (v: number) => (decimals > 0 ? v.toFixed(decimals) : Math.round(v).toString());
+  const withUnit = (v: number) => `${fmt(v)}${unit}`;
 
   const curV = interpArr(years, values, year);
   const curLow = hasRange ? interpArr(years, rangeLow, year) : null;
   const curHigh = hasRange ? interpArr(years, rangeHigh, year) : null;
   const mrkX = xOf(year);
   const mrkY = yOf(curV);
-  const pts = values.map((v, i) => `${xOf(years[i]).toFixed(2)},${yOf(v).toFixed(2)}`).join(" ");
+  const pts = annualValues.map((v, i) => `${xOf(annualYears[i]).toFixed(2)},${yOf(v).toFixed(2)}`).join(" ");
   const areaD = `M${xOf(years[0]).toFixed(2)},${(py + cH).toFixed(2)}` +
-    values.map((v, i) => ` L${xOf(years[i]).toFixed(2)},${yOf(v).toFixed(2)}`).join("") +
+    annualValues.map((v, i) => ` L${xOf(annualYears[i]).toFixed(2)},${yOf(v).toFixed(2)}`).join("") +
     ` L${xOf(years[years.length - 1]).toFixed(2)},${(py + cH).toFixed(2)}Z`;
   const rangeD = hasRange
-    ? `M${rangeHigh.map((v, i) => `${xOf(years[i]).toFixed(2)},${yOf(v).toFixed(2)}`).join(" L")} ` +
-      `L${rangeLow.map((v, i) => `${xOf(years[i]).toFixed(2)},${yOf(v).toFixed(2)}`).reverse().join(" L")}Z`
+    ? `M${annualHigh.map((v, i) => `${xOf(annualYears[i]).toFixed(2)},${yOf(v).toFixed(2)}`).join(" L")} ` +
+      `L${annualLow.map((v, i) => `${xOf(annualYears[i]).toFixed(2)},${yOf(v).toFixed(2)}`).reverse().join(" L")}Z`
     : "";
 
   const callW = 26, callH = 11;
@@ -773,10 +848,31 @@ function TrendChart({
   const cyPos = Math.max(0, Math.min(VH - bH - callH, mrkY - callH / 2));
   const displayV = fmt(curV);
   const displayRange = hasRange && curLow !== null && curHigh !== null ? `${fmt(curLow)}-${fmt(curHigh)}${unit}` : null;
+  const sourceYears = new Set(years);
+  const axisYears = Array.from(new Set([BASELINE_YEAR, CURRENT_FORECAST_YEAR, 2050, 2075, MAX_YEAR]))
+    .filter((yr) => yr >= BASELINE_YEAR && yr <= MAX_YEAR);
+  const pointLabel = (i: number) => {
+    const yr = annualYears[i];
+    const value = withUnit(annualValues[i]);
+    const range = hasRange ? `, range ${withUnit(annualLow[i])} to ${withUnit(annualHigh[i])}` : "";
+    const source = sourceYears.has(yr) ? "grounded API checkpoint" : "linear interpolation between grounded API checkpoints";
+    return `${label} ${yr}: ${value}${range}. ${source}${scenarioLabel ? `, ${scenarioLabel}` : ""}.`;
+  };
+  const valueRows = annualYears.map((yr, i) => ({
+    year: yr,
+    value: withUnit(annualValues[i]),
+    range: hasRange ? `${withUnit(annualLow[i])} to ${withUnit(annualHigh[i])}` : undefined,
+  }));
 
   return (
     <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column" }}>
-      <svg viewBox={`0 0 ${VW} ${VH}`} style={{ width: "100%", height: 80, display: "block" }}>
+      <svg
+        viewBox={`0 0 ${VW} ${VH}`}
+        role="img"
+        aria-label={`${label} trend from ${BASELINE_YEAR} to ${MAX_YEAR}${scenarioLabel ? `, ${scenarioLabel}` : ""}. Displayed yearly points are linearly interpolated between grounded API checkpoints.`}
+        style={{ width: "100%", height: 80, display: "block" }}
+      >
+        <title>{`${label} trend. Hover plotted yearly points for values; open the values disclosure below for keyboard and touch access.`}</title>
         {zones?.map((z, zi) => {
           const clampedHi = Math.min(z.to, mx), clampedLo = Math.max(z.from, mn);
           if (clampedHi <= clampedLo) return null;
@@ -796,16 +892,30 @@ function TrendChart({
         {hasRange && curLow !== null && curHigh !== null && (
           <line x1={mrkX} y1={yOf(curHigh)} x2={mrkX} y2={yOf(curLow)} stroke={color} strokeWidth="2.2" strokeLinecap="round" opacity="0.32" />
         )}
+        {annualYears.map((yr, i) => (
+          <circle
+            key={yr}
+            cx={xOf(yr)}
+            cy={yOf(annualValues[i])}
+            r={sourceYears.has(yr) ? "0.95" : "0.65"}
+            fill={color}
+            opacity={sourceYears.has(yr) ? "0.44" : "0.2"}
+          >
+            <title>{pointLabel(i)}</title>
+          </circle>
+        ))}
         <circle cx={mrkX} cy={mrkY} r="2.4" fill={color} stroke="white" strokeWidth="0.9" />
         <rect x={cxPos} y={cyPos} width={callW} height={callH} rx="2" fill="rgba(6,9,16,0.88)" stroke={color} strokeWidth="0.5" />
         <text x={cxPos + callW / 2} y={cyPos + callH - 2.5} textAnchor="middle" fill="white" fontSize="5.5" fontWeight="700">{displayV}{unit}</text>
-        {years.map((yr, i) => (
-          <text key={i} x={xOf(yr)} y={VH - 0.5} textAnchor="middle" fill={MUTED} fontSize="4.8">{yr}</text>
+        {axisYears.map((yr) => (
+          <text key={yr} x={xOf(yr)} y={VH - 0.5} textAnchor="middle" fill={MUTED} fontSize="4.8">{yr}</text>
         ))}
       </svg>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 6, marginTop: 2, padding: "0 1px" }}>
         <span style={{ minWidth: 0, display: "inline-flex", alignItems: "center", gap: 5, flexWrap: "wrap" }}>
           <span style={{ fontSize: 9, color: MUTED, textTransform: "uppercase", letterSpacing: "0.05em" }}>{label}</span>
+          {scenarioLabel && <span style={{ fontSize: 8, color: MUTED, border: `1px solid ${BORDER}`, borderRadius: 999, padding: "1px 5px" }}>{scenarioLabel}</span>}
+          <ChartValuesDetails label={label} rows={valueRows} />
           {hasRange && uncertaintyLabel && <ReceiptDetails label="range" text={uncertaintyLabel} />}
         </span>
         <span style={{ fontSize: 10, fontWeight: 700, color, fontFamily: "monospace", textAlign: "right", flexShrink: 0 }}>
@@ -2215,6 +2325,7 @@ export default function ClimateApp() {
               color={RED}
               decimals={1}
               thresholdY={18}
+              scenarioLabel={shownScenario.label}
               uncertaintyLabel="Shaded band uses temperature.uncertainty.annual_mean_low/high from the grounded API for this location, year range, and scenario."
             />
             <div style={{ width: 1, background: BORDER, alignSelf: "stretch", flexShrink: 0 }} />
@@ -2228,12 +2339,14 @@ export default function ClimateApp() {
               unit="mm"
               color={BLUE}
               decimals={0}
+              scenarioLabel={shownScenario.label}
               uncertaintyLabel="Shaded band uses precipitation.uncertainty.annual_total_low/high from the grounded API. Local precipitation trends can have larger model disagreement and direction changes."
             />
             <div style={{ width: 1, background: BORDER, alignSelf: "stretch", flexShrink: 0 }} />
-            <TrendChart years={traj!.years} values={traj!.heat} year={year} label="Heat Days" unit="d" color={ORANGE} decimals={0} thresholdY={15} />
+            <TrendChart years={traj!.years} values={traj!.heat} year={year} label="Heat Days" unit="d" color={ORANGE} decimals={0} thresholdY={15} scenarioLabel={shownScenario.label} />
             <div style={{ width: 1, background: BORDER, alignSelf: "stretch", flexShrink: 0 }} />
             <TrendChart years={traj!.years} values={traj!.score} year={year} label="Habitability" unit="" color={sc} decimals={0}
+              scenarioLabel={shownScenario.label}
               zones={[
                 { from: 85, to: 100, color: GREEN }, { from: 70, to: 85, color: "#4ade80" },
                 { from: 60, to: 70, color: AMBER }, { from: 40, to: 60, color: ORANGE }, { from: 0, to: 40, color: RED },
@@ -2250,13 +2363,14 @@ export default function ClimateApp() {
               color={CYAN}
               decimals={0}
               thresholdY={50}
+              scenarioLabel={shownScenario.label}
               uncertaintyLabel="Shaded band uses AR6 regional sea-level low/high context returned by the API; it is not a parcel-level coastal exposure assessment."
             />
             <div style={{ width: 1, background: BORDER, alignSelf: "stretch", flexShrink: 0 }} />
-            <TrendChart years={traj!.years} values={traj!.drought} year={year} label="Drought Risk" unit="%" color={AMBER} decimals={0} thresholdY={50} />
+            <TrendChart years={traj!.years} values={traj!.drought} year={year} label="Drought Risk" unit="%" color={AMBER} decimals={0} thresholdY={50} scenarioLabel={shownScenario.label} />
           </div>
           <div style={{ marginTop: 12, padding: "6px 10px", background: `${ACCENT}07`, border: `1px solid ${ACCENT}18`, borderRadius: 8, fontSize: 10, color: MUTED }}>
-            💡 Drag the year slider to move the marker across all six charts simultaneously and see how each metric evolves. Translucent bands show grounded low-high ranges where the API exposes comparable uncertainty fields; dashed horizontal lines mark critical thresholds.
+            💡 Drag the year slider to move the marker across all six charts simultaneously and see how each metric evolves. Hover plotted years for values, or open values for keyboard/touch access. Translucent bands show grounded low-high ranges where the API exposes comparable uncertainty fields; dashed horizontal lines mark critical thresholds.
           </div>
         </div>
 
