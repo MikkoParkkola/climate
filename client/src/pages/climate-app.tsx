@@ -4,20 +4,22 @@ import GuidedClimateExplainer from "@/components/guided-climate-explainer";
 import ScenarioSmallMultiples, { type ScenarioSmallMultipleMetric } from "@/components/scenario-small-multiples";
 import ScoreSensitivity, { type ScoreSensitivityInput } from "@/components/score-sensitivity";
 
-// ── Theme ──────────────────────────────────────────────────────────────────
-const BG = "hsl(222,47%,8%)";
-const CARD = "rgba(255,255,255,0.04)";
-const BORDER = "rgba(255,255,255,0.08)";
-const ACCENT = "hsl(192,91%,46%)";
-const MUTED = "hsl(215,20%,65%)";
-const RED = "#ef4444";
-const BLUE = "#3b82f6";
-const ORANGE = "#f97316";
-const GREEN = "#22c55e";
-const AMBER = "#f59e0b";
-const PURPLE = "#a78bfa";
-const CYAN = "hsl(192,91%,46%)";
-const card: React.CSSProperties = { backgroundColor: CARD, border: `1px solid ${BORDER}`, borderRadius: 12, backdropFilter: "blur(12px)" };
+// ── Theme: "field report" — warm ink, ember accent, opaque hairline panels ──
+const BG = "hsl(28,13%,8%)";
+const CARD = "hsl(28,13%,11.5%)";
+const BORDER = "hsl(34,12%,22%)";
+const ACCENT = "hsl(24,88%,56%)";
+const MUTED = "hsl(38,11%,60%)";
+const RED = "hsl(6,72%,57%)";
+const BLUE = "hsl(200,45%,58%)";
+const ORANGE = "hsl(28,82%,56%)";
+const GREEN = "hsl(150,38%,50%)";
+const AMBER = "hsl(38,72%,56%)";
+const PURPLE = "hsl(280,30%,66%)";
+const CYAN = "hsl(200,48%,58%)";
+const FONT_DISPLAY = "'Fraunces', Georgia, serif";
+const FONT_MONO = "'Space Mono', ui-monospace, monospace";
+const card: React.CSSProperties = { backgroundColor: CARD, border: `1px solid ${BORDER}`, borderRadius: 4 };
 
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 const BASELINE_YEAR = 2025;
@@ -2242,7 +2244,7 @@ export default function ClimateApp() {
   if (!trajectory) {
     return (
       <div className="fupit-landing">
-        <header style={{ background: "rgba(10,13,20,0.90)", borderBottom: `1px solid ${BORDER}`, backdropFilter: "blur(16px)" }}>
+        <header style={{ background: "hsl(28,13%,9%)", borderBottom: `1px solid ${BORDER}` }}>
           <div style={{ maxWidth: 1200, margin: "0 auto", padding: "0 20px", height: 56, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
             <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
               <img src="/favicon.svg" alt="" width={30} height={30} style={{ width: 30, height: 30, borderRadius: 7, display: "block" }} />
@@ -2280,7 +2282,7 @@ export default function ClimateApp() {
                 />
               </div>
               {showSuggestions && suggestions.length > 0 && (
-                <div style={{ position: "absolute", top: "calc(100% + 6px)", left: 0, right: 0, background: "rgba(15,20,30,0.98)", border: `1px solid ${BORDER}`, borderRadius: 10, overflow: "hidden", zIndex: 20, backdropFilter: "blur(16px)" }}>
+                <div style={{ position: "absolute", top: "calc(100% + 6px)", left: 0, right: 0, background: "hsl(28,13%,13%)", border: `1px solid ${BORDER}`, borderRadius: 6, overflow: "hidden", zIndex: 20 }}>
                   {suggestions.slice(0, 6).map((s, i) => (
                     <div key={i} onClick={() => selectLocation(s)}
                       style={{ padding: "11px 14px", display: "flex", alignItems: "center", gap: 10, cursor: "pointer", borderBottom: i < Math.min(suggestions.length, 6) - 1 ? `1px solid ${BORDER}` : "none" }}
@@ -2364,7 +2366,7 @@ export default function ClimateApp() {
   return (
     <div style={{ backgroundColor: BG, color: "white", minHeight: "100vh", fontFamily: "Inter, system-ui, sans-serif" }}>
       {/* Sticky Header */}
-      <header style={{ background: "rgba(10,13,20,0.90)", borderBottom: `1px solid ${BORDER}`, backdropFilter: "blur(16px)", position: "sticky", top: 0, zIndex: 50 }}>
+      <header style={{ background: "hsl(28,13%,9%)", borderBottom: `1px solid ${BORDER}`, position: "sticky", top: 0, zIndex: 50 }}>
         <div style={{ maxWidth: 1200, margin: "0 auto", padding: "0 20px", height: 48, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
             <img src="/favicon.svg" alt="" width={28} height={28} style={{ width: 28, height: 28, borderRadius: 6, display: "block" }} />
@@ -2407,7 +2409,7 @@ export default function ClimateApp() {
       </header>
 
       {/* Year Slider — sticky */}
-      <div style={{ position: "sticky", top: 48, zIndex: 45, background: "rgba(8,11,18,0.97)", borderBottom: `1px solid ${BORDER}`, backdropFilter: "blur(20px)" }}>
+      <div style={{ position: "sticky", top: 48, zIndex: 45, background: "hsl(28,13%,8.5%)", borderBottom: `1px solid ${BORDER}` }}>
         <div style={{ maxWidth: 1200, margin: "0 auto", padding: "10px 20px 18px" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
             <button onClick={togglePlay} title={playing ? "Pause" : `Play ${CURRENT_FORECAST_YEAR} to ${MAX_YEAR}`} aria-label={playing ? "Pause timeline" : "Play timeline"}
@@ -2468,7 +2470,7 @@ export default function ClimateApp() {
           <div style={{ position: "absolute", inset: 0, backgroundImage: "radial-gradient(circle at 1px 1px,rgba(255,255,255,0.03) 1px,transparent 0)", backgroundSize: "24px 24px", pointerEvents: "none" }} />
           <div style={{ position: "relative", display: "flex", justifyContent: "space-between", alignItems: "flex-end", gap: 16, flexWrap: "wrap" }}>
             <div>
-              <h1 style={{ fontSize: 32, fontWeight: 800, lineHeight: 1, marginBottom: 8 }}>{selectedLocation?.name}</h1>
+              <h1 style={{ fontFamily: FONT_DISPLAY, fontSize: 34, fontWeight: 600, lineHeight: 1, marginBottom: 8, letterSpacing: "-0.015em" }}>{selectedLocation?.name}</h1>
               <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 12, color: MUTED, flexWrap: "wrap" }}>
                 <span>{Math.abs(selectedLocation!.lat).toFixed(4)}° {selectedLocation!.lat >= 0 ? "N" : "S"}, {Math.abs(selectedLocation!.lng).toFixed(4)}° {selectedLocation!.lng >= 0 ? "E" : "W"}</span>
                 {d!.climateZone && <><span>·</span><span style={{ background: "rgba(255,255,255,0.08)", padding: "2px 8px", borderRadius: 10, fontSize: 11 }}>{d!.climateZone}</span></>}

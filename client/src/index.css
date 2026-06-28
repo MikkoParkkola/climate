@@ -3,67 +3,72 @@
 @tailwind utilities;
 
 :root {
-  --background: hsl(222, 47%, 11%);
-  --foreground: hsl(210, 40%, 98%);
-  --muted: hsl(217, 33%, 17%);
-  --muted-foreground: hsl(215, 20%, 65%);
-  --popover: hsl(222, 47%, 13%);
-  --popover-foreground: hsl(210, 40%, 98%);
-  --card: hsl(222, 47%, 13%);
-  --card-foreground: hsl(210, 40%, 98%);
-  --border: hsl(217, 33%, 22%);
-  --input: hsl(217, 33%, 17%);
-  --primary: hsl(192, 91%, 46%);
-  --primary-foreground: hsl(222, 47%, 8%);
-  --secondary: hsl(217, 33%, 17%);
-  --secondary-foreground: hsl(210, 40%, 98%);
-  --accent: hsl(217, 33%, 20%);
-  --accent-foreground: hsl(210, 40%, 98%);
-  --destructive: hsl(0, 84.2%, 60.2%);
-  --destructive-foreground: hsl(210, 40%, 98%);
-  --ring: hsl(192, 91%, 46%);
-  --radius: 0.75rem;
-  --chart-1: hsl(192, 91%, 46%);
-  --chart-2: hsl(142, 76%, 45%);
-  --chart-3: hsl(24, 92%, 60%);
-  --chart-4: hsl(280, 87%, 65%);
-  --chart-5: hsl(42, 87%, 55%);
+  --background: hsl(28, 13%, 8%);
+  --foreground: hsl(40, 24%, 92%);
+  --muted: hsl(30, 10%, 16%);
+  --muted-foreground: hsl(38, 11%, 60%);
+  --popover: hsl(28, 13%, 11%);
+  --popover-foreground: hsl(40, 24%, 92%);
+  --card: hsl(28, 13%, 11%);
+  --card-foreground: hsl(40, 24%, 92%);
+  --border: hsl(34, 12%, 22%);
+  --input: hsl(30, 10%, 16%);
+  --primary: hsl(24, 88%, 56%);
+  --primary-foreground: hsl(28, 30%, 8%);
+  --secondary: hsl(30, 10%, 16%);
+  --secondary-foreground: hsl(40, 24%, 92%);
+  --accent: hsl(30, 12%, 18%);
+  --accent-foreground: hsl(40, 24%, 92%);
+  --destructive: hsl(4, 70%, 52%);
+  --destructive-foreground: hsl(40, 24%, 96%);
+  --ring: hsl(24, 88%, 56%);
+  --radius: 0.25rem;
+  --chart-1: hsl(24, 88%, 56%);
+  --chart-2: hsl(150, 38%, 48%);
+  --chart-3: hsl(8, 72%, 56%);
+  --chart-4: hsl(38, 70%, 55%);
+  --chart-5: hsl(200, 45%, 56%);
 
-  --climate-blue: hsl(192, 91%, 46%);
-  --climate-green: hsl(142, 76%, 45%);
-  --climate-red: hsl(0, 84%, 60%);
-  --climate-orange: hsl(24, 92%, 60%);
+  --climate-blue: hsl(200, 45%, 56%);
+  --climate-green: hsl(150, 38%, 48%);
+  --climate-red: hsl(6, 72%, 55%);
+  --climate-orange: hsl(28, 82%, 55%);
 
-  --glass-bg: rgba(255, 255, 255, 0.04);
-  --glass-border: rgba(255, 255, 255, 0.08);
-  --glass-hover: rgba(255, 255, 255, 0.07);
+  /* opaque warm panels — no glassmorphism */
+  --glass-bg: hsl(28, 13%, 12%);
+  --glass-border: hsl(34, 12%, 22%);
+  --glass-hover: hsl(30, 12%, 15%);
+
+  --font-display: 'Fraunces', Georgia, 'Times New Roman', serif;
+  --font-body: 'Public Sans', system-ui, sans-serif;
+  --font-mono: 'Space Mono', ui-monospace, 'SFMono-Regular', monospace;
 }
 
 .dark {
-  --background: hsl(222, 47%, 11%);
-  --foreground: hsl(210, 40%, 98%);
-  --muted: hsl(217, 33%, 17%);
-  --muted-foreground: hsl(215, 20%, 65%);
-  --popover: hsl(222, 47%, 13%);
-  --popover-foreground: hsl(210, 40%, 98%);
-  --card: hsl(222, 47%, 13%);
-  --card-foreground: hsl(210, 40%, 98%);
-  --border: hsl(217, 33%, 22%);
-  --input: hsl(217, 33%, 17%);
-  --primary: hsl(192, 91%, 46%);
-  --primary-foreground: hsl(222, 47%, 8%);
-  --secondary: hsl(217, 33%, 17%);
-  --secondary-foreground: hsl(210, 40%, 98%);
-  --accent: hsl(217, 33%, 20%);
-  --accent-foreground: hsl(210, 40%, 98%);
-  --destructive: hsl(0, 62.8%, 50%);
-  --destructive-foreground: hsl(210, 40%, 98%);
-  --ring: hsl(192, 91%, 46%);
-  --chart-1: hsl(192, 91%, 46%);
-  --chart-2: hsl(142, 76%, 45%);
-  --chart-3: hsl(24, 92%, 60%);
-  --chart-4: hsl(280, 87%, 65%);
-  --chart-5: hsl(42, 87%, 55%);
+  --background: hsl(28, 13%, 8%);
+  --foreground: hsl(40, 24%, 92%);
+  --muted: hsl(30, 10%, 16%);
+  --muted-foreground: hsl(38, 11%, 60%);
+  --popover: hsl(28, 13%, 11%);
+  --popover-foreground: hsl(40, 24%, 92%);
+  --card: hsl(28, 13%, 11%);
+  --card-foreground: hsl(40, 24%, 92%);
+  --border: hsl(34, 12%, 22%);
+  --input: hsl(30, 10%, 16%);
+  --primary: hsl(24, 88%, 56%);
+  --primary-foreground: hsl(28, 30%, 8%);
+  --secondary: hsl(30, 10%, 16%);
+  --secondary-foreground: hsl(40, 24%, 92%);
+  --accent: hsl(30, 12%, 18%);
+  --accent-foreground: hsl(40, 24%, 92%);
+  --destructive: hsl(4, 70%, 52%);
+  --destructive-foreground: hsl(40, 24%, 96%);
+  --ring: hsl(24, 88%, 56%);
+  --chart-1: hsl(24, 88%, 56%);
+  --chart-2: hsl(150, 38%, 48%);
+  --chart-3: hsl(8, 72%, 56%);
+  --chart-4: hsl(38, 70%, 55%);
+  --chart-5: hsl(200, 45%, 56%);
 }
 
 @layer base {
@@ -76,25 +81,34 @@
   }
 
   body {
-    @apply font-sans antialiased;
-    font-family: 'Inter', system-ui, sans-serif;
-    background-color: hsl(222, 47%, 8%);
-    color: hsl(210, 40%, 98%);
+    @apply antialiased;
+    font-family: var(--font-body);
+    background-color: hsl(28, 13%, 8%);
+    color: hsl(40, 24%, 92%);
   }
 
   h1, h2, h3, h4, h5, h6 {
-    font-weight: 600;
-    line-height: 1.2;
+    font-family: var(--font-display);
+    font-weight: 580;
+    line-height: 1.08;
+    letter-spacing: -0.01em;
+  }
+
+  /* data product: numerals read like an instrument, not body copy */
+  .num, [data-num], time, .tabular {
+    font-family: var(--font-mono);
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.02em;
   }
 }
 
 .fupit-landing {
   position: relative;
   overflow: hidden;
-  background: hsl(222, 47%, 8%);
-  color: white;
+  background: hsl(28, 13%, 8%);
+  color: hsl(40, 24%, 94%);
   min-height: 100vh;
-  font-family: 'Inter', system-ui, sans-serif;
+  font-family: var(--font-body);
   display: flex;
   flex-direction: column;
 }
