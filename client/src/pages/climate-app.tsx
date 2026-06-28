@@ -86,6 +86,20 @@ interface ProjectionPoint {
       tropical_nights_per_year?: number;
       consecutive_dry_days?: number;
       max_5day_precip_mm?: number;
+      humid_heat?: {
+        max_monthly_mean_wet_bulb_c?: number;
+        max_month?: string;
+        monthly_mean_wet_bulb_c?: number[];
+        monthly_relative_humidity_percent?: number[];
+        relative_humidity_anomaly_percent_points?: number;
+        relative_humidity_spread_percent_points?: number;
+        relative_humidity_baseline_source?: string;
+        domain_clipped_months?: number;
+        temperature_domain_warning_months?: number;
+        source_id?: string;
+        method?: string;
+        caveat?: string;
+      };
       uncertainty?: {
         tropical_nights_spread_days?: number;
         consecutive_dry_days_spread?: number;
@@ -114,6 +128,7 @@ interface ProjectionPoint {
     baseline_source?: {
       temperature?: string;
       precipitation?: string;
+      humidity?: string;
       observed_period?: string;
       observed_resolution?: string;
       observed_citation?: string;
@@ -139,6 +154,7 @@ interface ProjectionPoint {
       temperature_ipcc_adjustment_c?: number;
       temperature_ipcc_calibration_factor?: number;
       precipitation_anomaly_spread_pct?: number;
+      relative_humidity_anomaly_spread_percent_points?: number;
       sea_level_low_cm?: number;
       sea_level_high_cm?: number;
     };
@@ -1506,6 +1522,7 @@ export default function ClimateApp() {
     const heatNightsRaw = interpOptionalScalar(pts, year, (p) => p.extremes.detail?.tropical_nights_per_year ?? p.extremes.heat_stress_days);
     const drySpellDays = interpOptionalScalar(pts, year, (p) => p.extremes.detail?.consecutive_dry_days);
     const maxFiveDayRain = interpOptionalScalar(pts, year, (p) => p.extremes.detail?.max_5day_precip_mm);
+    const humidHeatWetBulb = interpOptionalScalar(pts, year, (p) => p.extremes.detail?.humid_heat?.max_monthly_mean_wet_bulb_c);
     const score = Math.max(0, Math.min(100, Math.round(interpScalar(pts, year, (p) => p.habitability.score))));
     const category = categoryFor(score);
     const monthlyTemps = Array.from({ length: 12 }, (_, m) => interpScalar(pts, year, (p) => p.temperature.monthly?.[m] ?? p.temperature.annual_mean));
@@ -1527,6 +1544,9 @@ export default function ClimateApp() {
     }));
 
     const np = nearestPoint(pts, year);
+    const humidHeat = np.extremes.detail?.humid_heat;
+    const humidHeatMonthIndex = humidHeat?.max_month ? MONTHS.indexOf(humidHeat.max_month) : -1;
+    const humidHeatRh = humidHeatMonthIndex >= 0 ? humidHeat?.monthly_relative_humidity_percent?.[humidHeatMonthIndex] : undefined;
     const sensitivity = np.atmospheric_physics?.climate_sensitivity;
     const sensLabel = sensitivity == null ? null : sensitivity >= 2.2 ? "High" : sensitivity >= 1.6 ? "Moderate" : "Low";
     const sensColor = sensLabel === "High" ? ORANGE : sensLabel === "Moderate" ? AMBER : GREEN;
@@ -1556,6 +1576,16 @@ export default function ClimateApp() {
       heatNightsRaw,
       drySpellDays,
       maxFiveDayRain,
+      humidHeatWetBulb,
+      humidHeatMonth: humidHeat?.max_month,
+      humidHeatRh,
+      humidHeatRhDelta: humidHeat?.relative_humidity_anomaly_percent_points,
+      humidHeatRhSpread: humidHeat?.relative_humidity_spread_percent_points ?? np.metadata?.uncertainty?.relative_humidity_anomaly_spread_percent_points,
+      humidHeatClippedMonths: humidHeat?.domain_clipped_months,
+      humidHeatTempDomainWarningMonths: humidHeat?.temperature_domain_warning_months,
+      humidHeatMethod: humidHeat?.method,
+      humidHeatCaveat: humidHeat?.caveat,
+      humidHeatSourceId: humidHeat?.source_id,
       heatNightsSpread: np.extremes.detail?.uncertainty?.tropical_nights_spread_days,
       drySpellSpread: np.extremes.detail?.uncertainty?.consecutive_dry_days_spread,
       maxFiveDayRainSpread: np.extremes.detail?.uncertainty?.max_5day_precip_spread_mm,
@@ -1804,6 +1834,15 @@ export default function ClimateApp() {
         color: ORANGE,
         text: heatLifeText(d.heatDays, scoreStory.deltas.heat),
         receipt: "Uses the grounded heat_stress_days trajectory; it is not personal medical or occupational-safety advice.",
+      },
+      {
+        label: "Humid heat feel",
+        value: d.humidHeatWetBulb == null ? "not exposed" : `${d.humidHeatWetBulb.toFixed(1)}°C Tw`,
+        color: d.humidHeatWetBulb != null && d.humidHeatWetBulb >= 24 ? RED : ORANGE,
+        text: d.humidHeatWetBulb == null
+          ? "This build did not expose a humid-heat screen for the selected year."
+          : `The warmest humid month is ${d.humidHeatMonth ?? "not identified"} with a monthly mean wet-bulb screen of ${d.humidHeatWetBulb.toFixed(1)}°C. Higher wet-bulb values mean sweat evaporation works less well; daily peaks can be higher than this monthly mean.`,
+        receipt: `Uses ${d.humidHeatSourceId ?? "the registered humid-heat method"}: ${d.humidHeatMethod ?? "monthly mean temperature plus CMIP6 relative humidity through the Stull wet-bulb approximation."} ${d.humidHeatCaveat ?? "It is not WBGT, a daily exceedance count, or medical/occupational-safety advice."}`,
       },
       {
         label: "Water reliability",
@@ -3022,6 +3061,15 @@ export default function ClimateApp() {
               detail: `${roundedValue(d!.heatNightsRaw, " tropical nights/yr")} raw`,
               color: RED,
               receipt: `Heat stress uses the grounded ETCCDI tropical-nights layer for ${shownScenario.label}: nights per year with daily minimum temperature above ${d!.tropicalNightThreshold ?? 20}°C, linearly interpolated to the selected year. Ensemble spread: ${roundedValue(d!.heatNightsSpread, " days", 1)}. This is a climate screening indicator, not medical or occupational-safety advice.`,
+            },
+            {
+              label: "Humid heat screen",
+              value: d!.humidHeatWetBulb == null ? "n/a" : `${d!.humidHeatWetBulb.toFixed(1)}°C`,
+              unit: "monthly mean wet-bulb",
+              sub: d!.humidHeatMonth ?? "max month",
+              detail: `${roundedValue(d!.humidHeatRh, "% RH", 1)} · ${signedNumber(d!.humidHeatRhDelta ?? 0, 1)} pp RH`,
+              color: d!.humidHeatWetBulb != null && d!.humidHeatWetBulb >= 24 ? RED : ORANGE,
+              receipt: `Humid heat screen uses monthly mean air temperature and CMIP6 near-surface relative humidity for ${shownScenario.label}, then applies the registered Stull 2011 empirical wet-bulb approximation. It reports max monthly mean wet-bulb, not WBGT, not daily humid-heat days, and not medical or occupational-safety advice. RH ensemble spread: ${roundedValue(d!.humidHeatRhSpread, " percentage points", 1)}; RH formula-domain clipped months: ${d!.humidHeatClippedMonths ?? 0}; temperature-domain warning months: ${d!.humidHeatTempDomainWarningMonths ?? 0}.`,
             },
             {
               label: "Drought Risk",

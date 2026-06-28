@@ -11,6 +11,10 @@ const DEFAULT_SCENARIO = "ssp245";
 const DROUGHT_MAX_CDD = 180.0;
 const FLOOD_MAX_RX5 = 300.0;
 const TROPICAL_NIGHT_T = 20;
+const WET_BULB_RH_MIN = 5.0;
+const WET_BULB_RH_MAX = 99.0;
+const WET_BULB_TEMP_MIN = -20.0;
+const WET_BULB_TEMP_MAX = 50.0;
 
 const SOURCE_TRAIL = [
   {
@@ -44,6 +48,13 @@ const SOURCE_TRAIL = [
     source: "CMIP6 ETCCDI extreme-climate indices",
     method: "absolute future index scored against documented thresholds",
     citation: "Sillmann et al. 2013; IPCC AR6 WGI Ch.11",
+  },
+  {
+    label: "Humid heat screen",
+    source: "CMIP6 near-surface relative humidity plus Stull wet-bulb approximation",
+    method:
+      "monthly mean air temperature and relative humidity produce a max monthly mean wet-bulb screen; no daily exceedance count or WBGT is inferred",
+    citation: "Stull 2011; CMIP6 / Eyring et al. 2016",
   },
 ];
 
@@ -180,6 +191,21 @@ function annualExtreme(index: "tr" | "cdd" | "rx5day", scenario: string, lat: nu
   return Number.isNaN(baseline) || Number.isNaN(delta) ? Number.NaN : baseline + delta;
 }
 
+function wetBulbStullC(tempC: number, relativeHumidityPct: number): { wetBulb: number; formulaRh: number } {
+  if (Number.isNaN(tempC) || Number.isNaN(relativeHumidityPct)) {
+    return { wetBulb: Number.NaN, formulaRh: Number.NaN };
+  }
+  const physicalRh = clip(relativeHumidityPct, 0, 100);
+  const formulaRh = clip(physicalRh, WET_BULB_RH_MIN, WET_BULB_RH_MAX);
+  const wetBulb =
+    tempC * Math.atan(0.151977 * Math.sqrt(formulaRh + 8.313659)) +
+    Math.atan(tempC + formulaRh) -
+    Math.atan(formulaRh - 1.676331) +
+    0.00391838 * formulaRh ** 1.5 * Math.atan(0.023101 * formulaRh) -
+    4.686035;
+  return { wetBulb, formulaRh };
+}
+
 function monthName(values: number[], comparator: (a: number, b: number) => boolean): string | null {
   const finite = values.map((value, index) => ({ value, index })).filter((item) => Number.isFinite(item.value));
   if (finite.length === 0) return null;
@@ -194,9 +220,14 @@ export function projectClimate(lat: number, lng: number, year: number, scenario 
   const temperatureStdIpcc = temperatureStdRaw * k;
   const precipitationDelta = primary("precipitation", scenario, "mean", lat, lng, year);
   const precipitationStd = primary("precipitation", scenario, "std", lat, lng, year);
+  const humidityDelta = primary("humidity", scenario, "mean", lat, lng, year);
+  const humidityStd = primary("humidity", scenario, "std", lat, lng, year);
   const monthlyTemperature: number[] = [];
   const monthlyTemperatureIpcc: number[] = [];
   const monthlyPrecipitation: number[] = [];
+  const monthlyRelativeHumidity: number[] = [];
+  const monthlyWetBulb: number[] = [];
+  const wetBulbFormulaRh: number[] = [];
   const observedTemperatureValues: number[] = [];
   const observedPrecipitationValues: number[] = [];
   let observedTemperatureMonths = 0;
@@ -205,6 +236,7 @@ export function projectClimate(lat: number, lng: number, year: number, scenario 
   for (let month = 1; month <= 12; month++) {
     const modelTempBaseline = primary("baseline", "temperature", "clim", lat, lng, month);
     const modelPrecipBaseline = primary("baseline", "precipitation", "clim", lat, lng, month);
+    const modelHumidityBaseline = primary("baseline", "humidity", "clim", lat, lng, month);
     const observedTempBaseline = sampleObservedBaseline("temperature", lat, lng, month);
     const observedPrecipBaseline = sampleObservedBaseline("precipitation", lat, lng, month);
     const tempBaseline = Number.isNaN(observedTempBaseline) ? modelTempBaseline : observedTempBaseline;
@@ -214,9 +246,15 @@ export function projectClimate(lat: number, lng: number, year: number, scenario 
     if (!Number.isNaN(observedTempBaseline)) observedTemperatureValues.push(observedTempBaseline);
     if (!Number.isNaN(observedPrecipBaseline)) observedPrecipitationValues.push(observedPrecipBaseline);
 
-    monthlyTemperature.push(
-      Number.isNaN(tempBaseline) || Number.isNaN(temperatureDeltaRaw) ? Number.NaN : tempBaseline + temperatureDeltaRaw,
-    );
+    const monthlyTemp =
+      Number.isNaN(tempBaseline) || Number.isNaN(temperatureDeltaRaw) ? Number.NaN : tempBaseline + temperatureDeltaRaw;
+    const monthlyRh =
+      Number.isNaN(modelHumidityBaseline) || Number.isNaN(humidityDelta)
+        ? Number.NaN
+        : clip(modelHumidityBaseline + humidityDelta, 0, 100);
+    const { wetBulb, formulaRh } = wetBulbStullC(monthlyTemp, monthlyRh);
+
+    monthlyTemperature.push(monthlyTemp);
     monthlyTemperatureIpcc.push(
       Number.isNaN(tempBaseline) || Number.isNaN(temperatureDeltaIpcc) ? Number.NaN : tempBaseline + temperatureDeltaIpcc,
     );
@@ -225,14 +263,36 @@ export function projectClimate(lat: number, lng: number, year: number, scenario 
         ? Number.NaN
         : precipBaseline * (1 + precipitationDelta / 100.0),
     );
+    monthlyRelativeHumidity.push(monthlyRh);
+    monthlyWetBulb.push(wetBulb);
+    wetBulbFormulaRh.push(formulaRh);
   }
 
   const finiteTemperature = finiteValues(monthlyTemperature);
   const finiteTemperatureIpcc = finiteValues(monthlyTemperatureIpcc);
   const finitePrecipitation = finiteValues(monthlyPrecipitation);
+  const finiteWetBulb = finiteValues(monthlyWetBulb);
   const annualMean = mean(finiteTemperature);
   const annualMeanIpcc = mean(finiteTemperatureIpcc);
   const annualTotal = sum(finitePrecipitation);
+  const wetBulbMaxIndex =
+    finiteWetBulb.length > 0
+      ? monthlyWetBulb.reduce(
+          (bestIndex, value, index) =>
+            Number.isFinite(value) && (!Number.isFinite(monthlyWetBulb[bestIndex]) || value > monthlyWetBulb[bestIndex])
+              ? index
+              : bestIndex,
+          0,
+        )
+      : null;
+  const rhDomainClipped = monthlyRelativeHumidity.reduce((count, value, index) => {
+    const formulaRh = wetBulbFormulaRh[index];
+    return Number.isFinite(value) && Number.isFinite(formulaRh) && Math.abs(value - formulaRh) > 0.001 ? count + 1 : count;
+  }, 0);
+  const tempDomainWarningMonths = monthlyTemperature.reduce(
+    (count, value) => (Number.isFinite(value) && (value < WET_BULB_TEMP_MIN || value > WET_BULB_TEMP_MAX) ? count + 1 : count),
+    0,
+  );
 
   const tropicalNights = annualExtreme("tr", scenario, lat, lng, year);
   const dryDays = annualExtreme("cdd", scenario, lat, lng, year);
@@ -346,6 +406,22 @@ export function projectClimate(lat: number, lng: number, year: number, scenario 
         tropical_nights_per_year: num(heatNights),
         consecutive_dry_days: num(Number.isNaN(dryDays) ? null : dryDays),
         max_5day_precip_mm: num(Number.isNaN(fiveDayPrecip) ? null : fiveDayPrecip),
+        humid_heat: {
+          max_monthly_mean_wet_bulb_c: wetBulbMaxIndex === null ? null : num(monthlyWetBulb[wetBulbMaxIndex]),
+          max_month: wetBulbMaxIndex === null ? null : MONTHS[wetBulbMaxIndex],
+          monthly_mean_wet_bulb_c: monthlyWetBulb.map(num),
+          monthly_relative_humidity_percent: monthlyRelativeHumidity.map(num),
+          relative_humidity_anomaly_percent_points: num(humidityDelta),
+          relative_humidity_spread_percent_points: num(Number.isNaN(humidityStd) ? null : Math.abs(humidityStd)),
+          relative_humidity_baseline_source: "CMIP6 historical model baseline 1995-2014",
+          domain_clipped_months: rhDomainClipped,
+          temperature_domain_warning_months: tempDomainWarningMonths,
+          source_id: "stull-2011-wetbulb-approximation",
+          method:
+            "Stull 2011 empirical wet-bulb approximation from monthly mean air temperature and CMIP6 near-surface relative humidity; RH is physically clipped to 0-100% and formula-clipped to 5-99% if needed.",
+          caveat:
+            "Monthly mean wet-bulb is a humid-heat screening context only. It is not WBGT, a daily exceedance count, personal medical advice, or occupational-safety guidance.",
+        },
         uncertainty: {
           tropical_nights_spread_days: num(Number.isNaN(tropicalNightStd) ? null : Math.abs(tropicalNightStd)),
           consecutive_dry_days_spread: num(Number.isNaN(dryDayStd) ? null : Math.abs(dryDayStd)),
@@ -374,6 +450,7 @@ export function projectClimate(lat: number, lng: number, year: number, scenario 
       baseline_source: {
         temperature: baselineTemperature,
         precipitation: baselinePrecipitation,
+        humidity: "CMIP6 historical model monthly relative-humidity baseline 1995-2014",
         observed_period: observedSource.period,
         observed_resolution: observedSource.resolution,
         observed_citation: observedSource.citation,
@@ -396,6 +473,7 @@ export function projectClimate(lat: number, lng: number, year: number, scenario 
             : num(temperatureDeltaIpcc - temperatureDeltaRaw),
         temperature_ipcc_calibration_factor: num(k),
         precipitation_anomaly_spread_pct: num(precipitationSpreadPct),
+        relative_humidity_anomaly_spread_percent_points: num(Number.isNaN(humidityStd) ? null : Math.abs(humidityStd)),
         sea_level_low_cm: num(seaLevelLowCm),
         sea_level_high_cm: num(seaLevelHighCm),
         extreme_index_spread_source: "CMIP6 ETCCDI ensemble standard deviation",

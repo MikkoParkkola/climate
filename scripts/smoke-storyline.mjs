@@ -80,6 +80,9 @@ assert.match(source, /no deterministic local correction or collapse date is appl
 assert.match(methodology, /Large-scale circulation context/, "methodology documents AMOC/Gulf Stream context");
 assert.match(methodology, /does not apply a local cooling correction/, "methodology rejects deterministic AMOC local correction");
 assert.match(methodology, /scenario layers start at 2030/, "methodology discloses near-current source-year basis");
+assert.match(methodology, /Humid heat screen/, "methodology documents the humid-heat screen");
+assert.match(methodology, /Stull 2011 empirical wet-bulb approximation/, "methodology cites the humid-heat formula");
+assert.match(methodology, /not WBGT or occupational-safety guidance/, "methodology caveats humid heat as non-WBGT and non-advisory");
 assert.match(source, /What this does not mean/, "projection receipt renders the required caveat section");
 assert.match(source, /not a property-risk certificate/, "receipt caveat rejects property-risk interpretation");
 assert.match(source, /relocation recommendation/, "receipt caveat rejects relocation advice interpretation");
@@ -103,6 +106,13 @@ assert.match(source, /if \(av == null \|\| bv == null\) return undefined/, "opti
 assert.match(source, /const drySpellDays = interpOptionalScalar\(pts, year, \(p\) => p\.extremes\.detail\?\.consecutive_dry_days\)/, "missing drought raw detail is not defaulted to zero");
 assert.match(source, /const maxFiveDayRain = interpOptionalScalar\(pts, year, \(p\) => p\.extremes\.detail\?\.max_5day_precip_mm\)/, "missing flood raw detail is not defaulted to zero");
 assert.match(source, /Heat stress uses the grounded ETCCDI tropical-nights layer/, "heat-stress risk card exposes its source receipt");
+assert.match(source, /Humid heat screen/, "risk cards expose the humid-heat screening metric");
+assert.match(source, /Stull 2011 empirical wet-bulb approximation/, "humid-heat receipt cites the registered wet-bulb method");
+assert.match(source, /not WBGT, not daily humid-heat days/, "humid-heat receipt rejects WBGT and daily exceedance interpretations");
+assert.match(source, /temperature-domain warning months/, "humid-heat receipt discloses Stull formula temperature-domain warnings");
+assert.match(source, /Humid heat feel/, "daily-life section exposes humid-heat interpretation");
+assert.match(source, /d\.humidHeatWetBulb/, "daily-life humid-heat row is derived from the API snapshot");
+assert.match(source, /monthly mean wet-bulb/, "humid-heat copy labels the metric as monthly mean context");
 assert.match(source, /Drought risk uses ETCCDI consecutive dry days/, "drought risk card exposes its source receipt");
 assert.match(source, /Flood risk uses ETCCDI Rx5day/, "flood risk card exposes its source receipt");
 assert.match(source, /Sea-level context uses the registered NASA\/IPCC AR6 regional sea-level layer/, "sea-level context card exposes its source receipt");

@@ -190,7 +190,7 @@ try {
 
   const { json: sourceRegistry } = await getJson("/api/source-registry");
   assert(sourceRegistry.version === "source-registry-v1", "source-registry API version is source-registry-v1");
-  assert(Array.isArray(sourceRegistry.rows) && sourceRegistry.rows.length >= 13, "source-registry API exposes current source rows");
+  assert(Array.isArray(sourceRegistry.rows) && sourceRegistry.rows.length >= 14, "source-registry API exposes current source rows");
   assert(
     sourceRegistry.rows.some(
       (row) =>
@@ -231,6 +231,14 @@ try {
     ),
     "source-registry API exposes Natural Earth country aggregate row",
   );
+  assert(
+    sourceRegistry.rows.some(
+      (row) =>
+        row.sourceId === "stull-2011-wetbulb-approximation" &&
+        row.displayPolicy === "show-as-derived-screening-context-not-advice",
+    ),
+    "source-registry API exposes humid heat wet-bulb method row",
+  );
 
   const dataQualityPage = await getText("/data-quality");
   assert(dataQualityPage.res.status === 200, "GET /data-quality returns 200");
@@ -240,7 +248,7 @@ try {
   const { json: dataQuality } = await getJson("/api/data-quality");
   assert(dataQuality.version === "data-quality-v1", "data-quality API version is data-quality-v1");
   assert(Array.isArray(dataQuality.artifacts) && dataQuality.artifacts.length >= 10, "data-quality API exposes artifact hashes");
-  assert(dataQuality.sourceRegistry?.rowCount >= 13, "data-quality API exposes complete source-registry rows");
+  assert(dataQuality.sourceRegistry?.rowCount >= 14, "data-quality API exposes complete source-registry rows");
   assert(
     dataQuality.sourceRegistry?.rows?.some(
       (row) =>

@@ -59,6 +59,15 @@ const requiredPaths = [
   "extremes.drought_risk",
   "extremes.flood_risk",
   "extremes.sea_level_rise_cm",
+  "extremes.detail.humid_heat.max_monthly_mean_wet_bulb_c",
+  "extremes.detail.humid_heat.max_month",
+  "extremes.detail.humid_heat.relative_humidity_anomaly_percent_points",
+  "extremes.detail.humid_heat.relative_humidity_spread_percent_points",
+  "extremes.detail.humid_heat.domain_clipped_months",
+  "extremes.detail.humid_heat.temperature_domain_warning_months",
+  "extremes.detail.humid_heat.source_id",
+  "extremes.detail.humid_heat.method",
+  "extremes.detail.humid_heat.caveat",
   "extremes.detail.uncertainty.sea_level_low_cm",
   "extremes.detail.uncertainty.sea_level_high_cm",
   "habitability.score",
@@ -77,6 +86,7 @@ const requiredPaths = [
   "metadata.baseline",
   "metadata.baseline_source.temperature",
   "metadata.baseline_source.precipitation",
+  "metadata.baseline_source.humidity",
   "metadata.baseline_source.observed_temperature_months",
   "metadata.baseline_source.observed_precipitation_months",
   "metadata.baseline_source.observed_annual_temperature_c",
@@ -91,6 +101,7 @@ const requiredPaths = [
   "metadata.projection_method",
   "metadata.uncertainty.temperature_anomaly_spread_c",
   "metadata.uncertainty.precipitation_anomaly_spread_pct",
+  "metadata.uncertainty.relative_humidity_anomaly_spread_percent_points",
   "metadata.uncertainty.sea_level_low_cm",
   "metadata.uncertainty.sea_level_high_cm",
 ];
@@ -310,6 +321,22 @@ function validateProjection(sample, projection, expectedYear = 2050, expectedSce
   assert(projection.precipitation.monthly.length === 12, `${sample.name} precipitation.monthly length is not 12`);
   assert(Array.isArray(projection.precipitation.monthly_labels), `${sample.name} precipitation.monthly_labels missing`);
   assert(projection.precipitation.monthly_labels.length === 12, `${sample.name} precipitation.monthly_labels length is not 12`);
+  assert(Array.isArray(projection.extremes.detail.humid_heat.monthly_mean_wet_bulb_c), `${sample.name} humid heat monthly wet-bulb missing`);
+  assert(projection.extremes.detail.humid_heat.monthly_mean_wet_bulb_c.length === 12, `${sample.name} humid heat wet-bulb length is not 12`);
+  assert(Array.isArray(projection.extremes.detail.humid_heat.monthly_relative_humidity_percent), `${sample.name} humid heat monthly RH missing`);
+  assert(projection.extremes.detail.humid_heat.monthly_relative_humidity_percent.length === 12, `${sample.name} humid heat RH length is not 12`);
+  assert(
+    projection.extremes.detail.humid_heat.source_id === "stull-2011-wetbulb-approximation",
+    `${sample.name} humid heat source id mismatch`,
+  );
+  assert(
+    /Monthly mean wet-bulb/.test(projection.extremes.detail.humid_heat.caveat),
+    `${sample.name} humid heat caveat missing monthly-mean boundary`,
+  );
+  assert(
+    /not WBGT/.test(projection.extremes.detail.humid_heat.caveat),
+    `${sample.name} humid heat caveat missing WBGT boundary`,
+  );
 
   assert(projection.extremes.heat_stress_days >= 0 && projection.extremes.heat_stress_days <= 366, `${sample.name} heat_stress_days out of range`);
   assert(projection.extremes.drought_risk >= 0 && projection.extremes.drought_risk <= 100, `${sample.name} drought_risk out of 0-100 range`);
@@ -326,6 +353,10 @@ function validateProjection(sample, projection, expectedYear = 2050, expectedSce
   assert(projection.extremes.detail.uncertainty.sea_level_high_cm >= projection.extremes.sea_level_rise_cm, `${sample.name} sea-level high below median`);
   assert(Array.isArray(projection.metadata.source_trail), `${sample.name} source trail missing`);
   assert(projection.metadata.source_trail.length >= 4, `${sample.name} source trail incomplete`);
+  assert(
+    projection.metadata.source_trail.some((entry) => entry.label === "Humid heat screen" && /Stull 2011/.test(entry.citation)),
+    `${sample.name} humid heat source trail missing`,
+  );
   assert(/WorldClim|CMIP6/.test(projection.metadata.baseline_source.temperature), `${sample.name} temperature baseline source missing provenance`);
   assert(/WorldClim|CMIP6/.test(projection.metadata.baseline_source.precipitation), `${sample.name} precipitation baseline source missing provenance`);
   assert(projection.metadata.projection_year_basis.requested_year === expectedYear, `${sample.name} projection year basis requested year mismatch`);

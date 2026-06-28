@@ -27,10 +27,20 @@ const requiredPaths = [
   "extremes.drought_risk",
   "extremes.flood_risk",
   "extremes.sea_level_rise_cm",
+  "extremes.detail.humid_heat.max_monthly_mean_wet_bulb_c",
+  "extremes.detail.humid_heat.max_month",
+  "extremes.detail.humid_heat.relative_humidity_anomaly_percent_points",
+  "extremes.detail.humid_heat.relative_humidity_spread_percent_points",
+  "extremes.detail.humid_heat.domain_clipped_months",
+  "extremes.detail.humid_heat.temperature_domain_warning_months",
+  "extremes.detail.humid_heat.source_id",
+  "extremes.detail.humid_heat.method",
+  "extremes.detail.humid_heat.caveat",
   "habitability.score",
   "metadata.model_version",
   "metadata.baseline_source.temperature",
   "metadata.baseline_source.precipitation",
+  "metadata.baseline_source.humidity",
   "metadata.baseline_source.observed_temperature_months",
   "metadata.baseline_source.observed_precipitation_months",
   "metadata.baseline_source.observed_annual_temperature_c",
@@ -93,6 +103,16 @@ function compareProjection(label: string, expected: Record<string, unknown>, act
     `${label}.precipitation.monthly`,
     getPath(expected, "precipitation.monthly"),
     getPath(actual, "precipitation.monthly"),
+  );
+  compareValue(
+    `${label}.extremes.detail.humid_heat.monthly_mean_wet_bulb_c`,
+    getPath(expected, "extremes.detail.humid_heat.monthly_mean_wet_bulb_c"),
+    getPath(actual, "extremes.detail.humid_heat.monthly_mean_wet_bulb_c"),
+  );
+  compareValue(
+    `${label}.extremes.detail.humid_heat.monthly_relative_humidity_percent`,
+    getPath(expected, "extremes.detail.humid_heat.monthly_relative_humidity_percent"),
+    getPath(actual, "extremes.detail.humid_heat.monthly_relative_humidity_percent"),
   );
 
   for (const pathName of requiredPaths) {

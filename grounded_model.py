@@ -66,6 +66,12 @@ SOURCE_TRAIL = [
         "method": "absolute future index scored against documented thresholds",
         "citation": "Sillmann et al. 2013; IPCC AR6 WGI Ch.11",
     },
+    {
+        "label": "Humid heat screen",
+        "source": "CMIP6 near-surface relative humidity plus Stull wet-bulb approximation",
+        "method": "monthly mean air temperature and relative humidity produce a max monthly mean wet-bulb screen; no daily exceedance count or WBGT is inferred",
+        "citation": "Stull 2011; CMIP6 / Eyring et al. 2016",
+    },
 ]
 
 # ── Risk thresholds (serve-time, cited; see SCIENTIFIC_GROUNDING.md) ──────────
@@ -74,6 +80,10 @@ SOURCE_TRAIL = [
 DROUGHT_MAX_CDD = 180.0     # consecutive dry days; 180 = half-year dry spell = 100
 FLOOD_MAX_RX5 = 300.0       # max 5-day precip mm; 300 mm ~ extreme pluvial event = 100
 TROPICAL_NIGHT_T = 20       # ETCCDI TR: nights with Tmin>20C (heat-stress, no recovery)
+WET_BULB_RH_MIN = 5.0       # Stull approximation validity/capping domain for RH (%)
+WET_BULB_RH_MAX = 99.0
+WET_BULB_TEMP_MIN = -20.0   # Stull 2011 practical approximation domain (C)
+WET_BULB_TEMP_MAX = 50.0
 
 _CACHE = None
 
@@ -250,6 +260,22 @@ def _num(x):
     return None if (x is None or (isinstance(x, float) and np.isnan(x))) else round(float(x), 2)
 
 
+def wet_bulb_stull_c(temp_c, relative_humidity_pct):
+    """Stull 2011 empirical wet-bulb approximation from air temp (C) and RH (%)."""
+    if np.isnan(temp_c) or np.isnan(relative_humidity_pct):
+        return float("nan"), float("nan")
+    rh_physical = float(np.clip(relative_humidity_pct, 0.0, 100.0))
+    rh_formula = float(np.clip(rh_physical, WET_BULB_RH_MIN, WET_BULB_RH_MAX))
+    tw = (
+        temp_c * np.arctan(0.151977 * np.sqrt(rh_formula + 8.313659))
+        + np.arctan(temp_c + rh_formula)
+        - np.arctan(rh_formula - 1.676331)
+        + 0.00391838 * (rh_formula ** 1.5) * np.arctan(0.023101 * rh_formula)
+        - 4.686035
+    )
+    return tw, rh_formula
+
+
 def climate_zone(lat):
     a = abs(lat)
     return ("Tropical" if a < 23.5 else "Subtropical" if a < 35 else
@@ -318,13 +344,17 @@ def project(lat, lng, year, scenario=DEFAULT_SCENARIO):
     t_std_ipcc = t_std_raw * k
     p_delta = sample("precipitation", scenario, "mean", lat, lng, year)        # percent
     p_std = sample("precipitation", scenario, "std", lat, lng, year)          # percent
-    monthly_t, monthly_t_ipcc, monthly_p = [], [], []
+    rh_delta = sample("humidity", scenario, "mean", lat, lng, year)            # percentage points
+    rh_std = sample("humidity", scenario, "std", lat, lng, year)              # percentage points
+    monthly_t, monthly_t_ipcc, monthly_p, monthly_rh, monthly_wet_bulb = [], [], [], [], []
+    wet_bulb_formula_rh = []
     observed_t_values, observed_p_values = [], []
     observed_t_months = 0
     observed_p_months = 0
     for m in range(1, 13):
         model_bt = sample("baseline", "temperature", "clim", lat, lng, m)
         model_bp = sample("baseline", "precipitation", "clim", lat, lng, m)
+        model_brh = sample("baseline", "humidity", "clim", lat, lng, m)
         obs_bt = sample_observed_baseline("temperature", lat, lng, m)
         obs_bp = sample_observed_baseline("precipitation", lat, lng, m)
         bt = obs_bt if not np.isnan(obs_bt) else model_bt
@@ -335,15 +365,32 @@ def project(lat, lng, year, scenario=DEFAULT_SCENARIO):
             observed_t_values.append(float(obs_bt))
         if not np.isnan(obs_bp):
             observed_p_values.append(float(obs_bp))
-        monthly_t.append(bt + t_delta_raw if not np.isnan(bt) and not np.isnan(t_delta_raw) else float("nan"))
+        temp_m = bt + t_delta_raw if not np.isnan(bt) and not np.isnan(t_delta_raw) else float("nan")
+        rh_m = model_brh + rh_delta if not np.isnan(model_brh) and not np.isnan(rh_delta) else float("nan")
+        rh_m = float(np.clip(rh_m, 0.0, 100.0)) if not np.isnan(rh_m) else float("nan")
+        wet_bulb_m, formula_rh_m = wet_bulb_stull_c(temp_m, rh_m)
+        monthly_t.append(temp_m)
         monthly_t_ipcc.append(bt + t_delta_ipcc if not np.isnan(bt) and not np.isnan(t_delta_ipcc) else float("nan"))
         monthly_p.append(bp * (1 + p_delta / 100.0) if not np.isnan(bp) and not np.isnan(p_delta) else float("nan"))
+        monthly_rh.append(rh_m)
+        monthly_wet_bulb.append(wet_bulb_m)
+        wet_bulb_formula_rh.append(formula_rh_m)
     mt = [x for x in monthly_t if not np.isnan(x)]
     mt_ipcc = [x for x in monthly_t_ipcc if not np.isnan(x)]
     mp = [x for x in monthly_p if not np.isnan(x)]
+    mwb = [x for x in monthly_wet_bulb if not np.isnan(x)]
     annual_mean = float(np.mean(mt)) if mt else None
     annual_mean_ipcc = float(np.mean(mt_ipcc)) if mt_ipcc else None
     annual_total = float(np.sum(mp)) if mp else None
+    wet_bulb_max_idx = int(np.nanargmax(monthly_wet_bulb)) if mwb else None
+    rh_domain_clipped = sum(
+        1 for rh, formula_rh in zip(monthly_rh, wet_bulb_formula_rh)
+        if not np.isnan(rh) and not np.isnan(formula_rh) and abs(rh - formula_rh) > 0.001
+    )
+    temp_domain_warning_months = sum(
+        1 for temp in monthly_t
+        if not np.isnan(temp) and (temp < WET_BULB_TEMP_MIN or temp > WET_BULB_TEMP_MAX)
+    )
 
     # ── extremes -> serve-time absolute risk (baseline + delta vs cited threshold)
     def absolute(idx):
@@ -444,6 +491,20 @@ def project(lat, lng, year, scenario=DEFAULT_SCENARIO):
                 "tropical_nights_per_year": _num(heat_nights),
                 "consecutive_dry_days": _num(None if np.isnan(cdd_abs) else cdd_abs),
                 "max_5day_precip_mm": _num(None if np.isnan(rx5_abs) else rx5_abs),
+                "humid_heat": {
+                    "max_monthly_mean_wet_bulb_c": _num(monthly_wet_bulb[wet_bulb_max_idx]) if wet_bulb_max_idx is not None else None,
+                    "max_month": MONTHS[wet_bulb_max_idx] if wet_bulb_max_idx is not None else None,
+                    "monthly_mean_wet_bulb_c": [_num(x) for x in monthly_wet_bulb],
+                    "monthly_relative_humidity_percent": [_num(x) for x in monthly_rh],
+                    "relative_humidity_anomaly_percent_points": _num(rh_delta),
+                    "relative_humidity_spread_percent_points": _num(None if np.isnan(rh_std) else abs(rh_std)),
+                    "relative_humidity_baseline_source": "CMIP6 historical model baseline 1995-2014",
+                    "domain_clipped_months": rh_domain_clipped,
+                    "temperature_domain_warning_months": temp_domain_warning_months,
+                    "source_id": "stull-2011-wetbulb-approximation",
+                    "method": "Stull 2011 empirical wet-bulb approximation from monthly mean air temperature and CMIP6 near-surface relative humidity; RH is physically clipped to 0-100% and formula-clipped to 5-99% if needed.",
+                    "caveat": "Monthly mean wet-bulb is a humid-heat screening context only. It is not WBGT, a daily exceedance count, personal medical advice, or occupational-safety guidance.",
+                },
                 "uncertainty": {
                     "tropical_nights_spread_days": _num(None if np.isnan(tr_std) else abs(tr_std)),
                     "consecutive_dry_days_spread": _num(None if np.isnan(cdd_std) else abs(cdd_std)),
@@ -465,6 +526,7 @@ def project(lat, lng, year, scenario=DEFAULT_SCENARIO):
             "baseline_source": {
                 "temperature": baseline_temperature,
                 "precipitation": baseline_precipitation,
+                "humidity": "CMIP6 historical model monthly relative-humidity baseline 1995-2014",
                 "observed_period": observed_source.get("period"),
                 "observed_resolution": observed_source.get("resolution"),
                 "observed_citation": observed_source.get("citation"),
@@ -483,6 +545,7 @@ def project(lat, lng, year, scenario=DEFAULT_SCENARIO):
                 "temperature_ipcc_adjustment_c": _num(t_delta_ipcc - t_delta_raw) if not np.isnan(t_delta_ipcc) and not np.isnan(t_delta_raw) else None,
                 "temperature_ipcc_calibration_factor": _num(k),
                 "precipitation_anomaly_spread_pct": _num(p_spread_pct),
+                "relative_humidity_anomaly_spread_percent_points": _num(None if np.isnan(rh_std) else abs(rh_std)),
                 "sea_level_low_cm": _num(slr_low_cm),
                 "sea_level_high_cm": _num(slr_high_cm),
                 "extreme_index_spread_source": "CMIP6 ETCCDI ensemble standard deviation",

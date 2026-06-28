@@ -102,7 +102,7 @@ the same and can judge the pathway themselves.
 |---|---|
 | Avg temperature / change | CMIP6 multi-model regional anomaly under chosen SSP, added to WorldClim observed monthly baseline where available; CMIP6 historical fallback otherwise. |
 | Precipitation / change | CMIP6 regional precip change %, per SSP, applied to WorldClim observed monthly precipitation where available; CMIP6 historical fallback otherwise. |
-| Humidity / change | **Not currently served.** If added, use CMIP6 near-surface relative/specific humidity per SSP and label it as model consensus + spread; do not fabricate an assessed calibration. |
+| Humidity / humid heat | CMIP6 near-surface relative-humidity model baseline plus SSP delta, shown as model consensus + spread with no IPCC assessed calibration. The app derives a max monthly mean wet-bulb **screen** using the Stull 2011 approximation; it is not WBGT, daily exceedance days, medical advice, or occupational-safety guidance. |
 | Sea level / coastal flooding | NASA AR6 Sea Level tool, per-location, per-SSP. |
 | Heat-stress / drought / flood risk | Derived from CMIP6 ETCCDI extreme indices (`ingest/fetch_extremes.py`) — **not** from mean fields. Scored at **serve time** against absolute cited thresholds. **See "Risk index grounding (serve-time)" below.** |
 | AMOC / Gulf Stream context | IPCC AR6 WGI assessment language only, shown as regional tail-risk context for broad relevant regions. No deterministic local correction, collapse date, or local impact number is applied. |

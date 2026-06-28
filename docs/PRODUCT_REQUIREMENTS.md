@@ -288,6 +288,9 @@ Must show:
 - Temperature, precipitation, heat stress, drought, flood, sea-level relevance, and habitability.
 - Freshwater, cold stress, humid heat, fire weather, food/agriculture pressure, infrastructure
   pressure, and biodiversity pressure when grounded data is available.
+  Status: humid heat is partially implemented as a CMIP6 relative-humidity plus Stull 2011
+  monthly mean wet-bulb screen; daily humid-heat exceedance days and WBGT remain future
+  until grounded daily/weather-exposure data exists.
 - AMOC/Gulf Stream or other large-scale circulation context when relevant and cited, clearly
   separated from local metric projections.
 - Trend graphs as the default; year snapshot as a derived detail.

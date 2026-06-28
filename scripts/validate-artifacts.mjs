@@ -45,6 +45,7 @@ const registry = readJson("data/source-registry.json");
 assert(registry.version === sourceRegistryVersion, "source registry version mismatch");
 assert(Array.isArray(registry.rows) && registry.rows.length >= 10, "source registry rows incomplete");
 const sourceIds = new Set(registry.rows.map((row) => row.sourceId));
+assert(sourceIds.has("stull-2011-wetbulb-approximation"), "Stull wet-bulb method source row missing");
 assert(sourceIds.has("ipcc-ar6-amoc"), "AMOC/Gulf Stream context source row missing");
 assert(sourceIds.has("natural-earth-coastline-110m-v5"), "Natural Earth coastline source row missing");
 assert(sourceIds.has("natural-earth-populated-places-110m-v5"), "Natural Earth population-place source row missing");
@@ -56,6 +57,10 @@ const requireRegisteredSources = (ids, context) => {
   }
 };
 const getSourceRow = (sourceId) => registry.rows.find((row) => row.sourceId === sourceId);
+assert(
+  getSourceRow("stull-2011-wetbulb-approximation")?.displayPolicy === "show-as-derived-screening-context-not-advice",
+  "Stull wet-bulb method row must be displayed as screening context, not advice",
+);
 
 const manifest = readJson("data/manifest.json");
 assert(manifest.methodVersion === modelVersion, "grid manifest method version mismatch");
