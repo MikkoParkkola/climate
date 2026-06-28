@@ -33,6 +33,7 @@ for (const relativePath of [
   "data/rankings.natural-earth-country-population-weighted.json",
   "data/trajectory-audit-summary.json",
   "data/observed-baseline-audit.json",
+  "data/observed-climatology-validation.nasa-power.json",
   "docs/VALIDATION_REPORT.md",
   "client/public/climate-analog-catalog.current.json",
   "client/public/coastal-proximity.natural-earth-110m.json",
@@ -50,6 +51,7 @@ assert(sourceIds.has("ipcc-ar6-amoc"), "AMOC/Gulf Stream context source row miss
 assert(sourceIds.has("natural-earth-coastline-110m-v5"), "Natural Earth coastline source row missing");
 assert(sourceIds.has("natural-earth-populated-places-110m-v5"), "Natural Earth population-place source row missing");
 assert(sourceIds.has("natural-earth-country-population-weighted-v1"), "Natural Earth country aggregate source row missing");
+assert(sourceIds.has("nasa-power-meteorology-monthly-v10"), "NASA POWER observed-climatology validation source row missing");
 const requireRegisteredSources = (ids, context) => {
   assert(Array.isArray(ids) && ids.length > 0, `${context} source ids missing`);
   for (const sourceId of ids) {
@@ -204,12 +206,45 @@ assert(
   observedBaselineAudit.results.every((result) => result.projectionYearBasis?.source_year_low === 2030 && result.projectionYearBasis?.mode === "clamped-earliest-source-year"),
   "observed baseline audit does not disclose pre-2030 source-year basis",
 );
+const observedClimatologyValidation = readJson("data/observed-climatology-validation.nasa-power.json");
+assert(
+  observedClimatologyValidation.version === "nasa-power-observed-climatology-validation-v1",
+  "NASA POWER observed-climatology validation version mismatch",
+);
+assert(observedClimatologyValidation.status === "passed-with-caveats", "NASA POWER observed-climatology validation status mismatch");
+assert(observedClimatologyValidation.cityCount === 13, "NASA POWER observed-climatology validation city count mismatch");
+assert(observedClimatologyValidation.period?.start === 1981 && observedClimatologyValidation.period?.end === 2000, "NASA POWER validation period mismatch");
+requireRegisteredSources(observedClimatologyValidation.sourceIds, "NASA POWER observed-climatology validation");
+assert(
+  observedClimatologyValidation.sourceIds.includes("nasa-power-meteorology-monthly-v10") &&
+    observedClimatologyValidation.sourceIds.includes("worldclim-v2-1"),
+  "NASA POWER validation source ids incomplete",
+);
+assert(
+  String(observedClimatologyValidation.units?.precipitation).includes("converted to annual mm"),
+  "NASA POWER precipitation unit conversion missing",
+);
+assert(
+  observedClimatologyValidation.summary?.maxAbsTemperatureDifferenceC <= 2,
+  "NASA POWER observed-climatology validation temperature difference too large",
+);
+assert(
+  observedClimatologyValidation.summary?.reviewFlagCount <= 2,
+  "NASA POWER observed-climatology validation has too many review flags",
+);
+assert(
+  observedClimatologyValidation.caveats?.some((caveat) => caveat.includes("not validate future CMIP6 scenario trends")),
+  "NASA POWER validation non-hindcast caveat missing",
+);
 const validationReport = readFileSync(path.join(repoRoot, "docs/VALIDATION_REPORT.md"), "utf8");
 const scientificGrounding = readFileSync(path.join(repoRoot, "docs/architecture/SCIENTIFIC_GROUNDING.md"), "utf8");
 assert(validationReport.includes(audit.generatedAt), "validation report is not synced to trajectory audit artifact");
 assert(validationReport.includes("Not a Historical Hindcast"), "validation report must disclose missing historical hindcast");
 assert(validationReport.includes(observedBaselineAudit.generatedAt), "validation report is not synced to observed baseline audit artifact");
+assert(validationReport.includes(observedClimatologyValidation.generatedAt), "validation report is not synced to NASA POWER validation artifact");
+assert(validationReport.includes("NASA POWER / MERRA-2 observed climatology"), "validation report must include NASA POWER validation section");
 assert(validationReport.includes("Trend review flags are unresolved scientific-review evidence"), "validation report must keep trend flags visible");
 assert(scientificGrounding.includes("packed 2030 scenario layer"), "scientific grounding must disclose near-current source-year basis");
+assert(scientificGrounding.includes("NASA POWER / MERRA-2 monthly"), "scientific grounding must disclose NASA POWER validation source");
 
-console.log(`artifact validation passed: ${rankingEntryCount} ranking slices, ${analog.candidateCount} analog candidates, ${registry.rows.length} source rows, ${audit.resultCount} audit results, ${observedBaselineAudit.cityCount} baseline checks, ${coastline.lineCount} coastline lines`);
+console.log(`artifact validation passed: ${rankingEntryCount} ranking slices, ${analog.candidateCount} analog candidates, ${registry.rows.length} source rows, ${audit.resultCount} audit results, ${observedBaselineAudit.cityCount} baseline checks, ${observedClimatologyValidation.cityCount} NASA POWER checks, ${coastline.lineCount} coastline lines`);

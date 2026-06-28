@@ -21,6 +21,23 @@
       "reviewedAt": "2026-06-27"
     },
     {
+      "sourceId": "nasa-power-meteorology-monthly-v10",
+      "provider": "NASA POWER / MERRA-2",
+      "version": "POWER monthly point API, accessed 2026-06-28",
+      "stableUrl": "https://power.larc.nasa.gov/api/temporal/monthly/point",
+      "citation": "NASA POWER Project, monthly meteorology point data derived from MERRA-2 and associated products.",
+      "license": "NASA open data; attribution requested. This registry uses reduced validation statistics, not bulk redistribution of source time series.",
+      "commercialReuse": "allowed-with-attribution",
+      "redistribution": "reduced-derived-output-only",
+      "variables": ["T2M monthly 2-meter air temperature", "PRECTOTCORR monthly corrected precipitation"],
+      "spatialResolution": "NASA POWER point service on underlying global reanalysis grid",
+      "temporalResolution": "monthly values; validation artifact uses 1981-2000",
+      "scenarioCoverage": "observed/reanalysis climatology only; no future scenario coverage",
+      "method": "Used only for external observed-climatology validation of the packaged WorldClim baseline. Monthly PRECTOTCORR mm/day is converted to annual mm by month-length weighting. No forecast values are corrected from this source.",
+      "displayPolicy": "show-as-validation-source-not-forecast-correction",
+      "reviewedAt": "2026-06-28"
+    },
+    {
       "sourceId": "cmip6-scenariomip",
       "provider": "CMIP6 ScenarioMIP / ESGF",
       "version": "AR6-era CMIP6 ensemble subset in packaged grid",

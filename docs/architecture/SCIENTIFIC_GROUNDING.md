@@ -23,6 +23,7 @@ NVIDIA cBottle ("Climate in a Bottle") is a diffusion-based generative emulator 
 | **Copernicus CDS — CMIP6 / ScenarioMIP** | Raw model projections 2015–2100, all variables, per SSP | NetCDF via `cdsapi`; raw on [ESGF](https://esgf-node.llnl.gov) | Free (CDS account) |
 | **NASA AR6 Sea Level Projection Tool** | Per-location sea-level rise, per scenario, 2020–2150, per-process | Per-point download; archive on Zenodo ([5914710](https://zenodo.org/records/5914710), [6382554](https://zenodo.org/records/6382554)) | Open, DOI-cited |
 | **WorldClim v2.1 observed climatology** | Present-day monthly land baseline (10 arc-minutes, 1970-2000) | WorldClim GeoTIFFs | Public, citable |
+| **NASA POWER / MERRA-2 monthly meteorology** | External observed/reanalysis baseline validation for fixture locations | NASA POWER monthly point API (`T2M`, `PRECTOTCORR`) | NASA open data; reduced validation stats only |
 | **CMIP6 historical climatology** | Fallback baseline where observed land baseline is unavailable | Copernicus CDS / CMIP6 | Public |
 | **cBottle** (optional, later) | High-res spatial texture / present-climate sampling — **only** if driven by scenario SST; unvalidated; license-gated | HF `nvidia/cbottle` (14.4 GB), self-hosted GPU | **eval/R&D-only** |
 
@@ -109,6 +110,7 @@ the same and can judge the pathway themselves.
 | Habitability score & breakdown | Transparent weighted composite of the above — weights documented and shown to the user. Not a hidden black box. |
 | Comparable location | Nearest present-day analog by multivariate climate distance over grounded monthly temperature and log precipitation vectors, bounded to the registered current catalog and returned with catalog/source caveats. |
 | Uncertainty | Carried end-to-end as the AR6/CMIP6 model spread (range), shown in UI — never collapsed to false precision. |
+| Baseline validation | NASA POWER / MERRA-2 monthly `T2M` and `PRECTOTCORR` are used only to compare the packaged WorldClim observed baseline against an independent observed/reanalysis product for fixture cities. The comparison does not correct forecast values and is not a future-projection hindcast. |
 
 ## Honesty requirements (non-negotiable)
 

@@ -6,11 +6,15 @@ import { fileURLToPath } from "node:url";
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const auditPath = path.join(repoRoot, "data", "trajectory-audit-summary.json");
 const observedBaselineAuditPath = path.join(repoRoot, "data", "observed-baseline-audit.json");
+const observedClimatologyValidationPath = path.join(repoRoot, "data", "observed-climatology-validation.nasa-power.json");
 const outPath = path.join(repoRoot, "docs", "VALIDATION_REPORT.md");
 
 const audit = JSON.parse(readFileSync(auditPath, "utf8"));
 const observedBaselineAudit = existsSync(observedBaselineAuditPath)
   ? JSON.parse(readFileSync(observedBaselineAuditPath, "utf8"))
+  : null;
+const observedClimatologyValidation = existsSync(observedClimatologyValidationPath)
+  ? JSON.parse(readFileSync(observedClimatologyValidationPath, "utf8"))
   : null;
 
 const scenarioLabels = {
@@ -92,11 +96,41 @@ const lines = [
     "This cross-check proves that the packaged WorldClim observed baseline is decoded consistently by the Python serving engine and the Node grid reader for the fixture cities. It is baseline provenance evidence, not a claim that the forecast has been historically hindcast against time-varying observations.",
     "",
   ] : []),
+  ...(observedClimatologyValidation ? [
+    "## NASA POWER / MERRA-2 observed climatology",
+    "",
+    `- Validation artifact version: \`${observedClimatologyValidation.version}\``,
+    `- Validation artifact generated at: \`${observedClimatologyValidation.generatedAt}\``,
+    `- Status: \`${observedClimatologyValidation.status}\``,
+    `- Fixture cities: ${observedClimatologyValidation.cityCount}`,
+    `- Period compared: ${observedClimatologyValidation.period.start}-${observedClimatologyValidation.period.end}`,
+    `- Source IDs: ${asList(observedClimatologyValidation.sourceIds)}`,
+    `- Max absolute temperature difference: ${observedClimatologyValidation.summary.maxAbsTemperatureDifferenceC} C`,
+    `- Mean absolute temperature difference: ${observedClimatologyValidation.summary.meanAbsTemperatureDifferenceC} C`,
+    `- Max absolute precipitation difference: ${observedClimatologyValidation.summary.maxAbsPrecipitationDifferenceMm} mm/year`,
+    `- Mean absolute precipitation difference: ${observedClimatologyValidation.summary.meanAbsPrecipitationDifferenceMm} mm/year`,
+    `- Review flags: ${observedClimatologyValidation.summary.reviewFlagCount}`,
+    "",
+    "This matrix compares the packaged WorldClim v2.1 observed baseline against NASA POWER monthly point data for `T2M` and `PRECTOTCORR` over the overlapping 1981-2000 period. Monthly precipitation rates are converted from mm/day to annual totals using month-length weighting.",
+    "",
+    "This is observation-backed baseline evidence, not a correction layer and not proof of future projection skill.",
+    "",
+    "| Place | WorldClim temp C | NASA POWER temp C | Diff C | WorldClim precip mm | NASA POWER precip mm | Diff mm | Flags |",
+    "| --- | ---: | ---: | ---: | ---: | ---: | ---: | --- |",
+    ...observedClimatologyValidation.results.map((item) =>
+      `| ${item.name} | ${item.worldClimAnnualMeanTemperatureC} | ${item.nasaPowerAnnualMeanTemperatureC} | ${item.temperatureDifferenceC} | ${item.worldClimAnnualPrecipitationMm} | ${item.nasaPowerAnnualPrecipitationMm} | ${item.precipitationDifferenceMm} | ${item.flags.length ? mdCell(item.flags.join("; ")) : "none"} |`,
+    ),
+    "",
+    "Caveats:",
+    "",
+    ...observedClimatologyValidation.caveats.map((caveat) => `- ${caveat}`),
+    "",
+  ] : []),
   "## Not a Historical Hindcast",
   "",
-  "This is not yet a historical hindcast report. The current artifacts audit forecast trajectory contracts, trend shape from the current baseline year through 2100, and packaged WorldClim observed-baseline decoding. They do not compare historical projections for past years against NOAA, ERA5, station data, or another time-varying observation product.",
+  "This is not yet a historical future-projection hindcast report. The current artifacts audit forecast trajectory contracts, trend shape from the current baseline year through 2100, packaged WorldClim observed-baseline decoding, and an external NASA POWER observed-climatology comparison. They do not compare past forecast projections against station observations, ERA5, NOAA, or another time-varying historical target.",
   "",
-  "Until an observation-backed hindcast matrix exists, Phase 5 validation remains partial. The app can show this report as build evidence, but it must not claim historical forecast skill from it.",
+  "Until a time-varying projection-vs-observation hindcast matrix exists, Phase 5 validation remains partial. The app can show this report as build evidence, but it must not claim historical forecast skill from it.",
   "",
   "## Trend Review Summary",
   "",
@@ -125,6 +159,7 @@ const lines = [
   "",
   "```bash",
   "FUPIT_AUDIT_JSON=1 node scripts/audit-trajectories.mjs > data/trajectory-audit-summary.json",
+  "npm run build:observation-validation",
   "npm run report:validation",
   "npm run smoke:validation-report",
   "npm run audit:trajectories",
@@ -132,7 +167,7 @@ const lines = [
   "",
   "## Launch Implication",
   "",
-  "This report is useful public evidence because it makes the current build auditable and keeps scientific review flags visible. It does not replace the launch blockers in `docs/PLAN.md`: Replit republish, production cache purge/version proof, live verification, live screenshots, and a true observation-backed hindcast report.",
+  "This report is useful public evidence because it makes the current build auditable and keeps scientific review flags visible. It does not replace the launch blockers in `docs/PLAN.md`: Replit republish, production cache purge/version proof, live verification, live screenshots, and a true time-varying projection-vs-observation hindcast report.",
 ];
 
 writeFileSync(outPath, `${lines.join("\n")}\n`);

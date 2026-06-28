@@ -48,6 +48,26 @@ type ObservedBaselineAudit = {
   note: string;
 };
 
+type ObservedClimatologyValidation = {
+  version: string;
+  generatedAt: string;
+  status: string;
+  sourceIds: string[];
+  comparisonType: string;
+  period: { start: number; end: number };
+  cityCount: number;
+  summary: {
+    maxAbsTemperatureDifferenceC: number;
+    meanAbsTemperatureDifferenceC: number;
+    maxAbsPrecipitationDifferenceMm: number;
+    meanAbsPrecipitationDifferenceMm: number;
+    maxAbsPrecipitationRelativeDifferencePercent: number;
+    reviewFlagCount: number;
+  };
+  caveats: string[];
+  reviewFlags: Array<{ name: string; country: string; flag: string }>;
+};
+
 type CoastalProximityArtifact = {
   catalog: string;
   label: string;
@@ -219,6 +239,7 @@ export function loadDataQuality(): Record<string, unknown> {
   const rankingArtifacts = loadRankingArtifacts();
   const audit = readJson<TrajectoryAuditSummary>("data/trajectory-audit-summary.json");
   const observedBaselineAudit = readJson<ObservedBaselineAudit>("data/observed-baseline-audit.json");
+  const observedClimatologyValidation = readJson<ObservedClimatologyValidation>("data/observed-climatology-validation.nasa-power.json");
   const coastalProximity = readJson<CoastalProximityArtifact>("client/public/coastal-proximity.natural-earth-110m.json");
   const rankingEntries = rankingArtifacts.flatMap((artifact) => artifact.entries);
   const rankingYears = uniqueSorted(rankingEntries.map((entry) => entry.year));
@@ -256,6 +277,7 @@ export function loadDataQuality(): Record<string, unknown> {
       artifactInfo("data/rankings.natural-earth-country-population-weighted.json"),
       artifactInfo("data/trajectory-audit-summary.json"),
       artifactInfo("data/observed-baseline-audit.json"),
+      artifactInfo("data/observed-climatology-validation.nasa-power.json"),
       artifactInfo("client/public/coastal-proximity.natural-earth-110m.json"),
     ],
     sourceRegistry: {
@@ -368,16 +390,29 @@ export function loadDataQuality(): Record<string, unknown> {
       maxPrecipitationDifferenceMm: observedBaselineAudit.maxPrecipitationDifferenceMm,
       note: observedBaselineAudit.note,
     },
+    observedClimatologyValidation: {
+      artifactGeneratedAt: observedClimatologyValidation.generatedAt,
+      version: observedClimatologyValidation.version,
+      status: observedClimatologyValidation.status,
+      comparisonType: observedClimatologyValidation.comparisonType,
+      sourceIds: observedClimatologyValidation.sourceIds,
+      period: observedClimatologyValidation.period,
+      cityCount: observedClimatologyValidation.cityCount,
+      summary: observedClimatologyValidation.summary,
+      caveats: observedClimatologyValidation.caveats,
+      reviewFlags: observedClimatologyValidation.reviewFlags,
+    },
     validationReport: {
       repoPath: "docs/VALIDATION_REPORT.md",
-      status: "trajectory-audit and WorldClim baseline cross-check published; observation-backed historical hindcast pending",
+      status: "trajectory-audit, WorldClim baseline cross-check, and NASA POWER observed-climatology comparison published; time-varying projection hindcast pending",
       artifactGeneratedAt: audit.generatedAt,
-      historicalObservationHindcast: "pending",
+      historicalObservationHindcast: "partial-present-climate-baseline-validation",
       observedBaselineCrossCheck: "passed",
+      externalObservedClimatologyValidation: observedClimatologyValidation.status,
       trendReviewCount: audit.trendReview.length,
       trendReviewSummary: countTrendFlags(audit.trendReview),
       blockers: [
-        "No NOAA/ERA5/station historical projection-vs-observation hindcast matrix is packaged yet.",
+        "No station/ERA5/NOAA time-varying historical projection-vs-observation hindcast matrix is packaged yet.",
         "Trend-review flags require explanation or science review before they can be treated as resolved.",
       ],
     },
@@ -387,6 +422,7 @@ export function loadDataQuality(): Record<string, unknown> {
       "npm run smoke:node-model",
       "npm run smoke:node-performance",
       "npm run smoke:observed-baseline",
+      "npm run build:observation-validation",
       "npm run smoke:model",
       "npm run smoke:validation-report",
       "npm run audit:observed-baseline",
@@ -399,6 +435,7 @@ export function loadDataQuality(): Record<string, unknown> {
       "Ranking catalogs are bounded examples: curated cities, Natural Earth populated places, and Natural Earth-derived country aggregates; they are not complete GHSL urban-center, full national exposure, rural exposure, or population-weighted exposure rankings.",
       "Sea-level context now uses a Natural Earth 1:110m nearest-coast screen for coarse relevance copy, but still has no elevation, tides, storm surge, subsidence, defenses, rivers, drainage, or parcel-exposure model.",
       "Trend review flags are intentionally visible for scientific review and are not automatically hidden by green CI.",
+      "NASA POWER observed-climatology validation compares the packaged baseline to an independent observation/reanalysis product; it is not a forecast correction or proof of future projection skill.",
       "Freshwater, biodiversity, agriculture, infrastructure, and quantified AMOC local-impact layers remain withheld until source-registry approval and implementation.",
     ],
   };

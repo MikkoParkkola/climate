@@ -10,6 +10,7 @@
     "check": "tsc",
     "build:rankings": "node scripts/build-natural-earth-populated-places.mjs && node scripts/build-ranking-artifacts.mjs",
     "build:coastline": "node scripts/build-natural-earth-coastline-proximity.mjs",
+    "build:observation-validation": "tsx scripts/build-nasa-power-observation-validation.mjs",
     "report:validation": "node scripts/generate-validation-report.mjs",
     "validate:artifacts": "node scripts/validate-artifacts.mjs",
     "smoke:cache": "tsx scripts/smoke-cache-envelope.ts",

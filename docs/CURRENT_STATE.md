@@ -84,7 +84,8 @@ Local validation on 2026-06-27:
   catalog caveats.
 - `/data-quality` renders from the built server.
 - `npm run validate:artifacts` verifies ranking slices, the current climate-twin analog catalog,
-  registered source rows, trajectory-audit coverage, and validation-report sync.
+  registered source rows, trajectory-audit coverage, a 13-city NASA POWER/MERRA-2 external
+  observed-climatology baseline comparison, and validation-report sync.
 - `npm run smoke:educational-report` guards the Markdown educational summary export, source
   receipts, annual roadmap, climate twin context, and no-safe-haven/no-unregistered-enrichment
   caveats.
@@ -111,5 +112,6 @@ Local validation on 2026-06-27:
   and license review are complete.
 - Add freshwater, biodiversity, agriculture, fire-weather, infrastructure, and AMOC/context
   enrichments only after source/license registry approval.
-- Replace the current trajectory validation report with a true observation-backed hindcast
-  comparison once a historical observation matrix is packaged.
+- Expand the current validation report beyond fixture trajectory checks, WorldClim baseline
+  audit, and NASA POWER observed-climatology baseline comparison into a true time-varying
+  projection-vs-observation hindcast matrix once historical projection targets are packaged.

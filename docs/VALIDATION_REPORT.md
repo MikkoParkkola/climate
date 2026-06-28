@@ -33,11 +33,52 @@ It is intentionally conservative: it records what the current artifact proves, w
 
 This cross-check proves that the packaged WorldClim observed baseline is decoded consistently by the Python serving engine and the Node grid reader for the fixture cities. It is baseline provenance evidence, not a claim that the forecast has been historically hindcast against time-varying observations.
 
+## NASA POWER / MERRA-2 observed climatology
+
+- Validation artifact version: `nasa-power-observed-climatology-validation-v1`
+- Validation artifact generated at: `2026-06-28T16:52:44.318Z`
+- Status: `passed-with-caveats`
+- Fixture cities: 13
+- Period compared: 1981-2000
+- Source IDs: worldclim-v2-1, nasa-power-meteorology-monthly-v10
+- Max absolute temperature difference: 1.38 C
+- Mean absolute temperature difference: 0.61 C
+- Max absolute precipitation difference: 269.9 mm/year
+- Mean absolute precipitation difference: 83.72 mm/year
+- Review flags: 1
+
+This matrix compares the packaged WorldClim v2.1 observed baseline against NASA POWER monthly point data for `T2M` and `PRECTOTCORR` over the overlapping 1981-2000 period. Monthly precipitation rates are converted from mm/day to annual totals using month-length weighting.
+
+This is observation-backed baseline evidence, not a correction layer and not proof of future projection skill.
+
+| Place | WorldClim temp C | NASA POWER temp C | Diff C | WorldClim precip mm | NASA POWER precip mm | Diff mm | Flags |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | --- |
+| Helsinki | 5.19 | 5.27 | -0.07 | 638.99 | 757.24 | -118.26 | none |
+| London | 10.56 | 9.79 | 0.78 | 640.21 | 701.46 | -61.24 | none |
+| Amsterdam | 9.75 | 9.72 | 0.03 | 840.72 | 827.14 | 13.58 | none |
+| Paris | 11.48 | 10.33 | 1.15 | 637.06 | 689.5 | -52.44 | none |
+| Prague | 9.35 | 7.97 | 1.38 | 495.86 | 630.18 | -134.33 | none |
+| Kyiv | 8.09 | 7.26 | 0.82 | 602.92 | 602.32 | 0.61 | none |
+| Bangkok | 28.39 | 27.71 | 0.68 | 1292.75 | 1274.48 | 18.27 | none |
+| New York | 12.14 | 11.56 | 0.57 | 1198.85 | 1178.54 | 20.32 | none |
+| San Francisco | 14.2 | 13.5 | 0.69 | 796.74 | 666.88 | 129.86 | none |
+| Singapore | 26.82 | 26.76 | 0.06 | 2328.57 | 2058.67 | 269.9 | none |
+| Mumbai | 27.26 | 26.42 | 0.85 | 2194.72 | 2025.36 | 169.37 | none |
+| Cairo | 21.63 | 21.18 | 0.45 | 25.3 | 49.74 | -24.44 | dry-site-relative-precipitation-difference-high |
+| Manaus | 26.85 | 26.43 | 0.42 | 2270.39 | 2346.14 | -75.74 | none |
+
+Caveats:
+
+- NASA POWER/MERRA-2 and WorldClim are independent gridded products with different source data, spatial resolution, bias correction, and averaging periods.
+- This validates that the packaged observed baseline is broadly consistent with an external observation/reanalysis product for fixture cities.
+- This does not validate future CMIP6 scenario trends, local station microclimates, parcel-scale exposure, or historical forecast skill.
+- Precipitation differences can be large in dry or coastal-grid locations and should be interpreted as data-product uncertainty, not a correction factor.
+
 ## Not a Historical Hindcast
 
-This is not yet a historical hindcast report. The current artifacts audit forecast trajectory contracts, trend shape from the current baseline year through 2100, and packaged WorldClim observed-baseline decoding. They do not compare historical projections for past years against NOAA, ERA5, station data, or another time-varying observation product.
+This is not yet a historical future-projection hindcast report. The current artifacts audit forecast trajectory contracts, trend shape from the current baseline year through 2100, packaged WorldClim observed-baseline decoding, and an external NASA POWER observed-climatology comparison. They do not compare past forecast projections against station observations, ERA5, NOAA, or another time-varying historical target.
 
-Until an observation-backed hindcast matrix exists, Phase 5 validation remains partial. The app can show this report as build evidence, but it must not claim historical forecast skill from it.
+Until a time-varying projection-vs-observation hindcast matrix exists, Phase 5 validation remains partial. The app can show this report as build evidence, but it must not claim historical forecast skill from it.
 
 ## Trend Review Summary
 
@@ -86,6 +127,7 @@ Interpretation notes:
 
 ```bash
 FUPIT_AUDIT_JSON=1 node scripts/audit-trajectories.mjs > data/trajectory-audit-summary.json
+npm run build:observation-validation
 npm run report:validation
 npm run smoke:validation-report
 npm run audit:trajectories
@@ -93,4 +135,4 @@ npm run audit:trajectories
 
 ## Launch Implication
 
-This report is useful public evidence because it makes the current build auditable and keeps scientific review flags visible. It does not replace the launch blockers in `docs/PLAN.md`: Replit republish, production cache purge/version proof, live verification, live screenshots, and a true observation-backed hindcast report.
+This report is useful public evidence because it makes the current build auditable and keeps scientific review flags visible. It does not replace the launch blockers in `docs/PLAN.md`: Replit republish, production cache purge/version proof, live verification, live screenshots, and a true time-varying projection-vs-observation hindcast report.

@@ -106,9 +106,27 @@ type DataQuality = {
     status: string;
     artifactGeneratedAt: string;
     historicalObservationHindcast: string;
+    externalObservedClimatologyValidation?: string;
     trendReviewCount: number;
     trendReviewSummary: Array<{ kind: string; count: number }>;
     blockers: string[];
+  };
+  observedClimatologyValidation: {
+    artifactGeneratedAt: string;
+    version: string;
+    status: string;
+    sourceIds: string[];
+    period: { start: number; end: number };
+    cityCount: number;
+    summary: {
+      maxAbsTemperatureDifferenceC: number;
+      meanAbsTemperatureDifferenceC: number;
+      maxAbsPrecipitationDifferenceMm: number;
+      meanAbsPrecipitationDifferenceMm: number;
+      reviewFlagCount: number;
+    };
+    caveats: string[];
+    reviewFlags: Array<{ name: string; country: string; flag: string }>;
   };
   executableChecks: string[];
   limitations: string[];
@@ -334,6 +352,28 @@ export default function DataQualityPage() {
                 <div className="grid gap-3 sm:grid-cols-2">
                   <Stat label="Trend review items" value={data.validationReport.trendReviewCount} />
                   <Stat label="Hindcast status" value={data.validationReport.historicalObservationHindcast} />
+                </div>
+                <div className="rounded border border-blue-100 bg-blue-50 p-3 text-sm text-slate-700">
+                  <div className="font-semibold text-slate-900">NASA POWER observed-climatology baseline check</div>
+                  <p className="mt-1">
+                    Status {data.observedClimatologyValidation.status}; {data.observedClimatologyValidation.cityCount} fixture cities,
+                    period {data.observedClimatologyValidation.period.start}-{data.observedClimatologyValidation.period.end}.
+                    Max absolute temperature difference {data.observedClimatologyValidation.summary.maxAbsTemperatureDifferenceC} C;
+                    max absolute precipitation difference {data.observedClimatologyValidation.summary.maxAbsPrecipitationDifferenceMm} mm/year.
+                  </p>
+                  <p className="mt-1 text-xs text-slate-600">
+                    Sources: {data.observedClimatologyValidation.sourceIds.join(", ")}. This compares observed climatology products;
+                    it is not a forecast correction or proof of future projection skill.
+                  </p>
+                  {data.observedClimatologyValidation.reviewFlags.length > 0 && (
+                    <div className="mt-2 flex flex-wrap gap-2 text-xs">
+                      {data.observedClimatologyValidation.reviewFlags.map((flag) => (
+                        <span key={`${flag.name}-${flag.flag}`} className="rounded border border-blue-200 bg-white px-2 py-1">
+                          {flag.name}: {flag.flag}
+                        </span>
+                      ))}
+                    </div>
+                  )}
                 </div>
                 <ul className="list-disc space-y-1 pl-5 text-sm text-slate-600">
                   {data.validationReport.blockers.map((blocker) => <li key={blocker}>{blocker}</li>)}
