@@ -441,6 +441,11 @@ Replit remains the origin; CDN absorbs read spikes.
   response parity exists. `npm run smoke:node-model` now covers the first
   full-response parity matrix; the core trajectory/climate-twin helpers can
   opt into Node while Python remains the default bridge.
+- Guard the local scale target with `npm run smoke:node-performance`, which
+  warms the in-process grid reader, runs fixture trajectories across scenarios,
+  validates the returned contract has no nulls, and asserts warm p95 stays under
+  the 500 ms Node target unless `FUPIT_NODE_TRAJECTORY_P95_MS` is explicitly
+  overridden for slower hardware.
 - Keep Python fallback for one release only.
 
 ### Phase 4 - Enrichments
@@ -464,6 +469,8 @@ Replit remains the origin; CDN absorbs read spikes.
 - `npm run smoke:model`
 - `npm run audit:trajectories`
 - Node grid parity tests once implemented.
+- `npm run smoke:node-performance` for the warm in-process Node trajectory p95
+  target.
 - Documentation checks:
   - design contains hosting constraints, performance targets, cache strategy, scale plan, migration phases, and science gates.
   - public docs stay focused on the climate app, its science limits, and its educational/research purpose.
