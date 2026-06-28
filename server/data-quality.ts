@@ -9,6 +9,7 @@ type RankingArtifact = {
   sourceRegistryVersion: string;
   generatedAt: string;
   catalog: string;
+  catalogLabel?: string;
   entries: Array<{
     catalog: string;
     catalogSize: number;
@@ -70,6 +71,13 @@ function uniqueSorted<T>(values: T[]): T[] {
   return Array.from(new Set(values)).sort((a, b) => String(a).localeCompare(String(b)));
 }
 
+function loadRankingArtifacts(): RankingArtifact[] {
+  return [
+    "data/rankings.curated-cities.json",
+    "data/rankings.natural-earth-populated-places.json",
+  ].map((relativePath) => readJson<RankingArtifact>(relativePath));
+}
+
 function trendFlagKind(flag: string): string {
   return flag.split("=")[0];
 }
@@ -116,12 +124,27 @@ export function loadDataQuality(): Record<string, unknown> {
     decoded_bytes: number;
     source?: { name?: string; period?: string; resolution?: string; citation?: string };
   }>("data/worldclim10m.manifest.json");
-  const rankingCities = readJson<Array<unknown>>("data/ranking_cities.json");
-  const rankings = readJson<RankingArtifact>("data/rankings.curated-cities.json");
+  const rankingArtifacts = loadRankingArtifacts();
   const audit = readJson<TrajectoryAuditSummary>("data/trajectory-audit-summary.json");
   const observedBaselineAudit = readJson<ObservedBaselineAudit>("data/observed-baseline-audit.json");
-  const rankingYears = uniqueSorted(rankings.entries.map((entry) => entry.year));
-  const rankingSourceIds = uniqueSorted(rankings.entries.flatMap((entry) => entry.sourceIds));
+  const rankingEntries = rankingArtifacts.flatMap((artifact) => artifact.entries);
+  const rankingYears = uniqueSorted(rankingEntries.map((entry) => entry.year));
+  const rankingSourceIds = uniqueSorted(rankingEntries.flatMap((entry) => entry.sourceIds));
+  const rankingCatalogs = rankingArtifacts.map((artifact) => {
+    const first = artifact.entries[0];
+    const years = uniqueSorted(artifact.entries.map((entry) => entry.year));
+    return {
+      catalog: artifact.catalog,
+      label: artifact.catalogLabel ?? artifact.catalog,
+      artifactGeneratedAt: artifact.generatedAt,
+      catalogSize: first?.catalogSize ?? 0,
+      entryCount: artifact.entries.length,
+      yearRange: [years[0], years[years.length - 1]],
+      metrics: uniqueSorted(artifact.entries.map((entry) => entry.metric)),
+      sourceIds: uniqueSorted(artifact.entries.flatMap((entry) => entry.sourceIds)),
+      caveats: uniqueSorted(artifact.entries.flatMap((entry) => entry.caveats)),
+    };
+  });
 
   cachedDataQuality = {
     version: "data-quality-v1",
@@ -134,7 +157,9 @@ export function loadDataQuality(): Record<string, unknown> {
       artifactInfo("data/worldclim10m.i16.gz"),
       artifactInfo("data/worldclim10m.manifest.json"),
       artifactInfo("data/source-registry.json"),
+      artifactInfo("data/population-centers.natural-earth-110m.json"),
       artifactInfo("data/rankings.curated-cities.json"),
+      artifactInfo("data/rankings.natural-earth-populated-places.json"),
       artifactInfo("data/trajectory-audit-summary.json"),
       artifactInfo("data/observed-baseline-audit.json"),
     ],
@@ -184,16 +209,17 @@ export function loadDataQuality(): Record<string, unknown> {
       gridHash: primaryManifest.artifactHashes?.[primaryManifest.binary],
     },
     rankings: {
-      artifactGeneratedAt: rankings.generatedAt,
-      catalog: rankings.catalog,
-      catalogSize: rankingCities.length,
-      entryCount: rankings.entries.length,
-      scenarios: uniqueSorted(rankings.entries.map((entry) => entry.scenario)),
+      catalog: "multiple_bounded_catalogs",
+      catalogSize: rankingCatalogs.reduce((total, catalog) => total + catalog.catalogSize, 0),
+      catalogCount: rankingCatalogs.length,
+      catalogs: rankingCatalogs,
+      entryCount: rankingEntries.length,
+      scenarios: uniqueSorted(rankingEntries.map((entry) => entry.scenario)),
       yearRange: [rankingYears[0], rankingYears[rankingYears.length - 1]],
-      metrics: uniqueSorted(rankings.entries.map((entry) => entry.metric)),
-      directions: uniqueSorted(rankings.entries.map((entry) => entry.direction)),
+      metrics: uniqueSorted(rankingEntries.map((entry) => entry.metric)),
+      directions: uniqueSorted(rankingEntries.map((entry) => entry.direction)),
       sourceIds: rankingSourceIds,
-      caveats: uniqueSorted(rankings.entries.flatMap((entry) => entry.caveats)),
+      caveats: uniqueSorted(rankingEntries.flatMap((entry) => entry.caveats)),
     },
     trajectoryAudit: {
       artifactGeneratedAt: audit.generatedAt,
@@ -247,7 +273,7 @@ export function loadDataQuality(): Record<string, unknown> {
     limitations: [
       "This dashboard describes the packaged artifact bundle. It does not prove the public Replit deployment is current.",
       "Production climate_model_cache still requires purge or live version-guard proof after deployment.",
-      "Curated-city rankings are bounded examples, not complete global or country rankings.",
+      "Ranking catalogs are bounded examples: curated cities and Natural Earth populated places, not complete country, GHSL urban-center, or population-weighted exposure rankings.",
       "Trend review flags are intentionally visible for scientific review and are not automatically hidden by green CI.",
       "Freshwater, biodiversity, agriculture, infrastructure, and quantified AMOC local-impact layers remain withheld until source-registry approval and implementation.",
     ],

@@ -160,6 +160,57 @@ function runTrajectory(pythonBin, sample, years, scenario = "ssp245") {
   }
 }
 
+function runRankings(pythonBin, year = 2050, scenario = "ssp245", catalog = undefined) {
+  const args = [modelPath, "--rankings", String(year), scenario];
+  if (catalog) {
+    args.push(catalog);
+  }
+  const result = spawnSync(pythonBin, args, {
+    cwd: repoRoot,
+    encoding: "utf8",
+    maxBuffer: 16 * 1024 * 1024,
+  });
+  if (result.error) {
+    throw result.error;
+  }
+  if (result.status !== 0) {
+    throw new Error(`rankings process failed with exit ${result.status}: ${result.stderr || result.stdout}`);
+  }
+  try {
+    return JSON.parse(result.stdout);
+  } catch (error) {
+    throw new Error(`rankings output was not valid JSON: ${error.message}`);
+  }
+}
+
+function validateNaturalEarthRankings(pythonBin) {
+  const payload = runRankings(pythonBin, 2050, "ssp245", "population-centers.natural-earth-110m.json");
+  assert(payload.year === 2050, "Natural Earth rankings year mismatch");
+  assert(payload.scenario === "ssp245", "Natural Earth rankings scenario mismatch");
+  assert(Array.isArray(payload.rankings), "Natural Earth rankings missing rankings array");
+  assert(payload.rankings.length >= 50, "Natural Earth rankings catalog unexpectedly small");
+
+  payload.rankings.forEach((row, index) => {
+    assert(row.id, `Natural Earth rankings row ${index} missing id`);
+    assert(row.name, `Natural Earth rankings row ${index} missing name`);
+    assert(Number.isFinite(row.lat), `Natural Earth rankings row ${index} missing latitude`);
+    assert(Number.isFinite(row.lng), `Natural Earth rankings row ${index} missing longitude`);
+    assert(Number.isFinite(row.population), `Natural Earth rankings row ${index} missing population`);
+    assert(row.population >= 3_000_000, `Natural Earth rankings row ${index} below pop_max threshold`);
+    assert(row.populationField === "pop_max", `Natural Earth rankings row ${index} missing population field disclosure`);
+    assert(
+      String(row.inclusionReason || "").includes("Natural Earth 1:110m"),
+      `Natural Earth rankings row ${index} missing catalog inclusion reason`,
+    );
+    assert(Number.isFinite(row.temperature?.annual_mean), `Natural Earth rankings row ${index} missing annual temperature`);
+    assert(Number.isFinite(row.precipitation?.annual_total), `Natural Earth rankings row ${index} missing precipitation total`);
+    assert(Number.isFinite(row.extremes?.heat_stress_days), `Natural Earth rankings row ${index} missing heat stress days`);
+    assert(Number.isFinite(row.habitability?.score), `Natural Earth rankings row ${index} missing habitability score`);
+    assert(Array.isArray(row.metadata?.source_trail), `Natural Earth rankings row ${index} missing source trail`);
+    assert(row.metadata.source_trail.length >= 4, `Natural Earth rankings row ${index} source trail incomplete`);
+  });
+}
+
 function assertInvalidYearRejected(pythonBin) {
   const invalidYear = "2200";
   const commands = [
@@ -343,6 +394,7 @@ highScenarioTrajectory.points.forEach((point, index) => {
 
 assertInvalidYearRejected(pythonBin);
 assertUnsupportedFullScenarioRejected(pythonBin);
+validateNaturalEarthRankings(pythonBin);
 
 for (const { sample, projection } of results) {
   console.log(
@@ -354,5 +406,6 @@ for (const { sample, projection } of results) {
 console.log(`grounded_model contract smoke passed for ${samples.length} cities using ${pythonBin}`);
 console.log(`grounded_model trajectory smoke passed for ${trajectorySample.name} years ${trajectoryYears.join(",")}`);
 console.log("grounded_model non-default scenario trajectory smoke passed for ssp585");
+console.log("grounded_model Natural Earth population-place ranking catalog smoke passed");
 console.log("grounded_model rejects forecast years beyond 2100");
 console.log("grounded_model rejects SSP1-1.9 full forecasts until ETCCDI extremes exist");

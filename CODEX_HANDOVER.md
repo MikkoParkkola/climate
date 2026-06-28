@@ -14,7 +14,7 @@ file as the current handoff only.
 - Legacy location-id projection routes return HTTP 410.
 - Cache rows are versioned by scenario, cache version, and source-registry version.
 - A source registry artifact exists at `data/source-registry.json`.
-- Curated-city rankings are served from `data/rankings.curated-cities.json`, not live Python loops.
+- Curated-city and Natural Earth population-place rankings are served from static artifacts, not live Python loops.
 - Local production-style validation passes with a throwaway Postgres database.
 
 ## Local validation already proven
@@ -31,7 +31,7 @@ The current local validation covers:
 - Artifact validation before build.
 - Production build.
 - Cache envelope smoke.
-- Ranking artifact smoke.
+- Ranking artifact smoke, including the Natural Earth population-place catalog.
 - Five-city grounded model smoke.
 - Annual trajectory audit.
 
@@ -39,8 +39,8 @@ Additional Postgres-backed local smoke has proven:
 
 - `GET /api/health` returns the expected engine/cache/source-registry metadata.
 - `GET /api/source-registry` returns registry version `source-registry-v1`.
-- `GET /api/climate/global-rankings` returns curated rankings for supported metric/year/scenario
-  slices and 404s unsupported slices.
+- `GET /api/climate/global-rankings` returns curated and Natural Earth population-place rankings
+  for supported metric/year/scenario slices and 404s unsupported slices.
 - `POST /api/climate-trajectory` for Helsinki 2050 works for `ssp245` and `ssp585`.
 - Repeated `ssp245` smoke returns a cache hit while `ssp585` remains a separate cache row.
 - Invalid year/scenario requests return 400.

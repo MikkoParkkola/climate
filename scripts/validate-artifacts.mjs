@@ -27,7 +27,9 @@ for (const relativePath of [
   "data/manifest.json",
   "data/worldclim10m.manifest.json",
   "data/source-registry.json",
+  "data/population-centers.natural-earth-110m.json",
   "data/rankings.curated-cities.json",
+  "data/rankings.natural-earth-populated-places.json",
   "data/trajectory-audit-summary.json",
   "data/observed-baseline-audit.json",
   "docs/VALIDATION_REPORT.md",
@@ -42,6 +44,7 @@ assert(registry.version === sourceRegistryVersion, "source registry version mism
 assert(Array.isArray(registry.rows) && registry.rows.length >= 10, "source registry rows incomplete");
 const sourceIds = new Set(registry.rows.map((row) => row.sourceId));
 assert(sourceIds.has("ipcc-ar6-amoc"), "AMOC/Gulf Stream context source row missing");
+assert(sourceIds.has("natural-earth-populated-places-110m-v5"), "Natural Earth population-place source row missing");
 const requireRegisteredSources = (ids, context) => {
   assert(Array.isArray(ids) && ids.length > 0, `${context} source ids missing`);
   for (const sourceId of ids) {
@@ -84,18 +87,39 @@ assert(
   "grid artifact hash mismatch",
 );
 
-const rankings = readJson("data/rankings.curated-cities.json");
-assert(rankings.methodVersion === modelVersion, "ranking method version mismatch");
-assert(rankings.sourceRegistryVersion === sourceRegistryVersion, "ranking source registry version mismatch");
-assert(Array.isArray(rankings.entries) && rankings.entries.length > 0, "ranking entries missing");
+const populatedPlaces = readJson("data/population-centers.natural-earth-110m.json");
+assert(populatedPlaces.catalog === "natural_earth_populated_places_110m", "Natural Earth catalog id mismatch");
+assert(populatedPlaces.sourceId === "natural-earth-populated-places-110m-v5", "Natural Earth catalog source id mismatch");
+assert(populatedPlaces.populationThreshold === 3000000, "Natural Earth population threshold mismatch");
+assert(Array.isArray(populatedPlaces.places) && populatedPlaces.places.length >= 50, "Natural Earth places missing");
+for (const place of populatedPlaces.places) {
+  assert(Number.isFinite(place.lat) && Number.isFinite(place.lng), "Natural Earth place coordinates invalid");
+  assert(Number.isFinite(place.population) && place.population >= populatedPlaces.populationThreshold, "Natural Earth place population invalid");
+}
 
-for (const entry of rankings.entries) {
-  assert(entry.methodVersion === modelVersion, "ranking entry method version mismatch");
-  assert(entry.sourceRegistryVersion === sourceRegistryVersion, "ranking entry source registry mismatch");
-  assert(entry.catalog === "curated_cities", "ranking catalog mismatch");
-  assert(["highest", "lowest"].includes(entry.direction), "ranking direction invalid");
-  assert(Array.isArray(entry.rows) && entry.rows.length > 0, "ranking rows missing");
-  requireRegisteredSources(entry.sourceIds, "ranking");
+const rankingArtifacts = [
+  readJson("data/rankings.curated-cities.json"),
+  readJson("data/rankings.natural-earth-populated-places.json"),
+];
+const rankingCatalogs = new Set(rankingArtifacts.map((artifact) => artifact.catalog));
+assert(rankingCatalogs.has("curated_cities"), "curated ranking catalog missing");
+assert(rankingCatalogs.has("natural_earth_populated_places_110m"), "Natural Earth ranking catalog missing");
+
+let rankingEntryCount = 0;
+for (const rankings of rankingArtifacts) {
+  assert(rankings.methodVersion === modelVersion, "ranking method version mismatch");
+  assert(rankings.sourceRegistryVersion === sourceRegistryVersion, "ranking source registry version mismatch");
+  assert(Array.isArray(rankings.entries) && rankings.entries.length > 0, "ranking entries missing");
+  rankingEntryCount += rankings.entries.length;
+
+  for (const entry of rankings.entries) {
+    assert(entry.methodVersion === modelVersion, "ranking entry method version mismatch");
+    assert(entry.sourceRegistryVersion === sourceRegistryVersion, "ranking entry source registry mismatch");
+    assert(entry.catalog === rankings.catalog, "ranking catalog mismatch");
+    assert(["highest", "lowest"].includes(entry.direction), "ranking direction invalid");
+    assert(Array.isArray(entry.rows) && entry.rows.length > 0, "ranking rows missing");
+    requireRegisteredSources(entry.sourceIds, "ranking");
+  }
 }
 
 const analog = readJson("client/public/climate-analog-catalog.current.json");
@@ -146,4 +170,4 @@ assert(validationReport.includes(observedBaselineAudit.generatedAt), "validation
 assert(validationReport.includes("Trend review flags are unresolved scientific-review evidence"), "validation report must keep trend flags visible");
 assert(scientificGrounding.includes("packed 2030 scenario layer"), "scientific grounding must disclose near-current source-year basis");
 
-console.log(`artifact validation passed: ${rankings.entries.length} ranking slices, ${analog.candidateCount} analog candidates, ${registry.rows.length} source rows, ${audit.resultCount} audit results, ${observedBaselineAudit.cityCount} baseline checks`);
+console.log(`artifact validation passed: ${rankingEntryCount} ranking slices, ${analog.candidateCount} analog candidates, ${registry.rows.length} source rows, ${audit.resultCount} audit results, ${observedBaselineAudit.cityCount} baseline checks`);

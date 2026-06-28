@@ -6,10 +6,11 @@ const report = loadDataQuality() as Record<string, any>;
 assert.equal(report.version, "data-quality-v1");
 assert.ok(String(report.methodVersion).startsWith("grounded-grid-i16-v2"));
 assert.equal(report.sourceRegistryVersion, "source-registry-v1");
-assert.ok(Array.isArray(report.artifacts) && report.artifacts.length >= 7);
+assert.ok(Array.isArray(report.artifacts) && report.artifacts.length >= 10);
 assert.ok(report.artifacts.every((artifact: any) => artifact.bytes > 0 && /^[a-f0-9]{64}$/.test(artifact.sha256)));
-assert.equal(report.sourceRegistry.rowCount, 10);
+assert.equal(report.sourceRegistry.rowCount, 11);
 assert.ok(report.sourceRegistry.rows.some((row: any) => row.sourceId === "ipcc-ar6-amoc" && row.displayPolicy === "show-as-context-no-local-correction"));
+assert.ok(report.sourceRegistry.rows.some((row: any) => row.sourceId === "natural-earth-populated-places-110m-v5" && row.displayPolicy === "show-with-bounded-catalog-caveat"));
 assert.ok(report.sourceRegistry.rows.some((row: any) => row.sourceId === "unep-egr-2025-current-policies" && row.displayPolicy === "show-as-policy-context-no-local-correction"));
 assert.ok(report.sourceRegistry.rows.some((row: any) => row.sourceId === "cat-2025-warming-projections" && row.displayPolicy === "show-as-policy-context-no-local-correction"));
 assert.equal(report.defaultScenarioPolicy.scenario, "ssp245");
@@ -20,8 +21,12 @@ assert.deepEqual(report.defaultScenarioPolicy.sourceIds, ["unep-egr-2025-current
 assert.deepEqual(report.defaultScenarioPolicy.supportedFullForecastScenarios, ["ssp126", "ssp245", "ssp370", "ssp585"]);
 assert.equal(report.defaultScenarioPolicy.gridHash, report.grids.primary.artifactHash);
 assert.ok(String(report.defaultScenarioPolicy.gridHash).startsWith("sha256:0dc3f9d188e4d757"));
-assert.equal(report.rankings.catalogSize, 45);
-assert.equal(report.rankings.entryCount, 816);
+assert.equal(report.rankings.catalogCount, 2);
+assert.equal(report.rankings.catalogSize, 111);
+assert.equal(report.rankings.entryCount, 1632);
+assert.ok(report.rankings.catalogs.some((catalog: any) => catalog.catalog === "curated_cities" && catalog.catalogSize === 45));
+assert.ok(report.rankings.catalogs.some((catalog: any) => catalog.catalog === "natural_earth_populated_places_110m" && catalog.catalogSize === 66));
+assert.ok(report.rankings.sourceIds.includes("natural-earth-populated-places-110m-v5"));
 assert.equal(report.trajectoryAudit.cityCount, 13);
 assert.equal(report.trajectoryAudit.scenarioCount, 4);
 assert.equal(report.trajectoryAudit.yearCount, 76);
@@ -38,6 +43,7 @@ assert.ok(report.validationReport.blockers.some((blocker: string) => blocker.inc
 assert.ok(report.validationReport.trendReviewSummary.some((item: any) => item.kind === "precipStep" && item.count >= 1));
 assert.ok(report.executableChecks.includes("npm run smoke:node-performance"));
 assert.ok(report.limitations.some((limit: string) => limit.includes("Replit deployment")));
+assert.ok(report.limitations.some((limit: string) => limit.includes("Natural Earth populated places")));
 assert.ok(report.limitations.some((limit: string) => limit.includes("quantified AMOC")));
 
 console.log("data-quality smoke passed");

@@ -521,14 +521,24 @@ def _parse_scenario(value):
     return value
 
 
+def _load_ranking_catalog(catalog_arg=None):
+    catalog_file = catalog_arg or "ranking_cities.json"
+    catalog_path = catalog_file if os.path.isabs(catalog_file) else os.path.join(DATA, catalog_file)
+    if not os.path.exists(catalog_path):
+        raise ValueError(f"ranking catalog not found: {catalog_file}")
+    catalog = json.load(open(catalog_path))
+    rows = catalog.get("places") if isinstance(catalog, dict) else catalog
+    if not isinstance(rows, list):
+        raise ValueError("ranking catalog must be a list or an object with a places list")
+    return rows
+
+
 def main():
     try:
         a = sys.argv[1:]
         if a and a[0] == "--rankings":
             year = _parse_year(a[1]); scenario = _parse_scenario(a[2] if len(a) > 2 else DEFAULT_SCENARIO)
-            # rank a fixed set of major cities by habitability (grounded)
-            from_cities = json.load(open(os.path.join(DATA, "ranking_cities.json"))) \
-                if os.path.exists(os.path.join(DATA, "ranking_cities.json")) else []
+            from_cities = _load_ranking_catalog(a[3] if len(a) > 3 else None)
             out = []
             for ci in from_cities:
                 p = project(ci["lat"], ci["lng"], year, scenario)

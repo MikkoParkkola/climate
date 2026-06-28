@@ -16,6 +16,19 @@ const DEFAULT_SCENARIO_EXPLANATION =
 
 const YEARS = [2026, 2030, 2050, 2075, 2100];
 
+const CATALOGS = [
+  {
+    id: "curated_cities",
+    label: "Curated examples",
+    description: "45 hand-picked places used for examples, smoke tests, and communication.",
+  },
+  {
+    id: "natural_earth_populated_places_110m",
+    label: "Population places",
+    description: "Natural Earth 1:110m populated places with pop_max >= 3 million.",
+  },
+] as const;
+
 const METRICS = [
   { id: "habitability_score", label: "Habitability score", defaultDirection: "highest" },
   { id: "heat_stress_days", label: "Heat stress", defaultDirection: "highest" },
@@ -45,6 +58,9 @@ type Ranking = {
     country: string;
     lat: number;
     lng: number;
+    population?: number;
+    populationField?: string;
+    inclusionReason?: string;
     value: number;
     unit: string;
     uncertainty?: { low?: number | null; high?: number | null };
@@ -70,6 +86,7 @@ function uncertaintyLabel(row: Ranking["rows"][number]) {
 }
 
 export default function RankingsPage() {
+  const [catalog, setCatalog] = useState<(typeof CATALOGS)[number]["id"]>("curated_cities");
   const [scenario, setScenario] = useState(DEFAULT_SCENARIO);
   const [year, setYear] = useState(2050);
   const [metric, setMetric] = useState("habitability_score");
@@ -77,7 +94,7 @@ export default function RankingsPage() {
 
   const query = useMemo(() => {
     const params = new URLSearchParams({
-      catalog: "curated_cities",
+      catalog,
       scenario,
       year: String(year),
       metric,
@@ -85,10 +102,11 @@ export default function RankingsPage() {
       limit: "10",
     });
     return `/api/climate/global-rankings?${params.toString()}`;
-  }, [direction, metric, scenario, year]);
+  }, [catalog, direction, metric, scenario, year]);
 
   const { data, isLoading, error } = useQuery<Ranking>({ queryKey: [query] });
   const selectedMetric = METRICS.find((item) => item.id === metric) ?? METRICS[0];
+  const selectedCatalog = CATALOGS.find((item) => item.id === catalog) ?? CATALOGS[0];
 
   return (
     <div className="min-h-screen w-full bg-slate-50 px-4 py-10 text-slate-900">
@@ -101,15 +119,27 @@ export default function RankingsPage() {
           </nav>
           <div>
             <p className="text-sm font-semibold uppercase tracking-wide text-amber-700">Bounded rankings</p>
-            <h1 className="text-3xl font-bold">Top-10 climate signals in the curated city catalog</h1>
+            <h1 className="text-3xl font-bold">Top-10 climate signals in bounded place catalogs</h1>
             <p className="mt-2 max-w-3xl text-slate-600">
-              These lists are teaching examples from a documented 45-place catalog. They are not
-              global winner/loser lists and they do not identify safe cities or climate havens.
+              These lists are teaching examples from documented bounded catalogs, including a
+              curated example set and a Natural Earth population-place catalog. They are not
+              climate-haven, safety, or complete winner/loser lists.
             </p>
           </div>
         </header>
 
-        <section className="grid gap-3 rounded border border-slate-200 bg-white p-4 md:grid-cols-4">
+        <section className="grid gap-3 rounded border border-slate-200 bg-white p-4 md:grid-cols-5">
+          <label className="space-y-1 text-sm">
+            <span className="font-medium text-slate-700">Catalog</span>
+            <select
+              value={catalog}
+              onChange={(event) => setCatalog(event.target.value as (typeof CATALOGS)[number]["id"])}
+              className="w-full rounded border border-slate-300 bg-white px-3 py-2"
+            >
+              {CATALOGS.map((item) => <option key={item.id} value={item.id}>{item.label}</option>)}
+            </select>
+            <span className="block text-xs leading-5 text-slate-500">{selectedCatalog.description}</span>
+          </label>
           <label className="space-y-1 text-sm">
             <span className="font-medium text-slate-700">Metric</span>
             <select
@@ -206,6 +236,14 @@ export default function RankingsPage() {
                           <td className="px-3 py-2">
                             <div className="font-medium">{row.name}, {row.country}</div>
                             <div className="text-xs text-slate-500">{row.lat.toFixed(2)}, {row.lng.toFixed(2)}</div>
+                            {Number.isFinite(row.population) && (
+                              <div className="text-xs text-slate-500">
+                                Catalog {row.populationField ?? "population"} {Number(row.population).toLocaleString()}
+                              </div>
+                            )}
+                            {row.inclusionReason && (
+                              <div className="max-w-md text-xs text-slate-500">{row.inclusionReason}</div>
+                            )}
                           </td>
                           <td className="px-3 py-2 font-medium">{formatValue(row.value, row.unit)}</td>
                           <td className="px-3 py-2 text-slate-600">{uncertaintyLabel(row)}</td>
@@ -244,7 +282,8 @@ export default function RankingsPage() {
                   </dl>
                   <p className="flex gap-2 text-xs text-slate-500">
                     <Info className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden />
-                    Complete global, country, and population-weighted rankings require a licensed population catalog and are not implied by this curated example set.
+                    Natural Earth population-place rankings are still a bounded basemap catalog, not GHSL urban centers,
+                    not country rankings, and not population-weighted exposure.
                   </p>
                 </CardContent>
               </Card>

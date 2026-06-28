@@ -149,6 +149,7 @@ try {
   assert(rankingsPage.res.status === 200, "GET /rankings returns 200");
   assert(rankingsPage.text.includes("bounded climate rankings"), "/rankings carries bounded-ranking copy");
   assert(rankingsPage.text.includes("not complete global"), "/rankings avoids complete-global claim");
+  assert(rankingsPage.text.includes("Natural Earth"), "/rankings exposes Natural Earth population-place catalog copy");
 
   const { json: ranking } = await getJson("/api/climate/global-rankings?catalog=curated_cities&scenario=ssp245&year=2050&metric=habitability_score&direction=highest&limit=10");
   assert(ranking.catalog === "curated_cities", "ranking API uses curated_cities catalog");
@@ -160,9 +161,17 @@ try {
   assert(Array.isArray(ranking.sourceIds) && ranking.sourceIds.includes("curated-ranking-cities-v1"), "ranking API exposes source IDs");
   assert(Array.isArray(ranking.caveats) && ranking.caveats.some((caveat) => caveat.includes("not complete global rankings")), "ranking API exposes bounded-catalog caveat");
 
+  const { json: naturalRanking } = await getJson("/api/climate/global-rankings?catalog=natural_earth_populated_places_110m&scenario=ssp245&year=2050&metric=heat_stress_days&direction=highest&limit=10");
+  assert(naturalRanking.catalog === "natural_earth_populated_places_110m", "Natural Earth ranking API uses population-place catalog");
+  assert(naturalRanking.catalogSize >= 50, "Natural Earth ranking API discloses catalog size");
+  assert(Array.isArray(naturalRanking.rows) && naturalRanking.rows.length === 10, "Natural Earth ranking API returns top 10 rows");
+  assert(Array.isArray(naturalRanking.sourceIds) && naturalRanking.sourceIds.includes("natural-earth-populated-places-110m-v5"), "Natural Earth ranking API exposes source ID");
+  assert(naturalRanking.rows.every((row) => Number.isFinite(row.population) && row.population >= 3_000_000), "Natural Earth ranking rows expose population threshold metadata");
+  assert(Array.isArray(naturalRanking.caveats) && naturalRanking.caveats.some((caveat) => caveat.includes("pop_max >= 3,000,000")), "Natural Earth ranking API exposes bounded-catalog caveat");
+
   const { json: sourceRegistry } = await getJson("/api/source-registry");
   assert(sourceRegistry.version === "source-registry-v1", "source-registry API version is source-registry-v1");
-  assert(Array.isArray(sourceRegistry.rows) && sourceRegistry.rows.length >= 10, "source-registry API exposes current source rows");
+  assert(Array.isArray(sourceRegistry.rows) && sourceRegistry.rows.length >= 11, "source-registry API exposes current source rows");
   assert(
     sourceRegistry.rows.some(
       (row) =>
@@ -179,6 +188,14 @@ try {
     ),
     "source-registry API exposes CAT warming-projection source row",
   );
+  assert(
+    sourceRegistry.rows.some(
+      (row) =>
+        row.sourceId === "natural-earth-populated-places-110m-v5" &&
+        row.displayPolicy === "show-with-bounded-catalog-caveat",
+    ),
+    "source-registry API exposes Natural Earth population-place row",
+  );
 
   const dataQualityPage = await getText("/data-quality");
   assert(dataQualityPage.res.status === 200, "GET /data-quality returns 200");
@@ -187,8 +204,8 @@ try {
 
   const { json: dataQuality } = await getJson("/api/data-quality");
   assert(dataQuality.version === "data-quality-v1", "data-quality API version is data-quality-v1");
-  assert(Array.isArray(dataQuality.artifacts) && dataQuality.artifacts.length >= 7, "data-quality API exposes artifact hashes");
-  assert(dataQuality.sourceRegistry?.rowCount >= 10, "data-quality API exposes complete source-registry rows");
+  assert(Array.isArray(dataQuality.artifacts) && dataQuality.artifacts.length >= 10, "data-quality API exposes artifact hashes");
+  assert(dataQuality.sourceRegistry?.rowCount >= 11, "data-quality API exposes complete source-registry rows");
   assert(
     dataQuality.sourceRegistry?.rows?.some(
       (row) =>
@@ -204,6 +221,21 @@ try {
         row.displayPolicy === "show-as-policy-context-no-local-correction",
     ),
     "data-quality API exposes CAT warming-projection source row",
+  );
+  assert(
+    dataQuality.sourceRegistry?.rows?.some(
+      (row) =>
+        row.sourceId === "natural-earth-populated-places-110m-v5" &&
+        row.displayPolicy === "show-with-bounded-catalog-caveat",
+    ),
+    "data-quality API exposes Natural Earth population-place row",
+  );
+  assert(dataQuality.rankings?.catalogCount === 2, "data-quality API exposes two ranking catalogs");
+  assert(
+    dataQuality.rankings?.catalogs?.some(
+      (catalog) => catalog.catalog === "natural_earth_populated_places_110m" && catalog.catalogSize >= 50,
+    ),
+    "data-quality API exposes Natural Earth ranking catalog coverage",
   );
   assert(dataQuality.defaultScenarioPolicy?.scenario === "ssp245", "data-quality API exposes default scenario policy scenario");
   assert(

@@ -8,7 +8,7 @@
     "build": "node scripts/validate-artifacts.mjs && vite build && esbuild server/index.ts --platform=node --packages=external --bundle --format=esm --outdir=dist && node scripts/write-build-info.mjs",
     "start": "NODE_ENV=production node dist/index.js",
     "check": "tsc",
-    "build:rankings": "node scripts/build-ranking-artifacts.mjs",
+    "build:rankings": "node scripts/build-natural-earth-populated-places.mjs && node scripts/build-ranking-artifacts.mjs",
     "report:validation": "node scripts/generate-validation-report.mjs",
     "validate:artifacts": "node scripts/validate-artifacts.mjs",
     "smoke:cache": "tsx scripts/smoke-cache-envelope.ts",

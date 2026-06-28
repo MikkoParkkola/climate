@@ -270,7 +270,7 @@ const SEO_PAGES: Record<string, SeoPage> = {
   <ul>
     <li>Which immutable climate artifacts are packaged with the app.</li>
     <li>Which source registry rows approve visible metrics and rankings.</li>
-    <li>How much of the curated rankings and trajectory audit matrix is covered.</li>
+    <li>How much of the bounded ranking catalogs and trajectory audit matrix is covered.</li>
     <li>Which trend-review flags still require human scientific review.</li>
   </ul>
   <p>Use this page with <a href="/methodology">the methodology</a> and <a href="${GITHUB_REPO_URL}">the source repository</a>. It does not prove that the public Replit deployment has already been republished or that production cache purge has been completed.</p>
@@ -280,10 +280,10 @@ const SEO_PAGES: Record<string, SeoPage> = {
     path: "/rankings",
     title: "fupit rankings — bounded climate signal lists",
     description:
-      "Top-10 climate signal rankings from the current curated-city artifact, with catalog size, caveats, source receipts, and no safe-city claims.",
+      "Top-10 climate signal rankings from bounded curated-city and Natural Earth population-place artifacts, with catalog size, caveats, source receipts, and no safe-city claims.",
     bodyHtml: `<main aria-label="Rankings">
   <h1>fupit bounded climate rankings</h1>
-  <p>Compare precomputed climate signals across the documented curated-city catalog. Rankings are educational examples, not complete global, country, or climate-haven lists.</p>
+  <p>Compare precomputed climate signals across the documented curated-city catalog and a Natural Earth population-place catalog. Rankings are educational examples, not complete global, country, population-weighted, or climate-haven lists.</p>
   <h2>Available dimensions</h2>
   <ul>
     <li>Habitability score, heat stress, drought pressure, heavy-rain flood pressure, warming anomaly, and regional sea-level rise.</li>

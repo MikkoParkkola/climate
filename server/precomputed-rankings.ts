@@ -13,7 +13,7 @@ export const rankingQuerySchema = z.object({
   catalog: z.string().min(1).max(80).default("curated_cities"),
   metric: z.string().min(1).max(80).default("habitability_score"),
   direction: z.enum(RANKING_DIRECTIONS).default("highest"),
-  limit: z.coerce.number().int().min(1).max(50).default(10),
+  limit: z.coerce.number().int().min(1).max(10).default(10),
 });
 
 type RankingQuery = z.infer<typeof rankingQuerySchema>;
@@ -25,6 +25,9 @@ type RankingRow = {
   country: string;
   lat: number;
   lng: number;
+  population?: number;
+  populationField?: string;
+  inclusionReason?: string;
   value: number;
   unit: string;
   uncertainty?: { low?: number | null; high?: number | null };
@@ -52,41 +55,50 @@ type RankingArtifact = {
   methodVersion: string;
   sourceRegistryVersion: string;
   generatedAt: string;
+  catalog: string;
+  catalogLabel?: string;
+  catalogSourceIds?: string[];
   entries: RankingEntry[];
 };
 
-let cachedArtifact: RankingArtifact | undefined;
+let cachedArtifacts: RankingArtifact[] | undefined;
 
-function rankingPath(): string {
-  return path.resolve(import.meta.dirname, "..", "data", "rankings.curated-cities.json");
+function rankingPaths(): string[] {
+  return [
+    "rankings.curated-cities.json",
+    "rankings.natural-earth-populated-places.json",
+  ].map((file) => path.resolve(import.meta.dirname, "..", "data", file));
 }
 
-function loadRankingArtifact(): RankingArtifact {
-  if (!cachedArtifact) {
-    const artifact = JSON.parse(fs.readFileSync(rankingPath(), "utf-8")) as RankingArtifact;
-    if (artifact.methodVersion !== MODEL_CACHE_VERSION) {
-      throw new Error(`ranking method version mismatch: ${artifact.methodVersion}`);
-    }
-    if (artifact.sourceRegistryVersion !== SOURCE_REGISTRY_VERSION) {
-      throw new Error(`ranking source registry mismatch: ${artifact.sourceRegistryVersion}`);
-    }
-    for (const entry of artifact.entries) {
-      assertSourceIdsRegistered(entry.sourceIds);
-    }
-    cachedArtifact = artifact;
+function loadRankingArtifacts(): RankingArtifact[] {
+  if (!cachedArtifacts) {
+    cachedArtifacts = rankingPaths().map((artifactPath) => {
+      const artifact = JSON.parse(fs.readFileSync(artifactPath, "utf-8")) as RankingArtifact;
+      if (artifact.methodVersion !== MODEL_CACHE_VERSION) {
+        throw new Error(`ranking method version mismatch: ${artifact.methodVersion}`);
+      }
+      if (artifact.sourceRegistryVersion !== SOURCE_REGISTRY_VERSION) {
+        throw new Error(`ranking source registry mismatch: ${artifact.sourceRegistryVersion}`);
+      }
+      for (const entry of artifact.entries) {
+        assertSourceIdsRegistered(entry.sourceIds);
+      }
+      return artifact;
+    });
   }
-  return cachedArtifact;
+  return cachedArtifacts;
 }
 
 export function getRanking(query: RankingQuery): RankingEntry | undefined {
-  const artifact = loadRankingArtifact();
-  const entry = artifact.entries.find((candidate) =>
-    candidate.catalog === query.catalog &&
-    candidate.scenario === query.scenario &&
-    candidate.year === query.year &&
-    candidate.metric === query.metric &&
-    candidate.direction === query.direction
-  );
+  const entry = loadRankingArtifacts()
+    .flatMap((artifact) => artifact.entries)
+    .find((candidate) =>
+      candidate.catalog === query.catalog &&
+      candidate.scenario === query.scenario &&
+      candidate.year === query.year &&
+      candidate.metric === query.metric &&
+      candidate.direction === query.direction
+    );
   if (!entry) return undefined;
   return {
     ...entry,

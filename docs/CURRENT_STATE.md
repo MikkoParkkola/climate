@@ -23,8 +23,11 @@ cache purge/version-guard proof.
   source-registry version. Old unwrapped or mismatched rows are treated as misses and purged by
   the startup guard.
 - `data/source-registry.json` is the source/license registry for served artifacts.
-- `data/rankings.curated-cities.json` powers `/rankings` and `GET /api/climate/global-rankings`.
-  It is a bounded curated-city ranking artifact, not a complete global city/country ranking.
+- `data/rankings.curated-cities.json` and
+  `data/rankings.natural-earth-populated-places.json` power `/rankings` and
+  `GET /api/climate/global-rankings`. They are bounded curated-city and Natural Earth
+  population-place artifacts, not complete country, GHSL urban-center, or population-weighted
+  exposure rankings.
 - `client/public/climate-analog-catalog.current.json` powers the bounded climate-twin
   communication feature and is included in artifact validation.
 
@@ -94,7 +97,7 @@ Local validation on 2026-06-27:
 
 - Port the grid reader from Python to Node behind `CLIMATE_GRID_ENGINE=node` and keep Python as a
   fallback for one release after parity tests pass.
-- Replace curated-city rankings with licensed population-center/country artifacts when catalog
+- Add country, GHSL urban-center, and population-weighted exposure ranking artifacts when catalog
   and license review are complete.
 - Add freshwater, biodiversity, agriculture, fire-weather, infrastructure, and AMOC/context
   enrichments only after source/license registry approval.

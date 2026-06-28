@@ -169,9 +169,26 @@
       "spatialResolution": "point catalog",
       "temporalResolution": "not applicable",
       "scenarioCoverage": "not applicable",
-      "method": "Catalog bounds ranking candidates; rankings are not global claims until GHSL/Natural Earth-style catalog is added.",
+      "method": "Catalog bounds hand-picked ranking candidates; rankings are educational examples and not global population-center claims.",
       "displayPolicy": "show-with-catalog-boundary",
       "reviewedAt": "2026-06-27"
+    },
+    {
+      "sourceId": "natural-earth-populated-places-110m-v5",
+      "provider": "Natural Earth",
+      "version": "1:110m populated places simple, natural-earth-vector commit 117488dc884b",
+      "stableUrl": "https://www.naturalearthdata.com/downloads/110m-cultural-vectors/110m-populated-places/",
+      "citation": "Natural Earth populated places simple dataset, 1:110m cultural vectors.",
+      "license": "Natural Earth map data is public domain; attribution is requested but not required.",
+      "commercialReuse": "allowed",
+      "redistribution": "allowed-with-attribution-requested",
+      "variables": ["place name", "country", "point coordinate", "pop_max population attribute"],
+      "spatialResolution": "1:110m basemap point catalog",
+      "temporalResolution": "static catalog snapshot",
+      "scenarioCoverage": "not scenario data; used only as a place catalog for precomputed grounded climate rankings",
+      "method": "Rows with pop_max >= 3,000,000 are used as a bounded population-place ranking catalog. Climate values still come from the grounded fupit grid, not from Natural Earth.",
+      "displayPolicy": "show-with-bounded-catalog-caveat",
+      "reviewedAt": "2026-06-28"
     }
   ]
 }

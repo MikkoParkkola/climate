@@ -30,6 +30,17 @@ type DataQuality = {
   rankings: {
     catalog: string;
     catalogSize: number;
+    catalogCount: number;
+    catalogs: Array<{
+      catalog: string;
+      label: string;
+      catalogSize: number;
+      entryCount: number;
+      yearRange: [number, number];
+      metrics: string[];
+      sourceIds: string[];
+      caveats: string[];
+    }>;
     entryCount: number;
     scenarios: string[];
     yearRange: [number, number];
@@ -261,10 +272,21 @@ export default function DataQualityPage() {
                 <CardContent className="space-y-3 pt-6">
                   <h2 className="text-xl font-semibold">Ranking coverage</h2>
                   <p className="text-sm text-slate-600">
-                    Catalog `{data.rankings.catalog}` has {data.rankings.catalogSize} curated places,
+                    {data.rankings.catalogCount} bounded catalogs cover {data.rankings.catalogSize} total place rows,
                     {data.rankings.entryCount} precomputed slices, scenarios {data.rankings.scenarios.join(", ")},
                     and years {data.rankings.yearRange[0]}-{data.rankings.yearRange[1]}.
                   </p>
+                  <div className="space-y-2">
+                    {data.rankings.catalogs.map((catalog) => (
+                      <div key={catalog.catalog} className="rounded border border-slate-200 bg-white p-3 text-sm">
+                        <div className="font-medium">{catalog.label}</div>
+                        <div className="text-slate-600">
+                          {catalog.catalog} · {catalog.catalogSize} places · {catalog.entryCount} slices · years {catalog.yearRange[0]}-{catalog.yearRange[1]}
+                        </div>
+                        <div className="mt-1 break-words text-xs text-slate-500">Sources: {catalog.sourceIds.join(", ")}</div>
+                      </div>
+                    ))}
+                  </div>
                   <ul className="list-disc space-y-1 pl-5 text-sm text-slate-600">
                     {data.rankings.caveats.map((caveat) => <li key={caveat}>{caveat}</li>)}
                   </ul>
