@@ -77,7 +77,17 @@ const requiredPaths = [
   "metadata.baseline",
   "metadata.baseline_source.temperature",
   "metadata.baseline_source.precipitation",
+  "metadata.baseline_source.observed_temperature_months",
+  "metadata.baseline_source.observed_precipitation_months",
+  "metadata.baseline_source.observed_annual_temperature_c",
+  "metadata.baseline_source.observed_annual_precipitation_mm",
   "metadata.baseline_source.delta_reference_period",
+  "metadata.projection_year_basis.requested_year",
+  "metadata.projection_year_basis.source_year_low",
+  "metadata.projection_year_basis.source_year_high",
+  "metadata.projection_year_basis.mode",
+  "metadata.projection_year_basis.cadence",
+  "metadata.projection_year_basis.note",
   "metadata.projection_method",
   "metadata.uncertainty.temperature_anomaly_spread_c",
   "metadata.uncertainty.precipitation_anomaly_spread_pct",
@@ -267,6 +277,19 @@ function validateProjection(sample, projection, expectedYear = 2050, expectedSce
   assert(projection.metadata.source_trail.length >= 4, `${sample.name} source trail incomplete`);
   assert(/WorldClim|CMIP6/.test(projection.metadata.baseline_source.temperature), `${sample.name} temperature baseline source missing provenance`);
   assert(/WorldClim|CMIP6/.test(projection.metadata.baseline_source.precipitation), `${sample.name} precipitation baseline source missing provenance`);
+  assert(projection.metadata.projection_year_basis.requested_year === expectedYear, `${sample.name} projection year basis requested year mismatch`);
+  assert(
+    /decadal 2030-2100/.test(projection.metadata.projection_year_basis.cadence),
+    `${sample.name} projection year cadence missing decadal-source disclosure`,
+  );
+  if (expectedYear < 2030) {
+    assert(
+      projection.metadata.projection_year_basis.mode === "clamped-earliest-source-year",
+      `${sample.name} pre-2030 projection should disclose earliest-source-year clamp`,
+    );
+    assert(projection.metadata.projection_year_basis.source_year_low === 2030, `${sample.name} pre-2030 source low should be 2030`);
+    assert(projection.metadata.projection_year_basis.source_year_high === 2030, `${sample.name} pre-2030 source high should be 2030`);
+  }
   projection.metadata.source_trail.forEach((entry, index) => {
     assert(entry.label && entry.source && entry.method && entry.citation, `${sample.name} source trail entry ${index} incomplete`);
   });

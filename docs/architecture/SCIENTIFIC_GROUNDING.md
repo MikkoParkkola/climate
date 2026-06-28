@@ -34,6 +34,11 @@ extreme-index layers exist. Today the app serves full forecasts for SSP1-2.6, SS
 SSP3-7.0, and SSP5-8.5; SSP1-1.9 is withheld from full forecasts because the ETCCDI source
 does not include it.
 
+The packed scenario layers begin at **2030** and run through 2100. Requested years between
+packed source years are linearly interpolated; requested near-current years such as 2025 and
+2026 disclose that they use the earliest packed 2030 scenario layer. This is source-cadence
+metadata, not a historical hindcast claim.
+
 | Scenario | 2021–2040 | 2041–2060 | 2081–2100 |
 |---|---|---|---|
 | SSP1-1.9 | 1.5 (1.2–1.7) | 1.6 (1.2–2.0) | 1.4 (1.0–1.8) |

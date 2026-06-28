@@ -168,6 +168,52 @@ def sample(layer, scenario, var, lat, lng, axisval):
     return v_lo + t * (v_hi - v_lo)
 
 
+def projection_year_basis(scenario, year):
+    """Describe which packed scenario year(s) back a requested forecast year."""
+    c = load()
+    ent = c["index"].get(("temperature", scenario, "mean"))
+    if ent is None:
+        return {
+            "requested_year": year,
+            "cadence": "projection year basis unavailable because the scenario layer is missing",
+            "mode": "missing",
+        }
+    axis = ent["axis"]
+    effective = float(np.clip(year, axis[0], axis[-1]))
+    hi = next((i for i, x in enumerate(axis) if x >= effective), len(axis) - 1)
+    lo = max(hi - 1, 0)
+    source_low = int(axis[lo])
+    source_high = int(axis[hi])
+    cadence = "scenario layers are decadal 2030-2100; in-between years are linearly interpolated"
+    if year < axis[0]:
+        mode = "clamped-earliest-source-year"
+        note = (
+            f"Requested year {year} is before the first packed scenario layer; "
+            f"the earliest available {source_low} source layer is used."
+        )
+    elif year > axis[-1]:
+        mode = "clamped-latest-source-year"
+        note = (
+            f"Requested year {year} is after the last packed scenario layer; "
+            f"the latest available {source_high} source layer is used."
+        )
+    elif lo == hi or source_low == source_high:
+        mode = "direct-source-year"
+        note = f"Requested year {year} uses the packed {source_low} source layer."
+    else:
+        mode = "linear-interpolation"
+        note = f"Requested year {year} is linearly interpolated between packed {source_low} and {source_high} source layers."
+    return {
+        "requested_year": year,
+        "source_year_low": source_low,
+        "source_year_high": source_high,
+        "effective_source_year": round(effective, 2),
+        "mode": mode,
+        "cadence": cadence,
+        "note": note,
+    }
+
+
 def sample_observed_baseline(scenario, lat, lng, month):
     c = load()
     observed = c.get("observed")
@@ -273,6 +319,7 @@ def project(lat, lng, year, scenario=DEFAULT_SCENARIO):
     p_delta = sample("precipitation", scenario, "mean", lat, lng, year)        # percent
     p_std = sample("precipitation", scenario, "std", lat, lng, year)          # percent
     monthly_t, monthly_t_ipcc, monthly_p = [], [], []
+    observed_t_values, observed_p_values = [], []
     observed_t_months = 0
     observed_p_months = 0
     for m in range(1, 13):
@@ -284,6 +331,10 @@ def project(lat, lng, year, scenario=DEFAULT_SCENARIO):
         bp = obs_bp if not np.isnan(obs_bp) else model_bp
         observed_t_months += 0 if np.isnan(obs_bt) else 1
         observed_p_months += 0 if np.isnan(obs_bp) else 1
+        if not np.isnan(obs_bt):
+            observed_t_values.append(float(obs_bt))
+        if not np.isnan(obs_bp):
+            observed_p_values.append(float(obs_bp))
         monthly_t.append(bt + t_delta_raw if not np.isnan(bt) and not np.isnan(t_delta_raw) else float("nan"))
         monthly_t_ipcc.append(bt + t_delta_ipcc if not np.isnan(bt) and not np.isnan(t_delta_ipcc) else float("nan"))
         monthly_p.append(bp * (1 + p_delta / 100.0) if not np.isnan(bp) and not np.isnan(p_delta) else float("nan"))
@@ -417,8 +468,13 @@ def project(lat, lng, year, scenario=DEFAULT_SCENARIO):
                 "observed_period": observed_source.get("period"),
                 "observed_resolution": observed_source.get("resolution"),
                 "observed_citation": observed_source.get("citation"),
+                "observed_temperature_months": observed_t_months,
+                "observed_precipitation_months": observed_p_months,
+                "observed_annual_temperature_c": _num(np.mean(observed_t_values)) if observed_t_values else None,
+                "observed_annual_precipitation_mm": _num(np.sum(observed_p_values)) if observed_p_values else None,
                 "delta_reference_period": "CMIP6 deltas are relative to 1995-2014; baseline-period difference is disclosed, not hidden",
             },
+            "projection_year_basis": projection_year_basis(scenario, year),
             "projection_method": "delta/change-factor; observed or model baseline + raw CMIP6 ensemble delta; IPCC assessed temperature calibration is contextual, not the hidden headline; serve-time risk thresholds",
             "scenario": scenario,
             "uncertainty": {

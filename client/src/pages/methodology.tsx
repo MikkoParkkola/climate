@@ -145,7 +145,11 @@ export default function Methodology() {
               </li>
               <li>
                 Every projection carries its scenario, its source, and an uncertainty range
-                from the spread across models. We never collapse that range into false precision.
+                from the spread across models. It also carries the source-year basis: this
+                package's scenario layers start at 2030, so near-current 2025/2026 points
+                disclose that they use the earliest packed scenario layer rather than a true
+                historical hindcast. We never collapse that range or cadence into false
+                precision.
               </li>
             </ul>
 

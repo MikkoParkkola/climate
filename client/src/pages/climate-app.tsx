@@ -111,7 +111,20 @@ interface ProjectionPoint {
       observed_period?: string;
       observed_resolution?: string;
       observed_citation?: string;
+      observed_temperature_months?: number;
+      observed_precipitation_months?: number;
+      observed_annual_temperature_c?: number;
+      observed_annual_precipitation_mm?: number;
       delta_reference_period?: string;
+    };
+    projection_year_basis?: {
+      requested_year?: number;
+      source_year_low?: number;
+      source_year_high?: number;
+      effective_source_year?: number;
+      mode?: string;
+      cadence?: string;
+      note?: string;
     };
     projection_method?: string;
     uncertainty?: {
@@ -1349,6 +1362,7 @@ export default function ClimateApp() {
       scenario: np.metadata?.scenario ?? np.scenario,
       baseline: np.metadata?.baseline,
       baselineSource: np.metadata?.baseline_source,
+      projectionYearBasis: np.metadata?.projection_year_basis,
       projectionMethod: np.metadata?.projection_method,
       tempSpread: np.temperature.uncertainty?.anomaly_spread,
       tempLow: np.temperature.uncertainty?.annual_mean_low,
@@ -1814,7 +1828,7 @@ export default function ClimateApp() {
                 <div style={{ marginTop: 10, height: 4, background: "rgba(255,255,255,0.08)", borderRadius: 2, overflow: "hidden" }}>
                   <div style={{ height: "100%", background: ACCENT, borderRadius: 2, width: `${((loadingStep + 1) / CHECKPOINTS.length) * 100}%`, transition: "width 0.4s ease" }} />
                 </div>
-                <div style={{ marginTop: 6, fontSize: 11, color: "rgba(255,255,255,0.35)" }}>Sampling {BASELINE_YEAR} as the baseline, {CURRENT_FORECAST_YEAR} as the current start, then every 5 years to {MAX_YEAR}.</div>
+                <div style={{ marginTop: 6, fontSize: 11, color: "rgba(255,255,255,0.35)" }}>Sampling {BASELINE_YEAR} as the comparison point, {CURRENT_FORECAST_YEAR} as the current start, then every 5 years to {MAX_YEAR}; packed scenario layers start at 2030.</div>
               </div>
             )}
             {error && <div style={{ marginTop: 16, padding: "10px 14px", borderRadius: 8, background: `${RED}14`, border: `1px solid ${RED}30`, color: "#fca5a5", fontSize: 13 }}>{error}</div>}
@@ -2658,6 +2672,17 @@ export default function ClimateApp() {
                 value: d!.baselineSource?.observed_resolution ?? "1.0 degree",
                 sub: d!.baselineSource?.temperature ?? d!.baseline ?? "CMIP6 historical monthly climatology",
                 color: GREEN,
+              },
+              {
+                label: "Year basis",
+                value:
+                  d!.projectionYearBasis?.source_year_low != null && d!.projectionYearBasis?.source_year_high != null
+                    ? d!.projectionYearBasis.source_year_low === d!.projectionYearBasis.source_year_high
+                      ? `${d!.projectionYearBasis.source_year_low}`
+                      : `${d!.projectionYearBasis.source_year_low}-${d!.projectionYearBasis.source_year_high}`
+                    : "—",
+                sub: d!.projectionYearBasis?.note ?? "Source cadence unavailable",
+                color: PURPLE,
               },
             ].map((item) => (
               <div key={item.label} style={{ background: "rgba(255,255,255,0.025)", border: `1px solid ${BORDER}`, borderRadius: 8, padding: "10px 11px" }}>

@@ -22,6 +22,9 @@ assert.match(source, /function ChartValuesDetails/, "trend charts expose a keybo
 assert.match(source, /<ChartValuesDetails label=\{label\} rows=\{valueRows\} \/>/, "each trend chart wires the values disclosure");
 assert.match(source, /<title>\{pointLabel\(i\)\}<\/title>/, "each plotted year exposes a hover value title");
 assert.match(source, /linear interpolation between grounded API checkpoints/, "chart point labels disclose interpolation instead of pretending annual model granularity");
+assert.match(source, /Year basis/, "projection receipt exposes the source-year basis");
+assert.match(source, /packed scenario layers start at 2030/, "current-year sampling copy discloses source-layer cadence");
+assert.match(source, /projectionYearBasis/, "result snapshot carries projection-year basis metadata from the API");
 assert.match(source, /scenarioLabel\?: string/, "trend charts can display the active scenario label");
 assert.match(source, /scenarioLabel=\{shownScenario\.label\}/, "metric trajectory charts pass the active scenario label");
 assert.match(source, /const rangeD = hasRange/, "trend charts render a visual uncertainty band when low/high series are present");
@@ -50,6 +53,7 @@ assert.match(source, /not the central IPCC assessment/, "AMOC context caveats ab
 assert.match(source, /no deterministic local correction or collapse date is applied/, "AMOC context does not overclaim local correction or timing");
 assert.match(methodology, /Large-scale circulation context/, "methodology documents AMOC/Gulf Stream context");
 assert.match(methodology, /does not apply a local cooling correction/, "methodology rejects deterministic AMOC local correction");
+assert.match(methodology, /scenario layers start at 2030/, "methodology discloses near-current source-year basis");
 assert.match(source, /What this does not mean/, "projection receipt renders the required caveat section");
 assert.match(source, /not a property-risk certificate/, "receipt caveat rejects property-risk interpretation");
 assert.match(source, /relocation recommendation/, "receipt caveat rejects relocation advice interpretation");

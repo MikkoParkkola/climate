@@ -31,6 +31,16 @@ const requiredPaths = [
   "metadata.model_version",
   "metadata.baseline_source.temperature",
   "metadata.baseline_source.precipitation",
+  "metadata.baseline_source.observed_temperature_months",
+  "metadata.baseline_source.observed_precipitation_months",
+  "metadata.baseline_source.observed_annual_temperature_c",
+  "metadata.baseline_source.observed_annual_precipitation_mm",
+  "metadata.projection_year_basis.requested_year",
+  "metadata.projection_year_basis.source_year_low",
+  "metadata.projection_year_basis.source_year_high",
+  "metadata.projection_year_basis.mode",
+  "metadata.projection_year_basis.cadence",
+  "metadata.projection_year_basis.note",
 ];
 
 function getPath(value: unknown, dottedPath: string): unknown {

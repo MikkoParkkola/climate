@@ -34,6 +34,18 @@ type TrajectoryAuditSummary = {
   note: string;
 };
 
+type ObservedBaselineAudit = {
+  version: string;
+  generatedAt: string;
+  source: string;
+  checkedYear: number;
+  scenario: string;
+  cityCount: number;
+  maxTemperatureDifferenceC: number;
+  maxPrecipitationDifferenceMm: number;
+  note: string;
+};
+
 let cachedDataQuality: Record<string, unknown> | undefined;
 
 function dataPath(relativePath: string): string {
@@ -98,6 +110,7 @@ export function loadDataQuality(): Record<string, unknown> {
   const rankingCities = readJson<Array<unknown>>("data/ranking_cities.json");
   const rankings = readJson<RankingArtifact>("data/rankings.curated-cities.json");
   const audit = readJson<TrajectoryAuditSummary>("data/trajectory-audit-summary.json");
+  const observedBaselineAudit = readJson<ObservedBaselineAudit>("data/observed-baseline-audit.json");
   const rankingYears = uniqueSorted(rankings.entries.map((entry) => entry.year));
   const rankingSourceIds = uniqueSorted(rankings.entries.flatMap((entry) => entry.sourceIds));
 
@@ -114,6 +127,7 @@ export function loadDataQuality(): Record<string, unknown> {
       artifactInfo("data/source-registry.json"),
       artifactInfo("data/rankings.curated-cities.json"),
       artifactInfo("data/trajectory-audit-summary.json"),
+      artifactInfo("data/observed-baseline-audit.json"),
     ],
     sourceRegistry: {
       version: registry.version,
@@ -173,15 +187,27 @@ export function loadDataQuality(): Record<string, unknown> {
       trendReview: audit.trendReview,
       note: audit.note,
     },
+    observedBaselineAudit: {
+      artifactGeneratedAt: observedBaselineAudit.generatedAt,
+      version: observedBaselineAudit.version,
+      source: observedBaselineAudit.source,
+      checkedYear: observedBaselineAudit.checkedYear,
+      scenario: observedBaselineAudit.scenario,
+      cityCount: observedBaselineAudit.cityCount,
+      maxTemperatureDifferenceC: observedBaselineAudit.maxTemperatureDifferenceC,
+      maxPrecipitationDifferenceMm: observedBaselineAudit.maxPrecipitationDifferenceMm,
+      note: observedBaselineAudit.note,
+    },
     validationReport: {
       repoPath: "docs/VALIDATION_REPORT.md",
-      status: "trajectory-audit report published; observation-backed historical hindcast pending",
+      status: "trajectory-audit and WorldClim baseline cross-check published; observation-backed historical hindcast pending",
       artifactGeneratedAt: audit.generatedAt,
       historicalObservationHindcast: "pending",
+      observedBaselineCrossCheck: "passed",
       trendReviewCount: audit.trendReview.length,
       trendReviewSummary: countTrendFlags(audit.trendReview),
       blockers: [
-        "No NOAA/ERA5/WorldClim historical observation comparison matrix is packaged yet.",
+        "No NOAA/ERA5/station historical projection-vs-observation hindcast matrix is packaged yet.",
         "Trend-review flags require explanation or science review before they can be treated as resolved.",
       ],
     },
@@ -189,8 +215,10 @@ export function loadDataQuality(): Record<string, unknown> {
       "npm run validate:artifacts",
       "npm run smoke:grid-reader",
       "npm run smoke:node-model",
+      "npm run smoke:observed-baseline",
       "npm run smoke:model",
       "npm run smoke:validation-report",
+      "npm run audit:observed-baseline",
       "npm run audit:trajectories",
       "npm run ci",
     ],

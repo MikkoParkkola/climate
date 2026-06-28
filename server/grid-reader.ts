@@ -189,8 +189,55 @@ export function sampleGridLayer(
   return lowValue + t * (highValue - lowValue);
 }
 
+export function describeGridLayerAxis(loadedGrid: LoadedGrid, key: LayerKey, axisValue: number): Record<string, unknown> {
+  const layer = loadedGrid.layers.get(layerId(key));
+  if (!layer) {
+    return {
+      requested_year: axisValue,
+      cadence: "projection year basis unavailable because the scenario layer is missing",
+      mode: "missing",
+    };
+  }
+  const axis = layer.axis;
+  const effective = clamp(axisValue, axis[0], axis[axis.length - 1]);
+  const highIndex = axis.findIndex((value) => value >= effective);
+  const hi = highIndex >= 0 ? highIndex : axis.length - 1;
+  const lo = Math.max(hi - 1, 0);
+  const sourceLow = axis[lo];
+  const sourceHigh = axis[hi];
+  const cadence = "scenario layers are decadal 2030-2100; in-between years are linearly interpolated";
+  let mode: string;
+  let note: string;
+  if (axisValue < axis[0]) {
+    mode = "clamped-earliest-source-year";
+    note = `Requested year ${axisValue} is before the first packed scenario layer; the earliest available ${sourceLow} source layer is used.`;
+  } else if (axisValue > axis[axis.length - 1]) {
+    mode = "clamped-latest-source-year";
+    note = `Requested year ${axisValue} is after the last packed scenario layer; the latest available ${sourceHigh} source layer is used.`;
+  } else if (lo === hi || sourceLow === sourceHigh) {
+    mode = "direct-source-year";
+    note = `Requested year ${axisValue} uses the packed ${sourceLow} source layer.`;
+  } else {
+    mode = "linear-interpolation";
+    note = `Requested year ${axisValue} is linearly interpolated between packed ${sourceLow} and ${sourceHigh} source layers.`;
+  }
+  return {
+    requested_year: axisValue,
+    source_year_low: sourceLow,
+    source_year_high: sourceHigh,
+    effective_source_year: Math.round(effective * 100) / 100,
+    mode,
+    cadence,
+    note,
+  };
+}
+
 export function samplePrimaryLayer(key: LayerKey, lat: number, lng: number, axisValue: number): number {
   return sampleGridLayer(loadPrimaryGrid(), key, lat, lng, axisValue);
+}
+
+export function describePrimaryLayerAxis(key: LayerKey, axisValue: number): Record<string, unknown> {
+  return describeGridLayerAxis(loadPrimaryGrid(), key, axisValue);
 }
 
 export function sampleObservedBaseline(scenario: "temperature" | "precipitation", lat: number, lng: number, month: number): number {

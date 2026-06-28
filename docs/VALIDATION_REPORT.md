@@ -21,9 +21,21 @@ It is intentionally conservative: it records what the current artifact proves, w
 - Core values stayed inside broad physical sanity ranges for temperature, precipitation, heat-stress days, drought risk, flood risk, and habitability score.
 - Raw CMIP6 and IPCC-calibrated temperature fields were both present in the audited responses.
 
+## Observed Baseline Cross-check
+
+- Audit artifact version: `observed-baseline-audit-v1`
+- Audit artifact generated at: `2026-06-28T00:48:05.496Z`
+- Source checked: WorldClim v2.1 current conditions, 10 arc-minute monthly climatology (1970-2000)
+- Fixture cities: 13
+- Maximum Python-vs-Node WorldClim annual temperature difference: 0.0039 C
+- Maximum Python-vs-Node WorldClim annual precipitation difference: 0.0047 mm
+- Near-current projection-year basis: requested 2025 values disclose that the packed scenario source year is 2030.
+
+This cross-check proves that the packaged WorldClim observed baseline is decoded consistently by the Python serving engine and the Node grid reader for the fixture cities. It is baseline provenance evidence, not a claim that the forecast has been historically hindcast against time-varying observations.
+
 ## Not a Historical Hindcast
 
-This is not yet a historical hindcast report. The current artifact audits forecast trajectory contracts and trend shape from the current baseline year through 2100. It does not compare model output for past years against NOAA, ERA5, WorldClim, station data, or another observation product.
+This is not yet a historical hindcast report. The current artifacts audit forecast trajectory contracts, trend shape from the current baseline year through 2100, and packaged WorldClim observed-baseline decoding. They do not compare historical projections for past years against NOAA, ERA5, station data, or another time-varying observation product.
 
 Until an observation-backed hindcast matrix exists, Phase 5 validation remains partial. The app can show this report as build evidence, but it must not claim historical forecast skill from it.
 

@@ -24,6 +24,7 @@ for (const relativePath of [
   "data/source-registry.json",
   "data/rankings.curated-cities.json",
   "data/trajectory-audit-summary.json",
+  "data/observed-baseline-audit.json",
   "docs/VALIDATION_REPORT.md",
   "client/public/climate-analog-catalog.current.json",
 ]) {
@@ -88,9 +89,21 @@ assert(audit.version === "trajectory-audit-summary-v1", "trajectory audit summar
 assert(audit.cityCount === 13, "trajectory audit city count mismatch");
 assert(audit.resultCount === 52, "trajectory audit result count mismatch");
 assert(Array.isArray(audit.trendReview), "trajectory audit trend review missing");
+const observedBaselineAudit = readJson("data/observed-baseline-audit.json");
+assert(observedBaselineAudit.version === "observed-baseline-audit-v1", "observed baseline audit version mismatch");
+assert(observedBaselineAudit.cityCount === 13, "observed baseline audit city count mismatch");
+assert(observedBaselineAudit.maxTemperatureDifferenceC <= 0.02, "observed baseline audit temperature mismatch too large");
+assert(observedBaselineAudit.maxPrecipitationDifferenceMm <= 0.05, "observed baseline audit precipitation mismatch too large");
+assert(
+  observedBaselineAudit.results.every((result) => result.projectionYearBasis?.source_year_low === 2030 && result.projectionYearBasis?.mode === "clamped-earliest-source-year"),
+  "observed baseline audit does not disclose pre-2030 source-year basis",
+);
 const validationReport = readFileSync(path.join(repoRoot, "docs/VALIDATION_REPORT.md"), "utf8");
+const scientificGrounding = readFileSync(path.join(repoRoot, "docs/architecture/SCIENTIFIC_GROUNDING.md"), "utf8");
 assert(validationReport.includes(audit.generatedAt), "validation report is not synced to trajectory audit artifact");
 assert(validationReport.includes("Not a Historical Hindcast"), "validation report must disclose missing historical hindcast");
+assert(validationReport.includes(observedBaselineAudit.generatedAt), "validation report is not synced to observed baseline audit artifact");
 assert(validationReport.includes("Trend review flags are unresolved scientific-review evidence"), "validation report must keep trend flags visible");
+assert(scientificGrounding.includes("packed 2030 scenario layer"), "scientific grounding must disclose near-current source-year basis");
 
-console.log(`artifact validation passed: ${rankings.entries.length} ranking slices, ${analog.candidateCount} analog candidates, ${registry.rows.length} source rows, ${audit.resultCount} audit results`);
+console.log(`artifact validation passed: ${rankings.entries.length} ranking slices, ${analog.candidateCount} analog candidates, ${registry.rows.length} source rows, ${audit.resultCount} audit results, ${observedBaselineAudit.cityCount} baseline checks`);

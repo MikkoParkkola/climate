@@ -1,13 +1,17 @@
 #!/usr/bin/env node
-import { readFileSync, writeFileSync } from "node:fs";
+import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const auditPath = path.join(repoRoot, "data", "trajectory-audit-summary.json");
+const observedBaselineAuditPath = path.join(repoRoot, "data", "observed-baseline-audit.json");
 const outPath = path.join(repoRoot, "docs", "VALIDATION_REPORT.md");
 
 const audit = JSON.parse(readFileSync(auditPath, "utf8"));
+const observedBaselineAudit = existsSync(observedBaselineAuditPath)
+  ? JSON.parse(readFileSync(observedBaselineAuditPath, "utf8"))
+  : null;
 
 const scenarioLabels = {
   ssp126: "SSP1-2.6 lower-warming full forecast",
@@ -74,9 +78,23 @@ const lines = [
   "- Core values stayed inside broad physical sanity ranges for temperature, precipitation, heat-stress days, drought risk, flood risk, and habitability score.",
   "- Raw CMIP6 and IPCC-calibrated temperature fields were both present in the audited responses.",
   "",
+  ...(observedBaselineAudit ? [
+    "## Observed Baseline Cross-check",
+    "",
+    `- Audit artifact version: \`${observedBaselineAudit.version}\``,
+    `- Audit artifact generated at: \`${observedBaselineAudit.generatedAt}\``,
+    `- Source checked: ${observedBaselineAudit.source}`,
+    `- Fixture cities: ${observedBaselineAudit.cityCount}`,
+    `- Maximum Python-vs-Node WorldClim annual temperature difference: ${observedBaselineAudit.maxTemperatureDifferenceC} C`,
+    `- Maximum Python-vs-Node WorldClim annual precipitation difference: ${observedBaselineAudit.maxPrecipitationDifferenceMm} mm`,
+    `- Near-current projection-year basis: requested ${observedBaselineAudit.checkedYear} values disclose that the packed scenario source year is 2030.`,
+    "",
+    "This cross-check proves that the packaged WorldClim observed baseline is decoded consistently by the Python serving engine and the Node grid reader for the fixture cities. It is baseline provenance evidence, not a claim that the forecast has been historically hindcast against time-varying observations.",
+    "",
+  ] : []),
   "## Not a Historical Hindcast",
   "",
-  "This is not yet a historical hindcast report. The current artifact audits forecast trajectory contracts and trend shape from the current baseline year through 2100. It does not compare model output for past years against NOAA, ERA5, WorldClim, station data, or another observation product.",
+  "This is not yet a historical hindcast report. The current artifacts audit forecast trajectory contracts, trend shape from the current baseline year through 2100, and packaged WorldClim observed-baseline decoding. They do not compare historical projections for past years against NOAA, ERA5, station data, or another time-varying observation product.",
   "",
   "Until an observation-backed hindcast matrix exists, Phase 5 validation remains partial. The app can show this report as build evidence, but it must not claim historical forecast skill from it.",
   "",

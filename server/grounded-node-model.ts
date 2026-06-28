@@ -1,4 +1,10 @@
-import { loadObservedGrid, loadPrimaryGrid, sampleObservedBaseline, samplePrimaryLayer } from "./grid-reader";
+import {
+  describePrimaryLayerAxis,
+  loadObservedGrid,
+  loadPrimaryGrid,
+  sampleObservedBaseline,
+  samplePrimaryLayer,
+} from "./grid-reader";
 
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 const DEFAULT_SCENARIO = "ssp245";
@@ -191,6 +197,8 @@ export function projectClimate(lat: number, lng: number, year: number, scenario 
   const monthlyTemperature: number[] = [];
   const monthlyTemperatureIpcc: number[] = [];
   const monthlyPrecipitation: number[] = [];
+  const observedTemperatureValues: number[] = [];
+  const observedPrecipitationValues: number[] = [];
   let observedTemperatureMonths = 0;
   let observedPrecipitationMonths = 0;
 
@@ -203,6 +211,8 @@ export function projectClimate(lat: number, lng: number, year: number, scenario 
     const precipBaseline = Number.isNaN(observedPrecipBaseline) ? modelPrecipBaseline : observedPrecipBaseline;
     observedTemperatureMonths += Number.isNaN(observedTempBaseline) ? 0 : 1;
     observedPrecipitationMonths += Number.isNaN(observedPrecipBaseline) ? 0 : 1;
+    if (!Number.isNaN(observedTempBaseline)) observedTemperatureValues.push(observedTempBaseline);
+    if (!Number.isNaN(observedPrecipBaseline)) observedPrecipitationValues.push(observedPrecipBaseline);
 
     monthlyTemperature.push(
       Number.isNaN(tempBaseline) || Number.isNaN(temperatureDeltaRaw) ? Number.NaN : tempBaseline + temperatureDeltaRaw,
@@ -367,8 +377,13 @@ export function projectClimate(lat: number, lng: number, year: number, scenario 
         observed_period: observedSource.period,
         observed_resolution: observedSource.resolution,
         observed_citation: observedSource.citation,
+        observed_temperature_months: observedTemperatureMonths,
+        observed_precipitation_months: observedPrecipitationMonths,
+        observed_annual_temperature_c: num(mean(observedTemperatureValues)),
+        observed_annual_precipitation_mm: num(sum(observedPrecipitationValues)),
         delta_reference_period: "CMIP6 deltas are relative to 1995-2014; baseline-period difference is disclosed, not hidden",
       },
+      projection_year_basis: describePrimaryLayerAxis({ layer: "temperature", scenario, variable: "mean" }, year),
       projection_method:
         "delta/change-factor; observed or model baseline + raw CMIP6 ensemble delta; IPCC assessed temperature calibration is contextual, not the hidden headline; serve-time risk thresholds",
       scenario,
