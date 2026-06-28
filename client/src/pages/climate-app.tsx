@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo, useRef } from "react";
 import { GitCompare, Loader2, Download, Search, MapPin, ArrowLeft, Play, Pause, ShieldCheck, ExternalLink, Share2, Check } from "lucide-react";
+import GuidedClimateExplainer from "@/components/guided-climate-explainer";
 import ScenarioSmallMultiples, { type ScenarioSmallMultipleMetric } from "@/components/scenario-small-multiples";
 import ScoreSensitivity, { type ScoreSensitivityInput } from "@/components/score-sensitivity";
 
@@ -2209,6 +2210,43 @@ export default function ClimateApp() {
               : <> No modeled tipping points are crossed at this horizon.</>}
           </p>
         </div>
+
+        {scoreStory && (
+          <div style={{ marginBottom: 14 }}>
+            <GuidedClimateExplainer
+              placeName={placeName}
+              year={displayYear}
+              scenarioLabel={shownScenario.label}
+              scenarioCaption={shownScenario.caption}
+              tempChange={d!.tempChange}
+              ipccDelta={d!.ipccDelta}
+              heatDays={d!.heatDays}
+              heatDelta={heatDelta}
+              precipChange={d!.precipChange}
+              score={d!.score}
+              category={d!.category}
+              topDriver={scoreStory.scoreDrivers[0] ? {
+                label: scoreStory.scoreDrivers[0].label,
+                movement: scoreStory.scoreDrivers[0].movement,
+                effect: scoreStory.scoreDrivers[0].effect,
+              } : undefined}
+              dailyLifeSignals={dailyLifeSignals}
+              roadmapItems={roadmapItems}
+              climateTwin={climateAnalog ? {
+                name: climateAnalog.candidate.name,
+                country: climateAnalog.candidate.country,
+                distance: climateAnalog.distance,
+                comparedCount: climateAnalog.comparedCount,
+                annualTempDelta: climateAnalog.annualTempDelta,
+                annualPrecipDelta: climateAnalog.annualPrecipDelta,
+                heatDaysDelta: climateAnalog.heatDaysDelta,
+              } : null}
+              scenarioContrastText={scenarioContrastTakeaway?.text ?? null}
+              hasScenarioContrast={scenarioContrastRows.length > 0}
+              sourceCount={d!.sourceTrail.length}
+            />
+          </div>
+        )}
 
         {roadmapItems.length > 0 && (
           <div style={{ ...card, padding: 18, marginBottom: 14, borderLeft: `3px solid ${PURPLE}` }}>
