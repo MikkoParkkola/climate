@@ -14,6 +14,10 @@ assert.match(source, /Scenario contrast · same location/, "result page renders 
 assert.match(source, /Load pathway contrast/, "scenario contrast is user-triggered, not hidden or automatic");
 assert.match(source, /Lower-warming comparison/, "scenario roles explain lower-warming pathway framing");
 assert.match(source, /Current-policy-adjacent reference/, "scenario roles explain the default/reference framing");
+assert.match(source, /current-policy-reference-2025/, "scenario default has a visible versioned current-policy policy reference");
+assert.match(source, /UNEP current-policy and Climate Action Tracker/, "scenario default cites current-policy synthesis sources");
+assert.match(source, /2\.6 C and just below 3 C/, "scenario default explains the current-policy warming range behind SSP2-4.5 mapping");
+assert.match(source, /not a prediction or hidden scenario average/, "scenario default avoids prophecy and hidden-average framing");
 assert.match(source, /Higher-warming stress case/, "scenario roles explain high-warming stress framing");
 assert.match(source, /lower-likelihood stress test/, "scenario roles caveat SSP5-8.5 framing");
 assert.match(source, /Local pathway gap/, "scenario contrast gives a concrete local difference");
@@ -22,6 +26,7 @@ assert.match(source, /not a claim that one pathway is guaranteed/, "scenario con
 assert.match(source, /aria-describedby="scenario-contrast-receipt"/, "scenario contrast action links to an accessible method receipt");
 assert.match(source, /id="scenario-contrast-receipt"/, "scenario contrast method receipt is rendered near the action");
 assert.match(source, /<ReceiptDetails label="method" text="Fetches the same annual checkpoints/, "scenario contrast method receipt describes the grounded endpoint and same-coordinate comparison");
+assert.match(source, /<ReceiptDetails label="default" text=\{\`\$\{DEFAULT_SCENARIO_EXPLANATION\}/, "scenario contrast exposes the default-scenario method receipt");
 assert.doesNotMatch(source, /title="Fetch the same annual checkpoints/, "scenario contrast method receipt must not regress to hover-only title text");
 
 console.log("scenario contrast smoke passed: same-location pathway comparison, caveats, and accessible method receipt guarded");

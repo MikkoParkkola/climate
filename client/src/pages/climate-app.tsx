@@ -33,6 +33,9 @@ const SCENARIOS = [
 ] as const;
 type ScenarioId = (typeof SCENARIOS)[number]["id"];
 const DEFAULT_SCENARIO: ScenarioId = "ssp245";
+const DEFAULT_SCENARIO_POLICY_VERSION = "current-policy-reference-2025";
+const DEFAULT_SCENARIO_EXPLANATION =
+  "Default reference: 2025 UNEP current-policy and Climate Action Tracker policies/action estimates put end-century warming roughly between 2.6 C and just below 3 C, so fupit maps the reference case to the closest fully grounded SSP pathway. It is a versioned reference, not a prediction or hidden scenario average.";
 
 // ── Types ────────────────────────────────────────────────────────────────────
 interface LocationOption {
@@ -1805,6 +1808,9 @@ export default function ClimateApp() {
               <span style={{ color: MUTED, fontSize: 12, lineHeight: 1.35 }}>
                 {selectedScenario.caption}. The shared forecast URL keeps this scenario.
               </span>
+              {scenario === DEFAULT_SCENARIO && (
+                <ReceiptDetails label="why default" text={`${DEFAULT_SCENARIO_EXPLANATION} Version: ${DEFAULT_SCENARIO_POLICY_VERSION}.`} />
+              )}
             </div>
 
             <button
@@ -1881,6 +1887,9 @@ export default function ClimateApp() {
             >
               {SCENARIOS.map((s) => <option key={s.id} value={s.id}>{s.label}</option>)}
             </select>
+            {scenario === DEFAULT_SCENARIO && (
+              <ReceiptDetails label="default" text={`${DEFAULT_SCENARIO_EXPLANATION} Version: ${DEFAULT_SCENARIO_POLICY_VERSION}.`} />
+            )}
             <button onClick={newSearch} style={{ display: "flex", alignItems: "center", gap: 5, padding: "5px 12px", borderRadius: 6, border: `1px solid ${BORDER}`, background: CARD, color: MUTED, fontSize: 12, cursor: "pointer" }}>
               <ArrowLeft style={{ width: 13, height: 13 }} /> New Search
             </button>
@@ -2062,6 +2071,7 @@ export default function ClimateApp() {
           </div>
           <div id="scenario-contrast-receipt" style={{ marginBottom: 10 }}>
             <ReceiptDetails label="method" text="Fetches the same annual checkpoints for each supported SSP scenario using the grounded /api/climate-trajectory endpoint and the same coordinates." />
+            <ReceiptDetails label="default" text={`${DEFAULT_SCENARIO_EXPLANATION} Version: ${DEFAULT_SCENARIO_POLICY_VERSION}.`} />
           </div>
 
           {scenarioContrastError && (

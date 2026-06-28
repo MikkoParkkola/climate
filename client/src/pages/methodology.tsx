@@ -70,11 +70,14 @@ export default function Methodology() {
               The source grid carries five SSP pathways for temperature, precipitation and sea
               level context. The app offers full habitability forecasts for the four scenarios
               that also have grounded heat, drought and flood layers. SSP2-4.5 is the default
-              middle-path reference and is closest to many current-policy central estimates,
-              but it is not a promise. SSP5-8.5 remains available as a very-high-emissions
-              stress test, not as "business as usual." We cite the scenario and show the raw
-              output so readers can judge the pathway instead of being forced into a single
-              narrative.
+              middle-path reference because 2025 UNEP current-policy and Climate Action
+              Tracker policies/action estimates put end-century warming roughly between
+              2.6 C and just below 3 C, making it the closest fully grounded SSP pathway in
+              this package. The default policy version is current-policy-reference-2025. It
+              is a reference, not a promise, prophecy, or hidden average of scenarios.
+              SSP5-8.5 remains available as a very-high-emissions stress test, not as
+              "business as usual." We cite the scenario and show the raw output so readers
+              can judge the pathway instead of being forced into a single narrative.
             </p>
 
             <h2>Risk thresholds (exact bands)</h2>

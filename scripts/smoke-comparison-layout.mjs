@@ -22,6 +22,8 @@ assert.notEqual(scenarioControlStart, -1, "comparison page exposes a scenario se
 const scenarioControlBlock = source.slice(scenarioControlStart, scenarioControlStart + 900);
 assert.match(scenarioControlBlock, /value=\{scenario\}/, "comparison scenario selector is bound to scenario state");
 assert.match(scenarioControlBlock, /changeScenario\(parseScenario\(e\.target\.value\)\)/, "comparison scenario selector updates scenario state");
+assert.match(source, /current-policy-reference-2025/, "comparison scenario selector explains the versioned current-policy default");
+assert.match(source, /UNEP current-policy and Climate Action Tracker/, "comparison scenario selector cites current-policy synthesis sources");
 assert.match(source, /setTrajectories\(\[\]\);/, "comparison scenario changes clear stale trajectory results");
 assert.match(source, /body:\s*JSON\.stringify\(\{[\s\S]*?years:\s*CHECKPOINTS,[\s\S]*?scenario,[\s\S]*?\}\)/, "comparison trajectory requests include the selected scenario");
 

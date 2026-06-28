@@ -45,6 +45,9 @@ const SCENARIOS = [
 ] as const;
 type ScenarioId = (typeof SCENARIOS)[number]["id"];
 const DEFAULT_SCENARIO: ScenarioId = "ssp245";
+const DEFAULT_SCENARIO_POLICY_VERSION = "current-policy-reference-2025";
+const DEFAULT_SCENARIO_EXPLANATION =
+  "Default reference: 2025 UNEP current-policy and Climate Action Tracker policies/action estimates put end-century warming roughly between 2.6 C and just below 3 C, so fupit maps the reference case to the closest fully grounded SSP pathway. It is a versioned reference, not a prediction or hidden scenario average.";
 
 // ── Types ────────────────────────────────────────────────────────────────────
 interface ClimateLocation {
@@ -630,6 +633,11 @@ export default function ClimateComparison({ onBack }: ClimateComparisonProps) {
                     {SCENARIOS.map((s) => <option key={s.id} value={s.id}>{s.label}</option>)}
                   </select>
                   <span className="text-xs text-gray-400">{selectedScenario.caption}</span>
+                  {scenario === DEFAULT_SCENARIO && (
+                    <span className="text-xs leading-5 text-gray-500">
+                      {DEFAULT_SCENARIO_EXPLANATION} Version: {DEFAULT_SCENARIO_POLICY_VERSION}.
+                    </span>
+                  )}
                 </div>
                 <Badge variant="outline" className="text-lg px-3 py-1">
                   {selectedLocations.length}/10 locations
