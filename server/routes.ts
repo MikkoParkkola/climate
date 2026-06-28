@@ -4,6 +4,7 @@ import { spawn } from "child_process";
 import fs from "fs";
 import path from "path";
 import { storage } from "./storage";
+import { DatabaseUnavailableError, isDatabaseConfigured } from "./db";
 import { MODEL_CACHE_VERSION, SOURCE_REGISTRY_VERSION } from "./model-cache-version";
 import { insertClimateLocationSchema } from "@shared/schema";
 import { z } from "zod";
@@ -40,6 +41,17 @@ function checkRateLimit(ip: string): boolean {
   if (entry.count >= RATE_LIMIT_MAX_PER_WINDOW) return false;
   entry.count++;
   return true;
+}
+
+function isDatabaseUnavailable(error: unknown): boolean {
+  return error instanceof DatabaseUnavailableError ||
+    (error instanceof Error && error.name === "DatabaseUnavailableError");
+}
+
+function databaseUnavailable(res: any) {
+  return res.status(503).json({
+    message: "Database is not configured; this endpoint requires DATABASE_URL.",
+  });
 }
 
 // Bounded concurrency for the Python climate model. Callers acquire a slot
@@ -390,6 +402,7 @@ function readBuildInfo() {
 export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/health", (_req, res) => {
     const buildInfo = readBuildInfo();
+    const databaseConfigured = isDatabaseConfigured();
     const deploymentCommit =
       process.env.REPLIT_GIT_SHA ||
       process.env.GIT_COMMIT_SHA ||
@@ -405,7 +418,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       gridEngine: getClimateGridEngine(),
       modelCacheVersion: MODEL_CACHE_VERSION,
       sourceRegistryVersion: SOURCE_REGISTRY_VERSION,
-      cachePurge: "startup-incompatible-delete-enabled",
+      databaseConfigured,
+      cachePurge: databaseConfigured ? "startup-incompatible-delete-enabled" : "skipped-no-database",
       legacyProjectionEndpoints: "410-gone",
       retiredEndpoints: [
         "/api/projections",
@@ -465,6 +479,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Add lat/lng aliases so the client can use either naming convention
       res.json(locations.map(l => ({ ...l, lat: Number(l.latitude), lng: Number(l.longitude) })));
     } catch (error) {
+      if (isDatabaseUnavailable(error)) return databaseUnavailable(res);
       console.error("Error searching locations:", error);
       res.status(500).json({ message: "Failed to search locations" });
     }
@@ -487,6 +502,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const location = await storage.createClimateLocation(locationData);
       res.json(location);
     } catch (error) {
+      if (isDatabaseUnavailable(error)) return databaseUnavailable(res);
       console.error("Error creating location:", error);
       if (error instanceof z.ZodError) {
         return res.status(400).json({ message: "Invalid location data", errors: error.errors });
@@ -574,6 +590,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const result = await runClimateModel(coordinates.lat, coordinates.lng, year, scenario);
       return res.json({ success: true, data: result });
     } catch (err) {
+      if (isDatabaseUnavailable(err)) return databaseUnavailable(res);
       const msg = (err as Error).message;
       if (msg === "timeout") {
         return res.status(504).json({ message: "Climate model timed out. Please try again." });
@@ -683,6 +700,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const points = years.map((year) => pointsByYear.get(year));
       res.json({ success: true, data: { coordinates, points, cachedCount } });
     } catch (err) {
+      if (isDatabaseUnavailable(err)) return databaseUnavailable(res);
       const msg = (err as Error).message;
       if (msg === "timeout") {
         return res.status(504).json({ message: "Climate model timed out. Please try again." });
@@ -745,6 +763,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .set("Cache-Control", "public, max-age=300")
         .json({ success: true, data: { ...twin, cachedProjection } });
     } catch (err) {
+      if (isDatabaseUnavailable(err)) return databaseUnavailable(res);
       const msg = (err as Error).message;
       if (msg === "timeout") {
         return res.status(504).json({ message: "Climate model timed out. Please try again." });

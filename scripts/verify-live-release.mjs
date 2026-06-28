@@ -117,7 +117,15 @@ try {
   assert(health.app === "fupit", "health app=fupit");
   assert(health.engine === "grounded_model.py", "health engine is grounded_model.py");
   assert(health.modelCacheVersion === expectedCacheVersion, `health model cache version is ${expectedCacheVersion}`);
-  assert(health.cachePurge === "startup-incompatible-delete-enabled", "startup cache purge enabled");
+  if (skipTrajectory) {
+    assert(
+      ["startup-incompatible-delete-enabled", "skipped-no-database"].includes(health.cachePurge),
+      "health reports cache purge state for read-only verification",
+    );
+  } else {
+    assert(health.databaseConfigured === true, "health reports database configured for trajectory verification");
+    assert(health.cachePurge === "startup-incompatible-delete-enabled", "startup cache purge enabled");
+  }
   assert(health.legacyProjectionEndpoints === "410-gone", "health marks legacy projection endpoints gone");
   assert(Array.isArray(health.routes) && health.routes.includes("/methodology"), "health exposes /methodology route");
   assert(Array.isArray(health.routes) && health.routes.includes("/rankings"), "health exposes /rankings route");
