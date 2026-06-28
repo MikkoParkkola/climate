@@ -81,6 +81,8 @@ assert.ok(report.limitations.some((limit: string) => limit.includes("quantified 
 
 const dataQualityPage = fs.readFileSync("client/src/pages/data-quality.tsx", "utf-8");
 assert.ok(dataQualityPage.includes("Source and license registry"));
+assert.ok(dataQualityPage.includes("Coastal relevance screen"));
+assert.ok(dataQualityPage.includes("not a parcel exposure or flood model"));
 assert.ok(dataQualityPage.includes("No registry row means no public metric"));
 assert.ok(dataQualityPage.includes("Commercial:"));
 assert.ok(dataQualityPage.includes("Redistribution:"));

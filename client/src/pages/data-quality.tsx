@@ -67,6 +67,21 @@ type DataQuality = {
     metrics: string[];
     caveats: string[];
   };
+  coastalProximity: {
+    catalog: string;
+    label: string;
+    version: string;
+    sourceId: string;
+    lineCount: number;
+    pointCount: number;
+    thresholdsKm: {
+      coastal: number;
+      nearCoastal: number;
+      regional: number;
+    };
+    method: string;
+    caveats: string[];
+  };
   trajectoryAudit: {
     artifactGeneratedAt: string;
     cityCount: number;
@@ -193,6 +208,29 @@ export default function DataQualityPage() {
                 {data.defaultScenarioPolicy.gridHash && (
                   <p className="break-all text-xs text-slate-500">Primary grid hash: {data.defaultScenarioPolicy.gridHash}</p>
                 )}
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardContent className="space-y-4 pt-6">
+                <div className="flex items-center gap-2">
+                  <ShieldCheck className="h-5 w-5 text-blue-700" aria-hidden />
+                  <h2 className="text-xl font-semibold">Coastal relevance screen</h2>
+                </div>
+                <p className="text-sm text-slate-600">
+                  {data.coastalProximity.label} uses {data.coastalProximity.lineCount.toLocaleString()} generalized coastline lines
+                  and {data.coastalProximity.pointCount.toLocaleString()} points from {data.coastalProximity.sourceId}.
+                  It gates sea-level wording only; it is not a parcel exposure or flood model.
+                </p>
+                <div className="grid gap-3 sm:grid-cols-3">
+                  <Stat label="Coastal" value={`${data.coastalProximity.thresholdsKm.coastal} km`} />
+                  <Stat label="Near-coastal" value={`${data.coastalProximity.thresholdsKm.nearCoastal} km`} />
+                  <Stat label="Regional context" value={`${data.coastalProximity.thresholdsKm.regional} km`} />
+                </div>
+                <p className="text-xs text-slate-500">{data.coastalProximity.method}</p>
+                <ul className="list-disc space-y-1 pl-5 text-sm text-slate-600">
+                  {data.coastalProximity.caveats.map((caveat) => <li key={caveat}>{caveat}</li>)}
+                </ul>
               </CardContent>
             </Card>
 
