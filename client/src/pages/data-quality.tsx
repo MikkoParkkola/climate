@@ -6,7 +6,27 @@ type DataQuality = {
   methodVersion: string;
   sourceRegistryVersion: string;
   artifacts: Array<{ path: string; bytes: number; sha256: string }>;
-  sourceRegistry: { rowCount: number; policy?: string; rows: Array<{ sourceId: string; provider: string; displayPolicy: string }> };
+  sourceRegistry: {
+    rowCount: number;
+    policy?: string;
+    rows: Array<{
+      sourceId: string;
+      provider: string;
+      version?: string;
+      stableUrl?: string;
+      citation?: string;
+      license?: string;
+      commercialReuse?: string;
+      redistribution?: string;
+      displayPolicy: string;
+      variables?: string[];
+      spatialResolution?: string;
+      temporalResolution?: string;
+      scenarioCoverage?: string;
+      method?: string;
+      reviewedAt?: string;
+    }>;
+  };
   grids: {
     primary: {
       layerCount: number;
@@ -75,6 +95,10 @@ function formatBytes(bytes: number) {
   if (bytes > 1024 * 1024) return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
   if (bytes > 1024) return `${(bytes / 1024).toFixed(1)} KB`;
   return `${bytes} B`;
+}
+
+function formatList(values?: string[]) {
+  return values && values.length > 0 ? values.join(", ") : "Not registered";
 }
 
 function Stat({ label, value }: { label: string; value: string | number }) {
@@ -232,20 +256,69 @@ export default function DataQualityPage() {
             </Card>
 
             <section className="grid gap-4 lg:grid-cols-2">
-              <Card>
-                <CardContent className="space-y-3 pt-6">
+              <Card className="lg:col-span-2">
+                <CardContent className="space-y-4 pt-6">
                   <div className="flex items-center gap-2">
                     <ShieldCheck className="h-5 w-5 text-blue-700" aria-hidden />
-                    <h2 className="text-xl font-semibold">Source registry</h2>
+                    <h2 className="text-xl font-semibold">Source and license registry</h2>
                   </div>
-                  <ul className="space-y-2 text-sm">
-                    {data.sourceRegistry.rows.map((row) => (
-                      <li key={row.sourceId} className="rounded border border-slate-200 p-2">
-                        <span className="font-medium">{row.sourceId}</span>
-                        <span className="block text-slate-600">{row.provider} · {row.displayPolicy}</span>
-                      </li>
-                    ))}
-                  </ul>
+                  <p className="text-sm text-slate-600">
+                    {data.sourceRegistry.policy} No registry row means no public metric, ranking,
+                    exported field, or enrichment layer is allowed.
+                  </p>
+                  <div className="overflow-x-auto rounded border border-slate-200">
+                    <table className="min-w-full divide-y divide-slate-200 text-left text-sm">
+                      <thead className="bg-slate-100 text-xs uppercase tracking-wide text-slate-600">
+                        <tr>
+                          <th scope="col" className="px-3 py-2 font-semibold">Source</th>
+                          <th scope="col" className="px-3 py-2 font-semibold">Registered method</th>
+                          <th scope="col" className="px-3 py-2 font-semibold">Display policy</th>
+                          <th scope="col" className="px-3 py-2 font-semibold">License and reuse</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-200 bg-white align-top">
+                        {data.sourceRegistry.rows.map((row) => (
+                          <tr key={row.sourceId}>
+                            <td className="max-w-xs px-3 py-3">
+                              <div className="font-semibold text-slate-900">{row.sourceId}</div>
+                              <div className="mt-1 text-slate-600">{row.provider}{row.version ? ` · ${row.version}` : ""}</div>
+                              {row.stableUrl && (
+                                <a href={row.stableUrl} className="mt-1 block break-all text-xs text-blue-700 hover:underline">
+                                  Source URL
+                                </a>
+                              )}
+                              {row.citation && <div className="mt-1 text-xs text-slate-500">{row.citation}</div>}
+                            </td>
+                            <td className="max-w-md px-3 py-3 text-slate-700">
+                              <div>{row.method ?? "Method note not registered."}</div>
+                              <details className="mt-2 text-xs text-slate-600">
+                                <summary className="cursor-pointer font-medium text-slate-700">Coverage</summary>
+                                <dl className="mt-2 space-y-1">
+                                  <div><dt className="inline font-medium">Variables:</dt> <dd className="inline">{formatList(row.variables)}</dd></div>
+                                  <div><dt className="inline font-medium">Spatial:</dt> <dd className="inline">{row.spatialResolution ?? "Not registered"}</dd></div>
+                                  <div><dt className="inline font-medium">Temporal:</dt> <dd className="inline">{row.temporalResolution ?? "Not registered"}</dd></div>
+                                  <div><dt className="inline font-medium">Scenario:</dt> <dd className="inline">{row.scenarioCoverage ?? "Not registered"}</dd></div>
+                                </dl>
+                              </details>
+                            </td>
+                            <td className="px-3 py-3">
+                              <span className="rounded border border-blue-200 bg-blue-50 px-2 py-1 text-xs font-medium text-blue-800">
+                                {row.displayPolicy}
+                              </span>
+                              {row.reviewedAt && <div className="mt-2 text-xs text-slate-500">Reviewed {row.reviewedAt}</div>}
+                            </td>
+                            <td className="max-w-sm px-3 py-3 text-slate-700">
+                              <div>{row.license ?? "License note not registered."}</div>
+                              <div className="mt-2 flex flex-wrap gap-2 text-xs">
+                                <span className="rounded border border-slate-200 px-2 py-1">Commercial: {row.commercialReuse ?? "not registered"}</span>
+                                <span className="rounded border border-slate-200 px-2 py-1">Redistribution: {row.redistribution ?? "not registered"}</span>
+                              </div>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
                 </CardContent>
               </Card>
 

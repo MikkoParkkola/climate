@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import fs from "node:fs";
 import { loadDataQuality } from "../server/data-quality";
 
 const report = loadDataQuality() as Record<string, any>;
@@ -13,6 +14,18 @@ assert.ok(report.sourceRegistry.rows.some((row: any) => row.sourceId === "ipcc-a
 assert.ok(report.sourceRegistry.rows.some((row: any) => row.sourceId === "natural-earth-populated-places-110m-v5" && row.displayPolicy === "show-with-bounded-catalog-caveat"));
 assert.ok(report.sourceRegistry.rows.some((row: any) => row.sourceId === "unep-egr-2025-current-policies" && row.displayPolicy === "show-as-policy-context-no-local-correction"));
 assert.ok(report.sourceRegistry.rows.some((row: any) => row.sourceId === "cat-2025-warming-projections" && row.displayPolicy === "show-as-policy-context-no-local-correction"));
+assert.ok(String(report.sourceRegistry.policy).includes("No public metric"));
+const cmip6Source = report.sourceRegistry.rows.find((row: any) => row.sourceId === "cmip6-scenariomip");
+assert.ok(cmip6Source);
+assert.ok(String(cmip6Source.license).includes("Model-specific CMIP6 terms"));
+assert.ok(String(cmip6Source.method).includes("Raw model-consensus anomaly"));
+assert.ok(Array.isArray(cmip6Source.variables) && cmip6Source.variables.includes("temperature anomaly"));
+const etccdiSource = report.sourceRegistry.rows.find((row: any) => row.sourceId === "cmip6-etccdi");
+assert.equal(etccdiSource?.commercialReuse, "restricted");
+assert.equal(etccdiSource?.redistribution, "restricted");
+const naturalEarthSource = report.sourceRegistry.rows.find((row: any) => row.sourceId === "natural-earth-populated-places-110m-v5");
+assert.equal(naturalEarthSource?.commercialReuse, "allowed");
+assert.ok(String(naturalEarthSource?.license).includes("public domain"));
 assert.equal(report.defaultScenarioPolicy.scenario, "ssp245");
 assert.equal(report.defaultScenarioPolicy.policyVersion, "current-policy-reference-2025");
 assert.ok(report.defaultScenarioPolicy.basis.includes("UNEP current-policy"));
@@ -45,5 +58,11 @@ assert.ok(report.executableChecks.includes("npm run smoke:node-performance"));
 assert.ok(report.limitations.some((limit: string) => limit.includes("Replit deployment")));
 assert.ok(report.limitations.some((limit: string) => limit.includes("Natural Earth populated places")));
 assert.ok(report.limitations.some((limit: string) => limit.includes("quantified AMOC")));
+
+const dataQualityPage = fs.readFileSync("client/src/pages/data-quality.tsx", "utf-8");
+assert.ok(dataQualityPage.includes("Source and license registry"));
+assert.ok(dataQualityPage.includes("No registry row means no public metric"));
+assert.ok(dataQualityPage.includes("Commercial:"));
+assert.ok(dataQualityPage.includes("Redistribution:"));
 
 console.log("data-quality smoke passed");

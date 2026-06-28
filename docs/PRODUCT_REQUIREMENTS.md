@@ -382,7 +382,7 @@ The app is public-launch ready when:
 8. Add guided classroom/explainer mode.
 9. Add scenario comparison small multiples for all key metrics. Status: implemented in the result-page scenario contrast with raw warming, IPCC assessed warming, heat-stress days, rainfall change, drought risk, flood risk, sea-level context, and habitability score; each panel discloses same-coordinate SSP trajectories and annual interpolation between grounded checkpoints.
 10. Add transparent score sensitivity: show how habitability changes when weights are adjusted or hidden. Status: implemented in the result-page explainability section as an interactive what-if over the visible habitability breakdown; checkboxes hide components, sliders adjust already-weighted component multipliers, and the panel discloses the clamp formula plus missing-domain limits.
-11. Add a source/license registry table for all enrichment datasets before new metrics are exposed.
+11. Add a source/license registry table for all enrichment datasets before new metrics are exposed. Status: implemented on `/data-quality` for the current `data/source-registry.json` rows, including license, commercial reuse, redistribution, method, coverage, display policy, and the rule that unregistered sources cannot produce public metrics/rankings/exports.
 12. Add global top-10 rankings for urban centers, countries, and population-weighted regions.
 13. Add freshwater risk using a legally compatible global dataset with baseline/future indicators.
 14. Add biodiversity pressure using documented datasets or transparent climate/habitat proxies.

@@ -5,11 +5,23 @@ import { SOURCE_REGISTRY_VERSION } from "./model-cache-version";
 type SourceRegistry = {
   version: string;
   generatedAt: string;
+  policy?: string;
   rows: Array<{
     sourceId: string;
     provider: string;
+    version?: string;
+    stableUrl?: string;
+    citation?: string;
+    license?: string;
+    commercialReuse?: string;
+    redistribution?: string;
     displayPolicy: string;
     variables: string[];
+    spatialResolution?: string;
+    temporalResolution?: string;
+    scenarioCoverage?: string;
+    method?: string;
+    reviewedAt?: string;
   }>;
 };
 
