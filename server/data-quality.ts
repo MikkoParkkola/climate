@@ -117,12 +117,12 @@ const ENRICHMENT_READINESS = [
     missingForFullUse: "Needs legally compatible basin/aquifer/runoff/storage/demand indicator with source-registry approval.",
   },
   {
-    key: "cold_stress",
-    label: "Cold stress",
-    status: "withheld",
-    publicBehavior: "Not shown as cold-stress days.",
-    groundedBasis: "Monthly temperature is shown, but no daily Tmin/frost/ice-day source is packaged.",
-    missingForFullUse: "Needs grounded daily cold extreme indices or observed/future cold-stress layer.",
+    key: "cold_season_context",
+    label: "Cold-season context",
+    status: "partial",
+    publicBehavior: "Shown as monthly-mean freeze-month context in the result page and educational report.",
+    groundedBasis: "Selected-year monthly mean temperature trajectory from the grounded CMIP6/observed-baseline forecast.",
+    missingForFullUse: "Needs grounded daily cold extreme indices or observed/future cold-stress layer for daily freeze days, freeze-thaw, heating demand, road/crop damage, pests, or health risk.",
   },
   {
     key: "fire_weather",

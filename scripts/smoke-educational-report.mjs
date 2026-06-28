@@ -25,6 +25,8 @@ assert.match(source, /dailyLifeSignals/, "report uses the visible daily-life int
 assert.match(source, /climateAnalog/, "report uses the bounded climate twin when available");
 assert.match(source, /Default-policy note: \$\{DEFAULT_SCENARIO_EXPLANATION\}/, "report preserves current-policy scenario explanation");
 assert.match(source, /Coastal relevance: \$\{coastalRelevance\?\.label/, "report includes coastal relevance status for sea-level context");
+assert.match(source, /Cold-season context: \$\{d\.coldMonthCount\} monthly-mean freeze months/, "report includes cold-season monthly-mean context");
+assert.match(source, /not daily freeze days or a daily cold-stress count/, "report caveats cold-season context as non-daily");
 assert.match(source, /no unregistered enrichment layer/, "report forbids unregistered enrichment claims");
 assert.match(source, /no safe-city or climate-haven claim/, "report forbids safe-city framing");
 assert.match(source, /text\/markdown;charset=utf-8/, "report downloads as Markdown");

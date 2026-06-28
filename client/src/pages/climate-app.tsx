@@ -28,6 +28,7 @@ const CHECKPOINTS = Array.from(new Set([BASELINE_YEAR, CURRENT_FORECAST_YEAR, ..
 const YEAR_TICKS = CHECKPOINTS;
 const QUICK_YEAR_BUTTONS = Array.from(new Set([CURRENT_FORECAST_YEAR, 2030, 2050, 2075, 2100].filter((year) => year >= CURRENT_FORECAST_YEAR)));
 const ROADMAP_YEARS = Array.from(new Set([CURRENT_FORECAST_YEAR, 2030, 2040, 2050, 2060, 2070, 2080, 2090, 2100].filter((year) => year >= CURRENT_FORECAST_YEAR && year <= MAX_YEAR))).sort((a, b) => a - b);
+const FREEZING_MONTHLY_MEAN_C = 0;
 const SCENARIOS = [
   { id: "ssp126", label: "SSP1-2.6", caption: "low emissions; strong mitigation" },
   { id: "ssp245", label: "SSP2-4.5", caption: "middle path; current-policy-adjacent reference" },
@@ -246,6 +247,7 @@ interface RoadmapItem {
   year: number;
   tempChange: number;
   heatDays: number;
+  coldMonths: number;
   precipChange: number;
   drought: number;
   flood: number;
@@ -604,6 +606,32 @@ function heatLifeText(days: number, delta: number): string {
   return "Heat stress is not a prominent modeled signal here; precipitation, flood, drought, or cold-season effects may matter more locally.";
 }
 
+function countMonthlyFreezeContext(monthlyTemps: number[]): number {
+  return monthlyTemps.filter((value) => Number.isFinite(value) && value <= FREEZING_MONTHLY_MEAN_C).length;
+}
+
+function coldSeasonLifeText(coldMonths: number, baselineColdMonths: number, coldestMonth: string, coldestMeanC: number): string {
+  const coldest = `${coldestMonth} averages ${coldestMeanC.toFixed(1)}°C`;
+  if (coldMonths >= 4) {
+    return `${coldMonths} modeled months have monthly mean temperature at or below 0°C. That points to a long cold-season climate context; daily freeze-thaw, snow, road, crop, and heating impacts still need finer daily and local data.`;
+  }
+  if (coldMonths > 0) {
+    const direction = coldMonths < baselineColdMonths
+      ? `down from ${baselineColdMonths} baseline monthly-mean freeze months`
+      : coldMonths > baselineColdMonths
+        ? `up from ${baselineColdMonths} baseline monthly-mean freeze months`
+        : "similar to the baseline monthly-mean freeze season";
+    return `${coldMonths} modeled ${coldMonths === 1 ? "month has" : "months have"} monthly mean temperature at or below 0°C, ${direction}; ${coldest}. This is winter climate context, not a daily cold-stress count.`;
+  }
+  if (baselineColdMonths > 0) {
+    return `No selected-year month has monthly mean temperature at or below 0°C, down from ${baselineColdMonths} baseline monthly-mean freeze months. ${coldest}, so cold snaps can still occur even though this monthly proxy has crossed above freezing.`;
+  }
+  if (coldestMeanC <= 5) {
+    return `No modeled month averages at or below 0°C, but the coldest month remains cool (${coldest}). Daily frost, heating demand, pests, and freeze-thaw damage require daily or local datasets not included here.`;
+  }
+  return `The monthly-mean freeze proxy is not prominent here: ${coldest}, and no selected-year month averages at or below 0°C. Daily cold extremes are not modeled in this build.`;
+}
+
 function precipitationLifeText(percent: number): string {
   if (percent <= -15) {
     return "The annual precipitation signal is substantially drier, which can pressure freshwater reliability where storage, groundwater, snowpack, or demand are already limiting.";
@@ -661,6 +689,7 @@ function contrastSnapshot(points: ProjectionPoint[], year: number, scenarioId: S
 
 function roadmapDriver(current: Omit<RoadmapItem, "driver">, previous: Omit<RoadmapItem, "driver">): RoadmapItem["driver"] {
   const heatDelta = current.heatDays - previous.heatDays;
+  const coldDelta = current.coldMonths - previous.coldMonths;
   const droughtDelta = current.drought - previous.drought;
   const floodDelta = current.flood - previous.flood;
   const precipDelta = current.precipChange - previous.precipChange;
@@ -673,6 +702,14 @@ function roadmapDriver(current: Omit<RoadmapItem, "driver">, previous: Omit<Road
       text: heatDelta >= 0
         ? `heat-stress days rise by ${Math.round(heatDelta)} since the previous roadmap point`
         : `heat-stress days ease by ${Math.abs(Math.round(heatDelta))} since the previous roadmap point`,
+    },
+    {
+      weight: Math.abs(coldDelta),
+      label: "Cold season",
+      color: coldDelta > 0 ? BLUE : GREEN,
+      text: coldDelta > 0
+        ? `monthly-mean freeze-season proxy gains ${coldDelta} ${coldDelta === 1 ? "month" : "months"}`
+        : `monthly-mean freeze-season proxy loses ${Math.abs(coldDelta)} ${Math.abs(coldDelta) === 1 ? "month" : "months"}`,
     },
     {
       weight: Math.abs(droughtDelta) / 10,
@@ -714,10 +751,12 @@ function roadmapDriver(current: Omit<RoadmapItem, "driver">, previous: Omit<Road
 
 function roadmapSnapshot(points: ProjectionPoint[], year: number, previous?: Omit<RoadmapItem, "driver">): RoadmapItem {
   const score = Math.max(0, Math.min(100, Math.round(interpScalar(points, year, (p) => p.habitability.score))));
+  const monthlyTemps = Array.from({ length: 12 }, (_, month) => interpScalar(points, year, (p) => p.temperature.monthly?.[month] ?? p.temperature.annual_mean));
   const base = {
     year,
     tempChange: interpScalar(points, year, (p) => p.temperature.anomaly),
     heatDays: Math.max(0, Math.round(interpScalar(points, year, (p) => p.extremes.heat_stress_days))),
+    coldMonths: countMonthlyFreezeContext(monthlyTemps),
     precipChange: interpScalar(points, year, (p) => p.precipitation.anomaly_percent),
     drought: Math.round(riskScore(interpScalar(points, year, (p) => p.extremes.drought_risk))),
     flood: Math.round(riskScore(interpScalar(points, year, (p) => p.extremes.flood_risk))),
@@ -1526,6 +1565,9 @@ export default function ClimateApp() {
     const score = Math.max(0, Math.min(100, Math.round(interpScalar(pts, year, (p) => p.habitability.score))));
     const category = categoryFor(score);
     const monthlyTemps = Array.from({ length: 12 }, (_, m) => interpScalar(pts, year, (p) => p.temperature.monthly?.[m] ?? p.temperature.annual_mean));
+    const baselineMonthlyTemps = Array.from({ length: 12 }, (_, m) => pts[0].temperature.monthly?.[m] ?? pts[0].temperature.annual_mean);
+    const coldMonthCount = countMonthlyFreezeContext(monthlyTemps);
+    const baselineColdMonthCount = countMonthlyFreezeContext(baselineMonthlyTemps);
     const rawMonthlyPrecip = Array.from({ length: 12 }, (_, m) => Math.max(0, interpScalar(pts, year, (p) => p.precipitation.monthly?.[m] ?? p.precipitation.annual_total / 12)));
     const rawSum = rawMonthlyPrecip.reduce((a, b) => a + b, 0) || 1;
     const monthlyPrecip = rawMonthlyPrecip.map((v) => Math.max(0, Math.round((v / rawSum) * annualPrecip)));
@@ -1555,6 +1597,7 @@ export default function ClimateApp() {
     return {
       avgTemp, tempChange, ipccTemp, ipccDelta, ipccAdjustment, calibrationFactor, annualPrecip, precipChange, heatDays, baseHeatDays, drought, flood, seaLevel,
       score, category, monthlyTemps, monthlyPrecip, minIdx, maxIdx, wetIdx, dryIdx, breakdown,
+      coldMonthCount, baselineColdMonthCount,
       np, sensitivity, sensLabel, sensColor, feedbacks,
       circulation: np.atmospheric_physics?.circulation_pattern,
       climateZone: np.location?.climate_zone,
@@ -1845,6 +1888,13 @@ export default function ClimateApp() {
         receipt: `Uses ${d.humidHeatSourceId ?? "the registered humid-heat method"}: ${d.humidHeatMethod ?? "monthly mean temperature plus CMIP6 relative humidity through the Stull wet-bulb approximation."} ${d.humidHeatCaveat ?? "It is not WBGT, a daily exceedance count, or medical/occupational-safety advice."}`,
       },
       {
+        label: "Cold-season context",
+        value: `${d.coldMonthCount} mo`,
+        color: d.coldMonthCount >= 3 ? BLUE : d.coldMonthCount > 0 ? CYAN : GREEN,
+        text: coldSeasonLifeText(d.coldMonthCount, d.baselineColdMonthCount, MONTHS[d.minIdx], d.monthlyTemps[d.minIdx]),
+        receipt: `Uses the selected-year monthly mean temperature trajectory for ${scenarioInfo(d.scenario ?? scenario).label}. It counts months at or below ${FREEZING_MONTHLY_MEAN_C}°C as cold-season context, not daily freeze days, freeze-thaw events, heating demand, road conditions, crop damage, pests, or personal health risk.`,
+      },
+      {
         label: "Water reliability",
         value: `${signedNumber(d.precipChange, 1)}%`,
         color: BLUE,
@@ -1877,7 +1927,7 @@ export default function ClimateApp() {
       });
     }
     return signals;
-  }, [d, scoreStory, selectedLocation?.lat, selectedLocation?.lng, coastalRelevance]);
+  }, [d, scoreStory, scenario, selectedLocation?.lat, selectedLocation?.lng, coastalRelevance]);
 
   // Tipping points computed from real interpolated trajectory
   const tipping = useMemo(() => {
@@ -2081,7 +2131,7 @@ export default function ClimateApp() {
     const roadmapLines = roadmapItems
       .map((item) => {
         const delta = item.scenarioDelta ? ` ${item.scenarioDelta}` : "";
-        return `- ${item.year}: ${signedNumber(item.tempChange, 1)} C raw warming, ${item.heatDays} heat-stress days/year, precipitation ${signedNumber(item.precipChange, 1)}%, drought ${item.drought}/100, flood ${item.flood}/100, sea-level context ${item.seaLevel} cm, habitability ${item.score}/100 (${item.category}). Main signal: ${item.driver.text}.${delta}`;
+        return `- ${item.year}: ${signedNumber(item.tempChange, 1)} C raw warming, ${item.heatDays} heat-stress days/year, ${item.coldMonths} monthly-mean freeze months, precipitation ${signedNumber(item.precipChange, 1)}%, drought ${item.drought}/100, flood ${item.flood}/100, sea-level context ${item.seaLevel} cm, habitability ${item.score}/100 (${item.category}). Main signal: ${item.driver.text}.${delta}`;
       })
       .join("\n");
     const trendLines = scoreStory.trendRates.map((rate) => `- ${rate.label}: ${rate.value}`).join("\n");
@@ -2114,6 +2164,7 @@ export default function ClimateApp() {
       `- IPCC-assessed/calibrated annual temperature: ${d.ipccTemp.toFixed(1)} C; assessed anomaly ${signedNumber(d.ipccDelta, 1)} C; visible adjustment ${signedNumber(d.ipccAdjustment, 1)} C.`,
       `- Annual precipitation: ${d.annualPrecip} mm; change ${signedNumber(d.precipChange, 1)}%.`,
       `- Heat stress: ${d.heatDays} days/year.`,
+      `- Cold-season context: ${d.coldMonthCount} monthly-mean freeze months; baseline ${d.baselineColdMonthCount}; coldest modeled month ${MONTHS[d.minIdx]} ${d.monthlyTemps[d.minIdx].toFixed(1)} C. This is not daily freeze days or a daily cold-stress count.`,
       `- Drought pressure: ${d.drought}/100; flood/heavy-rain pressure: ${d.flood}/100.`,
       `- Sea-level context: ${d.seaLevel} cm; range ${d.seaLow != null && d.seaHigh != null ? `${Math.round(d.seaLow)}-${Math.round(d.seaHigh)} cm` : "not exposed"}. Coastal relevance: ${coastalRelevance?.label ?? "not evaluated"}. ${coastalRelevance?.receipt ?? "No local coastal exposure inference is made."}`,
       `- Habitability presentation score: ${d.score}/100 (${d.category}); score movement from ${scoreStory.baselineYear}: ${signedNumber(scoreStory.scoreDelta, 0)} points.`,
@@ -2150,7 +2201,7 @@ export default function ClimateApp() {
       "",
       "This is educational and research context, not a property-risk certificate, safety forecast, relocation recommendation, insurance model, medical advice, engineering assessment, or guarantee that this exact point will be livable or unlivable. Local adaptation, governance, health systems, wealth, migration, conflict, infrastructure, elevation, and parcel-scale exposure are outside this score.",
       "",
-      "Not yet included in the score: cold-stress days, crop yields, wildfire weather, biodiversity species ranges, local freshwater infrastructure, or parcel-level flood exposure.",
+      "Not yet included in the score: daily cold-stress days, crop yields, wildfire weather, biodiversity species ranges, local freshwater infrastructure, or parcel-level flood exposure.",
       "",
       "This Markdown report uses only fields already visible in the forecast page or projection receipt. It adds no unregistered enrichment layer and makes no safe-city or climate-haven claim.",
       "",
@@ -2512,6 +2563,7 @@ export default function ClimateApp() {
                     </div>
                     <div style={{ flex: "1 1 82px" }}><div style={{ fontSize: 9, color: MUTED }}>Raw warming</div><div style={{ fontSize: 12.5, fontWeight: 800, color: RED }}>{signedNumber(item.tempChange, 1)}°C</div></div>
                     <div style={{ flex: "1 1 72px" }}><div style={{ fontSize: 9, color: MUTED }}>Heat days</div><div style={{ fontSize: 12.5, fontWeight: 800, color: ORANGE }}>{item.heatDays}</div></div>
+                    <div style={{ flex: "1 1 82px" }}><div style={{ fontSize: 9, color: MUTED }}>Cold months</div><div style={{ fontSize: 12.5, fontWeight: 800, color: item.coldMonths > 0 ? CYAN : GREEN }}>{item.coldMonths}</div></div>
                     <div style={{ flex: "1 1 82px" }}><div style={{ fontSize: 9, color: MUTED }}>Water signal</div><div style={{ fontSize: 12.5, fontWeight: 800, color: BLUE }}>{signedNumber(item.precipChange, 1)}%</div></div>
                     <div style={{ flex: "1 1 90px" }}><div style={{ fontSize: 9, color: MUTED }}>Sea-level context</div><div style={{ fontSize: 12.5, fontWeight: 800, color: CYAN }}>{item.seaLevel} cm</div></div>
                     <div style={{ flex: "1 1 70px" }}><div style={{ fontSize: 9, color: MUTED }}>Score</div><div style={{ fontSize: 12.5, fontWeight: 800, color: scoreColor(item.score) }}>{item.score}/100</div></div>
@@ -2672,7 +2724,7 @@ export default function ClimateApp() {
                 ))}
               </div>
               <p style={{ margin: "12px 0 0", fontSize: 10.5, lineHeight: 1.55, color: MUTED }}>
-                Not yet included in the score: cold-stress days, crop yields, wildfire weather, biodiversity species ranges, local freshwater infrastructure, or parcel-level flood exposure.
+                Not yet included in the score: daily cold-stress days, crop yields, wildfire weather, biodiversity species ranges, local freshwater infrastructure, or parcel-level flood exposure.
               </p>
             </div>
 
@@ -3070,6 +3122,15 @@ export default function ClimateApp() {
               detail: `${roundedValue(d!.humidHeatRh, "% RH", 1)} · ${signedNumber(d!.humidHeatRhDelta ?? 0, 1)} pp RH`,
               color: d!.humidHeatWetBulb != null && d!.humidHeatWetBulb >= 24 ? RED : ORANGE,
               receipt: `Humid heat screen uses monthly mean air temperature and CMIP6 near-surface relative humidity for ${shownScenario.label}, then applies the registered Stull 2011 empirical wet-bulb approximation. It reports max monthly mean wet-bulb, not WBGT, not daily humid-heat days, and not medical or occupational-safety advice. RH ensemble spread: ${roundedValue(d!.humidHeatRhSpread, " percentage points", 1)}; RH formula-domain clipped months: ${d!.humidHeatClippedMonths ?? 0}; temperature-domain warning months: ${d!.humidHeatTempDomainWarningMonths ?? 0}.`,
+            },
+            {
+              label: "Cold-season context",
+              value: d!.coldMonthCount,
+              unit: "monthly mean freeze months",
+              sub: `${MONTHS[d!.minIdx]} ${d!.monthlyTemps[d!.minIdx].toFixed(1)}°C`,
+              detail: `${d!.baselineColdMonthCount} baseline months`,
+              color: d!.coldMonthCount >= 3 ? BLUE : d!.coldMonthCount > 0 ? CYAN : GREEN,
+              receipt: `Cold-season context uses monthly mean temperature from the grounded trajectory for ${shownScenario.label}. It counts months at or below ${FREEZING_MONTHLY_MEAN_C}°C, not daily freeze days, freeze-thaw events, heating demand, road conditions, crop damage, pests, or health risk.`,
             },
             {
               label: "Drought Risk",

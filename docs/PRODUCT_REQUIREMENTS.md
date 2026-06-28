@@ -126,7 +126,9 @@ The user should understand why the habitability score changed without reading th
 Every major metric must have a plain-language "how life changes" interpretation:
 
 - Heat: sleep quality, outdoor work/sport, cooling demand, health stress, school/work disruption.
-- Cold: fewer freezing days, winter recreation loss, heating demand, freeze-thaw damage, pests.
+- Cold: monthly-mean freeze-season context where available; daily freezing days, winter recreation loss,
+  heating demand, freeze-thaw damage, and pest effects require finer grounded datasets before they
+  can be shown as quantified impacts.
 - Water: freshwater stress, drought, seasonal reliability, groundwater context where grounded.
 - Rain/flood: heavy-rain disruption, drainage pressure, river/coastal caveats.
 - Food/agriculture: growing-season shifts, crop/land-cover context, water limits, no invented yields.
@@ -291,6 +293,9 @@ Must show:
   Status: humid heat is partially implemented as a CMIP6 relative-humidity plus Stull 2011
   monthly mean wet-bulb screen; daily humid-heat exceedance days and WBGT remain future
   until grounded daily/weather-exposure data exists.
+  Cold-season context is partially implemented as a monthly-mean freeze-month count from the
+  grounded monthly temperature trajectory; daily cold-stress days, freeze-thaw, heating demand,
+  crop damage, pests, and health risk remain future until finer data exists.
 - AMOC/Gulf Stream or other large-scale circulation context when relevant and cited, clearly
   separated from local metric projections.
 - Trend graphs as the default; year snapshot as a derived detail.
@@ -393,7 +398,7 @@ The app is public-launch ready when:
 8. Add guided classroom/explainer mode. Status: implemented on the result page as a guided explainer that walks users through trend-first reading, daily-life questions, score drivers, pathway/twin comparison, evidence limits, and classroom prompts using only visible forecast fields.
 9. Add scenario comparison small multiples for all key metrics. Status: implemented in the result-page scenario contrast with raw warming, IPCC assessed warming, heat-stress days, rainfall change, drought risk, flood risk, sea-level context, and habitability score; each panel discloses same-coordinate SSP trajectories and annual interpolation between grounded checkpoints.
 10. Add transparent score sensitivity: show how habitability changes when weights are adjusted or hidden. Status: implemented in the result-page explainability section as an interactive what-if over the visible habitability breakdown; checkboxes hide components, sliders adjust already-weighted component multipliers, and the panel discloses the clamp formula plus missing-domain limits.
-11. Add a source/license registry table for all enrichment datasets before new metrics are exposed. Status: implemented on `/data-quality` for the current `data/source-registry.json` rows, including license, commercial reuse, redistribution, method, coverage, display policy, and the rule that unregistered sources cannot produce public metrics/rankings/exports. `/data-quality` also shows an enrichment readiness ledger that marks partial/context-only domains separately from withheld domains such as freshwater, cold stress, fire weather, agriculture, infrastructure, and biodiversity.
+11. Add a source/license registry table for all enrichment datasets before new metrics are exposed. Status: implemented on `/data-quality` for the current `data/source-registry.json` rows, including license, commercial reuse, redistribution, method, coverage, display policy, and the rule that unregistered sources cannot produce public metrics/rankings/exports. `/data-quality` also shows an enrichment readiness ledger that marks partial/context-only domains separately from withheld domains such as freshwater, daily cold stress, fire weather, agriculture, infrastructure, and biodiversity.
 12. Add global top-10 rankings for urban centers, countries, and population-weighted regions. Status: partially implemented with curated-city rankings, Natural Earth populated-place rankings, and a Natural Earth-derived country aggregate weighted across included `pop_max >= 3,000,000` populated-place points. True GHSL urban-center, full national exposure, rural exposure, and population-weighted regional/country artifacts remain future work.
 13. Add freshwater risk using a legally compatible global dataset with baseline/future indicators.
 14. Add biodiversity pressure using documented datasets or transparent climate/habitat proxies.

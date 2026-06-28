@@ -276,7 +276,7 @@ const SEO_PAGES: Record<string, SeoPage> = {
     <li>Which trend-review flags still require human scientific review.</li>
   </ul>
   <h2>Enrichment readiness ledger</h2>
-  <p>The data-quality report marks humid heat and sea-level relevance as partial, AMOC as context-only, and freshwater, cold stress, fire weather, agriculture, infrastructure, and biodiversity as withheld until a registered source and method exist.</p>
+  <p>The data-quality report marks humid heat, sea-level relevance, and cold-season context as partial, AMOC as context-only, and freshwater, daily cold stress, fire weather, agriculture, infrastructure, and biodiversity as withheld until a registered source and method exist.</p>
   <p>Use this page with <a href="/methodology">the methodology</a> and <a href="${GITHUB_REPO_URL}">the source repository</a>. It does not prove that the public Replit deployment has already been republished or that production cache purge has been completed.</p>
 </main>`,
   },

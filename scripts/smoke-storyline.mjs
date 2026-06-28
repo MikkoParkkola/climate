@@ -113,6 +113,15 @@ assert.match(source, /temperature-domain warning months/, "humid-heat receipt di
 assert.match(source, /Humid heat feel/, "daily-life section exposes humid-heat interpretation");
 assert.match(source, /d\.humidHeatWetBulb/, "daily-life humid-heat row is derived from the API snapshot");
 assert.match(source, /monthly mean wet-bulb/, "humid-heat copy labels the metric as monthly mean context");
+assert.match(source, /function countMonthlyFreezeContext/, "cold-season context derives from monthly temperature values");
+assert.match(source, /const coldMonthCount = countMonthlyFreezeContext\(monthlyTemps\)/, "selected-year snapshot counts monthly-mean freeze months");
+assert.match(source, /Cold-season context/, "daily-life and risk sections expose cold-season context");
+assert.match(source, /monthly mean freeze months/, "cold-season UI labels the metric as monthly-mean freeze context");
+assert.match(source, /not daily freeze days/, "cold-season receipts reject daily freeze-day interpretation");
+assert.match(source, /not a daily cold-stress count/, "cold-season copy rejects daily cold-stress interpretation");
+assert.match(source, /Cold months/, "roadmap surfaces cold-season context alongside heat, water, sea level, and score");
+assert.match(methodology, /Cold-season context/, "methodology documents cold-season context");
+assert.match(methodology, /cannot\s+count daily freeze days/, "methodology discloses cold-season proxy limits");
 assert.match(source, /Drought risk uses ETCCDI consecutive dry days/, "drought risk card exposes its source receipt");
 assert.match(source, /Flood risk uses ETCCDI Rx5day/, "flood risk card exposes its source receipt");
 assert.match(source, /Sea-level context uses the registered NASA\/IPCC AR6 regional sea-level layer/, "sea-level context card exposes its source receipt");
