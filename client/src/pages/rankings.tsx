@@ -9,6 +9,10 @@ const SCENARIOS = [
   { id: "ssp370", label: "High pathway (SSP3-7.0)" },
   { id: "ssp585", label: "Very high stress test (SSP5-8.5)" },
 ] as const;
+const DEFAULT_SCENARIO = "ssp245";
+const DEFAULT_SCENARIO_POLICY_VERSION = "current-policy-reference-2025";
+const DEFAULT_SCENARIO_EXPLANATION =
+  "Default reference: 2025 UNEP current-policy and Climate Action Tracker policies/action estimates put end-century warming roughly between 2.6 C and just below 3 C, so fupit maps the reference case to the closest fully grounded SSP pathway. It is a versioned reference, not a prediction or hidden scenario average.";
 
 const YEARS = [2026, 2030, 2050, 2075, 2100];
 
@@ -66,7 +70,7 @@ function uncertaintyLabel(row: Ranking["rows"][number]) {
 }
 
 export default function RankingsPage() {
-  const [scenario, setScenario] = useState("ssp245");
+  const [scenario, setScenario] = useState(DEFAULT_SCENARIO);
   const [year, setYear] = useState(2050);
   const [metric, setMetric] = useState("habitability_score");
   const [direction, setDirection] = useState<Direction>("highest");
@@ -126,6 +130,11 @@ export default function RankingsPage() {
             <select value={scenario} onChange={(event) => setScenario(event.target.value)} className="w-full rounded border border-slate-300 bg-white px-3 py-2">
               {SCENARIOS.map((item) => <option key={item.id} value={item.id}>{item.label}</option>)}
             </select>
+            {scenario === DEFAULT_SCENARIO && (
+              <span className="block text-xs leading-5 text-slate-500">
+                {DEFAULT_SCENARIO_EXPLANATION} Version: {DEFAULT_SCENARIO_POLICY_VERSION}.
+              </span>
+            )}
           </label>
           <label className="space-y-1 text-sm">
             <span className="font-medium text-slate-700">Year</span>

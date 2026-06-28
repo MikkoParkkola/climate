@@ -1,6 +1,16 @@
 import assert from "node:assert/strict";
+import fs from "node:fs";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 import { getRanking } from "../server/precomputed-rankings";
 import { loadSourceRegistry } from "../server/source-registry";
+
+const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+const rankingsPage = fs.readFileSync(path.join(repoRoot, "client", "src", "pages", "rankings.tsx"), "utf8");
+
+assert.match(rankingsPage, /current-policy-reference-2025/, "rankings page explains the versioned current-policy default");
+assert.match(rankingsPage, /UNEP current-policy and Climate Action Tracker/, "rankings page cites current-policy synthesis sources");
+assert.match(rankingsPage, /not a prediction or hidden scenario average/, "rankings page avoids prophecy and hidden-average framing");
 
 const registry = loadSourceRegistry();
 assert.equal(registry.version, "source-registry-v1");
