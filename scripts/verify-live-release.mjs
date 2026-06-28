@@ -150,6 +150,7 @@ try {
   assert(rankingsPage.text.includes("bounded climate rankings"), "/rankings carries bounded-ranking copy");
   assert(rankingsPage.text.includes("not complete global"), "/rankings avoids complete-global claim");
   assert(rankingsPage.text.includes("Natural Earth"), "/rankings exposes Natural Earth population-place catalog copy");
+  assert(rankingsPage.text.includes("country aggregate"), "/rankings exposes bounded country aggregate copy");
 
   const { json: ranking } = await getJson("/api/climate/global-rankings?catalog=curated_cities&scenario=ssp245&year=2050&metric=habitability_score&direction=highest&limit=10");
   assert(ranking.catalog === "curated_cities", "ranking API uses curated_cities catalog");

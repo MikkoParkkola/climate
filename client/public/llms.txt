@@ -13,7 +13,7 @@ Builder profile: https://github.com/MikkoParkkola
 
 / : Single-location climate projection tool — search for a city or place and explore its projected future climate across multiple decades and emissions scenarios, with raw JSON and Markdown educational summary export.
 /comparison : Multi-location climate comparison page — compare climate projections side-by-side for two or more locations to understand regional differences.
-/rankings : Bounded top-10 ranking page — compares precomputed climate signals across documented curated-city and Natural Earth population-place catalogs with source receipts and caveats.
+/rankings : Bounded top-10 ranking page — compares precomputed climate signals across documented curated-city, Natural Earth population-place, and Natural Earth-derived country aggregate catalogs with source receipts and caveats.
 /methodology : Methodology and source page — explains CMIP6/IPCC data, IPCC calibration, sea-level inputs, ETCCDI extremes, risk thresholds, habitability scoring, and known limitations.
 /data-quality : Build evidence page — reports current artifact hashes, source-registry rows, default-scenario policy source IDs, ranking catalog coverage, trajectory-audit coverage, validation-report status, trend-review flags, and known launch limitations.
 

@@ -287,7 +287,7 @@ export function loadDataQuality(): Record<string, unknown> {
     limitations: [
       "This dashboard describes the packaged artifact bundle. It does not prove the public Replit deployment is current.",
       "Production climate_model_cache still requires purge or live version-guard proof after deployment.",
-      "Ranking catalogs are bounded examples: curated cities and Natural Earth populated places, not complete country, GHSL urban-center, or population-weighted exposure rankings.",
+      "Ranking catalogs are bounded examples: curated cities, Natural Earth populated places, and Natural Earth-derived country aggregates; they are not complete GHSL urban-center, full national exposure, rural exposure, or population-weighted exposure rankings.",
       "Trend review flags are intentionally visible for scientific review and are not automatically hidden by green CI.",
       "Freshwater, biodiversity, agriculture, infrastructure, and quantified AMOC local-impact layers remain withheld until source-registry approval and implementation.",
     ],
