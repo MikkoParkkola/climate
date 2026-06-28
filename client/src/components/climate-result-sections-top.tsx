@@ -1,0 +1,634 @@
+import { GitCompare, Loader2, Download, Search, MapPin, ArrowLeft, Play, Pause, ShieldCheck, ExternalLink, Share2, Check } from "lucide-react";
+import GuidedClimateExplainer from "@/components/guided-climate-explainer";
+import ScenarioSmallMultiples, { type ScenarioSmallMultipleMetric } from "@/components/scenario-small-multiples";
+import ScoreSensitivity, { type ScoreSensitivityInput } from "@/components/score-sensitivity";
+import {
+  BG, CARD, BORDER, ACCENT, MUTED, RED, BLUE, ORANGE, GREEN, AMBER, PURPLE, CYAN,
+  FONT_DISPLAY, FONT_MONO, card, MONTHS, BASELINE_YEAR, MAX_YEAR, CURRENT_FORECAST_YEAR,
+  YEAR_TICKS, QUICK_YEAR_BUTTONS, FREEZING_MONTHLY_MEAN_C, SCENARIOS, DEFAULT_SCENARIO, DEFAULT_SCENARIO_POLICY_VERSION,
+  DEFAULT_SCENARIO_EXPLANATION, SCENARIO_LINE_COLORS,
+} from "@/lib/climate-constants";
+import {
+  riskScore, signedNumber, roundedValue, prettify, confidenceColor, feedbackTag,
+  describeSignalLevel, scoreColor, parseScenario,
+} from "@/lib/climate-helpers";
+import {
+  ReceiptDetails, ChartValuesDetails, TrendChart, MonthlyTempChart, PrecipBars, ScoreSparkline,
+} from "@/components/climate-charts";
+
+import type { ClimateAppVM } from "@/hooks/use-climate-app";
+
+
+export default function ClimateResultSectionsTop({ vm }: { vm: ClimateAppVM }) {
+  const {
+  locationText, setLocationText, selectedLocation, setSelectedLocation,
+  suggestions, showSuggestions, setShowSuggestions, year, scenario, trajectory,
+  isLoading, loadingStep, error, exporting, playing, shareCopied, shareStoryCopied,
+  shareImageBusy, shareImageSaved, rawJsonCopied, reportSaved, analogCatalog, analogError,
+  coastalArtifact, coastalArtifactError, scenarioContrast, scenarioContrastLoading,
+  scenarioContrastError, resultsRef,
+  traj, d, displayYear, climateAnalog, coastalRelevance, scenarioContrastRows,
+  scenarioSmallMultipleMetrics, scenarioContrastTakeaway, roadmapItems, scoreStory,
+  scoreSensitivityInputs, dailyLifeSignals, tipping, selectedScenario, shownScenario,
+  shareUrl, shareStory, learningPrompts, sc, tPct, maxBreakdown,
+  togglePlay, setYearManual, selectLocation, generate, loadScenarioContrast, changeScenario,
+  newSearch, exportPDF, openClimateTwinCity, copyShareStory, downloadShareImage, shareForecast,
+  buildRawForecastJson, copyRawForecastJson, downloadRawForecastJson,
+  buildEducationalReportMarkdown, downloadEducationalReport,
+  } = vm;
+  const placeName = selectedLocation?.name?.split(",")[0] ?? "This location";
+  const heatDelta = d!.heatDays - d!.baseHeatDays;
+  const nextTip = tipping.find((t) => t.year != null && (t.year as number) > displayYear);
+  const crossedTips = tipping.filter((t) => t.year != null && (t.year as number) <= displayYear).length;
+
+  return (
+    <>
+        {/* Location Banner */}
+        <div style={{ ...card, padding: 18, marginBottom: 14, position: "relative", overflow: "hidden" }}>
+          <div style={{ position: "absolute", inset: 0, backgroundImage: "radial-gradient(circle at 1px 1px,rgba(255,255,255,0.03) 1px,transparent 0)", backgroundSize: "24px 24px", pointerEvents: "none" }} />
+          <div style={{ position: "relative", display: "flex", justifyContent: "space-between", alignItems: "flex-end", gap: 16, flexWrap: "wrap" }}>
+            <div>
+              <h1 style={{ fontFamily: FONT_DISPLAY, fontSize: 34, fontWeight: 600, lineHeight: 1, marginBottom: 8, letterSpacing: "-0.015em" }}>{selectedLocation?.name}</h1>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 12, color: MUTED, flexWrap: "wrap" }}>
+                <span>{Math.abs(selectedLocation!.lat).toFixed(4)}° {selectedLocation!.lat >= 0 ? "N" : "S"}, {Math.abs(selectedLocation!.lng).toFixed(4)}° {selectedLocation!.lng >= 0 ? "E" : "W"}</span>
+                {d!.climateZone && <><span>·</span><span style={{ background: "rgba(255,255,255,0.08)", padding: "2px 8px", borderRadius: 10, fontSize: 11 }}>{d!.climateZone}</span></>}
+                {d!.sensLabel && <><span>·</span><span>Sensitivity: <span style={{ color: d!.sensColor, fontWeight: 600 }}>{d!.sensLabel}</span></span></>}
+              </div>
+              <div style={{ marginTop: 8, display: "flex", gap: 6, flexWrap: "wrap" }}>
+                {d!.circulation && (
+                  <span style={{ background: `${BLUE}14`, border: `1px solid ${BLUE}28`, color: BLUE, padding: "2px 8px", borderRadius: 6, fontSize: 10, fontWeight: 500 }}>🔄 {d!.circulation.split(/[-–(]/)[0].trim()}</span>
+                )}
+                {d!.feedbacks.slice(0, 3).map((f, i) => {
+                  const t = feedbackTag(f);
+                  return <span key={i} style={{ background: `${t.color}14`, border: `1px solid ${t.color}28`, color: t.color, padding: "2px 8px", borderRadius: 6, fontSize: 10, fontWeight: 500 }}>{t.icon} {t.label}</span>;
+                })}
+              </div>
+            </div>
+            <div style={{ textAlign: "right" }}>
+              <div style={{ fontSize: 10, color: MUTED, textTransform: "uppercase", marginBottom: 4 }}>Raw model consensus</div>
+              <div style={{ fontSize: 20, fontWeight: 700, color: RED }}>{shownScenario.label}</div>
+              <div style={{ fontSize: 10, color: MUTED, marginTop: 2 }}>{shownScenario.caption}</div>
+              <div style={{ fontSize: 26, fontWeight: 800, color: RED, marginTop: 2 }}>+{d!.tempChange.toFixed(1)}°C</div>
+              <div style={{ fontSize: 11, color: MUTED }}>vs baseline · IPCC assessed {d!.ipccDelta >= 0 ? "+" : ""}{d!.ipccDelta.toFixed(1)}°C</div>
+            </div>
+          </div>
+        </div>
+
+        {/* Climate Outlook — plain-language summary (updates live with the slider) */}
+        <div style={{ ...card, padding: 18, marginBottom: 14, borderLeft: `3px solid ${ACCENT}` }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 9 }}>
+            <span style={{ fontSize: 15 }}>📋</span>
+            <h2 style={{ fontSize: 12, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.07em", color: MUTED }}>Climate Outlook · {displayYear}</h2>
+          </div>
+          <p style={{ fontSize: 14.5, lineHeight: 1.75, color: "rgba(255,255,255,0.9)", margin: 0 }}>
+            By <strong style={{ color: "white" }}>{displayYear}</strong>, {placeName}'s raw CMIP6 ensemble projection is{" "}
+            <strong style={{ color: RED }}>+{d!.tempChange.toFixed(1)}°C warmer</strong> than its baseline; the IPCC-assessed calibrated anomaly is{" "}
+            <strong style={{ color: AMBER }}>{d!.ipccDelta >= 0 ? "+" : ""}{d!.ipccDelta.toFixed(1)}°C</strong>. Heat-stress days{" "}
+            <strong style={{ color: ORANGE }}>{heatDelta >= 0 ? "rise" : "fall"} from {d!.baseHeatDays} to {d!.heatDays}/yr</strong>, annual rainfall shifts{" "}
+            <strong style={{ color: BLUE }}>{d!.precipChange >= 0 ? "+" : ""}{d!.precipChange.toFixed(1)}%</strong>, and overall habitability sits at{" "}
+            <strong style={{ color: sc }}>{d!.score}/100 ({d!.category})</strong>.
+            {nextTip
+              ? <> The next threshold ahead — <strong style={{ color: AMBER }}>{nextTip.label.toLowerCase()}</strong> — is crossed around <strong style={{ color: AMBER }}>{nextTip.year}</strong>.</>
+              : crossedTips > 0
+                ? <> All <strong style={{ color: RED }}>{crossedTips}</strong> modeled tipping points have already been crossed by this point.</>
+              : <> No modeled tipping points are crossed at this horizon.</>}
+          </p>
+        </div>
+
+        {scoreStory && (
+          <div style={{ marginBottom: 14 }}>
+            <GuidedClimateExplainer
+              placeName={placeName}
+              year={displayYear}
+              scenarioLabel={shownScenario.label}
+              scenarioCaption={shownScenario.caption}
+              tempChange={d!.tempChange}
+              ipccDelta={d!.ipccDelta}
+              heatDays={d!.heatDays}
+              heatDelta={heatDelta}
+              precipChange={d!.precipChange}
+              score={d!.score}
+              category={d!.category}
+              topDriver={scoreStory.scoreDrivers[0] ? {
+                label: scoreStory.scoreDrivers[0].label,
+                movement: scoreStory.scoreDrivers[0].movement,
+                effect: scoreStory.scoreDrivers[0].effect,
+              } : undefined}
+              dailyLifeSignals={dailyLifeSignals}
+              roadmapItems={roadmapItems}
+              climateTwin={climateAnalog ? {
+                name: climateAnalog.candidate.name,
+                country: climateAnalog.candidate.country,
+                distance: climateAnalog.distance,
+                comparedCount: climateAnalog.comparedCount,
+                annualTempDelta: climateAnalog.annualTempDelta,
+                annualPrecipDelta: climateAnalog.annualPrecipDelta,
+                heatDaysDelta: climateAnalog.heatDaysDelta,
+              } : null}
+              scenarioContrastText={scenarioContrastTakeaway?.text ?? null}
+              hasScenarioContrast={scenarioContrastRows.length > 0}
+              sourceCount={d!.sourceTrail.length}
+            />
+          </div>
+        )}
+
+        {roadmapItems.length > 0 && (
+          <div style={{ ...card, padding: 18, marginBottom: 14, borderLeft: `3px solid ${PURPLE}` }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 14, flexWrap: "wrap", marginBottom: 12 }}>
+              <div style={{ flex: "1 1 460px" }}>
+                <h2 style={{ fontSize: 12, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.07em", color: MUTED }}>Roadmap · current year to 2100</h2>
+                <p style={{ fontSize: 12.5, color: "rgba(255,255,255,0.68)", lineHeight: 1.6, margin: "6px 0 0" }}>
+                  The slider gives a value for every year. This roadmap summarizes the current year and decade waypoints so the trend reads like a living-conditions timeline, not a single snapshot.
+                </p>
+              </div>
+              <ReceiptDetails label="method" text="Roadmap values use the same /api/climate-trajectory points as the charts. The current build requests the current year plus 5-year checkpoints through 2100 and linearly interpolates intermediate years for display." />
+            </div>
+            <div style={{ display: "grid", gap: 8 }}>
+              {roadmapItems.map((item) => {
+                const active = item.year === displayYear || (displayYear > item.year && displayYear < item.year + 10);
+                return (
+                  <div key={item.year} style={{ display: "flex", gap: 10, alignItems: "stretch", flexWrap: "wrap", padding: "9px 10px", borderRadius: 8, border: `1px solid ${active ? `${PURPLE}55` : BORDER}`, background: active ? `${PURPLE}10` : "rgba(255,255,255,0.032)" }}>
+                    <div style={{ flex: "0 0 56px" }}>
+                      <div style={{ fontSize: 16, fontWeight: 900, color: active ? PURPLE : "white" }}>{item.year}</div>
+                      <div style={{ fontSize: 9, color: MUTED }}>{item.category}</div>
+                    </div>
+                    <div style={{ minWidth: 180, flex: "2 1 260px" }}>
+                      <div style={{ display: "flex", gap: 7, alignItems: "center", flexWrap: "wrap", marginBottom: 3 }}>
+                        <span style={{ color: item.driver.color, fontSize: 12, fontWeight: 850 }}>{item.driver.label}</span>
+                        {item.scenarioDelta && <span style={{ color: BLUE, fontSize: 10, border: `1px solid ${BLUE}30`, borderRadius: 999, padding: "1px 6px" }}>scenario delta</span>}
+                      </div>
+                      <div style={{ fontSize: 11.5, color: "rgba(255,255,255,0.76)", lineHeight: 1.45 }}>{item.driver.text}</div>
+                      {item.scenarioDelta ? (
+                        <div style={{ marginTop: 3, fontSize: 10.5, color: "rgba(255,255,255,0.6)", lineHeight: 1.45 }}>{item.scenarioDelta}</div>
+                      ) : (
+                        <div style={{ marginTop: 3, fontSize: 10.5, color: MUTED }}>Load pathway contrast to add lower-vs-higher scenario deltas.</div>
+                      )}
+                    </div>
+                    <div style={{ flex: "1 1 82px" }}><div style={{ fontSize: 9, color: MUTED }}>Raw warming</div><div style={{ fontSize: 12.5, fontWeight: 800, color: RED }}>{signedNumber(item.tempChange, 1)}°C</div></div>
+                    <div style={{ flex: "1 1 72px" }}><div style={{ fontSize: 9, color: MUTED }}>Heat days</div><div style={{ fontSize: 12.5, fontWeight: 800, color: ORANGE }}>{item.heatDays}</div></div>
+                    <div style={{ flex: "1 1 82px" }}><div style={{ fontSize: 9, color: MUTED }}>Cold months</div><div style={{ fontSize: 12.5, fontWeight: 800, color: item.coldMonths > 0 ? CYAN : GREEN }}>{item.coldMonths}</div></div>
+                    <div style={{ flex: "1 1 82px" }}><div style={{ fontSize: 9, color: MUTED }}>Water signal</div><div style={{ fontSize: 12.5, fontWeight: 800, color: BLUE }}>{signedNumber(item.precipChange, 1)}%</div></div>
+                    <div style={{ flex: "1 1 90px" }}><div style={{ fontSize: 9, color: MUTED }}>Sea-level context</div><div style={{ fontSize: 12.5, fontWeight: 800, color: CYAN }}>{item.seaLevel} cm</div></div>
+                    <div style={{ flex: "1 1 70px" }}><div style={{ fontSize: 9, color: MUTED }}>Score</div><div style={{ fontSize: 12.5, fontWeight: 800, color: scoreColor(item.score) }}>{item.score}/100</div></div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        <div style={{ ...card, padding: 18, marginBottom: 14, borderLeft: `3px solid ${BLUE}` }}>
+          <div style={{ display: "flex", justifyContent: "space-between", gap: 14, alignItems: "flex-start", flexWrap: "wrap", marginBottom: 12 }}>
+            <div style={{ flex: "1 1 420px" }}>
+              <h2 style={{ fontSize: 12, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.07em", color: MUTED }}>Scenario contrast · same location</h2>
+              <p style={{ fontSize: 12.5, color: "rgba(255,255,255,0.68)", lineHeight: 1.6, margin: "6px 0 0" }}>
+                Compare lower-warming, current-policy-adjacent, and higher-warming pathways for {placeName} without changing the selected place. These are pathway references, not predictions.
+              </p>
+            </div>
+            <button
+              onClick={loadScenarioContrast}
+              disabled={scenarioContrastLoading || isLoading}
+              aria-describedby="scenario-contrast-receipt"
+              style={{ display: "inline-flex", alignItems: "center", gap: 7, padding: "8px 12px", borderRadius: 7, border: `1px solid ${BLUE}55`, background: scenarioContrastRows.length > 0 ? `${BLUE}12` : `${BLUE}22`, color: "white", fontSize: 12, fontWeight: 800, cursor: scenarioContrastLoading || isLoading ? "wait" : "pointer", opacity: scenarioContrastLoading || isLoading ? 0.72 : 1 }}
+            >
+              {scenarioContrastLoading ? <Loader2 style={{ width: 13, height: 13, animation: "spin 1s linear infinite" }} /> : <GitCompare style={{ width: 13, height: 13 }} />}
+              {scenarioContrastLoading ? "Loading pathways" : scenarioContrastRows.length > 0 ? "Refresh pathways" : "Load pathway contrast"}
+            </button>
+          </div>
+          <div id="scenario-contrast-receipt" style={{ marginBottom: 10 }}>
+            <ReceiptDetails label="method" text="Fetches the same annual checkpoints for each supported SSP scenario using the grounded /api/climate-trajectory endpoint and the same coordinates." />
+            <ReceiptDetails label="default" text={`${DEFAULT_SCENARIO_EXPLANATION} Version: ${DEFAULT_SCENARIO_POLICY_VERSION}.`} />
+          </div>
+
+          {scenarioContrastError && (
+            <div style={{ padding: "9px 11px", borderRadius: 8, border: `1px solid ${RED}35`, background: `${RED}12`, color: "#fca5a5", fontSize: 12, marginBottom: 10 }}>
+              {scenarioContrastError}
+            </div>
+          )}
+
+          {scenarioContrastTakeaway ? (
+            <p style={{ margin: "0 0 12px", fontSize: 13.5, lineHeight: 1.65, color: "rgba(255,255,255,0.88)" }}>
+              <strong style={{ color: BLUE }}>Local pathway gap:</strong>{" "}
+              {scenarioContrastTakeaway.text} This is the concrete local difference between lower and higher warming, not a claim that one pathway is guaranteed.
+            </p>
+          ) : (
+            <p style={{ margin: 0, fontSize: 12.5, lineHeight: 1.6, color: MUTED }}>
+              Load the contrast to see how the same year changes under each supported SSP. The current forecast stays on {shownScenario.label}; the comparison only adds context.
+            </p>
+          )}
+
+          {scenarioContrastRows.length > 0 && (
+            <div>
+              <ScenarioSmallMultiples
+                metrics={scenarioSmallMultipleMetrics}
+                selectedYear={displayYear}
+                startYear={BASELINE_YEAR}
+                endYear={MAX_YEAR}
+              />
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(205px, 1fr))", gap: 10 }}>
+                {scenarioContrastRows.map((row) => {
+                  const rowScoreColor = scoreColor(row.score);
+                  const active = row.id === shownScenario.id;
+                  return (
+                    <div key={row.id} style={{ border: `1px solid ${active ? `${ACCENT}66` : BORDER}`, background: active ? `${ACCENT}10` : "rgba(255,255,255,0.035)", borderRadius: 8, padding: 11 }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", gap: 8, alignItems: "flex-start", marginBottom: 8 }}>
+                        <div>
+                          <div style={{ fontSize: 13, fontWeight: 800, color: "white" }}>{row.label}</div>
+                          <div style={{ fontSize: 10, color: active ? ACCENT : MUTED, marginTop: 2 }}>{row.role}</div>
+                        </div>
+                        {active && <span style={{ fontSize: 9, color: ACCENT, border: `1px solid ${ACCENT}44`, borderRadius: 999, padding: "2px 6px", textTransform: "uppercase", letterSpacing: "0.05em" }}>shown</span>}
+                      </div>
+                      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 7 }}>
+                        <div><div style={{ fontSize: 9, color: MUTED }}>Raw warming</div><div style={{ fontSize: 13, fontWeight: 800, color: RED }}>{signedNumber(row.tempChange, 1)}°C</div></div>
+                        <div><div style={{ fontSize: 9, color: MUTED }}>IPCC assessed</div><div style={{ fontSize: 13, fontWeight: 800, color: AMBER }}>{signedNumber(row.ipccDelta, 1)}°C</div></div>
+                        <div><div style={{ fontSize: 9, color: MUTED }}>Heat stress</div><div style={{ fontSize: 13, fontWeight: 800, color: ORANGE }}>{row.heatDays}/yr</div></div>
+                        <div><div style={{ fontSize: 9, color: MUTED }}>Rainfall</div><div style={{ fontSize: 13, fontWeight: 800, color: BLUE }}>{signedNumber(row.precipChange, 1)}%</div></div>
+                      </div>
+                      <div style={{ marginTop: 9, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
+                        <span style={{ fontSize: 10, color: MUTED }}>{row.category}</span>
+                        <span style={{ fontSize: 15, fontWeight: 900, color: rowScoreColor }}>{row.score}/100</span>
+                      </div>
+                      <div style={{ marginTop: 8 }}>
+                        <ReceiptDetails label="method" text="Same location and selected year; values interpolate from the annual trajectory returned by /api/climate-trajectory." />
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+        </div>
+
+        {scoreStory && (
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: 14, marginBottom: 14 }}>
+            <div style={{ ...card, padding: 18, borderLeft: `3px solid ${AMBER}` }}>
+              <div style={{ display: "flex", justifyContent: "space-between", gap: 12, alignItems: "flex-start", marginBottom: 12, flexWrap: "wrap" }}>
+                <div>
+                  <h2 style={{ fontSize: 12, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.07em", color: MUTED }}>Why this changed</h2>
+                  <p style={{ fontSize: 12, color: "rgba(255,255,255,0.62)", lineHeight: 1.55, margin: "6px 0 0" }}>
+                    Ranked by score-component movement from {scoreStory.baselineYear} to {displayYear}; this is not a full causal attribution model.
+                  </p>
+                </div>
+                <div style={{ textAlign: "right" }}>
+                  <div style={{ fontSize: 10, color: MUTED, textTransform: "uppercase" }}>Score movement</div>
+                  <div style={{ color: scoreStory.scoreDelta < 0 ? RED : GREEN, fontSize: 18, fontWeight: 800 }}>{signedNumber(scoreStory.scoreDelta, 0)} pts</div>
+                  <div style={{ fontSize: 10, color: MUTED }}>{scoreStory.baselineScore} → {d!.score}</div>
+                </div>
+              </div>
+
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(116px, 1fr))", gap: 8, marginBottom: 12 }}>
+                {scoreStory.trendRates.map((rate) => (
+                  <div key={rate.label} style={{ background: "rgba(255,255,255,0.045)", border: `1px solid ${BORDER}`, borderRadius: 8, padding: "8px 9px" }}>
+                    <div style={{ fontSize: 10, color: MUTED, marginBottom: 3 }}>{rate.label}</div>
+                    <div style={{ fontSize: 13, fontWeight: 800, color: rate.color }}>{rate.value}</div>
+                    <div style={{ marginTop: 6 }}>
+                      <ReceiptDetails label="rate" text="Per-decade slope from the baseline point to the selected year." />
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <div style={{ display: "flex", flexDirection: "column", gap: 9 }}>
+                {scoreStory.scoreDrivers.length > 0 ? scoreStory.scoreDrivers.map((driver, index) => {
+                  const helps = driver.effect >= 0;
+                  return (
+                    <div key={driver.key} style={{ display: "grid", gridTemplateColumns: "24px minmax(0, 1fr) auto", gap: 9, alignItems: "center" }}>
+                      <div style={{ width: 24, height: 24, borderRadius: 6, display: "flex", alignItems: "center", justifyContent: "center", background: helps ? `${GREEN}16` : `${RED}16`, color: helps ? GREEN : RED, fontSize: 11, fontWeight: 800 }}>{index + 1}</div>
+                      <div style={{ minWidth: 0 }}>
+                        <div style={{ fontSize: 12.5, fontWeight: 700, color: "rgba(255,255,255,0.92)" }}>{driver.label}</div>
+                        <div style={{ fontSize: 10.5, color: MUTED }}>{driver.movement} · raw component {signedNumber(driver.delta, 1)}</div>
+                        <div style={{ marginTop: 5 }}>
+                          <ReceiptDetails label="method" text={`Baseline ${driver.baselineValue.toFixed(1)}; selected year ${driver.val.toFixed(1)}. Effect sign is adjusted so positive means helping the score.`} />
+                        </div>
+                      </div>
+                      <div style={{ fontSize: 12, fontWeight: 800, color: helps ? GREEN : RED }}>{signedNumber(driver.effect, 1)} pts</div>
+                    </div>
+                  );
+                }) : (
+                  <p style={{ margin: 0, fontSize: 12, color: MUTED, lineHeight: 1.6 }}>No score component moved enough to rank; the modeled score is broadly stable at this horizon.</p>
+                )}
+              </div>
+            </div>
+
+            <div style={{ ...card, padding: 18, borderLeft: `3px solid ${GREEN}` }}>
+              <h2 style={{ fontSize: 12, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.07em", color: MUTED, marginBottom: 12 }}>What this means for daily life</h2>
+              <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                {dailyLifeSignals.map((signal) => (
+                  <div key={signal.label} style={{ display: "grid", gridTemplateColumns: "minmax(0, 1fr) auto", gap: 12, paddingBottom: 11, borderBottom: "1px solid rgba(255,255,255,0.07)" }}>
+                    <div style={{ minWidth: 0 }}>
+                      <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap", marginBottom: 4 }}>
+                        <span style={{ fontSize: 12.5, fontWeight: 800, color: "rgba(255,255,255,0.92)" }}>{signal.label}</span>
+                        <ReceiptDetails label="source" text={signal.receipt} />
+                      </div>
+                      <p style={{ margin: 0, fontSize: 12.5, color: "rgba(255,255,255,0.78)", lineHeight: 1.58 }}>{signal.text}</p>
+                    </div>
+                    <div style={{ fontSize: 12, fontWeight: 800, color: signal.color, whiteSpace: "nowrap" }}>{signal.value}</div>
+                  </div>
+                ))}
+              </div>
+              <p style={{ margin: "12px 0 0", fontSize: 10.5, lineHeight: 1.55, color: MUTED }}>
+                Not yet included in the score: daily cold-stress days, crop yields, wildfire weather, biodiversity species ranges, local freshwater infrastructure, or parcel-level flood exposure.
+              </p>
+            </div>
+
+            {scoreSensitivityInputs.length > 0 && (
+              <ScoreSensitivity modelScore={d!.score} category={d!.category} inputs={scoreSensitivityInputs} />
+            )}
+          </div>
+        )}
+
+        {/* Climate Twin — nearest present-day analog from the grounded catalog */}
+        <div style={{ ...card, padding: 18, marginBottom: 14, borderLeft: `3px solid ${PURPLE}` }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, flexWrap: "wrap", marginBottom: 12 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <MapPin style={{ width: 15, height: 15, color: PURPLE }} />
+              <h2 style={{ fontSize: 12, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.07em", color: MUTED }}>Climate Twin · current-day analog</h2>
+            </div>
+            {analogCatalog && (
+              <span style={{ fontSize: 10, color: MUTED }}>
+                {analogCatalog.candidateCount} indexed cities · {analogCatalog.catalogYear} catalog
+              </span>
+            )}
+          </div>
+
+          {climateAnalog ? (
+            <div>
+              <div style={{ display: "flex", justifyContent: "space-between", gap: 14, alignItems: "flex-start", flexWrap: "wrap" }}>
+                <div style={{ flex: "1 1 360px" }}>
+                  <p style={{ fontSize: 14.5, lineHeight: 1.7, color: "rgba(255,255,255,0.9)", margin: 0 }}>
+                    In <strong style={{ color: "white" }}>{displayYear}</strong>, {placeName}'s climate most resembles{" "}
+                    <strong style={{ color: PURPLE }}>{climateAnalog.candidate.name}, {climateAnalog.candidate.country}</strong>{" "}
+                    in the current-day catalog. This is a nearest match across monthly temperature and precipitation, not a claim that every local impact is identical.
+                  </p>
+                  <p style={{ fontSize: 11, color: MUTED, marginTop: 8, lineHeight: 1.55 }}>
+                    Distance {climateAnalog.distance.toFixed(2)} standardized climate units; lower is closer. Compared {climateAnalog.comparedCount} cities from the grounded analog catalog.
+                  </p>
+                </div>
+                <button
+                  onClick={openClimateTwinCity}
+                  style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "8px 12px", borderRadius: 7, border: `1px solid ${PURPLE}55`, background: `${PURPLE}16`, color: "white", fontSize: 12, fontWeight: 700, cursor: "pointer" }}
+                >
+                  <ExternalLink style={{ width: 13, height: 13 }} />
+                  Open twin city
+                </button>
+              </div>
+
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(118px, 1fr))", gap: 8, marginTop: 14 }}>
+                {[
+                  { label: "Avg temp gap", value: `${signedNumber(climateAnalog.annualTempDelta, 1)}°C`, color: RED },
+                  { label: "Rainfall gap", value: `${signedNumber(climateAnalog.annualPrecipDelta, 0)} mm`, color: BLUE },
+                  { label: "Heat nights gap", value: `${signedNumber(climateAnalog.heatDaysDelta, 0)} d/yr`, color: ORANGE },
+                  { label: "Drought gap", value: `${signedNumber(climateAnalog.droughtDelta, 0)} pts`, color: AMBER },
+                  { label: "Flood gap", value: `${signedNumber(climateAnalog.floodDelta, 0)} pts`, color: CYAN },
+                ].map((item) => (
+                  <div key={item.label} style={{ background: "rgba(255,255,255,0.035)", border: `1px solid ${BORDER}`, borderRadius: 8, padding: 10, minWidth: 0 }}>
+                    <div style={{ fontSize: 9, color: MUTED, textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 4 }}>{item.label}</div>
+                    <div style={{ fontSize: 15, fontWeight: 800, color: item.color, whiteSpace: "nowrap" }}>{item.value}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : (
+            <p style={{ margin: 0, color: analogError ? "#fca5a5" : MUTED, fontSize: 13 }}>
+              {analogError ?? "Loading grounded current-day analog catalog..."}
+            </p>
+          )}
+        </div>
+
+        {shareStory && (
+          <div style={{ ...card, padding: 18, marginBottom: 14, borderLeft: `3px solid ${ACCENT}` }}>
+            <div style={{ display: "flex", justifyContent: "space-between", gap: 12, alignItems: "flex-start", flexWrap: "wrap", marginBottom: 12 }}>
+              <div style={{ minWidth: 0, flex: "1 1 420px" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", marginBottom: 8 }}>
+                  <Share2 style={{ width: 15, height: 15, color: ACCENT }} />
+                  <h2 style={{ fontSize: 12, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.07em", color: MUTED }}>Shareable climate story</h2>
+                  <ReceiptDetails label="receipt" text={shareStory.caveat} />
+                </div>
+                <p style={{ margin: 0, fontSize: 16, fontWeight: 800, lineHeight: 1.45, color: "white" }}>{shareStory.headline}</p>
+                <p style={{ margin: "8px 0 0", fontSize: 12.5, lineHeight: 1.6, color: "rgba(255,255,255,0.76)" }}>
+                  {shareStory.metricLine}
+                </p>
+              </div>
+              <div style={{ display: "flex", gap: 8, flexWrap: "wrap", justifyContent: "flex-end" }}>
+                <button onClick={shareForecast} style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "8px 12px", borderRadius: 7, border: `1px solid ${ACCENT}55`, background: `${ACCENT}18`, color: "white", fontSize: 12, fontWeight: 800, cursor: "pointer" }}>
+                  <Share2 style={{ width: 13, height: 13 }} />
+                  Share story
+                </button>
+                <button onClick={copyShareStory} style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "8px 12px", borderRadius: 7, border: `1px solid ${shareStoryCopied ? GREEN : BORDER}`, background: shareStoryCopied ? `${GREEN}18` : "rgba(255,255,255,0.035)", color: shareStoryCopied ? GREEN : "white", fontSize: 12, fontWeight: 800, cursor: "pointer" }}>
+                  {shareStoryCopied ? <Check style={{ width: 13, height: 13 }} /> : <Share2 style={{ width: 13, height: 13 }} />}
+                  {shareStoryCopied ? "Copied story" : "Copy story"}
+                </button>
+                <button onClick={downloadShareImage} disabled={shareImageBusy} style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "8px 12px", borderRadius: 7, border: `1px solid ${shareImageSaved ? GREEN : BORDER}`, background: shareImageSaved ? `${GREEN}18` : "rgba(255,255,255,0.035)", color: shareImageSaved ? GREEN : "white", fontSize: 12, fontWeight: 800, cursor: shareImageBusy ? "wait" : "pointer", opacity: shareImageBusy ? 0.72 : 1 }}>
+                  {shareImageBusy ? <Loader2 style={{ width: 13, height: 13, animation: "spin 1s linear infinite" }} /> : shareImageSaved ? <Check style={{ width: 13, height: 13 }} /> : <Download style={{ width: 13, height: 13 }} />}
+                  {shareImageBusy ? "Rendering image" : shareImageSaved ? "Saved image" : "Download image"}
+                </button>
+              </div>
+            </div>
+
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 9 }}>
+              {[
+                { label: "Trend driver", text: shareStory.driverLine, color: AMBER },
+                { label: "Climate twin", text: shareStory.analogLine, color: PURPLE },
+              ].map((item) => (
+                <div key={item.label} style={{ background: "rgba(255,255,255,0.035)", border: `1px solid ${BORDER}`, borderRadius: 8, padding: 10 }}>
+                  <div style={{ fontSize: 10, color: item.color, textTransform: "uppercase", letterSpacing: "0.06em", fontWeight: 800, marginBottom: 5 }}>{item.label}</div>
+                  <div style={{ fontSize: 12.5, lineHeight: 1.55, color: "rgba(255,255,255,0.82)" }}>{item.text}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {learningPrompts.length > 0 && (
+          <div style={{ ...card, padding: 18, marginBottom: 14, borderLeft: `3px solid ${BLUE}` }}>
+            <div style={{ display: "flex", justifyContent: "space-between", gap: 12, alignItems: "flex-start", flexWrap: "wrap", marginBottom: 12 }}>
+              <div style={{ flex: "1 1 440px" }}>
+                <h2 style={{ fontSize: 12, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.07em", color: MUTED }}>Questions to test next</h2>
+                <p style={{ margin: "6px 0 0", fontSize: 12.5, color: "rgba(255,255,255,0.68)", lineHeight: 1.6 }}>
+                  A useful forecast should change what you compare. These prompts reuse the same grounded fields and routes, so the next click stays inspectable.
+                </p>
+              </div>
+              <ReceiptDetails label="scope" text="Prompts are generated from the visible forecast, scenario contrast, and bounded climate-twin catalog. They are learning prompts, not advice to move, invest, insure, or rank safe havens." />
+            </div>
+
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(230px, 1fr))", gap: 10 }}>
+              {learningPrompts.map((prompt) => {
+                const busy = prompt.action === "pathways" && scenarioContrastLoading;
+                const disabled = prompt.disabled || busy;
+                const accent = prompt.action === "twin" ? PURPLE : prompt.action === "comparison" ? ACCENT : BLUE;
+                return (
+                  <div key={prompt.eyebrow} style={{ border: `1px solid ${BORDER}`, borderRadius: 8, padding: 12, background: "rgba(255,255,255,0.032)" }}>
+                    <div style={{ fontSize: 9, color: accent, textTransform: "uppercase", letterSpacing: "0.07em", fontWeight: 850, marginBottom: 7 }}>{prompt.eyebrow}</div>
+                    <div style={{ fontSize: 14, lineHeight: 1.45, fontWeight: 800, color: "white", marginBottom: 7 }}>{prompt.question}</div>
+                    <p style={{ margin: 0, fontSize: 12, lineHeight: 1.55, color: "rgba(255,255,255,0.72)" }}>{prompt.detail}</p>
+                    <div style={{ marginTop: 10, display: "flex", gap: 8, alignItems: "center", justifyContent: "space-between", flexWrap: "wrap" }}>
+                      <ReceiptDetails label="receipt" text={prompt.receipt} />
+                      <button
+                        disabled={disabled}
+                        onClick={() => {
+                          if (prompt.action === "pathways") { void loadScenarioContrast(); return; }
+                          if (prompt.action === "twin") { openClimateTwinCity(); return; }
+                          window.location.href = "/comparison";
+                        }}
+                        style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "7px 10px", borderRadius: 7, border: `1px solid ${accent}55`, background: `${accent}16`, color: "white", fontSize: 11.5, fontWeight: 800, cursor: disabled ? "not-allowed" : "pointer", opacity: disabled ? 0.55 : 1 }}
+                      >
+                        {busy ? <Loader2 style={{ width: 12, height: 12, animation: "spin 1s linear infinite" }} /> : prompt.action === "comparison" ? <GitCompare style={{ width: 12, height: 12 }} /> : <ExternalLink style={{ width: 12, height: 12 }} />}
+                        {busy ? "Loading" : prompt.actionLabel}
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* KPI Strip */}
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(170px,1fr))", gap: 10, marginBottom: 14 }}>
+          <div style={{ ...card, padding: 14 }}>
+            <div style={{ fontSize: 9, textTransform: "uppercase", letterSpacing: "0.08em", color: MUTED, marginBottom: 4 }}>Avg Temperature</div>
+            <div style={{ display: "flex", alignItems: "baseline", gap: 5 }}>
+              <span style={{ fontSize: 24, fontWeight: 700 }}>{d!.avgTemp.toFixed(1)}°C</span>
+              <span style={{ fontSize: 12, fontWeight: 600, color: RED }}>+{d!.tempChange.toFixed(1)}°</span>
+            </div>
+            <div style={{ marginTop: 7 }}>
+              <ReceiptDetails label="source" text="Raw CMIP6 model-consensus annual_mean and anomaly for the selected SSP scenario. Trend range uses temperature.uncertainty.annual_mean_low/high when exposed by the grounded API." />
+            </div>
+          </div>
+          <div style={{ ...card, padding: 14 }}>
+            <div style={{ fontSize: 9, textTransform: "uppercase", letterSpacing: "0.08em", color: MUTED, marginBottom: 4 }}>Annual Precip</div>
+            <div style={{ display: "flex", alignItems: "baseline", gap: 5 }}>
+              <span style={{ fontSize: 24, fontWeight: 700 }}>{d!.annualPrecip}mm</span>
+              <span style={{ fontSize: 12, fontWeight: 600, color: BLUE }}>{d!.precipChange >= 0 ? "+" : ""}{d!.precipChange.toFixed(1)}%</span>
+            </div>
+            <div style={{ marginTop: 7 }}>
+              <ReceiptDetails label="source" text="Annual precipitation total and anomaly_percent from the grounded precipitation projection. It does not include groundwater, reservoirs, demand, or local drainage capacity." />
+            </div>
+          </div>
+          <div style={{ ...card, padding: 14 }}>
+            <div style={{ fontSize: 9, textTransform: "uppercase", letterSpacing: "0.08em", color: MUTED, marginBottom: 4 }}>Heat Stress</div>
+            <div style={{ display: "flex", alignItems: "baseline", gap: 5 }}>
+              <span style={{ fontSize: 24, fontWeight: 700 }}>{d!.heatDays}</span>
+              <span style={{ fontSize: 12, color: MUTED }}>days/yr</span>
+            </div>
+            <div style={{ marginTop: 6, height: 3, background: "rgba(255,255,255,0.08)", borderRadius: 2 }}>
+              <div style={{ height: "100%", borderRadius: 2, background: ORANGE, width: `${Math.min((d!.heatDays / Math.max(...traj!.heat, 1)) * 100, 100)}%`, transition: "width 0.25s ease" }} />
+            </div>
+            <div style={{ marginTop: 7 }}>
+              <ReceiptDetails label="source" text="Heat-stress days come from the grounded extremes layer returned by /api/climate-trajectory. Treat as a climate screening indicator, not medical or occupational-safety advice." />
+            </div>
+          </div>
+          <div style={{ ...card, padding: 14, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <div>
+              <div style={{ fontSize: 9, textTransform: "uppercase", letterSpacing: "0.08em", color: MUTED, marginBottom: 4 }}>Habitability</div>
+              <div style={{ fontSize: 24, fontWeight: 700 }}>{d!.score}<span style={{ fontSize: 14, color: MUTED }}>/100</span></div>
+              <div style={{ fontSize: 11, fontWeight: 600, color: sc, marginTop: 2 }}>{d!.category}</div>
+              <div style={{ marginTop: 7 }}>
+                <ReceiptDetails label="method" text="Habitability is the score returned by the grounded grid engine from its visible climate component breakdown. It is educational context, not a safety certificate or relocation recommendation." />
+              </div>
+            </div>
+            <div style={{ position: "relative", width: 54, height: 54 }}>
+              <svg viewBox="0 0 36 36" style={{ width: "100%", height: "100%", transform: "rotate(-90deg)" }}>
+                <path d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="rgba(255,255,255,0.08)" strokeWidth="4" />
+                <path d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke={sc} strokeWidth="4" strokeDasharray={`${d!.score}, 100`} strokeLinecap="round" style={{ transition: "stroke-dasharray 0.3s ease" }} />
+              </svg>
+            </div>
+          </div>
+        </div>
+
+        {/* Metric Trajectories */}
+        <div style={{ ...card, padding: 18, marginBottom: 14 }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <span style={{ fontSize: 16 }}>📈</span>
+              <h2 style={{ fontSize: 15, fontWeight: 700 }}>Metric Trajectories</h2>
+              <span style={{ fontSize: 10, color: MUTED, marginLeft: 4 }}>{BASELINE_YEAR} baseline to {MAX_YEAR}</span>
+            </div>
+            <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 10, color: MUTED }}>
+              <div style={{ width: 14, height: 1.5, borderTop: `1.5px dashed ${ACCENT}`, opacity: 0.7 }} />
+              <span>= selected year marker (synced with slider above)</span>
+            </div>
+          </div>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(145px,1fr))", gap: 12 }}>
+            <TrendChart
+              years={traj!.years}
+              values={traj!.temp}
+              lowValues={traj!.tempLow}
+              highValues={traj!.tempHigh}
+              year={year}
+              label="Temperature"
+              unit="°C"
+              color={RED}
+              decimals={1}
+              thresholdY={18}
+              scenarioLabel={shownScenario.label}
+              uncertaintyLabel="Shaded band uses temperature.uncertainty.annual_mean_low/high from the grounded API for this location, year range, and scenario."
+            />
+            <TrendChart
+              years={traj!.years}
+              values={traj!.precip}
+              lowValues={traj!.precipLow}
+              highValues={traj!.precipHigh}
+              year={year}
+              label="Precipitation"
+              unit="mm"
+              color={BLUE}
+              decimals={0}
+              scenarioLabel={shownScenario.label}
+              uncertaintyLabel="Shaded band uses precipitation.uncertainty.annual_total_low/high from the grounded API. Local precipitation trends can have larger model disagreement and direction changes."
+            />
+            <TrendChart years={traj!.years} values={traj!.heat} year={year} label="Heat Days" unit="d" color={ORANGE} decimals={0} thresholdY={15} scenarioLabel={shownScenario.label} />
+            <TrendChart years={traj!.years} values={traj!.score} year={year} label="Habitability" unit="" color={sc} decimals={0}
+              scenarioLabel={shownScenario.label}
+              zones={[
+                { from: 85, to: 100, color: GREEN }, { from: 70, to: 85, color: "#4ade80" },
+                { from: 60, to: 70, color: AMBER }, { from: 40, to: 60, color: ORANGE }, { from: 0, to: 40, color: RED },
+              ]} />
+            <TrendChart
+              years={traj!.years}
+              values={traj!.sea}
+              lowValues={traj!.seaLow}
+              highValues={traj!.seaHigh}
+              year={year}
+              label="Sea-level context"
+              unit="cm"
+              color={CYAN}
+              decimals={0}
+              thresholdY={50}
+              thresholdLabel={coastalRelevance?.thresholdLabel ?? "50 cm regional context"}
+              scenarioLabel={shownScenario.label}
+              uncertaintyLabel={`Shaded band uses AR6 regional sea-level low/high context returned by the API. ${coastalRelevance?.receipt ?? "Coastal relevance is not evaluated, so this is not a parcel-level coastal exposure assessment."}`}
+            />
+            <TrendChart
+              years={traj!.years}
+              values={traj!.drought}
+              year={year}
+              label="Drought Risk"
+              unit="%"
+              color={AMBER}
+              decimals={0}
+              thresholdY={50}
+              thresholdLabel="50% elevated risk"
+              scenarioLabel={shownScenario.label}
+            />
+            <TrendChart
+              years={traj!.years}
+              values={traj!.flood}
+              year={year}
+              label="Flood Risk"
+              unit="%"
+              color={BLUE}
+              decimals={0}
+              thresholdY={50}
+              thresholdLabel="50% elevated risk"
+              scenarioLabel={shownScenario.label}
+            />
+          </div>
+          <div style={{ marginTop: 12, padding: "6px 10px", background: `${ACCENT}07`, border: `1px solid ${ACCENT}18`, borderRadius: 8, fontSize: 10, color: MUTED }}>
+            💡 Drag the year slider to move the marker across all seven charts simultaneously and see how each metric evolves. Hover plotted years for values, or open values for keyboard/touch access. Translucent bands show grounded low-high ranges where the API exposes comparable uncertainty fields; labeled dashed horizontal lines mark documented risk/context thresholds.
+          </div>
+        </div>
+
+    </>
+  );
+}

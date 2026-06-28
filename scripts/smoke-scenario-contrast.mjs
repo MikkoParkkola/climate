@@ -12,10 +12,14 @@ const charts = fs.readFileSync(path.join(repoRoot, "client", "src", "components"
 const shareCard = fs.readFileSync(path.join(repoRoot, "client", "src", "lib", "share-card.ts"), "utf8");
 const constants = fs.readFileSync(path.join(repoRoot, "client", "src", "lib", "climate-constants.ts"), "utf8");
 const types = fs.readFileSync(path.join(repoRoot, "client", "src", "lib", "climate-types.ts"), "utf8");
-const multiplesSource = fs.readFileSync(multiplesPath, "utf8");
 const derivations = fs.readFileSync(path.join(repoRoot, "client", "src", "lib", "climate-derivations.ts"), "utf8");
 const landing = fs.readFileSync(path.join(repoRoot, "client", "src", "components", "climate-landing.tsx"), "utf8");
-const all = [source, helpers, charts, shareCard, constants, types, derivations, landing].join("\n");
+const hook = fs.readFileSync(path.join(repoRoot, "client", "src", "hooks", "use-climate-app.ts"), "utf8");
+const resultView = fs.readFileSync(path.join(repoRoot, "client", "src", "components", "climate-result-view.tsx"), "utf8");
+const sectionsTop = fs.readFileSync(path.join(repoRoot, "client", "src", "components", "climate-result-sections-top.tsx"), "utf8");
+const sectionsBottom = fs.readFileSync(path.join(repoRoot, "client", "src", "components", "climate-result-sections-bottom.tsx"), "utf8");
+const all = [source, helpers, charts, shareCard, constants, types, derivations, landing, hook, resultView, sectionsTop, sectionsBottom].join("\n");
+const multiplesSource = fs.readFileSync(multiplesPath, "utf8");
 
 assert.match(all, /const loadScenarioContrast = async/, "scenario contrast loads pathways on demand");
 assert.match(all, /for \(const row of SCENARIOS\)/, "scenario contrast covers all supported SSP scenarios");

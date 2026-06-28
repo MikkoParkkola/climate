@@ -9,14 +9,17 @@ const componentPath = path.join(repoRoot, "client", "src", "components", "guided
 
 const appSource = fs.readFileSync(appPath, "utf8");
 const componentSource = fs.readFileSync(componentPath, "utf8");
+const sectionsTop = fs.readFileSync(path.join(repoRoot, "client", "src", "components", "climate-result-sections-top.tsx"), "utf8");
+const sectionsBottom = fs.readFileSync(path.join(repoRoot, "client", "src", "components", "climate-result-sections-bottom.tsx"), "utf8");
+const allApp = [appSource, sectionsTop, sectionsBottom].join("\n");
 
-assert.match(appSource, /import GuidedClimateExplainer from "@\/components\/guided-climate-explainer"/, "ClimateApp imports guided explainer");
-assert.match(appSource, /<GuidedClimateExplainer/, "ClimateApp renders guided explainer");
-assert.match(appSource, /dailyLifeSignals=\{dailyLifeSignals\}/, "explainer uses visible daily-life signal rows");
-assert.match(appSource, /roadmapItems=\{roadmapItems\}/, "explainer uses existing roadmap rows");
-assert.match(appSource, /scenarioContrastText=\{scenarioContrastTakeaway\?\.text \?\? null\}/, "explainer uses existing scenario contrast text");
-assert.match(appSource, /sourceCount=\{d!\.sourceTrail\.length\}/, "explainer exposes source-trail evidence count");
-assert.match(appSource, /climateTwin=\{climateAnalog \? \{/, "explainer uses bounded climate twin when available");
+assert.match(allApp, /import GuidedClimateExplainer from "@\/components\/guided-climate-explainer"/, "ClimateApp imports guided explainer");
+assert.match(allApp, /<GuidedClimateExplainer/, "ClimateApp renders guided explainer");
+assert.match(allApp, /dailyLifeSignals=\{dailyLifeSignals\}/, "explainer uses visible daily-life signal rows");
+assert.match(allApp, /roadmapItems=\{roadmapItems\}/, "explainer uses existing roadmap rows");
+assert.match(allApp, /scenarioContrastText=\{scenarioContrastTakeaway\?\.text \?\? null\}/, "explainer uses existing scenario contrast text");
+assert.match(allApp, /sourceCount=\{d!\.sourceTrail\.length\}/, "explainer exposes source-trail evidence count");
+assert.match(allApp, /climateTwin=\{climateAnalog \? \{/, "explainer uses bounded climate twin when available");
 
 assert.match(componentSource, /Guided explainer/, "component has stable guided-explainer heading");
 assert.match(componentSource, /classroom-friendly reading path/, "component is framed for education");

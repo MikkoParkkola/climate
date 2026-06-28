@@ -8,16 +8,20 @@ const appPath = path.join(repoRoot, "client", "src", "pages", "climate-app.tsx")
 const methodologyPath = path.join(repoRoot, "client", "src", "pages", "methodology.tsx");
 const scoreSensitivityPath = path.join(repoRoot, "client", "src", "components", "score-sensitivity.tsx");
 const source = fs.readFileSync(appPath, "utf8");
+const helpers = fs.readFileSync(path.join(repoRoot, "client", "src", "lib", "climate-helpers.ts"), "utf8");
+const charts = fs.readFileSync(path.join(repoRoot, "client", "src", "components", "climate-charts.tsx"), "utf8");
 const shareCard = fs.readFileSync(path.join(repoRoot, "client", "src", "lib", "share-card.ts"), "utf8");
 const constants = fs.readFileSync(path.join(repoRoot, "client", "src", "lib", "climate-constants.ts"), "utf8");
 const types = fs.readFileSync(path.join(repoRoot, "client", "src", "lib", "climate-types.ts"), "utf8");
-const methodology = fs.readFileSync(methodologyPath, "utf8");
-const scoreSensitivity = fs.readFileSync(scoreSensitivityPath, "utf8");
-const helpers = fs.readFileSync(path.join(repoRoot, "client", "src", "lib", "climate-helpers.ts"), "utf8");
-const charts = fs.readFileSync(path.join(repoRoot, "client", "src", "components", "climate-charts.tsx"), "utf8");
 const derivations = fs.readFileSync(path.join(repoRoot, "client", "src", "lib", "climate-derivations.ts"), "utf8");
 const landing = fs.readFileSync(path.join(repoRoot, "client", "src", "components", "climate-landing.tsx"), "utf8");
-const all = [source, helpers, charts, shareCard, constants, types, derivations, landing].join("\n");
+const hook = fs.readFileSync(path.join(repoRoot, "client", "src", "hooks", "use-climate-app.ts"), "utf8");
+const resultView = fs.readFileSync(path.join(repoRoot, "client", "src", "components", "climate-result-view.tsx"), "utf8");
+const sectionsTop = fs.readFileSync(path.join(repoRoot, "client", "src", "components", "climate-result-sections-top.tsx"), "utf8");
+const sectionsBottom = fs.readFileSync(path.join(repoRoot, "client", "src", "components", "climate-result-sections-bottom.tsx"), "utf8");
+const all = [source, helpers, charts, shareCard, constants, types, derivations, landing, hook, resultView, sectionsTop, sectionsBottom].join("\n");
+const methodology = fs.readFileSync(methodologyPath, "utf8");
+const scoreSensitivity = fs.readFileSync(scoreSensitivityPath, "utf8");
 
 assert.match(all, /const scoreStory = useMemo/, "storyline derives score-story data from the selected trajectory");
 assert.match(all, /baseline\.habitability\.breakdown/, "storyline compares selected score components to the baseline breakdown");
