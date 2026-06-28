@@ -1071,6 +1071,7 @@ export default function ClimateApp() {
   const [shareImageBusy, setShareImageBusy] = useState(false);
   const [shareImageSaved, setShareImageSaved] = useState(false);
   const [rawJsonCopied, setRawJsonCopied] = useState(false);
+  const [reportSaved, setReportSaved] = useState(false);
   const [analogCatalog, setAnalogCatalog] = useState<AnalogCatalog | null>(null);
   const [analogError, setAnalogError] = useState<string | null>(null);
   const [scenarioContrast, setScenarioContrast] = useState<Partial<Record<ScenarioId, ProjectionPoint[]>> | null>(null);
@@ -1248,6 +1249,7 @@ export default function ClimateApp() {
     setError(null);
     setShareCopied(false);
     setRawJsonCopied(false);
+    setReportSaved(false);
     setScenarioContrast(null);
     setScenarioContrastError(null);
     window.history.replaceState(null, "", "/");
@@ -1732,6 +1734,102 @@ export default function ClimateApp() {
     link.click();
     link.remove();
     URL.revokeObjectURL(url);
+  };
+
+  const buildEducationalReportMarkdown = () => {
+    if (!selectedLocation || !trajectory || !d || !scoreStory) return "";
+    const reportScenario = shownScenario;
+    const sourceLines = d.sourceTrail
+      .map((entry) => `- ${entry.label}: ${entry.source}. Method: ${entry.method}. Citation: ${entry.citation}.`)
+      .join("\n");
+    const roadmapLines = roadmapItems
+      .map((item) => {
+        const delta = item.scenarioDelta ? ` ${item.scenarioDelta}` : "";
+        return `- ${item.year}: ${signedNumber(item.tempChange, 1)} C raw warming, ${item.heatDays} heat-stress days/year, precipitation ${signedNumber(item.precipChange, 1)}%, drought ${item.drought}/100, flood ${item.flood}/100, sea-level context ${item.seaLevel} cm, habitability ${item.score}/100 (${item.category}). Main signal: ${item.driver.text}.${delta}`;
+      })
+      .join("\n");
+    const trendLines = scoreStory.trendRates.map((rate) => `- ${rate.label}: ${rate.value}`).join("\n");
+    const driverLines = scoreStory.scoreDrivers.length
+      ? scoreStory.scoreDrivers.map((driver) => `- ${driver.label}: ${driver.movement}; visible score effect ${signedNumber(driver.effect, 1)} points.`).join("\n")
+      : "- No single score component moved enough to dominate this horizon.";
+    const dailyLifeLines = dailyLifeSignals
+      .map((signal) => `- ${signal.label} (${signal.value}): ${signal.text} Receipt: ${signal.receipt}`)
+      .join("\n");
+    const twinLine = climateAnalog
+      ? `${climateAnalog.candidate.name}, ${climateAnalog.candidate.country}; distance ${climateAnalog.distance.toFixed(2)} standardized climate units across ${climateAnalog.comparedCount} bounded-catalog cities. Temperature gap ${signedNumber(climateAnalog.annualTempDelta, 1)} C, rainfall gap ${signedNumber(climateAnalog.annualPrecipDelta, 0)} mm, heat-stress gap ${signedNumber(climateAnalog.heatDaysDelta, 0)} days/year.`
+      : "No climate twin is included in this export because the bounded analog catalog did not return a match.";
+    const scenarioLine = scenarioContrastTakeaway
+      ? scenarioContrastTakeaway.text
+      : "Scenario contrast was not loaded when this report was exported.";
+
+    return [
+      "# fupit educational climate summary",
+      "",
+      `Exported: ${new Date().toISOString()}`,
+      `Location: ${selectedLocation.name} (${selectedLocation.lat.toFixed(4)}, ${selectedLocation.lng.toFixed(4)})`,
+      `Selected year: ${displayYear}`,
+      `Scenario: ${reportScenario.label} (${reportScenario.id})`,
+      `Default-policy note: ${DEFAULT_SCENARIO_EXPLANATION} Version: ${DEFAULT_SCENARIO_POLICY_VERSION}.`,
+      `Share URL: ${shareUrl}`,
+      "",
+      "## Selected-year snapshot",
+      "",
+      `- Raw CMIP6 model-consensus annual temperature: ${d.avgTemp.toFixed(1)} C; raw warming from ${BASELINE_YEAR}: ${signedNumber(d.tempChange, 1)} C.`,
+      `- IPCC-assessed/calibrated annual temperature: ${d.ipccTemp.toFixed(1)} C; assessed anomaly ${signedNumber(d.ipccDelta, 1)} C; visible adjustment ${signedNumber(d.ipccAdjustment, 1)} C.`,
+      `- Annual precipitation: ${d.annualPrecip} mm; change ${signedNumber(d.precipChange, 1)}%.`,
+      `- Heat stress: ${d.heatDays} days/year.`,
+      `- Drought pressure: ${d.drought}/100; flood/heavy-rain pressure: ${d.flood}/100.`,
+      `- Sea-level context: ${d.seaLevel} cm; range ${d.seaLow != null && d.seaHigh != null ? `${Math.round(d.seaLow)}-${Math.round(d.seaHigh)} cm` : "not exposed"}.`,
+      `- Habitability presentation score: ${d.score}/100 (${d.category}); score movement from ${scoreStory.baselineYear}: ${signedNumber(scoreStory.scoreDelta, 0)} points.`,
+      "",
+      "## Trend rates",
+      "",
+      trendLines,
+      "",
+      "## Main score drivers",
+      "",
+      driverLines,
+      "",
+      "## Living-conditions interpretation",
+      "",
+      dailyLifeLines,
+      "",
+      "## Annual roadmap",
+      "",
+      roadmapLines,
+      "",
+      "## Scenario contrast",
+      "",
+      scenarioLine,
+      "",
+      "## Climate twin",
+      "",
+      twinLine,
+      "",
+      "## Sources and methods",
+      "",
+      sourceLines,
+      "",
+      "## What this does not mean",
+      "",
+      "This is educational and research context, not a property-risk certificate, safety forecast, relocation recommendation, insurance model, medical advice, engineering assessment, or guarantee that this exact point will be livable or unlivable. Local adaptation, governance, health systems, wealth, migration, conflict, infrastructure, elevation, and parcel-scale exposure are outside this score.",
+      "",
+      "Not yet included in the score: cold-stress days, crop yields, wildfire weather, biodiversity species ranges, local freshwater infrastructure, or parcel-level flood exposure.",
+      "",
+      "This Markdown report uses only fields already visible in the forecast page or projection receipt. It adds no unregistered enrichment layer and makes no safe-city or climate-haven claim.",
+      "",
+    ].join("\n");
+  };
+
+  const downloadEducationalReport = () => {
+    const report = buildEducationalReportMarkdown();
+    if (!report || !selectedLocation) return;
+    downloadBlob(
+      new Blob([report], { type: "text/markdown;charset=utf-8" }),
+      `fupit-educational-summary-${jsonFileSlug(selectedLocation.city || selectedLocation.name)}-${displayYear}-${scenario}.md`,
+    );
+    setReportSaved(true);
+    window.setTimeout(() => setReportSaved(false), 1800);
   };
 
   const sc = d ? scoreColor(d.score) : GREEN;
@@ -2650,6 +2748,9 @@ export default function ClimateApp() {
             <button onClick={downloadRawForecastJson} style={{ display: "inline-flex", alignItems: "center", gap: 4, padding: "4px 8px", borderRadius: 6, border: `1px solid ${BORDER}`, background: "rgba(255,255,255,0.025)", color: "white", fontSize: 10, cursor: "pointer" }}>
               <Download size={11} /> Download JSON
             </button>
+            <button onClick={downloadEducationalReport} style={{ display: "inline-flex", alignItems: "center", gap: 4, padding: "4px 8px", borderRadius: 6, border: `1px solid ${reportSaved ? GREEN : BORDER}`, background: reportSaved ? `${GREEN}18` : "rgba(255,255,255,0.025)", color: reportSaved ? GREEN : "white", fontSize: 10, cursor: "pointer" }}>
+              {reportSaved ? <Check size={11} /> : <Download size={11} />} {reportSaved ? "Saved report" : "Download report"}
+            </button>
           </div>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(145px,1fr))", gap: 10, marginBottom: 12 }}>
             {[
@@ -2708,7 +2809,7 @@ export default function ClimateApp() {
             </p>
           )}
           <p style={{ color: MUTED, fontSize: 9.5, lineHeight: 1.45, marginTop: 8, marginBottom: 12 }}>
-            Raw JSON export includes the selected-year projection, the full annual trajectory, scenario, model version, uncertainty fields, and source trail returned by the grounded API.
+            Raw JSON export includes the selected-year projection, the full annual trajectory, scenario, model version, uncertainty fields, and source trail returned by the grounded API. The Markdown report is an educational summary built from the same visible fields, annual roadmap, climate twin, source trail, and missing-domain caveats.
           </p>
           <div style={{ padding: "10px 12px", borderRadius: 8, border: `1px solid ${AMBER}38`, background: `${AMBER}10`, marginBottom: 12 }}>
             <div style={{ fontSize: 10, color: AMBER, textTransform: "uppercase", letterSpacing: "0.06em", fontWeight: 800, marginBottom: 5 }}>What this does not mean</div>

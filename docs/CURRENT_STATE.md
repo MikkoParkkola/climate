@@ -37,6 +37,9 @@ cache purge/version-guard proof.
   shareable UI scaffolding.
 - The comparison flow has an explicit scenario selector and a sticky year slider that no longer
   reuses the single-location header offset.
+- The single-location projection receipt offers raw JSON and a Markdown educational summary
+  export built from visible forecast fields, annual roadmap, climate twin, source trail, and
+  missing-domain caveats.
 - Express 5 API with request validation, rate limits, bounded Python concurrency for the launch
   bridge, and a durable Postgres response cache.
 - Drizzle schema in `shared/schema.ts` as the database type source of truth.
@@ -78,6 +81,9 @@ Local validation on 2026-06-27:
 - `/data-quality` renders from the built server.
 - `npm run validate:artifacts` verifies ranking slices, the current climate-twin analog catalog,
   registered source rows, trajectory-audit coverage, and validation-report sync.
+- `npm run smoke:educational-report` guards the Markdown educational summary export, source
+  receipts, annual roadmap, climate twin context, and no-safe-haven/no-unregistered-enrichment
+  caveats.
 - `npm run smoke:comparison-layout` guards the comparison slider offset and scenario propagation.
 - `npm run screenshots:capture` captures desktop/mobile PNG evidence for layered launch checks
   using local Chrome headless; use `--include-single` only on a host with `DATABASE_URL`.
