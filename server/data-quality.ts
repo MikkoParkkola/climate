@@ -48,6 +48,21 @@ type ObservedBaselineAudit = {
   note: string;
 };
 
+type CoastalProximityArtifact = {
+  catalog: string;
+  label: string;
+  version: string;
+  sourceId: string;
+  generatedAt: string;
+  coastalThresholdKm: number;
+  nearCoastalThresholdKm: number;
+  regionalThresholdKm: number;
+  method: string;
+  caveats: string[];
+  lineCount: number;
+  pointCount: number;
+};
+
 let cachedDataQuality: Record<string, unknown> | undefined;
 
 function dataPath(relativePath: string): string {
@@ -129,6 +144,7 @@ export function loadDataQuality(): Record<string, unknown> {
   const rankingArtifacts = loadRankingArtifacts();
   const audit = readJson<TrajectoryAuditSummary>("data/trajectory-audit-summary.json");
   const observedBaselineAudit = readJson<ObservedBaselineAudit>("data/observed-baseline-audit.json");
+  const coastalProximity = readJson<CoastalProximityArtifact>("client/public/coastal-proximity.natural-earth-110m.json");
   const rankingEntries = rankingArtifacts.flatMap((artifact) => artifact.entries);
   const rankingYears = uniqueSorted(rankingEntries.map((entry) => entry.year));
   const rankingSourceIds = uniqueSorted(rankingEntries.flatMap((entry) => entry.sourceIds));
@@ -165,6 +181,7 @@ export function loadDataQuality(): Record<string, unknown> {
       artifactInfo("data/rankings.natural-earth-country-population-weighted.json"),
       artifactInfo("data/trajectory-audit-summary.json"),
       artifactInfo("data/observed-baseline-audit.json"),
+      artifactInfo("client/public/coastal-proximity.natural-earth-110m.json"),
     ],
     sourceRegistry: {
       version: registry.version,
@@ -235,6 +252,22 @@ export function loadDataQuality(): Record<string, unknown> {
       sourceIds: rankingSourceIds,
       caveats: uniqueSorted(rankingEntries.flatMap((entry) => entry.caveats)),
     },
+    coastalProximity: {
+      catalog: coastalProximity.catalog,
+      label: coastalProximity.label,
+      version: coastalProximity.version,
+      sourceId: coastalProximity.sourceId,
+      artifactGeneratedAt: coastalProximity.generatedAt,
+      lineCount: coastalProximity.lineCount,
+      pointCount: coastalProximity.pointCount,
+      thresholdsKm: {
+        coastal: coastalProximity.coastalThresholdKm,
+        nearCoastal: coastalProximity.nearCoastalThresholdKm,
+        regional: coastalProximity.regionalThresholdKm,
+      },
+      method: coastalProximity.method,
+      caveats: coastalProximity.caveats,
+    },
     trajectoryAudit: {
       artifactGeneratedAt: audit.generatedAt,
       version: audit.version,
@@ -288,6 +321,7 @@ export function loadDataQuality(): Record<string, unknown> {
       "This dashboard describes the packaged artifact bundle. It does not prove the public Replit deployment is current.",
       "Production climate_model_cache still requires purge or live version-guard proof after deployment.",
       "Ranking catalogs are bounded examples: curated cities, Natural Earth populated places, and Natural Earth-derived country aggregates; they are not complete GHSL urban-center, full national exposure, rural exposure, or population-weighted exposure rankings.",
+      "Sea-level context now uses a Natural Earth 1:110m nearest-coast screen for coarse relevance copy, but still has no elevation, tides, storm surge, subsidence, defenses, rivers, drainage, or parcel-exposure model.",
       "Trend review flags are intentionally visible for scientific review and are not automatically hidden by green CI.",
       "Freshwater, biodiversity, agriculture, infrastructure, and quantified AMOC local-impact layers remain withheld until source-registry approval and implementation.",
     ],

@@ -38,7 +38,7 @@ assert.match(source, /sea_level_low_cm/, "sea-level context chart uses grounded 
 assert.match(source, /flood: trajectory\.map\(\(p\) => riskScore\(p\.extremes\.flood_risk\)\)/, "metric trajectories include the grounded flood-risk series");
 assert.match(source, /values=\{traj!\.flood\}[\s\S]*?label="Flood Risk"/, "result page renders a flood-risk trend chart");
 assert.match(source, /thresholdLabel="50% elevated risk"/, "risk trend charts mark the documented elevated-risk threshold directly");
-assert.match(source, /thresholdLabel="50 cm regional context"/, "sea-level context chart labels its regional context marker");
+assert.match(source, /thresholdLabel=\{coastalRelevance\?\.thresholdLabel \?\? "50 cm regional context"\}/, "sea-level context chart labels its coastal or regional context marker");
 assert.match(source, /Translucent bands show grounded low-high ranges/, "chart legend explains range bands only appear where comparable uncertainty fields exist");
 assert.match(source, /all seven charts/, "chart legend accounts for temperature, precipitation, heat, habitability, sea-level, drought, and flood");
 assert.match(source, /Hover plotted years for values, or open values for keyboard\/touch access/, "chart legend explains hover and non-hover value access");
@@ -49,9 +49,11 @@ assert.match(source, /ROADMAP_YEARS/, "roadmap includes the current year and dec
 assert.match(source, /Roadmap · current year to 2100/, "result page renders the required roadmap section");
 assert.match(source, /5-year checkpoints through 2100 and linearly interpolates intermediate years/, "roadmap method receipt discloses checkpoint cadence and interpolation");
 assert.match(source, /Sea-level context/, "roadmap includes sea-level context as a visible metric");
-assert.match(source, /not as a claim that this exact point is coastal or exposed/, "sea-level copy must not imply local coastal exposure");
-assert.match(source, /no coastal-exposure\/elevation gate/, "sea-level receipt must disclose missing coastal-exposure gate");
-assert.match(source, /regional context, not parcel exposure/, "projection receipt must caveat sea-level range");
+assert.match(source, /coastal-proximity\.natural-earth-110m\.json/, "sea-level copy loads the registered Natural Earth coastal-proximity artifact");
+assert.match(source, /Coarse nearest-coast distance is/, "sea-level receipt must disclose the coarse nearest-coast method");
+assert.match(source, /Natural Earth 1:110m coastline/, "sea-level receipt must disclose the coastline source");
+assert.match(source, /no elevation, tides, storm surge, subsidence, coastal defenses, rivers, drainage, or parcel exposure/, "sea-level receipt must reject parcel exposure and missing local factors");
+assert.match(source, /Coastal relevance:/, "educational export includes coastal relevance status");
 assert.match(source, /SSP3-7\.0 vs SSP1-2\.6/, "roadmap can show lower-vs-higher pathway deltas after scenario contrast loads");
 assert.match(source, /Load pathway contrast to add lower-vs-higher scenario deltas/, "roadmap discloses missing scenario deltas before contrast is loaded");
 assert.match(source, /Why this changed/, "result page renders the required why-this-changed section");

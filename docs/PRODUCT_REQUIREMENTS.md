@@ -382,7 +382,7 @@ The app is public-launch ready when:
 
 1. Replace coarse baseline with higher-resolution observed climatology where not already active, and document cell-level confidence.
 2. Evaluate NASA NEX-GDDP-CMIP6 as a finer, bias-corrected delta layer.
-3. Add coastal-relevance/elevation gating for sea-level and coastal flood cards.
+3. Add coastal-relevance/elevation gating for sea-level and coastal flood cards. Status: partial; result-page sea-level wording now uses a Natural Earth 1:110m nearest-coast screen with source receipts and inland/regional caveats, but true elevation, storm-surge, tides, subsidence, defenses, drainage, river, and parcel-exposure gating remains future work.
 4. Add exportable classroom/journalist/researcher report. Status: initial Markdown educational summary is implemented from visible grounded fields, annual roadmap, climate twin, source trail, and caveats; richer printable classroom mode remains future work.
 5. Expand the public data-quality dashboard from the current trajectory validation report to a true observation-backed hindcast matrix, then add live-deploy evidence after Replit publish/cache purge.
 6. Research cBottle on DGX Spark only after permission clearance and with a written validation protocol.

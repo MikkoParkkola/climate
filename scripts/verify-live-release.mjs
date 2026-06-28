@@ -190,7 +190,7 @@ try {
 
   const { json: sourceRegistry } = await getJson("/api/source-registry");
   assert(sourceRegistry.version === "source-registry-v1", "source-registry API version is source-registry-v1");
-  assert(Array.isArray(sourceRegistry.rows) && sourceRegistry.rows.length >= 12, "source-registry API exposes current source rows");
+  assert(Array.isArray(sourceRegistry.rows) && sourceRegistry.rows.length >= 13, "source-registry API exposes current source rows");
   assert(
     sourceRegistry.rows.some(
       (row) =>
@@ -218,6 +218,14 @@ try {
   assert(
     sourceRegistry.rows.some(
       (row) =>
+        row.sourceId === "natural-earth-coastline-110m-v5" &&
+        row.displayPolicy === "show-with-coastal-proximity-caveat",
+    ),
+    "source-registry API exposes Natural Earth coastline row",
+  );
+  assert(
+    sourceRegistry.rows.some(
+      (row) =>
         row.sourceId === "natural-earth-country-population-weighted-v1" &&
         row.displayPolicy === "show-with-country-aggregate-caveat",
     ),
@@ -232,7 +240,7 @@ try {
   const { json: dataQuality } = await getJson("/api/data-quality");
   assert(dataQuality.version === "data-quality-v1", "data-quality API version is data-quality-v1");
   assert(Array.isArray(dataQuality.artifacts) && dataQuality.artifacts.length >= 10, "data-quality API exposes artifact hashes");
-  assert(dataQuality.sourceRegistry?.rowCount >= 12, "data-quality API exposes complete source-registry rows");
+  assert(dataQuality.sourceRegistry?.rowCount >= 13, "data-quality API exposes complete source-registry rows");
   assert(
     dataQuality.sourceRegistry?.rows?.some(
       (row) =>
@@ -260,6 +268,14 @@ try {
   assert(
     dataQuality.sourceRegistry?.rows?.some(
       (row) =>
+        row.sourceId === "natural-earth-coastline-110m-v5" &&
+        row.displayPolicy === "show-with-coastal-proximity-caveat",
+    ),
+    "data-quality API exposes Natural Earth coastline row",
+  );
+  assert(
+    dataQuality.sourceRegistry?.rows?.some(
+      (row) =>
         row.sourceId === "natural-earth-country-population-weighted-v1" &&
         row.displayPolicy === "show-with-country-aggregate-caveat",
     ),
@@ -278,6 +294,8 @@ try {
     ),
     "data-quality API exposes country aggregate ranking catalog coverage",
   );
+  assert(dataQuality.coastalProximity?.catalog === "natural_earth_coastline_110m", "data-quality API exposes coastline proximity artifact");
+  assert(dataQuality.coastalProximity?.thresholdsKm?.coastal === 50, "data-quality API exposes coastline proximity thresholds");
   assert(dataQuality.defaultScenarioPolicy?.scenario === "ssp245", "data-quality API exposes default scenario policy scenario");
   assert(
     Array.isArray(dataQuality.defaultScenarioPolicy?.sourceIds) &&
@@ -288,6 +306,7 @@ try {
   assert(dataQuality.trajectoryAudit?.resultCount === 52, "data-quality API exposes trajectory audit matrix");
   assert(dataQuality.trajectoryAudit?.trendReviewCount > 0, "data-quality API exposes trend-review flags");
   assert(String(dataQuality.limitations ?? "").includes("Replit deployment"), "data-quality API discloses live-deploy limitation");
+  assert(String(dataQuality.limitations ?? "").includes("Natural Earth 1:110m nearest-coast screen"), "data-quality API discloses coastal-proximity limitation");
 
   const robots = await getText("/robots.txt");
   assert(robots.res.status === 200, "GET /robots.txt returns 200");

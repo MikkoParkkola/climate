@@ -2,7 +2,7 @@
 > Public climate and habitability projection app for any location worldwide, built from grounded climate datasets.
 
 ## About
-fupit is a free public web application that lets anyone search for a location on Earth and view future climate and habitability projections to 2100. The serving engine uses an offline CMIP6/IPCC grid, NASA/IPCC sea-level projections, and ETCCDI extreme-climate indices. No account required.
+fupit is a free public web application that lets anyone search for a location on Earth and view future climate and habitability projections to 2100. The serving engine uses an offline CMIP6/IPCC grid, NASA/IPCC sea-level projections, ETCCDI extreme-climate indices, and a Natural Earth 1:110m nearest-coast screen for sea-level relevance wording. No account required.
 
 Numbers must be traceable to source data and documented methods. If a value cannot be grounded, fupit should omit it rather than fabricate it.
 
@@ -14,7 +14,7 @@ Builder profile: https://github.com/MikkoParkkola
 / : Single-location climate projection tool — search for a city or place and explore its projected future climate across multiple decades and emissions scenarios, with raw JSON and Markdown educational summary export.
 /comparison : Multi-location climate comparison page — compare climate projections side-by-side for two or more locations to understand regional differences.
 /rankings : Bounded top-10 ranking page — compares precomputed climate signals across documented curated-city, Natural Earth population-place, and Natural Earth-derived country aggregate catalogs with source receipts and caveats.
-/methodology : Methodology and source page — explains CMIP6/IPCC data, IPCC calibration, sea-level inputs, ETCCDI extremes, risk thresholds, habitability scoring, and known limitations.
+/methodology : Methodology and source page — explains CMIP6/IPCC data, IPCC calibration, sea-level inputs, Natural Earth coastal relevance caveats, ETCCDI extremes, risk thresholds, habitability scoring, and known limitations.
 /data-quality : Build evidence page — reports current artifact hashes, source-registry rows, default-scenario policy source IDs, ranking catalog coverage, trajectory-audit coverage, validation-report status, trend-review flags, and known launch limitations.
 
 ## Audience

@@ -24,6 +24,7 @@ assert.match(source, /roadmapItems/, "report uses the annual roadmap already sho
 assert.match(source, /dailyLifeSignals/, "report uses the visible daily-life interpretation rows");
 assert.match(source, /climateAnalog/, "report uses the bounded climate twin when available");
 assert.match(source, /Default-policy note: \$\{DEFAULT_SCENARIO_EXPLANATION\}/, "report preserves current-policy scenario explanation");
+assert.match(source, /Coastal relevance: \$\{coastalRelevance\?\.label/, "report includes coastal relevance status for sea-level context");
 assert.match(source, /no unregistered enrichment layer/, "report forbids unregistered enrichment claims");
 assert.match(source, /no safe-city or climate-haven claim/, "report forbids safe-city framing");
 assert.match(source, /text\/markdown;charset=utf-8/, "report downloads as Markdown");

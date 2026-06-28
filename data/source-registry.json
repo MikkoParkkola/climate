@@ -106,6 +106,23 @@
       "reviewedAt": "2026-06-27"
     },
     {
+      "sourceId": "natural-earth-coastline-110m-v5",
+      "provider": "Natural Earth",
+      "version": "1:110m coastline, natural-earth-vector commit 117488dc884b",
+      "stableUrl": "https://www.naturalearthdata.com/downloads/110m-physical-vectors/110m-coastline/",
+      "citation": "Natural Earth 1:110m coastline physical vectors.",
+      "license": "Natural Earth map data is public domain; attribution is requested but not required.",
+      "commercialReuse": "allowed",
+      "redistribution": "allowed-with-attribution-requested",
+      "variables": ["coastline line geometry", "coarse nearest-coast distance"],
+      "spatialResolution": "1:110m generalized basemap line geometry; coarse global screening only",
+      "temporalResolution": "static coastline snapshot",
+      "scenarioCoverage": "not scenario data; used only to caveat regional sea-level context by coarse coastal proximity",
+      "method": "Client computes nearest distance to the packaged Natural Earth 1:110m coastline line segments. The result is a coarse coastal-relevance flag only and does not include elevation, tides, surge, subsidence, defenses, rivers, drainage, or parcel exposure.",
+      "displayPolicy": "show-with-coastal-proximity-caveat",
+      "reviewedAt": "2026-06-28"
+    },
+    {
       "sourceId": "ipcc-ar6-amoc",
       "provider": "IPCC AR6 Working Group I",
       "version": "Sixth Assessment Report",

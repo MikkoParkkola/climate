@@ -37,7 +37,10 @@ export default function Methodology() {
               </li>
               <li>
                 <strong>Sea-level rise</strong> — IPCC AR6 regional projections, per
-                scenario.
+                scenario. The result page also loads a Natural Earth 1:110m coastline
+                artifact to compute a coarse nearest-coast screen for wording only; it
+                is not an elevation, tide, storm-surge, subsidence, defense, drainage,
+                river, or parcel-exposure model.
               </li>
               <li>
                 <strong>Heat, drought and flood risk</strong> — CMIP6 ETCCDI extreme-climate
@@ -159,8 +162,9 @@ export default function Methodology() {
             <p className="text-gray-500">
               Sources: WorldClim v2.1 (Fick & Hijmans 2017); IPCC AR6 Working Group I;
               CMIP6 (Eyring et al. 2016); ETCCDI indices (Sillmann et al. 2013); IPCC
-              AR6 sea-level projections; Climate Action Tracker thermometer; Hausfather
-              &amp; Peters 2020 on high-emissions scenario framing.
+              AR6 sea-level projections; Natural Earth 1:110m coastline; Climate Action
+              Tracker thermometer; Hausfather &amp; Peters 2020 on high-emissions scenario
+              framing.
             </p>
           </CardContent>
         </Card>

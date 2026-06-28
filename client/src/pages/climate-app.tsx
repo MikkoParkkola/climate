@@ -169,6 +169,32 @@ interface AnalogCatalog {
   candidates: AnalogCandidate[];
 }
 
+type CoastCoord = [number, number];
+
+interface CoastalProximityArtifact {
+  catalog: "natural_earth_coastline_110m";
+  label: string;
+  version: string;
+  sourceId: "natural-earth-coastline-110m-v5";
+  coastalThresholdKm: number;
+  nearCoastalThresholdKm: number;
+  regionalThresholdKm: number;
+  method: string;
+  caveats: string[];
+  lines: CoastCoord[][];
+}
+
+interface CoastalRelevance {
+  status: "loading" | "unavailable" | "coastal" | "near_coastal" | "regional" | "inland";
+  label: string;
+  shortLabel: string;
+  summary: string;
+  receipt: string;
+  thresholdLabel: string;
+  isLocallyRelevant: boolean;
+  distanceKm?: number;
+}
+
 interface ClimateAnalogMatch {
   candidate: AnalogCandidate;
   distance: number;
@@ -322,6 +348,114 @@ function signedNumber(value: number, decimals = 1) {
 function roundedValue(value: number | undefined | null, unit: string, decimals = 0): string {
   if (value == null || !Number.isFinite(value)) return "not exposed";
   return `${decimals > 0 ? value.toFixed(decimals) : Math.round(value).toString()}${unit}`;
+}
+
+function normalizeLngDelta(candidateLng: number, originLng: number): number {
+  let delta = candidateLng - originLng;
+  while (delta > 180) delta -= 360;
+  while (delta < -180) delta += 360;
+  return delta;
+}
+
+function distancePointToSegmentKm(lat: number, lng: number, a: CoastCoord, b: CoastCoord): number {
+  const kmPerLat = 111.32;
+  const kmPerLng = Math.max(0.001, 111.32 * Math.cos((lat * Math.PI) / 180));
+  const ax = normalizeLngDelta(a[0], lng) * kmPerLng;
+  const ay = (a[1] - lat) * kmPerLat;
+  const bx = normalizeLngDelta(b[0], lng) * kmPerLng;
+  const by = (b[1] - lat) * kmPerLat;
+  const dx = bx - ax;
+  const dy = by - ay;
+  const lengthSq = dx * dx + dy * dy;
+  if (lengthSq === 0) return Math.hypot(ax, ay);
+  const t = Math.max(0, Math.min(1, -(ax * dx + ay * dy) / lengthSq));
+  return Math.hypot(ax + dx * t, ay + dy * t);
+}
+
+function nearestCoastDistanceKm(lat: number, lng: number, artifact: CoastalProximityArtifact): number | undefined {
+  let best = Infinity;
+  for (const line of artifact.lines) {
+    for (let i = 0; i < line.length - 1; i++) {
+      const distance = distancePointToSegmentKm(lat, lng, line[i], line[i + 1]);
+      if (distance < best) best = distance;
+      if (best < 1) return best;
+    }
+  }
+  return Number.isFinite(best) ? best : undefined;
+}
+
+function formatDistanceKm(distanceKm: number | undefined): string {
+  if (distanceKm == null || !Number.isFinite(distanceKm)) return "not evaluated";
+  return distanceKm < 10 ? `${distanceKm.toFixed(1)} km` : `${Math.round(distanceKm)} km`;
+}
+
+function coastalRelevanceFor(location: LocationOption, artifact: CoastalProximityArtifact): CoastalRelevance {
+  const distanceKm = nearestCoastDistanceKm(location.lat, location.lng, artifact);
+  const distanceText = formatDistanceKm(distanceKm);
+  const baseReceipt =
+    `Coarse nearest-coast distance is ${distanceText} using Natural Earth 1:110m coastline (${artifact.sourceId}). This gates wording only: no elevation, tides, storm surge, subsidence, coastal defenses, rivers, drainage, or parcel exposure are modeled.`;
+
+  if (distanceKm == null) {
+    return {
+      status: "unavailable",
+      label: "Coastal relevance not evaluated",
+      shortLabel: "not evaluated",
+      summary: "Coastal relevance could not be evaluated, so sea-level rise stays regional context only.",
+      receipt: baseReceipt,
+      thresholdLabel: "50 cm regional context",
+      isLocallyRelevant: false,
+    };
+  }
+
+  if (distanceKm <= artifact.coastalThresholdKm) {
+    return {
+      status: "coastal",
+      label: `Coastal relevance screen: within ${distanceText} of generalized coastline`,
+      shortLabel: `${distanceText} from coast`,
+      summary: `This location is within ${distanceText} of the generalized Natural Earth coastline, so regional sea-level rise is locally relevant enough to inspect, but it is still not a flood-exposure result.`,
+      receipt: baseReceipt,
+      thresholdLabel: "50 cm coastal context",
+      isLocallyRelevant: true,
+      distanceKm,
+    };
+  }
+
+  if (distanceKm <= artifact.nearCoastalThresholdKm) {
+    return {
+      status: "near_coastal",
+      label: `Near-coastal screen: ${distanceText} from generalized coastline`,
+      shortLabel: `${distanceText} from coast`,
+      summary: `This location is near the generalized coastline (${distanceText}), so sea-level rise is worth reading as a screening context, not as proof of exposure.`,
+      receipt: baseReceipt,
+      thresholdLabel: "50 cm near-coastal context",
+      isLocallyRelevant: false,
+      distanceKm,
+    };
+  }
+
+  if (distanceKm <= artifact.regionalThresholdKm) {
+    return {
+      status: "regional",
+      label: `Regional coastal context: ${distanceText} from generalized coastline`,
+      shortLabel: `${distanceText} from coast`,
+      summary: `This location is ${distanceText} from the generalized coastline, so sea-level rise is shown as broad regional context rather than local exposure.`,
+      receipt: baseReceipt,
+      thresholdLabel: "50 cm regional context",
+      isLocallyRelevant: false,
+      distanceKm,
+    };
+  }
+
+  return {
+    status: "inland",
+    label: `Inland screen: ${distanceText} from generalized coastline`,
+    shortLabel: `${distanceText} inland`,
+    summary: `This location is far inland by the coarse Natural Earth screen (${distanceText}), so sea-level rise should be treated as regional background context, not a local risk signal.`,
+    receipt: baseReceipt,
+    thresholdLabel: "50 cm regional context",
+    isLocallyRelevant: false,
+    distanceKm,
+  };
 }
 
 function climateVector(monthlyTemps: number[], monthlyPrecip: number[]): number[] | null {
@@ -1095,6 +1229,8 @@ export default function ClimateApp() {
   const [reportSaved, setReportSaved] = useState(false);
   const [analogCatalog, setAnalogCatalog] = useState<AnalogCatalog | null>(null);
   const [analogError, setAnalogError] = useState<string | null>(null);
+  const [coastalArtifact, setCoastalArtifact] = useState<CoastalProximityArtifact | null>(null);
+  const [coastalArtifactError, setCoastalArtifactError] = useState<string | null>(null);
   const [scenarioContrast, setScenarioContrast] = useState<Partial<Record<ScenarioId, ProjectionPoint[]>> | null>(null);
   const [scenarioContrastLoading, setScenarioContrastLoading] = useState(false);
   const [scenarioContrastError, setScenarioContrastError] = useState<string | null>(null);
@@ -1117,6 +1253,26 @@ export default function ClimateApp() {
       })
       .catch(() => {
         if (!cancelled) setAnalogError("Climate twin catalog unavailable");
+      });
+    return () => { cancelled = true; };
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    fetch("/coastal-proximity.natural-earth-110m.json")
+      .then((response) => {
+        if (!response.ok) throw new Error("coastal_proximity_unavailable");
+        return response.json();
+      })
+      .then((artifact: CoastalProximityArtifact) => {
+        if (cancelled) return;
+        if (artifact.catalog !== "natural_earth_coastline_110m" || artifact.sourceId !== "natural-earth-coastline-110m-v5" || !Array.isArray(artifact.lines)) {
+          throw new Error("coastal_proximity_invalid");
+        }
+        setCoastalArtifact(artifact);
+      })
+      .catch(() => {
+        if (!cancelled) setCoastalArtifactError("Coastal proximity artifact unavailable");
       });
     return () => { cancelled = true; };
   }, []);
@@ -1419,6 +1575,31 @@ export default function ClimateApp() {
     return findClimateAnalog(analogCatalog, selectedLocation, displayYear, d);
   }, [analogCatalog, selectedLocation, d, displayYear]);
 
+  const coastalRelevance = useMemo<CoastalRelevance | null>(() => {
+    if (!selectedLocation) return null;
+    if (coastalArtifact) return coastalRelevanceFor(selectedLocation, coastalArtifact);
+    if (coastalArtifactError) {
+      return {
+        status: "unavailable",
+        label: "Coastal relevance unavailable",
+        shortLabel: "coast screen unavailable",
+        summary: "Coastal relevance could not be evaluated, so sea-level rise stays regional context only.",
+        receipt: "The Natural Earth 1:110m coastal proximity artifact did not load. No local coastal exposure inference is made.",
+        thresholdLabel: "50 cm regional context",
+        isLocallyRelevant: false,
+      };
+    }
+    return {
+      status: "loading",
+      label: "Coastal relevance loading",
+      shortLabel: "coast screen loading",
+      summary: "Coastal relevance is still loading, so sea-level rise is temporarily shown as regional context only.",
+      receipt: "Waiting for the Natural Earth 1:110m coastal proximity artifact. No local coastal exposure inference is made while it is unavailable.",
+      thresholdLabel: "50 cm regional context",
+      isLocallyRelevant: false,
+    };
+  }, [selectedLocation, coastalArtifact, coastalArtifactError]);
+
   const scenarioContrastRows = useMemo(() => {
     if (!scenarioContrast) return [];
     return SCENARIOS
@@ -1484,10 +1665,20 @@ export default function ClimateApp() {
       makeMetric("rainfall-change", "Rainfall change", "%", BLUE, 1, (point) => point.precipitation.anomaly_percent, "Rainfall change is annual precipitation anomaly percent from the same-coordinate trajectory; it is not a freshwater availability model."),
       makeMetric("drought-risk", "Drought risk", "%", AMBER, 0, (point) => riskScore(point.extremes.drought_risk), "Drought risk is the displayed normalized ETCCDI-derived risk score from the grounded trajectory response.", 50, "50% elevated risk"),
       makeMetric("flood-risk", "Flood risk", "%", BLUE, 0, (point) => riskScore(point.extremes.flood_risk), "Flood risk is the displayed normalized ETCCDI-derived heavy-rain risk score from the grounded trajectory response.", 50, "50% elevated risk"),
-      makeMetric("sea-level-context", "Sea-level context", "cm", CYAN, 0, (point) => Math.max(0, point.extremes.sea_level_rise_cm ?? 0), "Sea-level context uses the regional AR6 sea-level value returned by the API; it is not parcel-level elevation, flood defense, or inland exposure.", 50, "50 cm context"),
+      makeMetric(
+        "sea-level-context",
+        "Sea-level relevance",
+        "cm",
+        CYAN,
+        0,
+        (point) => Math.max(0, point.extremes.sea_level_rise_cm ?? 0),
+        `Sea-level context uses the regional AR6 sea-level value returned by the API. ${coastalRelevance?.receipt ?? "Coastal relevance is not evaluated, so no local exposure inference is made."}`,
+        50,
+        coastalRelevance?.thresholdLabel ?? "50 cm regional context",
+      ),
       makeMetric("habitability", "Habitability score", "", GREEN, 0, (point) => Math.max(0, Math.min(100, point.habitability.score)), "Habitability is the app's registered composite score for the same scenario trajectory; use component receipts and the methodology page to inspect inputs."),
     ];
-  }, [scenarioContrast, scenario]);
+  }, [scenarioContrast, scenario, coastalRelevance]);
 
   const scenarioContrastTakeaway = useMemo(() => {
     const low = scenarioContrastRows.find((row) => row.id === "ssp126");
@@ -1629,11 +1820,11 @@ export default function ClimateApp() {
         receipt: "Uses CMIP6-derived dry-spell and heavy-precipitation risk layers; local drainage, rivers, soils, and defenses are outside the current score.",
       },
       {
-        label: "Sea-level context, infrastructure, and ecosystems",
-        value: `${d.seaLevel} cm context`,
+        label: "Sea-level relevance, infrastructure, and ecosystems",
+        value: `${d.seaLevel} cm · ${coastalRelevance?.shortLabel ?? "regional context"}`,
         color: CYAN,
-        text: `Sea-level rise is shown as regional context (${d.seaLevel} cm at this horizon), not as a claim that this exact point is coastal or exposed. Local exposure depends on elevation, distance to coast, tides, subsidence, defenses, and storm surge. Climate-zone movement can pressure biodiversity, pests, and ecosystem services, but species-specific outcomes are not modeled yet.`,
-        receipt: "Sea-level data comes through the registered AR6/NASA source trail. This build has no coastal-exposure/elevation gate, so inland users should treat the number as regional context. Biodiversity and infrastructure text is educational context, not a quantified impact model.",
+        text: `${coastalRelevance?.summary ?? "Coastal relevance is not evaluated, so sea-level rise stays regional context only."} Regional AR6 sea-level rise is ${d.seaLevel} cm at this horizon. Local exposure still depends on elevation, tides, subsidence, defenses, rivers, drainage, and storm surge. Climate-zone movement can pressure biodiversity, pests, and ecosystem services, but species-specific outcomes are not modeled yet.`,
+        receipt: `Sea-level data comes through the registered AR6/NASA source trail. ${coastalRelevance?.receipt ?? "No Natural Earth coastal proximity receipt is available, so inland users should treat the number as regional context."} Biodiversity and infrastructure text is educational context, not a quantified impact model.`,
       },
     ];
     const circulation = circulationContextFor(selectedLocation?.lat, selectedLocation?.lng);
@@ -1647,7 +1838,7 @@ export default function ClimateApp() {
       });
     }
     return signals;
-  }, [d, scoreStory, selectedLocation?.lat, selectedLocation?.lng]);
+  }, [d, scoreStory, selectedLocation?.lat, selectedLocation?.lng, coastalRelevance]);
 
   // Tipping points computed from real interpolated trajectory
   const tipping = useMemo(() => {
@@ -1655,11 +1846,11 @@ export default function ClimateApp() {
     const items = [
       { icon: "🌡️", label: "Heat stress exceeds 15 days/yr", year: crossYear(trajectory, 15, "above", (p) => p.extremes.heat_stress_days) },
       { icon: "⚠️", label: "Habitability drops below 70 (Fair territory)", year: crossYear(trajectory, 70, "below", (p) => p.habitability.score) },
-      { icon: "🌊", label: "Regional sea-level context exceeds 50 cm", year: crossYear(trajectory, 50, "above", (p) => p.extremes.sea_level_rise_cm ?? 0) },
+      { icon: "🌊", label: `${coastalRelevance?.isLocallyRelevant ? "Coastal" : "Regional"} sea-level context exceeds 50 cm`, year: crossYear(trajectory, 50, "above", (p) => p.extremes.sea_level_rise_cm ?? 0) },
       { icon: "💧", label: "Drought risk exceeds 50%", year: crossYear(trajectory, 50, "above", (p) => riskScore(p.extremes.drought_risk)) },
     ];
     return items.sort((a, b) => (a.year ?? Infinity) - (b.year ?? Infinity));
-  }, [trajectory]);
+  }, [trajectory, coastalRelevance]);
 
   const selectedScenario = scenarioInfo(scenario);
   const shownScenario = scenarioInfo(d?.scenario ?? scenario);
@@ -1885,7 +2076,7 @@ export default function ClimateApp() {
       `- Annual precipitation: ${d.annualPrecip} mm; change ${signedNumber(d.precipChange, 1)}%.`,
       `- Heat stress: ${d.heatDays} days/year.`,
       `- Drought pressure: ${d.drought}/100; flood/heavy-rain pressure: ${d.flood}/100.`,
-      `- Sea-level context: ${d.seaLevel} cm; range ${d.seaLow != null && d.seaHigh != null ? `${Math.round(d.seaLow)}-${Math.round(d.seaHigh)} cm` : "not exposed"}.`,
+      `- Sea-level context: ${d.seaLevel} cm; range ${d.seaLow != null && d.seaHigh != null ? `${Math.round(d.seaLow)}-${Math.round(d.seaHigh)} cm` : "not exposed"}. Coastal relevance: ${coastalRelevance?.label ?? "not evaluated"}. ${coastalRelevance?.receipt ?? "No local coastal exposure inference is made."}`,
       `- Habitability presentation score: ${d.score}/100 (${d.category}); score movement from ${scoreStory.baselineYear}: ${signedNumber(scoreStory.scoreDelta, 0)} points.`,
       "",
       "## Trend rates",
@@ -2710,9 +2901,9 @@ export default function ClimateApp() {
               color={CYAN}
               decimals={0}
               thresholdY={50}
-              thresholdLabel="50 cm regional context"
+              thresholdLabel={coastalRelevance?.thresholdLabel ?? "50 cm regional context"}
               scenarioLabel={shownScenario.label}
-              uncertaintyLabel="Shaded band uses AR6 regional sea-level low/high context returned by the API; it is not a parcel-level coastal exposure assessment."
+              uncertaintyLabel={`Shaded band uses AR6 regional sea-level low/high context returned by the API. ${coastalRelevance?.receipt ?? "Coastal relevance is not evaluated, so this is not a parcel-level coastal exposure assessment."}`}
             />
             <TrendChart
               years={traj!.years}
@@ -2853,10 +3044,10 @@ export default function ClimateApp() {
             {
               label: "Sea-level context",
               value: `${d!.seaLevel}cm`,
-              sub: "Regional AR6",
+              sub: coastalRelevance?.isLocallyRelevant ? "Coastal screen" : "Regional AR6",
               detail: d!.seaLow != null && d!.seaHigh != null ? `${Math.round(d!.seaLow)}-${Math.round(d!.seaHigh)} cm range` : "range not exposed",
               color: CYAN,
-              receipt: `Sea-level context uses the registered NASA/IPCC AR6 regional sea-level layer for ${shownScenario.label}. Selected range: ${d!.seaLow != null && d!.seaHigh != null ? `${Math.round(d!.seaLow)} to ${Math.round(d!.seaHigh)} cm` : "not exposed"}. This is regional context only; local exposure depends on elevation, coast distance, subsidence, tides, storm surge, and defenses.`,
+              receipt: `Sea-level context uses the registered NASA/IPCC AR6 regional sea-level layer for ${shownScenario.label}. Selected range: ${d!.seaLow != null && d!.seaHigh != null ? `${Math.round(d!.seaLow)} to ${Math.round(d!.seaHigh)} cm` : "not exposed"}. ${coastalRelevance?.receipt ?? "Coastal relevance is not evaluated, so this is regional context only."}`,
             },
           ].map(({ label, value, unit, delta, sub, detail, bar, color, receipt }) => (
             <div key={label} style={{ ...card, padding: 14, borderTop: `2px solid ${color}` }}>
@@ -2949,7 +3140,9 @@ export default function ClimateApp() {
               {
                 label: "Sea-level range",
                 value: d!.seaLow != null && d!.seaHigh != null ? `${Math.round(d!.seaLow)}–${Math.round(d!.seaHigh)}cm` : "—",
-                sub: "IPCC AR6 low to high; regional context, not parcel exposure",
+                sub: coastalRelevance?.isLocallyRelevant
+                  ? "IPCC AR6 low to high; coastal screen, not parcel exposure"
+                  : "IPCC AR6 low to high; regional context, not parcel exposure",
                 color: CYAN,
               },
               {

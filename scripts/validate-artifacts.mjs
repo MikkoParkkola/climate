@@ -35,6 +35,7 @@ for (const relativePath of [
   "data/observed-baseline-audit.json",
   "docs/VALIDATION_REPORT.md",
   "client/public/climate-analog-catalog.current.json",
+  "client/public/coastal-proximity.natural-earth-110m.json",
 ]) {
   assert(existsSync(path.join(repoRoot, relativePath)), `${relativePath} missing`);
   assert(statSync(path.join(repoRoot, relativePath)).size > 0, `${relativePath} is empty`);
@@ -45,6 +46,7 @@ assert(registry.version === sourceRegistryVersion, "source registry version mism
 assert(Array.isArray(registry.rows) && registry.rows.length >= 10, "source registry rows incomplete");
 const sourceIds = new Set(registry.rows.map((row) => row.sourceId));
 assert(sourceIds.has("ipcc-ar6-amoc"), "AMOC/Gulf Stream context source row missing");
+assert(sourceIds.has("natural-earth-coastline-110m-v5"), "Natural Earth coastline source row missing");
 assert(sourceIds.has("natural-earth-populated-places-110m-v5"), "Natural Earth population-place source row missing");
 assert(sourceIds.has("natural-earth-country-population-weighted-v1"), "Natural Earth country aggregate source row missing");
 const requireRegisteredSources = (ids, context) => {
@@ -98,6 +100,30 @@ for (const place of populatedPlaces.places) {
   assert(Number.isFinite(place.lat) && Number.isFinite(place.lng), "Natural Earth place coordinates invalid");
   assert(Number.isFinite(place.population) && place.population >= populatedPlaces.populationThreshold, "Natural Earth place population invalid");
 }
+
+const coastline = readJson("client/public/coastal-proximity.natural-earth-110m.json");
+assert(coastline.catalog === "natural_earth_coastline_110m", "Natural Earth coastline catalog id mismatch");
+assert(coastline.sourceId === "natural-earth-coastline-110m-v5", "Natural Earth coastline source id mismatch");
+assert(coastline.version === "natural-earth-vector-117488dc884b", "Natural Earth coastline version mismatch");
+assert(coastline.coastalThresholdKm === 50, "Natural Earth coastline coastal threshold mismatch");
+assert(coastline.nearCoastalThresholdKm === 100, "Natural Earth coastline near-coastal threshold mismatch");
+assert(coastline.regionalThresholdKm === 250, "Natural Earth coastline regional threshold mismatch");
+assert(coastline.lineCount >= 100, "Natural Earth coastline line count too small");
+assert(coastline.pointCount >= 3000, "Natural Earth coastline point count too small");
+assert(Array.isArray(coastline.lines) && coastline.lines.length === coastline.lineCount, "Natural Earth coastline lines missing");
+assert(
+  coastline.lines.every((line) =>
+    Array.isArray(line) &&
+    line.length >= 2 &&
+    line.every((coord) => Array.isArray(coord) && coord.length === 2 && coord.every(Number.isFinite))
+  ),
+  "Natural Earth coastline coordinate geometry invalid",
+);
+requireRegisteredSources([coastline.sourceId], "coastal proximity artifact");
+assert(
+  getSourceRow(coastline.sourceId)?.displayPolicy === "show-with-coastal-proximity-caveat",
+  "Natural Earth coastline display policy mismatch",
+);
 
 const rankingArtifacts = [
   readJson("data/rankings.curated-cities.json"),
@@ -181,4 +207,4 @@ assert(validationReport.includes(observedBaselineAudit.generatedAt), "validation
 assert(validationReport.includes("Trend review flags are unresolved scientific-review evidence"), "validation report must keep trend flags visible");
 assert(scientificGrounding.includes("packed 2030 scenario layer"), "scientific grounding must disclose near-current source-year basis");
 
-console.log(`artifact validation passed: ${rankingEntryCount} ranking slices, ${analog.candidateCount} analog candidates, ${registry.rows.length} source rows, ${audit.resultCount} audit results, ${observedBaselineAudit.cityCount} baseline checks`);
+console.log(`artifact validation passed: ${rankingEntryCount} ranking slices, ${analog.candidateCount} analog candidates, ${registry.rows.length} source rows, ${audit.resultCount} audit results, ${observedBaselineAudit.cityCount} baseline checks, ${coastline.lineCount} coastline lines`);
