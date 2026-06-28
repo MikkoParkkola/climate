@@ -88,12 +88,15 @@ try {
       stdio: "inherit",
     },
   );
+  // Location search is geocoder-backed and no longer needs a database. Without
+  // DATABASE_URL it still returns 200 (live geocoder results, or an empty array
+  // if both the geocoder and the DB fallback are unavailable).
   await expectStatus(
     baseUrl,
     "/api/locations/search?q=he",
     undefined,
-    503,
-    "DB-backed location search without DATABASE_URL",
+    200,
+    "geocoder-backed location search without DATABASE_URL",
   );
   await expectStatus(
     baseUrl,

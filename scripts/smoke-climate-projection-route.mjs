@@ -5,19 +5,25 @@ import { fileURLToPath } from "node:url";
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const routesPath = path.join(repoRoot, "server", "routes.ts");
-const gridEnginePath = path.join(repoRoot, "server", "climate-grid-engine.ts");
 const source = fs.readFileSync(routesPath, "utf8");
-const gridEngineSource = fs.readFileSync(gridEnginePath, "utf8");
 
+// Forecasts run only through the in-process Node grid engine. The legacy Python
+// serving subprocess has been removed, so the live request path must not spawn
+// a child process at all.
 assert.match(
-  gridEngineSource,
-  /return\s+"node";/,
-  "CLIMATE_GRID_ENGINE defaults to the in-process Node grid engine",
+  source,
+  /import \{ climateTrajectory, projectClimate \} from "\.\/grounded-node-model";/,
+  "routes import the in-process Node grid engine",
 );
-assert.match(
-  gridEngineSource,
-  /requested === "node" \|\| requested === "python"/,
-  "CLIMATE_GRID_ENGINE still allows explicit node/python selection",
+assert.equal(
+  source.includes('spawn(PYTHON_BIN'),
+  false,
+  "no Python subprocess is spawned in the serving path",
+);
+assert.equal(
+  source.includes('from "child_process"'),
+  false,
+  "child_process is no longer imported by the serving path",
 );
 
 const routeStart = source.indexOf('app.post("/api/climate-projection"');
@@ -36,30 +42,11 @@ assert.match(
 const runModelIndex = routeBlock.indexOf("await runClimateModel(");
 assert.notEqual(runModelIndex, -1, "climate-projection route calls the shared grounded engine wrapper");
 
-const legacyBusyCheckIndex = routeBlock.indexOf("activePythonProcesses >= MAX_PYTHON_CONCURRENT");
-assert.equal(legacyBusyCheckIndex, -1, "climate-projection route no longer bypasses the Python queue with a busy precheck");
-
-const legacyCounterIndex = routeBlock.indexOf("activePythonProcesses++");
-if (legacyCounterIndex !== -1) {
-  assert.ok(
-    runModelIndex < legacyCounterIndex,
-    "shared grounded engine wrapper is reached before the legacy subprocess branch",
-  );
-}
-
-const legacySpawnIndex = routeBlock.indexOf("spawn(PYTHON_BIN");
-if (legacySpawnIndex !== -1) {
-  assert.ok(runModelIndex < legacySpawnIndex, "CLIMATE_GRID_ENGINE route selection precedes any legacy spawn branch");
-}
-
-const activeBranch = routeBlock.slice(
-  runModelIndex,
-  legacyCounterIndex === -1 ? routeBlock.length : legacyCounterIndex,
-);
+const activeBranch = routeBlock.slice(runModelIndex);
 assert.match(
   activeBranch,
   /return\s+res\.json\(\{\s*success:\s*true,\s*data:\s*result\s*\}\)/,
-  "climate-projection keeps its success envelope after running the shared engine",
+  "climate-projection keeps its success envelope after running the Node engine",
 );
 
-console.log("climate-projection route smoke passed: Node default, scenario validation, and engine wrapper guarded");
+console.log("climate-projection route smoke passed: Node-only engine, no Python spawn, scenario validation, success envelope guarded");
