@@ -156,10 +156,35 @@ export default function Methodology() {
 
             <h2>Habitability score</h2>
             <p>
-              The single habitability number is a weighted blend of temperature comfort
-              (weight 0.45), rainfall adequacy (0.35), a fixed adaptation allowance, minus
-              penalties for heat, drought and flood. It is a transparent summary, not a model
-              output, and the full breakdown is shown so you can see every component.
+              The single habitability number is hazard-led. It starts from a base built of
+              two parts — temperature comfort (weight 0.6) and rainfall adequacy (weight 0.4),
+              on a 0 to 100 scale — and then subtracts grounded, cited hazard penalties:
+              humid heat (a wet-bulb screen, the strongest single penalty because humid heat
+              is the limit human bodies cannot cool past), heat-stress nights, drought, and
+              flood. There is no fixed "adaptation" constant in the score; a flat allowance
+              that ignored real infrastructure was removed because it could not be grounded.
+            </p>
+            <p>
+              Temperature comfort is the one stated <em>preference</em> in the score, not a
+              physical fact: it peaks across a comfortable band around an optimum of 20°C and
+              falls off on both sides, with heat penalised slightly harder than cold. This is
+              a temperate-human comfort assumption, and it is adjustable — on a single
+              location you can move the comfort optimum to match where you are acclimatised.
+              Global rankings are computed at the documented 20°C default so they stay
+              comparable between people. Everything else in the score is grounded hazard data;
+              the full component breakdown is always shown.
+            </p>
+
+            <h2>Sea-level rise (coastal only)</h2>
+            <p>
+              Sea-level rise is only reported for coastal locations — places at the sea or
+              within roughly 75 km of ocean, detected from a land/ocean mask. Inland and
+              high-altitude locations are shown as "not applicable" rather than given a number,
+              because regional sea-level rise has no meaning away from a coast. The figure is
+              the regional relative rise at the nearest coast; it is not a flood-exposure or
+              parcel-elevation claim. Known limitation: the mask treats very large lakes (for
+              example the Great Lakes or the Caspian) like ocean, so a few lakeside cities can
+              be mis-classified as coastal until a true ocean-polygon mask is added.
             </p>
 
             <h2>Large-scale circulation context</h2>

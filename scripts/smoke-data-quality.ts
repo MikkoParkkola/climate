@@ -5,7 +5,7 @@ import { loadDataQuality } from "../server/data-quality";
 const report = loadDataQuality() as Record<string, any>;
 
 assert.equal(report.version, "data-quality-v1");
-assert.ok(String(report.methodVersion).startsWith("grounded-grid-i16-v2"));
+assert.ok(String(report.methodVersion).startsWith("grounded-grid-i16-v3"));
 assert.equal(report.sourceRegistryVersion, "source-registry-v1");
 assert.ok(Array.isArray(report.artifacts) && report.artifacts.length >= 10);
 assert.ok(report.artifacts.every((artifact: any) => artifact.bytes > 0 && /^[a-f0-9]{64}$/.test(artifact.sha256)));

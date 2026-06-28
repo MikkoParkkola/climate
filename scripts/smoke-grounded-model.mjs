@@ -74,8 +74,9 @@ const requiredPaths = [
   "habitability.category",
   "habitability.breakdown.temperature_comfort",
   "habitability.breakdown.precipitation_adequacy",
-  "habitability.breakdown.infrastructure_adaptation",
+  "habitability.breakdown.comfort_optimum_c",
   "habitability.breakdown.heat_stress_penalty",
+  "habitability.breakdown.humid_heat_penalty",
   "habitability.breakdown.drought_penalty",
   "habitability.breakdown.flood_penalty",
   "habitability.breakdown.base_score",
@@ -303,7 +304,9 @@ function validateProjection(sample, projection, expectedYear = 2050, expectedSce
     assert(getPath(projection, requiredPath) !== undefined, `${sample.name} missing ${requiredPath}`);
   }
 
-  const nulls = collectNullPaths(projection);
+  const nulls = collectNullPaths(projection).filter(
+    (p) => !(projection.extremes.sea_level_applicable === false && p.includes("sea_level")),
+  );
   assert(nulls.length === 0, `${sample.name} returned null values: ${nulls.slice(0, 12).join(", ")}`);
 
   assert(projection.year === expectedYear, `${sample.name} year mismatch`);
@@ -349,8 +352,12 @@ function validateProjection(sample, projection, expectedYear = 2050, expectedSce
   assert(projection.temperature.ipcc_calibrated.calibration_factor > 0, `${sample.name} invalid IPCC calibration factor`);
   assert(projection.precipitation.uncertainty.annual_total_low <= projection.precipitation.annual_total, `${sample.name} precipitation uncertainty low above total`);
   assert(projection.precipitation.uncertainty.annual_total_high >= projection.precipitation.annual_total, `${sample.name} precipitation uncertainty high below total`);
-  assert(projection.extremes.detail.uncertainty.sea_level_low_cm <= projection.extremes.sea_level_rise_cm, `${sample.name} sea-level low above median`);
-  assert(projection.extremes.detail.uncertainty.sea_level_high_cm >= projection.extremes.sea_level_rise_cm, `${sample.name} sea-level high below median`);
+  if (projection.extremes.sea_level_rise_cm !== null) {
+    assert(projection.extremes.detail.uncertainty.sea_level_low_cm <= projection.extremes.sea_level_rise_cm, `${sample.name} sea-level low above median`);
+    assert(projection.extremes.detail.uncertainty.sea_level_high_cm >= projection.extremes.sea_level_rise_cm, `${sample.name} sea-level high below median`);
+  } else {
+    assert(projection.extremes.sea_level_applicable === false, `${sample.name} null sea-level must be flagged inland`);
+  }
   assert(Array.isArray(projection.metadata.source_trail), `${sample.name} source trail missing`);
   assert(projection.metadata.source_trail.length >= 4, `${sample.name} source trail incomplete`);
   assert(

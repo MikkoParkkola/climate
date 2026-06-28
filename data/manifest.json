@@ -1,8 +1,8 @@
 {
   "format": "option-c grid v1",
   "encoding": "int16 LE, C-order, per-array scale; byte-shuffle then gzip",
-  "methodVersion": "grounded-grid-i16-v2-raw-temp-headline:0dc3f9d188e4d757",
-  "cacheVersion": "grounded-grid-i16-v2-raw-temp-headline:0dc3f9d188e4d757",
+  "methodVersion": "grounded-grid-i16-v3-hazard-habitability:0dc3f9d188e4d757",
+  "cacheVersion": "grounded-grid-i16-v3-hazard-habitability:0dc3f9d188e4d757",
   "sourceRegistryVersion": "source-registry-v1",
   "defaultScenario": "ssp245",
   "defaultScenarioPolicyVersion": "current-policy-reference-2025",

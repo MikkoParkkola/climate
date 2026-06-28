@@ -83,6 +83,7 @@ interface ProjectionPoint {
     drought_risk: number;
     flood_risk: number;
     sea_level_rise_cm?: number;
+    sea_level_applicable?: boolean;
     detail?: {
       tropical_nights_per_year?: number;
       consecutive_dry_days?: number;
@@ -576,8 +577,8 @@ function componentScoreEffect(key: string, delta: number): number {
 
 function isDriverComponent(key: string): boolean {
   const normalized = key.toLowerCase();
-  if (["base_score", "final_score", "infrastructure_adaptation"].includes(normalized)) return false;
-  if (["drought_risk_penalty", "flood_risk_penalty"].includes(normalized)) return false;
+  // base_score/final_score are aggregates; comfort_optimum_c is a setting, not a score driver.
+  if (["base_score", "final_score", "comfort_optimum_c"].includes(normalized)) return false;
   return true;
 }
 
@@ -761,6 +762,7 @@ function roadmapSnapshot(points: ProjectionPoint[], year: number, previous?: Omi
     drought: Math.round(riskScore(interpScalar(points, year, (p) => p.extremes.drought_risk))),
     flood: Math.round(riskScore(interpScalar(points, year, (p) => p.extremes.flood_risk))),
     seaLevel: Math.max(0, Math.round(interpScalar(points, year, (p) => p.extremes.sea_level_rise_cm ?? 0))),
+    seaLevelApplicable: points[0]?.extremes?.sea_level_applicable !== false,
     score,
     category: categoryFor(score),
   };
@@ -1566,6 +1568,7 @@ export default function ClimateApp() {
     const drought = Math.round(riskScore(interpScalar(pts, year, (p) => p.extremes.drought_risk)));
     const flood = Math.round(riskScore(interpScalar(pts, year, (p) => p.extremes.flood_risk)));
     const seaLevel = Math.max(0, Math.round(interpScalar(pts, year, (p) => p.extremes.sea_level_rise_cm ?? 0)));
+    const seaLevelApplicable = pts[0]?.extremes?.sea_level_applicable !== false;
     const heatNightsRaw = interpOptionalScalar(pts, year, (p) => p.extremes.detail?.tropical_nights_per_year ?? p.extremes.heat_stress_days);
     const drySpellDays = interpOptionalScalar(pts, year, (p) => p.extremes.detail?.consecutive_dry_days);
     const maxFiveDayRain = interpOptionalScalar(pts, year, (p) => p.extremes.detail?.max_5day_precip_mm);
@@ -1603,7 +1606,7 @@ export default function ClimateApp() {
     const feedbacks = np.atmospheric_physics?.feedback_mechanisms ?? [];
 
     return {
-      avgTemp, tempChange, ipccTemp, ipccDelta, ipccAdjustment, calibrationFactor, annualPrecip, precipChange, heatDays, baseHeatDays, drought, flood, seaLevel,
+      avgTemp, tempChange, ipccTemp, ipccDelta, ipccAdjustment, calibrationFactor, annualPrecip, precipChange, heatDays, baseHeatDays, drought, flood, seaLevel, seaLevelApplicable,
       score, category, monthlyTemps, monthlyPrecip, minIdx, maxIdx, wetIdx, dryIdx, breakdown,
       coldMonthCount, baselineColdMonthCount,
       np, sensitivity, sensLabel, sensColor, feedbacks,
@@ -1869,8 +1872,8 @@ export default function ClimateApp() {
     return [
       makeInput("temperature_comfort", "Temperature comfort", "contribution", "Weighted annual-temperature comfort contribution returned by the model."),
       makeInput("precipitation_adequacy", "Precipitation adequacy", "contribution", "Weighted annual-precipitation adequacy contribution returned by the model."),
-      makeInput("infrastructure_adaptation", "Fixed adaptation allowance", "contribution", "A fixed allowance in the current educational score; it is not local infrastructure data."),
-      makeInput("heat_stress_penalty", "Heat-stress penalty", "penalty", "Penalty derived from the grounded heat-stress extreme layer."),
+      makeInput("heat_stress_penalty", "Heat-stress penalty", "penalty", "Penalty derived from the grounded tropical-night heat-stress layer."),
+      makeInput("humid_heat_penalty", "Humid-heat penalty", "penalty", "Penalty from the grounded wet-bulb humid-heat screen (Stull 2011); humid heat is the strongest survivability limit."),
       makeInput("drought_penalty", "Drought penalty", "penalty", "Penalty derived from the grounded consecutive-dry-days risk score."),
       makeInput("flood_penalty", "Flood penalty", "penalty", "Penalty derived from the grounded heavy-rain flood-risk score."),
     ].filter((item): item is ScoreSensitivityInput => item !== null);
@@ -1918,10 +1921,14 @@ export default function ClimateApp() {
       },
       {
         label: "Sea-level relevance, infrastructure, and ecosystems",
-        value: `${d.seaLevel} cm · ${coastalRelevance?.shortLabel ?? "regional context"}`,
+        value: d.seaLevelApplicable ? `${d.seaLevel} cm · ${coastalRelevance?.shortLabel ?? "regional context"}` : "N/A · inland location",
         color: CYAN,
-        text: `${coastalRelevance?.summary ?? "Coastal relevance is not evaluated, so sea-level rise stays regional context only."} Regional AR6 sea-level rise is ${d.seaLevel} cm at this horizon. Local exposure still depends on elevation, tides, subsidence, defenses, rivers, drainage, and storm surge. Climate-zone movement can pressure biodiversity, pests, and ecosystem services, but species-specific outcomes are not modeled yet.`,
-        receipt: `Sea-level data comes through the registered AR6/NASA source trail. ${coastalRelevance?.receipt ?? "No Natural Earth coastal proximity receipt is available, so inland users should treat the number as regional context."} Biodiversity and infrastructure text is educational context, not a quantified impact model.`,
+        text: d.seaLevelApplicable
+          ? `${coastalRelevance?.summary ?? "Coastal relevance is not evaluated, so sea-level rise stays regional context only."} Regional AR6 sea-level rise is ${d.seaLevel} cm at this horizon. Local exposure still depends on elevation, tides, subsidence, defenses, rivers, drainage, and storm surge. Climate-zone movement can pressure biodiversity, pests, and ecosystem services, but species-specific outcomes are not modeled yet.`
+          : "This location is inland (no ocean within ~75 km), so regional sea-level rise does not apply and is shown as N/A rather than a misleading number. Climate-zone movement can still pressure biodiversity, pests, and ecosystem services, but species-specific outcomes are not modeled yet.",
+        receipt: d.seaLevelApplicable
+          ? `Sea-level data comes through the registered AR6/NASA source trail. ${coastalRelevance?.receipt ?? "No Natural Earth coastal proximity receipt is available, so inland users should treat the number as regional context."} Biodiversity and infrastructure text is educational context, not a quantified impact model.`
+          : "Sea-level rise is gated to coastal locations using a land/ocean mask; inland points return no value by design. Biodiversity and infrastructure text is educational context, not a quantified impact model.",
       },
     ];
     const circulation = circulationContextFor(selectedLocation?.lat, selectedLocation?.lng);

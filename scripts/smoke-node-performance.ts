@@ -76,7 +76,8 @@ function assertTrajectoryContract(sample: (typeof samples)[number], points: Proj
       assert.ok(value.every((item) => typeof item === "number" && Number.isFinite(item)), `${sample.name}: ${pathName} contains non-finite values`);
     }
 
-    const nulls = collectNullPaths(point);
+    const seaLevelInapplicable = valueAt(point, "extremes.sea_level_applicable") === false;
+    const nulls = collectNullPaths(point).filter((p) => !(seaLevelInapplicable && p.includes("sea_level")));
     assert.equal(nulls.length, 0, `${sample.name}: null values in projected point: ${nulls.slice(0, 8).join(", ")}`);
   }
 }

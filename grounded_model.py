@@ -57,7 +57,7 @@ SOURCE_TRAIL = [
     {
         "label": "Sea level",
         "source": "IPCC AR6 regional sea-level projections",
-        "method": "regional median plus low/high range sampled at this grid cell",
+        "method": "regional median plus low/high range sampled at the coast; inland locations are reported as not applicable",
         "citation": "IPCC AR6 sea-level projections; NASA AR6 archive",
     },
     {
@@ -84,6 +84,31 @@ WET_BULB_RH_MIN = 5.0       # Stull approximation validity/capping domain for RH
 WET_BULB_RH_MAX = 99.0
 WET_BULB_TEMP_MIN = -20.0   # Stull 2011 practical approximation domain (C)
 WET_BULB_TEMP_MAX = 50.0
+
+# ── Habitability scoring (transparent; hazards grounded, comfort is a stated preference) ──
+# The comfort term encodes a temperate-human thermal preference (optimum adjustable on the
+# live single-location path). The penalties are grounded, cited hazard indices. See
+# docs/architecture/SCIENTIFIC_GROUNDING.md "Habitability scoring".
+COMFORT_OPTIMUM_C = 20.0      # default thermal-comfort optimum (user-adjustable; rankings use the default)
+COMFORT_PLATEAU_C = 3.0       # +/- band around the optimum scored as fully comfortable
+COMFORT_HEAT_SLOPE = 3.5      # comfort points lost per C above the plateau (heat penalised hardest)
+COMFORT_COLD_SLOPE = 3.0      # comfort points lost per C below the plateau
+COMFORT_WEIGHT_TEMP = 0.6     # base = temp comfort * 0.6 + precip adequacy * 0.4 (sum 1.0, 0-100 scale)
+COMFORT_WEIGHT_PRECIP = 0.4
+HEAT_NIGHTS_PEN_PER = 0.4     # penalty per tropical night (ETCCDI TR), capped
+HEAT_NIGHTS_PEN_MAX = 25.0
+WETBULB_PEN_LOW_C = 18.0      # monthly-mean wet-bulb at/below this -> no humid-heat penalty
+WETBULB_PEN_HIGH_C = 28.0     # monthly-mean wet-bulb at/above this -> max humid-heat penalty
+WETBULB_PEN_MAX = 35.0        # strongest single penalty: humid-heat survivability dominates habitability
+DROUGHT_PEN_MAX = 25.0
+FLOOD_PEN_MAX = 25.0
+
+# ── Coastal mask (sea-level rise is only meaningful near a coast) ──
+# 75 km = smallest radius that classified a 20-city validation set (10 coastal,
+# 10 inland) with zero errors; biased small so inland points are never shown a
+# fabricated sea-level number (a false "N/A" is honest; a false number is not).
+COAST_RADIUS_KM = 75.0        # a land point is "coastal" if ocean lies within this distance
+KM_PER_DEG = 111.32
 
 _CACHE = None
 
@@ -239,6 +264,43 @@ def sample_observed_baseline(scenario, lat, lng, month):
                      observed["grid"], lat, lng)
 
 
+def is_coastal(lat, lng):
+    """True if (lat,lng) is at sea or within COAST_RADIUS_KM of ocean, using the
+    WorldClim land-only baseline as a land/ocean mask. Sea-level rise is only
+    meaningful near a coast, so inland points return None for sea level instead of
+    a fabricated number.
+    KNOWN CEILING: WorldClim masks large lakes the same as ocean, so cities beside
+    the Great Lakes / Caspian can false-positive. Documented in the methodology;
+    upgrade path is a true ocean polygon mask. Fails open if no mask is loaded."""
+    c = load()
+    observed = c.get("observed")
+    if not observed:
+        return True
+    ent = observed["index"].get(("observed-baseline", "temperature", "clim"))
+    if ent is None:
+        return True
+    g = observed["grid"]; fill = observed["fill"]
+    data = ent["data"][0]  # any month works; the land/ocean mask is month-invariant
+    nlat, nlon = g["nlat"], g["nlon"]
+    r0 = int(np.floor((lat - g["lat0"]) / g["dlat"] + 0.5))   # nearest cell (half-up, matches JS)
+    c0 = int(np.floor(((lng - g["lon0"]) % 360) / g["dlon"] + 0.5))
+    r0 = min(max(r0, 0), nlat - 1); c0 = c0 % nlon
+    if data[r0, c0] == fill:
+        return True  # the point itself is sea/water -> sea level applies
+    lat_steps = max(1, int(np.ceil(COAST_RADIUS_KM / (KM_PER_DEG * abs(g["dlat"])))))
+    coslat = max(0.05, float(np.cos(np.radians(lat))))
+    lon_steps = max(1, int(np.ceil(COAST_RADIUS_KM / (KM_PER_DEG * abs(g["dlon"]) * coslat))))
+    lon_steps = min(lon_steps, nlon // 2)
+    for dr in range(-lat_steps, lat_steps + 1):
+        rr = r0 + dr
+        if rr < 0 or rr >= nlat:
+            continue
+        for dc in range(-lon_steps, lon_steps + 1):
+            if data[rr, (c0 + dc) % nlon] == fill:
+                return True
+    return False
+
+
 def calibration_k(scenario, year):
     """IPCC hot-model scaling k for temperature at (scenario, year). 1.0 if absent."""
     c = load()
@@ -287,19 +349,25 @@ def category(score):
             "Fair" if score >= 40 else "Poor" if score >= 20 else "Severe")
 
 
-def habitability(mean_temp, annual_precip, heat_nights, drought_risk, flood_risk):
-    """Transparent weighted comfort composite (documented; not a model output).
-    Components shown to the user; weights fixed + visible. See SCIENTIFIC_GROUNDING."""
-    # temperature comfort: peak at ~20C, falls off both sides (heat penalised harder)
+def habitability(mean_temp, annual_precip, heat_nights, drought_risk, flood_risk,
+                 wet_bulb_max=None, comfort_optimum=COMFORT_OPTIMUM_C):
+    """Hazard-led habitability composite (documented; not a model output).
+    Grounded, cited hazard penalties (humid heat via wet-bulb, heat nights, drought,
+    flood) are subtracted from a base built of a STATED temperate-human comfort
+    preference (temperature optimum adjustable) plus rainfall adequacy. Every
+    component is returned in the breakdown. See SCIENTIFIC_GROUNDING.md."""
     if mean_temp is None:
         return 50.0, {}
-    if 15 <= mean_temp <= 25:
-        ts = 100 - abs(mean_temp - 20) * 1.5
-    elif mean_temp < 15:
-        ts = max(0, 92 - (15 - mean_temp) * 2.2)
+    # temperature comfort: flat plateau around the (adjustable) optimum, then linear
+    # falloff; heat is penalised harder than cold, and genuinely hostile cold reaches 0.
+    d = abs(mean_temp - comfort_optimum)
+    if d <= COMFORT_PLATEAU_C:
+        ts = 100.0
+    elif mean_temp > comfort_optimum:
+        ts = 100.0 - (d - COMFORT_PLATEAU_C) * COMFORT_HEAT_SLOPE
     else:
-        ts = max(0, 92 - (mean_temp - 25) * 3.5)
-    ts = max(0, min(100, ts))
+        ts = 100.0 - (d - COMFORT_PLATEAU_C) * COMFORT_COLD_SLOPE
+    ts = max(0.0, min(100.0, ts))
     # precipitation adequacy: comfortable 600-1200 mm/yr, dry & very-wet penalised
     if annual_precip is None:
         ps = 50.0
@@ -309,31 +377,35 @@ def habitability(mean_temp, annual_precip, heat_nights, drought_risk, flood_risk
         ps = max(20, 88 - (600 - annual_precip) / 12)
     else:
         ps = max(20, 88 - (annual_precip - 1200) / 40)
-    ps = max(0, min(100, ps))
-    temp_component = ts * 0.45            # documented weights
-    precip_component = ps * 0.35
-    adaptation = 20.0                     # fixed adaptation allowance (NOT climate-derived)
-    base = temp_component + precip_component + adaptation
-    heat_pen = min(30, (heat_nights or 0) * 0.4)
-    drought_pen = min(25, (drought_risk or 0) * 0.25)
-    flood_pen = min(25, (flood_risk or 0) * 0.25)
-    final = max(10, min(100, base - heat_pen - drought_pen - flood_pen))
+    ps = max(0.0, min(100.0, ps))
+    temp_component = ts * COMFORT_WEIGHT_TEMP
+    precip_component = ps * COMFORT_WEIGHT_PRECIP
+    base = temp_component + precip_component          # 0-100, no fabricated adaptation constant
+    heat_pen = min(HEAT_NIGHTS_PEN_MAX, (heat_nights or 0) * HEAT_NIGHTS_PEN_PER)
+    if wet_bulb_max is None or (isinstance(wet_bulb_max, float) and np.isnan(wet_bulb_max)):
+        humid_pen = 0.0
+    else:
+        humid_pen = float(np.clip(
+            (wet_bulb_max - WETBULB_PEN_LOW_C) / (WETBULB_PEN_HIGH_C - WETBULB_PEN_LOW_C) * WETBULB_PEN_MAX,
+            0.0, WETBULB_PEN_MAX))
+    drought_pen = min(DROUGHT_PEN_MAX, (drought_risk or 0) * 0.25)
+    flood_pen = min(FLOOD_PEN_MAX, (flood_risk or 0) * 0.25)
+    final = max(0.0, min(100.0, base - heat_pen - humid_pen - drought_pen - flood_pen))
     breakdown = {
         "temperature_comfort": round(temp_component, 1),
         "precipitation_adequacy": round(precip_component, 1),
-        "infrastructure_adaptation": round(adaptation, 1),
+        "comfort_optimum_c": round(comfort_optimum, 1),
         "heat_stress_penalty": round(heat_pen, 1),
+        "humid_heat_penalty": round(humid_pen, 1),
         "drought_penalty": round(drought_pen, 1),
         "flood_penalty": round(flood_pen, 1),
-        "drought_risk_penalty": round(drought_pen, 1),
-        "flood_risk_penalty": round(flood_pen, 1),
         "base_score": round(base, 1),
         "final_score": round(final, 1),
     }
     return final, breakdown
 
 
-def project(lat, lng, year, scenario=DEFAULT_SCENARIO):
+def project(lat, lng, year, scenario=DEFAULT_SCENARIO, comfort_optimum=COMFORT_OPTIMUM_C):
     k = calibration_k(scenario, year)
     # monthly absolute = baseline monthly + annual delta.
     # Headline temperature is the raw CMIP6 model consensus. IPCC assessed
@@ -409,10 +481,11 @@ def project(lat, lng, year, scenario=DEFAULT_SCENARIO):
     drought_risk = None if np.isnan(cdd_abs) else float(np.clip(100 * max(0, cdd_abs) / DROUGHT_MAX_CDD, 0, 100))
     flood_risk = None if np.isnan(rx5_abs) else float(np.clip(100 * max(0, rx5_abs) / FLOOD_MAX_RX5, 0, 100))
 
-    slr = sample("sealevel", scenario, "median", lat, lng, year)      # metres
+    coastal = is_coastal(lat, lng)
+    slr = sample("sealevel", scenario, "median", lat, lng, year) if coastal else float("nan")  # metres; inland -> N/A
     slr_cm = None if np.isnan(slr) else slr * 100.0
-    slr_low = sample("sealevel", scenario, "low", lat, lng, year)
-    slr_high = sample("sealevel", scenario, "high", lat, lng, year)
+    slr_low = sample("sealevel", scenario, "low", lat, lng, year) if coastal else float("nan")
+    slr_high = sample("sealevel", scenario, "high", lat, lng, year) if coastal else float("nan")
     slr_low_cm = None if np.isnan(slr_low) else slr_low * 100.0
     slr_high_cm = None if np.isnan(slr_high) else slr_high * 100.0
 
@@ -421,7 +494,9 @@ def project(lat, lng, year, scenario=DEFAULT_SCENARIO):
     p_spread_pct = None if np.isnan(p_std) else abs(p_std)
     precip_spread_mm = None if annual_total is None or p_spread_pct is None else annual_total * p_spread_pct / 100.0
 
-    score, breakdown = habitability(annual_mean, annual_total, heat_nights, drought_risk, flood_risk)
+    wet_bulb_max = monthly_wet_bulb[wet_bulb_max_idx] if wet_bulb_max_idx is not None else None
+    score, breakdown = habitability(annual_mean, annual_total, heat_nights, drought_risk,
+                                    flood_risk, wet_bulb_max, comfort_optimum)
     observed = load().get("observed")
     observed_source = observed.get("source", {}) if observed else {}
     baseline_temperature = "WorldClim v2.1 observed 1970-2000" if observed_t_months == 12 else "CMIP6 historical model baseline 1995-2014"
@@ -487,6 +562,7 @@ def project(lat, lng, year, scenario=DEFAULT_SCENARIO):
             "heat_stress_days": None if heat_nights is None else int(round(heat_nights)),
             "drought_risk": _num(drought_risk), "flood_risk": _num(flood_risk),
             "sea_level_rise_cm": _num(slr_cm),
+            "sea_level_applicable": coastal,
             "detail": {
                 "tropical_nights_per_year": _num(heat_nights),
                 "consecutive_dry_days": _num(None if np.isnan(cdd_abs) else cdd_abs),
@@ -519,7 +595,7 @@ def project(lat, lng, year, scenario=DEFAULT_SCENARIO):
         },
         "habitability": {"score": round(score, 1), "category": category(score), "breakdown": breakdown},
         "metadata": {
-            "model": "fupit grounded engine (raw CMIP6 + IPCC AR6 context)", "model_version": "grounded-v2",
+            "model": "fupit grounded engine (raw CMIP6 + IPCC AR6 context)", "model_version": "grounded-v3",
             "resolution": "1.0 degree", "confidence": "raw CMIP6 ensemble spread with IPCC AR6 assessed ranges reported separately",
             "data_source": "WorldClim v2.1 observed baseline where available + raw CMIP6 ScenarioMIP + IPCC AR6 temperature context + AR6 sea level + CMIP6 ETCCDI extremes",
             "baseline": "WorldClim v2.1 10 arc-minute observed climatology (1970-2000) where available; CMIP6 1995-2014 model baseline fallback",
@@ -637,7 +713,8 @@ def main():
             return
         lat = float(a[0]); lng = float(a[1]); year = _parse_year(a[2])
         scenario = _parse_scenario(a[3] if len(a) > 3 else DEFAULT_SCENARIO)
-        print(json.dumps(project(lat, lng, year, scenario)))
+        comfort = float(a[4]) if len(a) > 4 else COMFORT_OPTIMUM_C
+        print(json.dumps(project(lat, lng, year, scenario, comfort)))
     except (IndexError, ValueError) as exc:
         print(f"error: {exc}", file=sys.stderr)
         sys.exit(2)

@@ -60,7 +60,7 @@ assert.match(source, /Why this changed/, "result page renders the required why-t
 assert.match(source, /const scoreSensitivityInputs = useMemo/, "result page derives score-sensitivity inputs from the selected breakdown");
 assert.match(source, /makeInput\("temperature_comfort"/, "score sensitivity includes temperature comfort from habitability.breakdown");
 assert.match(source, /makeInput\("precipitation_adequacy"/, "score sensitivity includes precipitation adequacy from habitability.breakdown");
-assert.match(source, /makeInput\("infrastructure_adaptation"/, "score sensitivity includes the fixed adaptation allowance from habitability.breakdown");
+assert.match(source, /makeInput\("humid_heat_penalty"/, "score sensitivity includes the wet-bulb humid-heat penalty from habitability.breakdown");
 assert.match(source, /makeInput\("heat_stress_penalty"/, "score sensitivity includes heat-stress penalty from habitability.breakdown");
 assert.match(source, /makeInput\("drought_penalty"/, "score sensitivity includes drought penalty from habitability.breakdown");
 assert.match(source, /makeInput\("flood_penalty"/, "score sensitivity includes flood penalty from habitability.breakdown");

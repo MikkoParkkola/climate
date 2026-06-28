@@ -1,5 +1,6 @@
 import {
   describePrimaryLayerAxis,
+  isCoastal,
   loadObservedGrid,
   loadPrimaryGrid,
   sampleObservedBaseline,
@@ -15,6 +16,22 @@ const WET_BULB_RH_MIN = 5.0;
 const WET_BULB_RH_MAX = 99.0;
 const WET_BULB_TEMP_MIN = -20.0;
 const WET_BULB_TEMP_MAX = 50.0;
+
+// Habitability scoring — mirror of grounded_model.py. Hazards are grounded + cited;
+// the comfort term is a stated temperate-human preference (optimum adjustable).
+const COMFORT_OPTIMUM_C = 20.0;
+const COMFORT_PLATEAU_C = 3.0;
+const COMFORT_HEAT_SLOPE = 3.5;
+const COMFORT_COLD_SLOPE = 3.0;
+const COMFORT_WEIGHT_TEMP = 0.6;
+const COMFORT_WEIGHT_PRECIP = 0.4;
+const HEAT_NIGHTS_PEN_PER = 0.4;
+const HEAT_NIGHTS_PEN_MAX = 25.0;
+const WETBULB_PEN_LOW_C = 18.0;
+const WETBULB_PEN_HIGH_C = 28.0;
+const WETBULB_PEN_MAX = 35.0;
+const DROUGHT_PEN_MAX = 25.0;
+const FLOOD_PEN_MAX = 25.0;
 
 const SOURCE_TRAIL = [
   {
@@ -40,7 +57,7 @@ const SOURCE_TRAIL = [
   {
     label: "Sea level",
     source: "IPCC AR6 regional sea-level projections",
-    method: "regional median plus low/high range sampled at this grid cell",
+    method: "regional median plus low/high range sampled at the coast; inland locations are reported as not applicable",
     citation: "IPCC AR6 sea-level projections; NASA AR6 archive",
   },
   {
@@ -100,16 +117,21 @@ function habitability(
   heatNights: number | null,
   droughtRisk: number | null,
   floodRisk: number | null,
+  wetBulbMax: number | null = null,
+  comfortOptimum: number = COMFORT_OPTIMUM_C,
 ): [number, HabitabilityBreakdown] {
   if (meanTemp === null) return [50.0, {}];
 
+  // temperature comfort: flat plateau around the (adjustable) optimum, then linear
+  // falloff; heat penalised harder than cold, genuinely hostile cold reaches 0.
+  const d = Math.abs(meanTemp - comfortOptimum);
   let tempScore: number;
-  if (meanTemp >= 15 && meanTemp <= 25) {
-    tempScore = 100 - Math.abs(meanTemp - 20) * 1.5;
-  } else if (meanTemp < 15) {
-    tempScore = Math.max(0, 92 - (15 - meanTemp) * 2.2);
+  if (d <= COMFORT_PLATEAU_C) {
+    tempScore = 100.0;
+  } else if (meanTemp > comfortOptimum) {
+    tempScore = 100.0 - (d - COMFORT_PLATEAU_C) * COMFORT_HEAT_SLOPE;
   } else {
-    tempScore = Math.max(0, 92 - (meanTemp - 25) * 3.5);
+    tempScore = 100.0 - (d - COMFORT_PLATEAU_C) * COMFORT_COLD_SLOPE;
   }
   tempScore = clip(tempScore, 0, 100);
 
@@ -125,26 +147,28 @@ function habitability(
   }
   precipScore = clip(precipScore, 0, 100);
 
-  const tempComponent = tempScore * 0.45;
-  const precipComponent = precipScore * 0.35;
-  const adaptation = 20.0;
-  const base = tempComponent + precipComponent + adaptation;
-  const heatPenalty = Math.min(30, (heatNights ?? 0) * 0.4);
-  const droughtPenalty = Math.min(25, (droughtRisk ?? 0) * 0.25);
-  const floodPenalty = Math.min(25, (floodRisk ?? 0) * 0.25);
-  const final = clip(base - heatPenalty - droughtPenalty - floodPenalty, 10, 100);
+  const tempComponent = tempScore * COMFORT_WEIGHT_TEMP;
+  const precipComponent = precipScore * COMFORT_WEIGHT_PRECIP;
+  const base = tempComponent + precipComponent; // 0-100, no fabricated adaptation constant
+  const heatPenalty = Math.min(HEAT_NIGHTS_PEN_MAX, (heatNights ?? 0) * HEAT_NIGHTS_PEN_PER);
+  const humidPenalty =
+    wetBulbMax === null || Number.isNaN(wetBulbMax)
+      ? 0.0
+      : clip(((wetBulbMax - WETBULB_PEN_LOW_C) / (WETBULB_PEN_HIGH_C - WETBULB_PEN_LOW_C)) * WETBULB_PEN_MAX, 0, WETBULB_PEN_MAX);
+  const droughtPenalty = Math.min(DROUGHT_PEN_MAX, (droughtRisk ?? 0) * 0.25);
+  const floodPenalty = Math.min(FLOOD_PEN_MAX, (floodRisk ?? 0) * 0.25);
+  const final = clip(base - heatPenalty - humidPenalty - droughtPenalty - floodPenalty, 0, 100);
 
   return [
     final,
     {
       temperature_comfort: roundOne(tempComponent),
       precipitation_adequacy: roundOne(precipComponent),
-      infrastructure_adaptation: roundOne(adaptation),
+      comfort_optimum_c: roundOne(comfortOptimum),
       heat_stress_penalty: roundOne(heatPenalty),
+      humid_heat_penalty: roundOne(humidPenalty),
       drought_penalty: roundOne(droughtPenalty),
       flood_penalty: roundOne(floodPenalty),
-      drought_risk_penalty: roundOne(droughtPenalty),
-      flood_risk_penalty: roundOne(floodPenalty),
       base_score: roundOne(base),
       final_score: roundOne(final),
     },
@@ -212,8 +236,9 @@ function monthName(values: number[], comparator: (a: number, b: number) => boole
   return MONTHS[finite.reduce((best, item) => (comparator(item.value, best.value) ? item : best), finite[0]).index];
 }
 
-export function projectClimate(lat: number, lng: number, year: number, scenario = DEFAULT_SCENARIO): Record<string, unknown> {
+export function projectClimate(lat: number, lng: number, year: number, scenario = DEFAULT_SCENARIO, comfortOptimum = COMFORT_OPTIMUM_C): Record<string, unknown> {
   const k = calibrationFactor(scenario, year);
+  const coastal = isCoastal(lat, lng);
   const temperatureDeltaRaw = primary("temperature", scenario, "mean", lat, lng, year);
   const temperatureStdRaw = primary("temperature", scenario, "std", lat, lng, year);
   const temperatureDeltaIpcc = temperatureDeltaRaw * k;
@@ -304,9 +329,9 @@ export function projectClimate(lat: number, lng: number, year: number, scenario 
   const droughtRisk = Number.isNaN(dryDays) ? null : clip((100 * Math.max(0, dryDays)) / DROUGHT_MAX_CDD, 0, 100);
   const floodRisk = Number.isNaN(fiveDayPrecip) ? null : clip((100 * Math.max(0, fiveDayPrecip)) / FLOOD_MAX_RX5, 0, 100);
 
-  const seaLevel = primary("sealevel", scenario, "median", lat, lng, year);
-  const seaLevelLow = primary("sealevel", scenario, "low", lat, lng, year);
-  const seaLevelHigh = primary("sealevel", scenario, "high", lat, lng, year);
+  const seaLevel = coastal ? primary("sealevel", scenario, "median", lat, lng, year) : Number.NaN;
+  const seaLevelLow = coastal ? primary("sealevel", scenario, "low", lat, lng, year) : Number.NaN;
+  const seaLevelHigh = coastal ? primary("sealevel", scenario, "high", lat, lng, year) : Number.NaN;
   const seaLevelCm = Number.isNaN(seaLevel) ? null : seaLevel * 100.0;
   const seaLevelLowCm = Number.isNaN(seaLevelLow) ? null : seaLevelLow * 100.0;
   const seaLevelHighCm = Number.isNaN(seaLevelHigh) ? null : seaLevelHigh * 100.0;
@@ -317,7 +342,8 @@ export function projectClimate(lat: number, lng: number, year: number, scenario 
   const precipitationSpreadMm =
     annualTotal === null || precipitationSpreadPct === null ? null : annualTotal * precipitationSpreadPct / 100.0;
 
-  const [score, breakdown] = habitability(annualMean, annualTotal, heatNights, droughtRisk, floodRisk);
+  const wetBulbMax = wetBulbMaxIndex === null ? null : monthlyWetBulb[wetBulbMaxIndex];
+  const [score, breakdown] = habitability(annualMean, annualTotal, heatNights, droughtRisk, floodRisk, wetBulbMax, comfortOptimum);
   const observedSource = loadObservedGrid().source ?? {};
   let baselineTemperature =
     observedTemperatureMonths === 12 ? "WorldClim v2.1 observed 1970-2000" : "CMIP6 historical model baseline 1995-2014";
@@ -402,6 +428,7 @@ export function projectClimate(lat: number, lng: number, year: number, scenario 
       drought_risk: num(droughtRisk),
       flood_risk: num(floodRisk),
       sea_level_rise_cm: num(seaLevelCm),
+      sea_level_applicable: coastal,
       detail: {
         tropical_nights_per_year: num(heatNights),
         consecutive_dry_days: num(Number.isNaN(dryDays) ? null : dryDays),
@@ -440,7 +467,7 @@ export function projectClimate(lat: number, lng: number, year: number, scenario 
     habitability: { score: roundOne(score), category: category(score), breakdown },
     metadata: {
       model: "fupit grounded engine (raw CMIP6 + IPCC AR6 context)",
-      model_version: "grounded-v2",
+      model_version: "grounded-v3",
       resolution: "1.0 degree",
       confidence: "raw CMIP6 ensemble spread with IPCC AR6 assessed ranges reported separately",
       data_source:
@@ -483,10 +510,10 @@ export function projectClimate(lat: number, lng: number, year: number, scenario 
   };
 }
 
-export function climateTrajectory(lat: number, lng: number, years: number[], scenario = DEFAULT_SCENARIO): Record<string, unknown> {
+export function climateTrajectory(lat: number, lng: number, years: number[], scenario = DEFAULT_SCENARIO, comfortOptimum = COMFORT_OPTIMUM_C): Record<string, unknown> {
   return {
     coordinates: { lat, lng },
     scenario,
-    points: years.map((pointYear) => ({ year: pointYear, ...projectClimate(lat, lng, pointYear, scenario) })),
+    points: years.map((pointYear) => ({ year: pointYear, ...projectClimate(lat, lng, pointYear, scenario, comfortOptimum) })),
   };
 }

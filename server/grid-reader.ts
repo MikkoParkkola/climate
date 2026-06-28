@@ -249,3 +249,39 @@ export function sampleObservedBaseline(scenario: "temperature" | "precipitation"
     month,
   );
 }
+
+// Coastal mask — mirror of grounded_model.py is_coastal(). Sea-level rise is only
+// meaningful near a coast, so inland points report N/A instead of a fabricated number.
+// Uses the WorldClim land-only baseline as a land/ocean mask. KNOWN CEILING: large
+// lakes (Great Lakes / Caspian) mask like ocean and can false-positive. Fails open.
+const COAST_RADIUS_KM = 75.0; // smallest radius classifying a 20-city validation set with zero errors; see grounded_model.py
+const KM_PER_DEG = 111.32;
+
+export function isCoastal(lat: number, lng: number, dataDir = defaultDataDir): boolean {
+  const observed = loadObservedGrid(dataDir);
+  const layer = observed.layers.get(layerId({ layer: "observed-baseline", scenario: "temperature", variable: "clim" }));
+  if (!layer) return true;
+  const g = observed.grid;
+  const fill = observed.fill;
+  const { nlat, nlon } = g;
+  let row0 = Math.floor((lat - g.lat0) / g.dlat + 0.5); // nearest cell (half-up, matches Python)
+  let col0 = Math.floor(positiveModulo(lng - g.lon0, 360) / g.dlon + 0.5);
+  row0 = clamp(row0, 0, nlat - 1);
+  col0 = positiveModulo(col0, nlon);
+  const cell = (row: number, col: number): number => layer.data[row * nlon + col]; // axis index 0 (any month)
+  if (cell(row0, col0) === fill) return true; // the point itself is sea/water
+  const latSteps = Math.max(1, Math.ceil(COAST_RADIUS_KM / (KM_PER_DEG * Math.abs(g.dlat))));
+  const cosLat = Math.max(0.05, Math.cos((lat * Math.PI) / 180));
+  const lonSteps = Math.min(
+    Math.max(1, Math.ceil(COAST_RADIUS_KM / (KM_PER_DEG * Math.abs(g.dlon) * cosLat))),
+    Math.floor(nlon / 2),
+  );
+  for (let dr = -latSteps; dr <= latSteps; dr++) {
+    const rr = row0 + dr;
+    if (rr < 0 || rr >= nlat) continue;
+    for (let dc = -lonSteps; dc <= lonSteps; dc++) {
+      if (cell(rr, positiveModulo(col0 + dc, nlon)) === fill) return true;
+    }
+  }
+  return false;
+}

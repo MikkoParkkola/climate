@@ -24,10 +24,11 @@ interface ComparisonData {
     breakdown: {
       temperature_comfort: number;
       precipitation_adequacy: number;
-      infrastructure_adaptation: number;
+      comfort_optimum_c: number;
       heat_stress_penalty: number;
-      drought_risk_penalty: number;
-      flood_risk_penalty: number;
+      humid_heat_penalty: number;
+      drought_penalty: number;
+      flood_penalty: number;
     };
   };
   extremes: {
@@ -261,13 +262,13 @@ export default function ComparisonCharts({ data, targetYear }: ComparisonChartsP
                 ))}
               </div>
 
-              {/* Infrastructure Adaptation */}
+              {/* Humid-heat penalty (wet-bulb) */}
               <div className="space-y-2">
-                <h4 className="text-sm font-medium text-gray-700">Infrastructure Adaptation</h4>
+                <h4 className="text-sm font-medium text-gray-700">Humid-heat penalty</h4>
                 {data.map((item, index) => (
                   <div key={index} className="flex items-center justify-between text-xs">
                     <span style={{ color: colors[index] }}>{getLocationName(item.location.name)}</span>
-                    <span className="font-medium">{item.habitability.breakdown?.infrastructure_adaptation?.toFixed(1) || 'N/A'}</span>
+                    <span className="font-medium">{item.habitability.breakdown?.humid_heat_penalty?.toFixed(1) || 'N/A'}</span>
                   </div>
                 ))}
               </div>
