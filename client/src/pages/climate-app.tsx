@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo, useRef } from "react";
 import { GitCompare, Loader2, Download, Search, MapPin, ArrowLeft, Play, Pause, ShieldCheck, ExternalLink, Share2, Check } from "lucide-react";
+import ScenarioSmallMultiples, { type ScenarioSmallMultipleMetric } from "@/components/scenario-small-multiples";
 
 // ── Theme ──────────────────────────────────────────────────────────────────
 const BG = "hsl(222,47%,8%)";
@@ -189,6 +190,13 @@ interface ScenarioContrastRow {
   score: number;
   category: string;
 }
+
+const SCENARIO_LINE_COLORS: Record<ScenarioId, string> = {
+  ssp126: GREEN,
+  ssp245: BLUE,
+  ssp370: ORANGE,
+  ssp585: PURPLE,
+};
 
 interface RoadmapItem {
   year: number;
@@ -1419,6 +1427,66 @@ export default function ClimateApp() {
       .filter((row): row is ScenarioContrastRow => row !== null);
   }, [scenarioContrast, displayYear]);
 
+  const scenarioSmallMultipleMetrics = useMemo<ScenarioSmallMultipleMetric[]>(() => {
+    if (!scenarioContrast) return [];
+    const series = SCENARIOS
+      .map((row) => {
+        const points = scenarioContrast[row.id];
+        if (!points?.length) return null;
+        return {
+          id: row.id,
+          label: row.label,
+          role: scenarioRole(row.id),
+          color: SCENARIO_LINE_COLORS[row.id],
+          years: points.map((point) => point.year),
+          active: row.id === scenario,
+          points,
+        };
+      })
+      .filter((row): row is NonNullable<typeof row> => row !== null);
+
+    const makeMetric = (
+      id: string,
+      label: string,
+      unit: string,
+      color: string,
+      decimals: number,
+      getValue: (point: ProjectionPoint) => number,
+      receipt: string,
+      thresholdY?: number,
+      thresholdLabel?: string,
+    ): ScenarioSmallMultipleMetric => ({
+      id,
+      label,
+      unit,
+      color,
+      decimals,
+      thresholdY,
+      thresholdLabel,
+      receipt,
+      series: series.map((line) => ({
+        id: line.id,
+        label: line.label,
+        role: line.role,
+        color: line.color,
+        years: line.years,
+        values: line.points.map(getValue),
+        active: line.active,
+      })),
+    });
+
+    return [
+      makeMetric("raw-warming", "Raw warming", "°C", RED, 1, (point) => point.temperature.anomaly, "Raw warming uses the same location trajectory from /api/climate-trajectory for each SSP; annual display values are interpolated between grounded checkpoints."),
+      makeMetric("ipcc-assessed", "IPCC assessed warming", "°C", AMBER, 1, (point) => point.temperature.ipcc_calibrated?.anomaly ?? point.temperature.anomaly, "IPCC assessed warming uses temperature.ipcc_calibrated.anomaly when the grounded API exposes it, otherwise the raw CMIP6 anomaly is shown for that checkpoint."),
+      makeMetric("heat-days", "Heat-stress days", "d", ORANGE, 0, (point) => Math.max(0, point.extremes.heat_stress_days), "Heat-stress days come from the grounded extremes layer returned by the trajectory endpoint for each scenario."),
+      makeMetric("rainfall-change", "Rainfall change", "%", BLUE, 1, (point) => point.precipitation.anomaly_percent, "Rainfall change is annual precipitation anomaly percent from the same-coordinate trajectory; it is not a freshwater availability model."),
+      makeMetric("drought-risk", "Drought risk", "%", AMBER, 0, (point) => riskScore(point.extremes.drought_risk), "Drought risk is the displayed normalized ETCCDI-derived risk score from the grounded trajectory response.", 50, "50% elevated risk"),
+      makeMetric("flood-risk", "Flood risk", "%", BLUE, 0, (point) => riskScore(point.extremes.flood_risk), "Flood risk is the displayed normalized ETCCDI-derived heavy-rain risk score from the grounded trajectory response.", 50, "50% elevated risk"),
+      makeMetric("sea-level-context", "Sea-level context", "cm", CYAN, 0, (point) => Math.max(0, point.extremes.sea_level_rise_cm ?? 0), "Sea-level context uses the regional AR6 sea-level value returned by the API; it is not parcel-level elevation, flood defense, or inland exposure.", 50, "50 cm context"),
+      makeMetric("habitability", "Habitability score", "", GREEN, 0, (point) => Math.max(0, Math.min(100, point.habitability.score)), "Habitability is the app's registered composite score for the same scenario trajectory; use component receipts and the methodology page to inspect inputs."),
+    ];
+  }, [scenarioContrast, scenario]);
+
   const scenarioContrastTakeaway = useMemo(() => {
     const low = scenarioContrastRows.find((row) => row.id === "ssp126");
     const high = scenarioContrastRows.find((row) => row.id === "ssp370");
@@ -2202,35 +2270,43 @@ export default function ClimateApp() {
           )}
 
           {scenarioContrastRows.length > 0 && (
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(205px, 1fr))", gap: 10 }}>
-              {scenarioContrastRows.map((row) => {
-                const rowScoreColor = scoreColor(row.score);
-                const active = row.id === shownScenario.id;
-                return (
-                  <div key={row.id} style={{ border: `1px solid ${active ? `${ACCENT}66` : BORDER}`, background: active ? `${ACCENT}10` : "rgba(255,255,255,0.035)", borderRadius: 8, padding: 11 }}>
-                    <div style={{ display: "flex", justifyContent: "space-between", gap: 8, alignItems: "flex-start", marginBottom: 8 }}>
-                      <div>
-                        <div style={{ fontSize: 13, fontWeight: 800, color: "white" }}>{row.label}</div>
-                        <div style={{ fontSize: 10, color: active ? ACCENT : MUTED, marginTop: 2 }}>{row.role}</div>
+            <div>
+              <ScenarioSmallMultiples
+                metrics={scenarioSmallMultipleMetrics}
+                selectedYear={displayYear}
+                startYear={BASELINE_YEAR}
+                endYear={MAX_YEAR}
+              />
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(205px, 1fr))", gap: 10 }}>
+                {scenarioContrastRows.map((row) => {
+                  const rowScoreColor = scoreColor(row.score);
+                  const active = row.id === shownScenario.id;
+                  return (
+                    <div key={row.id} style={{ border: `1px solid ${active ? `${ACCENT}66` : BORDER}`, background: active ? `${ACCENT}10` : "rgba(255,255,255,0.035)", borderRadius: 8, padding: 11 }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", gap: 8, alignItems: "flex-start", marginBottom: 8 }}>
+                        <div>
+                          <div style={{ fontSize: 13, fontWeight: 800, color: "white" }}>{row.label}</div>
+                          <div style={{ fontSize: 10, color: active ? ACCENT : MUTED, marginTop: 2 }}>{row.role}</div>
+                        </div>
+                        {active && <span style={{ fontSize: 9, color: ACCENT, border: `1px solid ${ACCENT}44`, borderRadius: 999, padding: "2px 6px", textTransform: "uppercase", letterSpacing: "0.05em" }}>shown</span>}
                       </div>
-                      {active && <span style={{ fontSize: 9, color: ACCENT, border: `1px solid ${ACCENT}44`, borderRadius: 999, padding: "2px 6px", textTransform: "uppercase", letterSpacing: "0.05em" }}>shown</span>}
+                      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 7 }}>
+                        <div><div style={{ fontSize: 9, color: MUTED }}>Raw warming</div><div style={{ fontSize: 13, fontWeight: 800, color: RED }}>{signedNumber(row.tempChange, 1)}°C</div></div>
+                        <div><div style={{ fontSize: 9, color: MUTED }}>IPCC assessed</div><div style={{ fontSize: 13, fontWeight: 800, color: AMBER }}>{signedNumber(row.ipccDelta, 1)}°C</div></div>
+                        <div><div style={{ fontSize: 9, color: MUTED }}>Heat stress</div><div style={{ fontSize: 13, fontWeight: 800, color: ORANGE }}>{row.heatDays}/yr</div></div>
+                        <div><div style={{ fontSize: 9, color: MUTED }}>Rainfall</div><div style={{ fontSize: 13, fontWeight: 800, color: BLUE }}>{signedNumber(row.precipChange, 1)}%</div></div>
+                      </div>
+                      <div style={{ marginTop: 9, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
+                        <span style={{ fontSize: 10, color: MUTED }}>{row.category}</span>
+                        <span style={{ fontSize: 15, fontWeight: 900, color: rowScoreColor }}>{row.score}/100</span>
+                      </div>
+                      <div style={{ marginTop: 8 }}>
+                        <ReceiptDetails label="method" text="Same location and selected year; values interpolate from the annual trajectory returned by /api/climate-trajectory." />
+                      </div>
                     </div>
-                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 7 }}>
-                      <div><div style={{ fontSize: 9, color: MUTED }}>Raw warming</div><div style={{ fontSize: 13, fontWeight: 800, color: RED }}>{signedNumber(row.tempChange, 1)}°C</div></div>
-                      <div><div style={{ fontSize: 9, color: MUTED }}>IPCC assessed</div><div style={{ fontSize: 13, fontWeight: 800, color: AMBER }}>{signedNumber(row.ipccDelta, 1)}°C</div></div>
-                      <div><div style={{ fontSize: 9, color: MUTED }}>Heat stress</div><div style={{ fontSize: 13, fontWeight: 800, color: ORANGE }}>{row.heatDays}/yr</div></div>
-                      <div><div style={{ fontSize: 9, color: MUTED }}>Rainfall</div><div style={{ fontSize: 13, fontWeight: 800, color: BLUE }}>{signedNumber(row.precipChange, 1)}%</div></div>
-                    </div>
-                    <div style={{ marginTop: 9, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
-                      <span style={{ fontSize: 10, color: MUTED }}>{row.category}</span>
-                      <span style={{ fontSize: 15, fontWeight: 900, color: rowScoreColor }}>{row.score}/100</span>
-                    </div>
-                    <div style={{ marginTop: 8 }}>
-                      <ReceiptDetails label="method" text="Same location and selected year; values interpolate from the annual trajectory returned by /api/climate-trajectory." />
-                    </div>
-                  </div>
-                );
-              })}
+                  );
+                })}
+              </div>
             </div>
           )}
         </div>

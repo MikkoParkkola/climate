@@ -380,7 +380,7 @@ The app is public-launch ready when:
 6. Research cBottle on DGX Spark only after permission clearance and with a written validation protocol.
 7. Add share-card image generation and social previews.
 8. Add guided classroom/explainer mode.
-9. Add scenario comparison small multiples for all key metrics.
+9. Add scenario comparison small multiples for all key metrics. Status: implemented in the result-page scenario contrast with raw warming, IPCC assessed warming, heat-stress days, rainfall change, drought risk, flood risk, sea-level context, and habitability score; each panel discloses same-coordinate SSP trajectories and annual interpolation between grounded checkpoints.
 10. Add transparent score sensitivity: show how habitability changes when weights are adjusted or hidden.
 11. Add a source/license registry table for all enrichment datasets before new metrics are exposed.
 12. Add global top-10 rankings for urban centers, countries, and population-weighted regions.
