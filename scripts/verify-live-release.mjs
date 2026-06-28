@@ -143,6 +143,8 @@ try {
   assert(methodology.res.status === 200, "GET /methodology returns 200");
   assert(methodology.text.includes("WorldClim v2.1"), "/methodology mentions WorldClim v2.1");
   assert(methodology.text.includes("Fick & Hijmans 2017"), "/methodology cites Fick & Hijmans 2017");
+  assert(methodology.text.includes("Humid heat screen"), "/methodology exposes humid heat screen copy");
+  assert(methodology.text.includes("Stull 2011"), "/methodology cites Stull 2011 wet-bulb source");
   assert(methodology.text.includes("No fabricated") || methodology.text.includes("do not invent"), "/methodology carries no-fabricated-science copy");
 
   const rankingsPage = await getText("/rankings");
@@ -244,11 +246,20 @@ try {
   assert(dataQualityPage.res.status === 200, "GET /data-quality returns 200");
   assert(dataQualityPage.text.includes("fupit data quality"), "/data-quality carries data-quality heading");
   assert(dataQualityPage.text.includes("artifact hashes"), "/data-quality mentions artifact hashes");
+  assert(dataQualityPage.text.includes("Enrichment readiness ledger"), "/data-quality exposes enrichment readiness ledger");
 
   const { json: dataQuality } = await getJson("/api/data-quality");
   assert(dataQuality.version === "data-quality-v1", "data-quality API version is data-quality-v1");
   assert(Array.isArray(dataQuality.artifacts) && dataQuality.artifacts.length >= 10, "data-quality API exposes artifact hashes");
   assert(dataQuality.sourceRegistry?.rowCount >= 14, "data-quality API exposes complete source-registry rows");
+  assert(
+    dataQuality.enrichmentReadiness?.some((item) => item.key === "humid_heat" && item.status === "partial"),
+    "data-quality API exposes partial humid heat readiness",
+  );
+  assert(
+    dataQuality.enrichmentReadiness?.some((item) => item.key === "freshwater" && item.status === "withheld"),
+    "data-quality API exposes withheld freshwater readiness",
+  );
   assert(
     dataQuality.sourceRegistry?.rows?.some(
       (row) =>

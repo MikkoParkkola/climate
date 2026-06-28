@@ -82,6 +82,14 @@ type DataQuality = {
     method: string;
     caveats: string[];
   };
+  enrichmentReadiness: Array<{
+    key: string;
+    label: string;
+    status: "partial" | "context-only" | "withheld";
+    publicBehavior: string;
+    groundedBasis: string;
+    missingForFullUse: string;
+  }>;
   trajectoryAudit: {
     artifactGeneratedAt: string;
     cityCount: number;
@@ -231,6 +239,53 @@ export default function DataQualityPage() {
                 <ul className="list-disc space-y-1 pl-5 text-sm text-slate-600">
                   {data.coastalProximity.caveats.map((caveat) => <li key={caveat}>{caveat}</li>)}
                 </ul>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardContent className="space-y-4 pt-6">
+                <div className="flex items-center gap-2">
+                  <ShieldCheck className="h-5 w-5 text-blue-700" aria-hidden />
+                  <h2 className="text-xl font-semibold">Enrichment readiness ledger</h2>
+                </div>
+                <p className="text-sm text-slate-600">
+                  This ledger is the no-fabricated-science gate for living-condition enrichments:
+                  partial or context-only rows may appear with caveats, while withheld rows stay out
+                  of the public forecast until a registered source and method exist.
+                </p>
+                <div className="overflow-x-auto rounded border border-slate-200">
+                  <table className="min-w-full divide-y divide-slate-200 text-left text-sm">
+                    <thead className="bg-slate-100 text-xs uppercase tracking-wide text-slate-600">
+                      <tr>
+                        <th scope="col" className="px-3 py-2 font-semibold">Domain</th>
+                        <th scope="col" className="px-3 py-2 font-semibold">Status</th>
+                        <th scope="col" className="px-3 py-2 font-semibold">Public behavior</th>
+                        <th scope="col" className="px-3 py-2 font-semibold">What is still missing</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-200 bg-white align-top">
+                      {data.enrichmentReadiness.map((item) => (
+                        <tr key={item.key}>
+                          <td className="px-3 py-3 font-semibold text-slate-900">{item.label}</td>
+                          <td className="px-3 py-3">
+                            <span className={
+                              item.status === "withheld"
+                                ? "rounded border border-amber-200 bg-amber-50 px-2 py-1 text-xs font-medium text-amber-800"
+                                : "rounded border border-blue-200 bg-blue-50 px-2 py-1 text-xs font-medium text-blue-800"
+                            }>
+                              {item.status}
+                            </span>
+                          </td>
+                          <td className="max-w-md px-3 py-3 text-slate-700">
+                            <div>{item.publicBehavior}</div>
+                            <div className="mt-1 text-xs text-slate-500">Basis: {item.groundedBasis}</div>
+                          </td>
+                          <td className="max-w-md px-3 py-3 text-slate-700">{item.missingForFullUse}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               </CardContent>
             </Card>
 

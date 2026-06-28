@@ -245,6 +245,7 @@ const SEO_PAGES: Record<string, SeoPage> = {
     <li>Present-day baseline: WorldClim v2.1 observed monthly climatology (1970-2000, 10 arc-minutes) where available, with CMIP6 historical climatology as fallback.</li>
     <li>Sea-level rise: IPCC AR6 regional projections.</li>
     <li>Heat, drought, and flood risk: CMIP6 ETCCDI extreme-climate indices scored against documented thresholds.</li>
+    <li>Humid heat screen: CMIP6 relative humidity and monthly mean temperature through the Stull 2011 wet-bulb approximation; not WBGT or daily humid-heat days.</li>
     <li>Climate twin: nearest present-day city in the indexed catalog by standardized monthly temperature and precipitation distance from grounded model output.</li>
   </ul>
   <h2>Honesty rules</h2>
@@ -254,7 +255,7 @@ const SEO_PAGES: Record<string, SeoPage> = {
     <li>Precipitation is shown as model consensus plus spread because there is no equivalent single assessed calibration anchor.</li>
     <li>Risk scores expose the raw physical quantity next to the 0 to 100 score.</li>
   </ul>
-  <p>Sources: WorldClim v2.1 (Fick & Hijmans 2017); IPCC AR6 Working Group I; CMIP6; ETCCDI indices; IPCC AR6 sea-level projections.</p>
+  <p>Sources: WorldClim v2.1 (Fick & Hijmans 2017); IPCC AR6 Working Group I; CMIP6; ETCCDI indices; Stull 2011 wet-bulb approximation; IPCC AR6 sea-level projections.</p>
   <p><a href="/">Return to fupit</a> or inspect <a href="${GITHUB_REPO_URL}">the source on GitHub</a>.</p>
 </main>`,
   },
@@ -271,8 +272,11 @@ const SEO_PAGES: Record<string, SeoPage> = {
     <li>Which immutable climate artifacts are packaged with the app.</li>
     <li>Which source registry rows approve visible metrics and rankings.</li>
     <li>How much of the bounded ranking catalogs and trajectory audit matrix is covered.</li>
+    <li>Which living-condition enrichment domains are partial, context-only, or withheld until grounded data exists.</li>
     <li>Which trend-review flags still require human scientific review.</li>
   </ul>
+  <h2>Enrichment readiness ledger</h2>
+  <p>The data-quality report marks humid heat and sea-level relevance as partial, AMOC as context-only, and freshwater, cold stress, fire weather, agriculture, infrastructure, and biodiversity as withheld until a registered source and method exist.</p>
   <p>Use this page with <a href="/methodology">the methodology</a> and <a href="${GITHUB_REPO_URL}">the source repository</a>. It does not prove that the public Replit deployment has already been republished or that production cache purge has been completed.</p>
 </main>`,
   },

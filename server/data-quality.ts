@@ -63,6 +63,81 @@ type CoastalProximityArtifact = {
   pointCount: number;
 };
 
+const ENRICHMENT_READINESS = [
+  {
+    key: "humid_heat",
+    label: "Humid heat",
+    status: "partial",
+    publicBehavior: "Shown as max monthly mean wet-bulb screen in the result page and API detail.",
+    groundedBasis: "CMIP6 monthly relative humidity baseline plus scenario delta, projected monthly temperature, Stull 2011 wet-bulb approximation.",
+    missingForFullUse: "No daily/hourly humid-heat exceedance days, no WBGT, no wind, sun/radiation, exposure, or occupational-safety model.",
+  },
+  {
+    key: "sea_level_local_relevance",
+    label: "Sea-level local relevance",
+    status: "partial",
+    publicBehavior: "Shown as AR6 regional sea-level context with Natural Earth nearest-coast wording gate.",
+    groundedBasis: "IPCC/NASA AR6 sea-level layer plus Natural Earth 1:110m coastline proximity artifact.",
+    missingForFullUse: "No elevation, tides, storm surge, subsidence, defenses, rivers, drainage, or parcel exposure.",
+  },
+  {
+    key: "amoc_context",
+    label: "AMOC/Gulf Stream",
+    status: "context-only",
+    publicBehavior: "Shown only as regional IPCC AR6 context where relevant.",
+    groundedBasis: "IPCC AR6 WGI assessment language.",
+    missingForFullUse: "No deterministic local cooling/warming correction, collapse timing, or local impact layer.",
+  },
+  {
+    key: "freshwater",
+    label: "Freshwater availability",
+    status: "withheld",
+    publicBehavior: "Not shown as a quantified metric.",
+    groundedBasis: "No registered freshwater risk artifact in this build.",
+    missingForFullUse: "Needs legally compatible basin/aquifer/runoff/storage/demand indicator with source-registry approval.",
+  },
+  {
+    key: "cold_stress",
+    label: "Cold stress",
+    status: "withheld",
+    publicBehavior: "Not shown as cold-stress days.",
+    groundedBasis: "Monthly temperature is shown, but no daily Tmin/frost/ice-day source is packaged.",
+    missingForFullUse: "Needs grounded daily cold extreme indices or observed/future cold-stress layer.",
+  },
+  {
+    key: "fire_weather",
+    label: "Fire weather",
+    status: "withheld",
+    publicBehavior: "Not shown as a quantified fire-weather metric.",
+    groundedBasis: "No registered fire-weather artifact in this build.",
+    missingForFullUse: "Needs humidity, wind, precipitation/drought, fuel/aridity method and source-registry approval.",
+  },
+  {
+    key: "food_agriculture",
+    label: "Food and agriculture",
+    status: "withheld",
+    publicBehavior: "Not shown as crop yield or food-supply impact.",
+    groundedBasis: "No registered crop, growing-degree, soil, irrigation, or yield artifact in this build.",
+    missingForFullUse: "Needs crop/soil/water datasets and explicit non-advisory interpretation.",
+  },
+  {
+    key: "infrastructure",
+    label: "Infrastructure pressure",
+    status: "withheld",
+    publicBehavior: "Not shown as engineering exposure or asset-risk score.",
+    groundedBasis: "The current score has only a fixed adaptation allowance, not local infrastructure data.",
+    missingForFullUse: "Needs local infrastructure, design thresholds, drainage, grid, transport, or asset datasets.",
+  },
+  {
+    key: "biodiversity",
+    label: "Biodiversity pressure",
+    status: "withheld",
+    publicBehavior: "Mentioned only as educational context, not quantified.",
+    groundedBasis: "No registered species/habitat/ecoregion transition artifact in this build.",
+    missingForFullUse: "Needs legally compatible biodiversity or habitat-pressure dataset with transparent proxy limits.",
+  },
+] as const;
+
 let cachedDataQuality: Record<string, unknown> | undefined;
 
 function dataPath(relativePath: string): string {
@@ -268,6 +343,7 @@ export function loadDataQuality(): Record<string, unknown> {
       method: coastalProximity.method,
       caveats: coastalProximity.caveats,
     },
+    enrichmentReadiness: ENRICHMENT_READINESS,
     trajectoryAudit: {
       artifactGeneratedAt: audit.generatedAt,
       version: audit.version,
