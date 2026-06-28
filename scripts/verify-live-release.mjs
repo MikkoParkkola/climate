@@ -115,7 +115,8 @@ try {
   const { json: health } = await getJson("/api/health");
   assert(health.ok === true, "health ok=true");
   assert(health.app === "fupit", "health app=fupit");
-  assert(health.engine === "grounded_model.py", "health engine is grounded_model.py");
+  assert(health.engine === "grounded-node-model.ts", "health engine is grounded-node-model.ts");
+  assert(health.gridEngine === "node", "health grid engine defaults to node");
   assert(health.modelCacheVersion === expectedCacheVersion, `health model cache version is ${expectedCacheVersion}`);
   if (skipTrajectory) {
     assert(

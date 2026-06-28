@@ -15,7 +15,9 @@ Ship fupit as a stateless read-mostly service:
 4. Use Postgres for durable response cache, lightweight user-created records, and future audit metadata.
 5. Keep request-time work to validation, lookup, interpolation, transparent scoring, and JSON assembly.
 
-The current Python subprocess path is acceptable as a launch bridge, but it is not the consumer-scale architecture. The target serving path removes Python from user requests and loads the compact grid once per Replit machine in Node.js.
+The current default serving path uses the Node.js in-process grid reader. The Python
+subprocess remains only as an explicit fallback and parity oracle while live Replit proof is
+collected.
 
 ## Constraints
 
@@ -27,7 +29,8 @@ Replit Autoscale is a good fit for a public educational launch because it gives 
 - Autoscale can run more than one machine. In-memory cache is a per-machine optimization, not shared truth.
 - Cold starts matter. Startup must not run climate ingestion, large NetCDF reads, npm install, schema migration, or cache rebuilds.
 - Republish/deploy state is external operational truth. A green Git push does not prove the public site is live.
-- Request duration and memory/CPU usage drive cost and reliability. Long Python subprocesses are the first thing to remove from the hot path.
+- Request duration and memory/CPU usage drive cost and reliability. Long Python subprocesses are
+  fallback-only, not the normal hot path.
 
 The current Replit deployment uses Node.js, Python, Postgres, Autoscale, `npm run build`, and `npm run start`.
 
@@ -44,13 +47,17 @@ Reference: Replit Autoscale Deployments documentation: https://docs.replit.com/r
 
 ### Current State
 
-- `grounded_model.py` reads `data/grid.i16.gz` and `data/worldclim10m.i16.gz`.
+- `server/grounded-node-model.ts` reads the compact grid and observed baseline artifacts through
+  the TypeScript grid reader.
+- `grounded_model.py` reads the same artifacts only as the `CLIMATE_GRID_ENGINE=python`
+  fallback/parity oracle.
 - Compact artifacts are small enough for Replit image startup:
   - `data/grid.i16.gz`: about 35 MB.
   - `data/worldclim10m.i16.gz`: about 16 MB.
   - `data/manifest.json`: about 56 KB.
   - `data/ranking_cities.json`: about 4 KB.
-- `/api/climate-trajectory` batches uncached years into one Python subprocess and caches each point in `climate_model_cache`.
+- `/api/climate-trajectory` uses the Node grid engine by default for uncached years and caches
+  each point in `climate_model_cache`.
 - `climate_model_cache` is version-wrapped, but its unique index is currently `(lat_key, lng_key, year)`. Target design must include scenario and model/cache version in cache identity.
 - Memory currently records public Replit verification as unresolved/stale. Treat production deploy state as unknown until `/api/health` and live endpoint smoke pass after republish.
 
@@ -64,7 +71,7 @@ These targets are for consumer-grade public service, not scientific batch jobs.
 | JS/CSS asset caching | immutable hashed assets | immutable hashed assets | Replit origin can serve; CDN optional for viral spikes. |
 | Health endpoint | p95 < 100 ms | p95 < 50 ms | No DB required. |
 | Cached trajectory API | p95 < 300 ms | p95 < 150 ms | 17 annual/checkpoint points, from Postgres or in-process LRU. |
-| Uncached trajectory API | p95 < 3 s launch bridge | p95 < 500 ms target | Launch bridge may call Python; target Node grid lookup. |
+| Uncached trajectory API | p95 < 500 ms warm Node target | p95 < 500 ms target | Python is fallback-only; Node warm p95 is guarded locally. |
 | Rankings API | p95 < 300 ms | p95 < 150 ms | Must be precomputed. No live global sorting. |
 | Source registry API/page | p95 < 200 ms | p95 < 100 ms | Static JSON or in-memory manifest. |
 | Error rate | < 1% user-visible 5xx | < 0.1% user-visible 5xx | Exclude client validation 4xx. |
@@ -180,7 +187,7 @@ Prefer one row per year for compatibility now; add trajectory rows only after me
 
 ## Serving Grid Options
 
-### Option A - Current Bridge: Python Subprocess
+### Option A - Fallback Bridge: Python Subprocess
 
 Pros:
 
@@ -195,7 +202,7 @@ Cons:
 - 60-second timeout protects the server but creates user-visible failures under bursts.
 - Rankings can spawn Python and should not do live catalog computation under load.
 
-Use only for launch bridge and smoke verification.
+Use only for explicit fallback (`CLIMATE_GRID_ENGINE=python`) and smoke/parity verification.
 
 ### Option B - Node.js In-Process Grid Reader
 
@@ -218,8 +225,9 @@ Implementation sequence:
 1. Write `server/climate-grid-loader.ts` to read `manifest.json`, `grid.i16.gz`, and `worldclim10m.i16.gz`.
 2. Write pure functions for coordinate sampling, temporal interpolation, scenario selection, and risk-score assembly.
 3. Add contract tests comparing Node output to `grounded_model.py` for Helsinki, London, Singapore, Mumbai, Cairo, Manaus, Amsterdam, Bangkok, New York, and San Francisco.
-4. Switch trajectory generation to Node grid service behind `CLIMATE_GRID_ENGINE=node`.
-5. Remove Python from forecast request path after parity and load tests pass.
+4. Switch trajectory generation to Node grid service as the default; keep
+   `CLIMATE_GRID_ENGINE=python` as the rollback path for one release.
+5. Remove Python fallback after live parity, cache, and Replit performance proof pass.
 
 ### Option C - Postgres Grid Table
 
@@ -381,10 +389,12 @@ Good enough for initial public release:
 
 - Replit Autoscale origin serves app and API.
 - Neon/Postgres stores durable response cache.
-- Python bridge remains but is protected by batched trajectories, response cache, rate limits, and max two subprocesses.
+- Node in-process grid reader serves normal forecast misses; Python fallback remains protected by
+  response cache, rate limits, and max two subprocesses.
 - Precompute rankings if exposing rankings prominently.
 
-Risk: an uncached viral spike can saturate Python and return 503/504.
+Risk: an uncached viral spike can still pressure Postgres/cache writes and cold starts. Forcing
+`CLIMATE_GRID_ENGINE=python` would reintroduce subprocess saturation and should be rollback-only.
 
 ### Consumer-grade Replit Target
 
@@ -414,7 +424,7 @@ Replit remains the origin; CDN absorbs read spikes.
 
 ### Phase 0 - Document and Guard
 
-- Keep current Python bridge.
+- Keep Python fallback available, but make the Node grid engine the default.
 - Add this design doc.
 - Add health/build artifact checks.
 - Keep live deploy verification explicit.
@@ -440,10 +450,10 @@ Replit remains the origin; CDN absorbs read spikes.
 - Add Python parity tests. Initial parity is covered by
   `npm run smoke:grid-reader`, which compares Node samples against
   `grounded_model.py` on the real grid and WorldClim artifacts.
-- Switch trajectory API behind `CLIMATE_GRID_ENGINE=node` after full projected
-  response parity exists. `npm run smoke:node-model` now covers the first
-  full-response parity matrix; the core trajectory/climate-twin helpers can
-  opt into Node while Python remains the default bridge.
+- Switch trajectory API to the Node grid service by default after full projected
+  response parity exists. `npm run smoke:node-model` covers the full-response
+  parity matrix; `CLIMATE_GRID_ENGINE=python` remains the explicit rollback path
+  while live Replit proof is pending.
 - Guard the local scale target with `npm run smoke:node-performance`, which
   warms the in-process grid reader, runs fixture trajectories across scenarios,
   validates the returned contract has no nulls, and asserts warm p95 stays under

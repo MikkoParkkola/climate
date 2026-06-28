@@ -5,8 +5,10 @@ aspirations or historical handoff notes.
 
 ## Headline
 
-The fabricated legacy runner has been removed. The serving path now uses `grounded_model.py`,
-an offline CMIP6/IPCC grid reader backed by compact artifacts in `data/`.
+The fabricated legacy runner has been removed. The default serving path now uses the
+TypeScript in-process grid engine in `server/grounded-node-model.ts`, backed by compact
+artifacts in `data/`. `grounded_model.py` remains as an explicit `CLIMATE_GRID_ENGINE=python`
+fallback and parity oracle for one release.
 
 The app is locally validated with a production build and a Postgres-backed endpoint smoke.
 Public Replit readiness is still an operational state to verify after republish and production
@@ -14,11 +16,13 @@ cache purge/version-guard proof.
 
 ## Grounded serving stack
 
-- `grounded_model.py` reads `data/grid.i16.gz`, `data/manifest.json`, and the observed baseline
-  artifacts with numpy/gzip only.
-- `server/routes.ts` calls `grounded_model.py` for trajectory fills, serves precomputed ranking
-  artifacts, exposes `GET /api/source-registry`, and returns 410 for retired legacy projection
-  routes.
+- `server/grounded-node-model.ts` reads `data/grid.i16.gz`, `data/manifest.json`, and the
+  observed baseline artifacts through the TypeScript grid reader.
+- `server/routes.ts` uses the Node grid engine by default for trajectory and climate-twin cache
+  fills, serves precomputed ranking artifacts, exposes `GET /api/source-registry`, and returns
+  410 for retired legacy projection routes.
+- `grounded_model.py` remains available through `CLIMATE_GRID_ENGINE=python` for rollback and
+  parity checks; it is not the default request path.
 - `climate_model_cache` identity includes rounded coordinates, year, scenario, cache version, and
   source-registry version. Old unwrapped or mismatched rows are treated as misses and purged by
   the startup guard.
@@ -40,8 +44,8 @@ cache purge/version-guard proof.
 - The single-location projection receipt offers raw JSON and a Markdown educational summary
   export built from visible forecast fields, annual roadmap, climate twin, source trail, and
   missing-domain caveats.
-- Express 5 API with request validation, rate limits, bounded Python concurrency for the launch
-  bridge, and a durable Postgres response cache.
+- Express 5 API with request validation, rate limits, an in-process Node forecast path, bounded
+  Python fallback concurrency, and a durable Postgres response cache.
 - Drizzle schema in `shared/schema.ts` as the database type source of truth.
 - The cache-and-serve pattern, with stricter cache identity and version guards.
 - Public methodology and source-trail direction: every visible number must map to a registered
@@ -101,8 +105,8 @@ Local validation on 2026-06-27:
 
 ## Known future work
 
-- Port the grid reader from Python to Node behind `CLIMATE_GRID_ENGINE=node` and keep Python as a
-  fallback for one release after parity tests pass.
+- Keep Python fallback for one release while live Replit verification proves the Node default
+  path under production cache/database conditions.
 - Add country, GHSL urban-center, and population-weighted exposure ranking artifacts when catalog
   and license review are complete.
 - Add freshwater, biodiversity, agriculture, fire-weather, infrastructure, and AMOC/context

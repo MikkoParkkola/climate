@@ -54,9 +54,8 @@ function databaseUnavailable(res: any) {
   });
 }
 
-// Bounded concurrency for the Python climate model. Callers acquire a slot
-// before spawning and release it when the process settles. Waiters queue
-// (instead of failing) so multi-year trajectory requests glide to completion.
+// Bounded concurrency for the Python fallback. Normal forecast requests use the
+// in-process Node grid engine unless CLIMATE_GRID_ENGINE=python is set.
 const pythonQueue: Array<() => void> = [];
 
 function acquirePythonSlot(): Promise<void> {
@@ -86,7 +85,8 @@ async function runGroundedModel(args: string[]): Promise<any> {
   return new Promise((resolve, reject) => {
     let killed = false;
     let settled = false;
-    // grounded_model.py is offline (reads the compact CMIP6/IPCC grid in data/).
+    // grounded_model.py is offline (reads the compact CMIP6/IPCC grid in data/)
+    // and is used only when CLIMATE_GRID_ENGINE=python selects the fallback.
     const python = spawn(PYTHON_BIN, [
       "grounded_model.py",
       ...args,
@@ -418,7 +418,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       ok: true,
       app: "fupit",
       service: "climate-api",
-      engine: "grounded_model.py",
+      engine: getClimateGridEngine() === "node" ? "grounded-node-model.ts" : "grounded_model.py",
       gridEngine: getClimateGridEngine(),
       modelCacheVersion: MODEL_CACHE_VERSION,
       sourceRegistryVersion: SOURCE_REGISTRY_VERSION,
@@ -586,8 +586,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
     const { coordinates, year, apiKey: clientApiKey } = parsed.data;
     const scenario = parsed.data.scenario;
-    // grounded_model.py is offline (reads the compact CMIP6/IPCC grid in data/)
-    // and needs no API key. clientApiKey is accepted but ignored for compatibility.
+    // The grounded grid engine is offline and needs no API key.
+    // clientApiKey is accepted but ignored for compatibility.
     void clientApiKey;
 
     try {
@@ -664,7 +664,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     const years = Array.from(new Set(parsed.data.years)).sort((a, b) => a - b);
 
     // Round to a ~0.01° (~1 km) grid so the same location — or a near-identical
-    // one — reuses a previously cached model run instead of re-spawning Python.
+    // one — reuses a previously cached grounded-model run.
     // Storage also checks the JSON payload's grounded-grid cache version; old
     // unversioned cbottle-era rows read as misses and are overwritten.
     const latKey = roundCacheKey(coordinates.lat);
@@ -685,7 +685,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       if (missingYears.length > 0) {
-        // grounded_model.py is offline — no API key needed for any location.
+        // The grounded grid engine is offline — no API key needed for any location.
         const trajectory = await runClimateTrajectory(coordinates.lat, coordinates.lng, missingYears, scenario);
         const projectedPoints = Array.isArray(trajectory?.points) ? trajectory.points : [];
         for (const projection of projectedPoints) {
@@ -715,7 +715,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // GET /api/climate-twin - bounded current-day analog lookup. The target
-  // projection is grounded_model.py output; the candidate set is the registered
+  // projection is grounded grid output; the candidate set is the registered
   // current analog catalog, not an unbounded global search.
   app.get("/api/climate-twin", async (req, res) => {
     const clientIp = ((req.ip ?? "") || (req.socket?.remoteAddress ?? "unknown")).replace(/^::ffff:/, "");

@@ -5,7 +5,20 @@ import { fileURLToPath } from "node:url";
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const routesPath = path.join(repoRoot, "server", "routes.ts");
+const gridEnginePath = path.join(repoRoot, "server", "climate-grid-engine.ts");
 const source = fs.readFileSync(routesPath, "utf8");
+const gridEngineSource = fs.readFileSync(gridEnginePath, "utf8");
+
+assert.match(
+  gridEngineSource,
+  /return\s+"node";/,
+  "CLIMATE_GRID_ENGINE defaults to the in-process Node grid engine",
+);
+assert.match(
+  gridEngineSource,
+  /requested === "node" \|\| requested === "python"/,
+  "CLIMATE_GRID_ENGINE still allows explicit node/python selection",
+);
 
 const routeStart = source.indexOf('app.post("/api/climate-projection"');
 assert.notEqual(routeStart, -1, "compatibility climate-projection route exists");
@@ -49,4 +62,4 @@ assert.match(
   "climate-projection keeps its success envelope after running the shared engine",
 );
 
-console.log("climate-projection route smoke passed: scenario validation and engine wrapper guarded");
+console.log("climate-projection route smoke passed: Node default, scenario validation, and engine wrapper guarded");
