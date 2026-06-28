@@ -3208,12 +3208,13 @@ export default function ClimateApp() {
         </div>
 
         {/* Atmospheric Physics */}
-        <div style={{ ...card, padding: 18, marginBottom: 14 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
+        <details style={{ ...card, padding: 18, marginBottom: 14 }}>
+          <summary style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", listStyle: "none" }}>
             <span style={{ fontSize: 18 }}>⚛️</span>
-            <h3 style={{ fontSize: 14, fontWeight: 700 }}>Atmospheric Physics</h3>
-          </div>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(220px,1fr))", gap: "2px 18px" }}>
+            <h3 style={{ fontFamily: FONT_DISPLAY, fontSize: 16, fontWeight: 600, margin: 0 }}>Atmospheric Physics</h3>
+            <span style={{ marginLeft: "auto", fontSize: 10, color: MUTED, textTransform: "uppercase", letterSpacing: "0.06em" }}>expand ▾</span>
+          </summary>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(220px,1fr))", gap: "2px 18px", marginTop: 12 }}>
             {[
               { label: "Circulation Pattern", value: d!.circulation ?? "—", color: BLUE },
               { label: "Climate Sensitivity", value: d!.sensitivity != null ? `${d!.sensitivity.toFixed(1)}°C per CO₂ doubling` : "—", color: ORANGE },
@@ -3228,7 +3229,7 @@ export default function ClimateApp() {
               </div>
             ))}
           </div>
-        </div>
+        </details>
 
         {/* Projection Receipt */}
         <div style={{ ...card, padding: 18, marginBottom: 14 }}>
@@ -3333,12 +3334,12 @@ export default function ClimateApp() {
         </div>
 
         {/* Tipping Points */}
-        <div style={{ ...card, padding: 18, marginBottom: 14 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 14 }}>
+        <details style={{ ...card, padding: 18, marginBottom: 14 }}>
+          <summary style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 14, cursor: "pointer", listStyle: "none" }}>
             <span style={{ fontSize: 18 }}>⏱️</span>
-            <h2 style={{ fontSize: 15, fontWeight: 700 }}>Tipping Point Timeline</h2>
-            <span style={{ marginLeft: "auto", fontSize: 10, color: MUTED }}>Computed from this location's trajectory</span>
-          </div>
+            <h2 style={{ fontFamily: FONT_DISPLAY, fontSize: 16, fontWeight: 600, margin: 0 }}>Tipping Point Timeline</h2>
+            <span style={{ marginLeft: "auto", fontSize: 10, color: MUTED, textTransform: "uppercase", letterSpacing: "0.06em" }}>expand ▾</span>
+          </summary>
           <div style={{ height: 4, background: BORDER, borderRadius: 2, marginBottom: 16, position: "relative" }}>
             <div style={{ height: "100%", borderRadius: 2, background: `linear-gradient(to right, ${GREEN}, ${AMBER}, ${RED})`, width: `${tPct}%`, transition: "width 0.25s ease" }} />
             <div style={{ position: "absolute", top: "50%", left: `${tPct}%`, transform: "translate(-50%,-50%)", width: 10, height: 10, borderRadius: "50%", background: ACCENT, border: "2px solid white", transition: "left 0.25s ease" }} />
@@ -3364,7 +3365,7 @@ export default function ClimateApp() {
               );
             })}
           </div>
-        </div>
+        </details>
 
         {/* Habitability Assessment */}
         <div style={{ ...card, padding: 18, marginBottom: 14 }}>

@@ -100,6 +100,11 @@
     font-variant-numeric: tabular-nums;
     letter-spacing: -0.02em;
   }
+
+  /* native collapsible sections — our own marker, no default triangle */
+  summary { list-style: none; user-select: none; }
+  summary::-webkit-details-marker { display: none; }
+  details[open] > summary [data-disclosure]::after { content: "collapse ▴"; }
 }
 
 .fupit-landing {
