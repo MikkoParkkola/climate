@@ -152,6 +152,26 @@ try {
   assert(Array.isArray(ranking.sourceIds) && ranking.sourceIds.includes("curated-ranking-cities-v1"), "ranking API exposes source IDs");
   assert(Array.isArray(ranking.caveats) && ranking.caveats.some((caveat) => caveat.includes("not complete global rankings")), "ranking API exposes bounded-catalog caveat");
 
+  const { json: sourceRegistry } = await getJson("/api/source-registry");
+  assert(sourceRegistry.version === "source-registry-v1", "source-registry API version is source-registry-v1");
+  assert(Array.isArray(sourceRegistry.rows) && sourceRegistry.rows.length >= 10, "source-registry API exposes current source rows");
+  assert(
+    sourceRegistry.rows.some(
+      (row) =>
+        row.sourceId === "unep-egr-2025-current-policies" &&
+        row.displayPolicy === "show-as-policy-context-no-local-correction",
+    ),
+    "source-registry API exposes UNEP current-policy source row",
+  );
+  assert(
+    sourceRegistry.rows.some(
+      (row) =>
+        row.sourceId === "cat-2025-warming-projections" &&
+        row.displayPolicy === "show-as-policy-context-no-local-correction",
+    ),
+    "source-registry API exposes CAT warming-projection source row",
+  );
+
   const dataQualityPage = await getText("/data-quality");
   assert(dataQualityPage.res.status === 200, "GET /data-quality returns 200");
   assert(dataQualityPage.text.includes("fupit data quality"), "/data-quality carries data-quality heading");
