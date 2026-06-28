@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo, useRef } from "react";
 import { GitCompare, Loader2, Download, Search, MapPin, ArrowLeft, Play, Pause, ShieldCheck, ExternalLink, Share2, Check } from "lucide-react";
 import ScenarioSmallMultiples, { type ScenarioSmallMultipleMetric } from "@/components/scenario-small-multiples";
+import ScoreSensitivity, { type ScoreSensitivityInput } from "@/components/score-sensitivity";
 
 // ── Theme ──────────────────────────────────────────────────────────────────
 const BG = "hsl(222,47%,8%)";
@@ -1578,6 +1579,30 @@ export default function ClimateApp() {
     };
   }, [trajectory, d, displayYear]);
 
+  const scoreSensitivityInputs = useMemo<ScoreSensitivityInput[]>(() => {
+    if (!d) return [];
+    const byKey = new Map(d.breakdown.map((item) => [item.key, item]));
+    const makeInput = (
+      key: string,
+      label: string,
+      kind: ScoreSensitivityInput["kind"],
+      description: string,
+    ): ScoreSensitivityInput | null => {
+      const item = byKey.get(key);
+      if (!item || !Number.isFinite(item.val)) return null;
+      return { key, label, kind, value: Math.max(0, Math.abs(item.val)), description };
+    };
+
+    return [
+      makeInput("temperature_comfort", "Temperature comfort", "contribution", "Weighted annual-temperature comfort contribution returned by the model."),
+      makeInput("precipitation_adequacy", "Precipitation adequacy", "contribution", "Weighted annual-precipitation adequacy contribution returned by the model."),
+      makeInput("infrastructure_adaptation", "Fixed adaptation allowance", "contribution", "A fixed allowance in the current educational score; it is not local infrastructure data."),
+      makeInput("heat_stress_penalty", "Heat-stress penalty", "penalty", "Penalty derived from the grounded heat-stress extreme layer."),
+      makeInput("drought_penalty", "Drought penalty", "penalty", "Penalty derived from the grounded consecutive-dry-days risk score."),
+      makeInput("flood_penalty", "Flood penalty", "penalty", "Penalty derived from the grounded heavy-rain flood-risk score."),
+    ].filter((item): item is ScoreSensitivityInput => item !== null);
+  }, [d]);
+
   const dailyLifeSignals = useMemo(() => {
     if (!d || !scoreStory) return [];
     const signals = [
@@ -2382,6 +2407,10 @@ export default function ClimateApp() {
                 Not yet included in the score: cold-stress days, crop yields, wildfire weather, biodiversity species ranges, local freshwater infrastructure, or parcel-level flood exposure.
               </p>
             </div>
+
+            {scoreSensitivityInputs.length > 0 && (
+              <ScoreSensitivity modelScore={d!.score} category={d!.category} inputs={scoreSensitivityInputs} />
+            )}
           </div>
         )}
 
