@@ -22,6 +22,7 @@ npm run dev
 npm run build
 npm run start
 npm run check
+npm run audit:public
 npm run verify:live
 ```
 
@@ -32,6 +33,7 @@ npm run verify:live
 
 - `AGENTS.md` - contributor and agent operating guide
 - `CONTRIBUTING.md` - contribution rules and validation checklist
+- `scripts/audit-public-readiness.mjs` - tracked public-readiness audit for repo hygiene, required docs, stale artifacts, and public-facing language
 - `docs/PLAN.md` - current delivery plan and handoff status
 - `docs/PRODUCT_REQUIREMENTS.md` - educational/research product requirements and public-launch criteria
 - `docs/VALIDATION_REPORT.md` - generated trajectory validation report and unresolved hindcast gap

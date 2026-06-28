@@ -28,6 +28,7 @@ suite before handoff:
 ```bash
 npm run check
 npm run build
+npm run audit:public
 npm run smoke:comparison-layout
 npm run validate:artifacts
 npm run ci
