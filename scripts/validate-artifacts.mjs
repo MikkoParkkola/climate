@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { createHash } from "node:crypto";
 import { existsSync, readFileSync, statSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -14,6 +15,10 @@ function assert(condition, message) {
 
 function readJson(relativePath) {
   return JSON.parse(readFileSync(path.join(repoRoot, relativePath), "utf8"));
+}
+
+function sha256(relativePath) {
+  return createHash("sha256").update(readFileSync(path.join(repoRoot, relativePath))).digest("hex");
 }
 
 for (const relativePath of [
@@ -43,6 +48,28 @@ const requireRegisteredSources = (ids, context) => {
     assert(sourceIds.has(sourceId), `${context} uses unregistered source id ${sourceId}`);
   }
 };
+
+const manifest = readJson("data/manifest.json");
+assert(manifest.methodVersion === modelVersion, "grid manifest method version mismatch");
+assert(manifest.cacheVersion === modelVersion, "grid manifest cache version mismatch");
+assert(manifest.sourceRegistryVersion === sourceRegistryVersion, "grid manifest source registry version mismatch");
+assert(manifest.defaultScenario === "ssp245", "grid manifest default scenario mismatch");
+assert(manifest.defaultScenarioPolicyVersion === "current-policy-reference-2025", "grid manifest default scenario policy version missing");
+assert(
+  typeof manifest.defaultScenarioPolicyBasis === "string" &&
+    manifest.defaultScenarioPolicyBasis.includes("UNEP current-policy") &&
+    manifest.defaultScenarioPolicyBasis.includes("Climate Action Tracker") &&
+    manifest.defaultScenarioPolicyBasis.includes("not a prediction or hidden scenario average"),
+  "grid manifest default scenario policy basis incomplete",
+);
+assert(
+  JSON.stringify(manifest.supportedFullForecastScenarios) === JSON.stringify(["ssp126", "ssp245", "ssp370", "ssp585"]),
+  "grid manifest supported full-forecast scenarios mismatch",
+);
+assert(
+  manifest.artifactHashes?.["grid.i16.gz"] === `sha256:${sha256("data/grid.i16.gz")}`,
+  "grid artifact hash mismatch",
+);
 
 const rankings = readJson("data/rankings.curated-cities.json");
 assert(rankings.methodVersion === modelVersion, "ranking method version mismatch");

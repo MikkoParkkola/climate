@@ -94,6 +94,14 @@ export function loadDataQuality(): Record<string, unknown> {
   const primaryManifest = readJson<{
     format: string;
     encoding: string;
+    methodVersion: string;
+    cacheVersion: string;
+    sourceRegistryVersion: string;
+    defaultScenario: string;
+    defaultScenarioPolicyVersion: string;
+    defaultScenarioPolicyBasis: string;
+    supportedFullForecastScenarios: string[];
+    artifactHashes?: Record<string, string>;
     grid: { nlat: number; nlon: number; dlat: number; dlon: number };
     layers: unknown[];
     binary: string;
@@ -145,11 +153,15 @@ export function loadDataQuality(): Record<string, unknown> {
       primary: {
         format: primaryManifest.format,
         encoding: primaryManifest.encoding,
+        methodVersion: primaryManifest.methodVersion,
+        cacheVersion: primaryManifest.cacheVersion,
+        sourceRegistryVersion: primaryManifest.sourceRegistryVersion,
         binary: primaryManifest.binary,
         layerCount: primaryManifest.layers.length,
         decodedBytes: primaryManifest.decoded_bytes,
         resolution: `${Math.abs(primaryManifest.grid.dlat)} degree`,
         cells: primaryManifest.grid.nlat * primaryManifest.grid.nlon,
+        artifactHash: primaryManifest.artifactHashes?.[primaryManifest.binary],
       },
       observedBaseline: {
         format: observedManifest.format,
@@ -161,6 +173,13 @@ export function loadDataQuality(): Record<string, unknown> {
         citation: observedManifest.source?.citation,
         cells: observedManifest.grid.nlat * observedManifest.grid.nlon,
       },
+    },
+    defaultScenarioPolicy: {
+      scenario: primaryManifest.defaultScenario,
+      policyVersion: primaryManifest.defaultScenarioPolicyVersion,
+      basis: primaryManifest.defaultScenarioPolicyBasis,
+      supportedFullForecastScenarios: primaryManifest.supportedFullForecastScenarios,
+      gridHash: primaryManifest.artifactHashes?.[primaryManifest.binary],
     },
     rankings: {
       artifactGeneratedAt: rankings.generatedAt,

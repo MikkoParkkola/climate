@@ -1,6 +1,21 @@
 {
   "format": "option-c grid v1",
   "encoding": "int16 LE, C-order, per-array scale; byte-shuffle then gzip",
+  "methodVersion": "grounded-grid-i16-v2-raw-temp-headline:0dc3f9d188e4d757",
+  "cacheVersion": "grounded-grid-i16-v2-raw-temp-headline:0dc3f9d188e4d757",
+  "sourceRegistryVersion": "source-registry-v1",
+  "defaultScenario": "ssp245",
+  "defaultScenarioPolicyVersion": "current-policy-reference-2025",
+  "defaultScenarioPolicyBasis": "2025 UNEP current-policy and Climate Action Tracker policies/action estimates put end-century warming roughly between 2.6 C and just below 3 C; the app maps the reference case to the closest fully grounded SSP pathway and treats it as a reference, not a prediction or hidden scenario average.",
+  "supportedFullForecastScenarios": [
+    "ssp126",
+    "ssp245",
+    "ssp370",
+    "ssp585"
+  ],
+  "artifactHashes": {
+    "grid.i16.gz": "sha256:0dc3f9d188e4d7570b710ecd904bb59167fb1547994f4d80a05a7de579046452"
+  },
   "shuffle": true,
   "grid": {
     "nlat": 180,

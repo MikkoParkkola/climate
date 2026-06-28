@@ -8,8 +8,23 @@ type DataQuality = {
   artifacts: Array<{ path: string; bytes: number; sha256: string }>;
   sourceRegistry: { rowCount: number; policy?: string; rows: Array<{ sourceId: string; provider: string; displayPolicy: string }> };
   grids: {
-    primary: { layerCount: number; resolution: string; cells: number };
+    primary: {
+      layerCount: number;
+      resolution: string;
+      cells: number;
+      methodVersion?: string;
+      cacheVersion?: string;
+      sourceRegistryVersion?: string;
+      artifactHash?: string;
+    };
     observedBaseline: { layerCount: number; resolution: string; period?: string; citation?: string };
+  };
+  defaultScenarioPolicy: {
+    scenario: string;
+    policyVersion: string;
+    basis: string;
+    supportedFullForecastScenarios: string[];
+    gridHash?: string;
   };
   rankings: {
     catalog: string;
@@ -104,6 +119,7 @@ export default function DataQualityPage() {
                   <dl className="space-y-2 text-sm">
                     <div><dt className="font-medium text-slate-500">Model cache</dt><dd className="break-all">{data.methodVersion}</dd></div>
                     <div><dt className="font-medium text-slate-500">Source registry</dt><dd>{data.sourceRegistryVersion}</dd></div>
+                    <div><dt className="font-medium text-slate-500">Default scenario policy</dt><dd>{data.defaultScenarioPolicy.policyVersion} · {data.defaultScenarioPolicy.scenario}</dd></div>
                   </dl>
                 </CardContent>
               </Card>
@@ -122,6 +138,24 @@ export default function DataQualityPage() {
                 </CardContent>
               </Card>
             </section>
+
+            <Card>
+              <CardContent className="space-y-3 pt-6">
+                <div className="flex items-center gap-2">
+                  <ShieldCheck className="h-5 w-5 text-blue-700" aria-hidden />
+                  <h2 className="text-xl font-semibold">Default scenario policy</h2>
+                </div>
+                <p className="text-sm text-slate-600">{data.defaultScenarioPolicy.basis}</p>
+                <div className="grid gap-3 sm:grid-cols-3">
+                  <Stat label="Default" value={data.defaultScenarioPolicy.scenario} />
+                  <Stat label="Policy version" value={data.defaultScenarioPolicy.policyVersion} />
+                  <Stat label="Forecast scenarios" value={data.defaultScenarioPolicy.supportedFullForecastScenarios.join(", ")} />
+                </div>
+                {data.defaultScenarioPolicy.gridHash && (
+                  <p className="break-all text-xs text-slate-500">Primary grid hash: {data.defaultScenarioPolicy.gridHash}</p>
+                )}
+              </CardContent>
+            </Card>
 
             <Card>
               <CardContent className="space-y-4 pt-6">
