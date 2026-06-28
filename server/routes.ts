@@ -54,6 +54,35 @@ function databaseUnavailable(res: any) {
   });
 }
 
+// Resolve a free-text place name to coordinates via the Open-Meteo geocoding API
+// (no API key, CORS-friendly, OSM/GeoNames-sourced). This gives the product its
+// "any location on Earth" promise without us maintaining a city table. Geocoding
+// is factual name->coordinate lookup, not modeled science — the forecast itself
+// still comes only from the grounded grid.
+// ponytail: Open-Meteo only; add a Nominatim fallback if it measurably fails.
+type GeocodeHit = { name: string; latitude: number; longitude: number; country: string | null; region: string | null; lat: number; lng: number; population?: number };
+async function geocodePlaces(query: string, signal?: AbortSignal): Promise<GeocodeHit[]> {
+  const url = `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(query)}&count=8&language=en&format=json`;
+  const resp = await fetch(url, { signal });
+  if (!resp.ok) throw new Error(`geocoder ${resp.status}`);
+  const data = (await resp.json()) as { results?: Array<Record<string, any>> };
+  return (data.results ?? []).map((r) => {
+    const region = r.admin1 ?? null;
+    const country = r.country ?? null;
+    const label = [r.name, region, country].filter(Boolean).join(", ");
+    return {
+      name: label,
+      latitude: r.latitude,
+      longitude: r.longitude,
+      country,
+      region,
+      lat: r.latitude,
+      lng: r.longitude,
+      population: r.population,
+    };
+  });
+}
+
 // Bounded concurrency for the Python fallback. Normal forecast requests use the
 // in-process Node grid engine unless CLIMATE_GRID_ENGINE=python is set.
 const pythonQueue: Array<() => void> = [];
@@ -474,17 +503,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Climate location routes
   app.get("/api/locations/search", async (req, res) => {
+    const query = req.query.q as string;
+    if (!query || query.length < 2) {
+      return res.json([]);
+    }
+    // Primary: live geocoder (any place on Earth, no DB needed).
     try {
-      const query = req.query.q as string;
-      if (!query || query.length < 2) {
-        return res.json([]);
-      }
-      
+      const hits = await geocodePlaces(query);
+      return res.json(hits);
+    } catch (geoError) {
+      console.warn("Geocoder unavailable, falling back to stored locations:", (geoError as Error).message);
+    }
+    // Fallback: previously-stored locations (works offline / if geocoder is down).
+    try {
       const locations = await storage.searchClimateLocations(query);
-      // Add lat/lng aliases so the client can use either naming convention
-      res.json(locations.map(l => ({ ...l, lat: Number(l.latitude), lng: Number(l.longitude) })));
+      res.json(locations.map((l) => ({ ...l, lat: Number(l.latitude), lng: Number(l.longitude) })));
     } catch (error) {
-      if (isDatabaseUnavailable(error)) return databaseUnavailable(res);
+      if (isDatabaseUnavailable(error)) return res.json([]);
       console.error("Error searching locations:", error);
       res.status(500).json({ message: "Failed to search locations" });
     }
