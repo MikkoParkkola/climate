@@ -34,7 +34,7 @@ Research verdict: **cBottle cannot be the forecast engine.** It is a present-cli
 
 ### Phase 4 — Serving layer refactor
 - App reads grounded cache only. Add **scenario selector** and **honest uncertainty UI** (ranges, not false precision).
-- **Model consensus vs IPCC-calibrated**: show both numbers + the adjustment, default to the IPCC-calibrated value, so the "hot model" tuning is visible (operator decision 2026-06-26; method in `architecture/SCIENTIFIC_GROUNDING.md`).
+- **Model consensus vs IPCC-calibrated**: show both numbers + the adjustment, default to the raw CMIP6 model consensus, so the "hot model" tuning is visible rather than hidden (operator decision 2026-06-27; method in `architecture/SCIENTIFIC_GROUNDING.md`).
 - Show **provenance** on every projection. Drop the Python subprocess from the request path.
 - **DoD:** UI surfaces source + scenario + uncertainty + the raw/calibrated pair; no live model dependency in the request path.
 
