@@ -37,10 +37,10 @@ export const FREEZING_MONTHLY_MEAN_C = 0;
 // SINGLE SOURCE OF TRUTH — pages import this, never re-declare it, so the wording
 // can't drift across the landing, comparison and rankings views.
 export const SCENARIOS = [
-  { id: "ssp126", short: "Strong climate action", label: "SSP1-2.6", warming: "~1.8°C", caption: "If the world cuts emissions hard and fast — about 1.8°C of global warming by 2100." },
-  { id: "ssp245", short: "Roughly today's policies", label: "SSP2-4.5", warming: "~2.7°C", caption: "Close to where current policies point, not the best case nor the worst — about 2.7°C of global warming by 2100." },
-  { id: "ssp370", short: "High emissions", label: "SSP3-7.0", warming: "~3.6°C", caption: "If emissions keep climbing and climate action stalls — about 3.6°C of global warming by 2100." },
-  { id: "ssp585", short: "Very high emissions", label: "SSP5-8.5", warming: "~4.4°C", caption: "A worst-case stress test, now seen as unlikely — about 4.4°C of global warming by 2100." },
+  { id: "ssp126", short: "Strong climate action", label: "SSP1-2.6", warming: "~1.8°C", caption: "If the world cuts emissions hard and fast. About 1.8°C of global warming by 2100." },
+  { id: "ssp245", short: "Roughly today's policies", label: "SSP2-4.5", warming: "~2.7°C", caption: "Close to where current policies point, not the best case nor the worst. About 2.7°C of global warming by 2100." },
+  { id: "ssp370", short: "High emissions", label: "SSP3-7.0", warming: "~3.6°C", caption: "If emissions keep climbing and climate action stalls. About 3.6°C of global warming by 2100." },
+  { id: "ssp585", short: "Very high emissions", label: "SSP5-8.5", warming: "~4.4°C", caption: "A worst-case stress test, now seen as unlikely. About 4.4°C of global warming by 2100." },
 ] as const;
 
 // Plain name first, acronym in parentheses for the experts: "Roughly today's policies (SSP2-4.5)".

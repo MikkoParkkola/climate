@@ -86,7 +86,7 @@ export default function ClimateLanding({
             Everywhere's getting worse.<br />Just not equally.
           </h1>
           <p className="fupit-landing-copy" style={{ fontSize: 15, color: MUTED, marginBottom: 32, lineHeight: 1.6 }}>
-            Watch any place on Earth heat up, year by year from now to 2100 — and compare them side by side to find where stays livable long enough to matter. Where do you want to grow old? Where will your kids?
+            Watch any place on Earth heat up, year by year from now to 2100, and compare them side by side to find where stays livable long enough to matter. Where do you want to grow old? Where will your kids?
           </p>
 
           <button type="button" onClick={useMyLocation} disabled={geoBusy}
@@ -139,7 +139,7 @@ export default function ClimateLanding({
               style={{ flex: "0 0 88px", border: `1px solid ${BORDER}`, borderRadius: 7, background: "rgba(255,255,255,0.05)", color: "white", padding: "7px 9px", fontSize: 13, outline: "none" }}
             />
             <span style={{ color: MUTED, fontSize: 12, lineHeight: 1.35 }}>
-              See the forecast against your own lifetime. Stays in your browser — never sent anywhere.
+              See the forecast against your own lifetime. Stays in your browser. Never sent anywhere.
             </span>
           </div>
 
@@ -163,7 +163,7 @@ export default function ClimateLanding({
                 {SCENARIOS.map((s) => <option key={s.id} value={s.id}>{scenarioOptionLabel(s)}</option>)}
               </select>
               <span style={{ color: MUTED, fontSize: 12, lineHeight: 1.35 }}>
-                {selectedScenario.caption}. The shared forecast URL keeps this scenario.
+                {selectedScenario.caption} The shared forecast URL keeps this scenario.
               </span>
               {scenario === DEFAULT_SCENARIO && (
                 <ReceiptDetails label="why default" text={`${DEFAULT_SCENARIO_EXPLANATION} Version: ${DEFAULT_SCENARIO_POLICY_VERSION}.`} />
