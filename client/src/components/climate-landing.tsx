@@ -200,6 +200,41 @@ export default function ClimateLanding({
           {error && <div style={{ marginTop: 16, padding: "10px 14px", borderRadius: 8, background: `${RED}14`, border: `1px solid ${RED}30`, color: "#fca5a5", fontSize: 13 }}>{error}</div>}
         </div>
       </main>
+
+      {/* What you'll see — plain-language tour of every signal, so the landing page
+          actually names the full feature set. Each term is tap/hover-to-explain. */}
+      <section style={{ maxWidth: 1100, margin: "0 auto", padding: "8px 20px 40px" }}>
+        <h2 style={{ fontSize: 20, fontWeight: 700, marginBottom: 6, textAlign: "center" }}>What you'll see for any place</h2>
+        <p style={{ color: MUTED, fontSize: 13, lineHeight: 1.6, marginBottom: 22, textAlign: "center", maxWidth: 640, marginLeft: "auto", marginRight: "auto" }}>
+          Pick a place and you get a forecast to 2100 built only from real climate science. Hover or tap any blue-dotted word to see what it means in plain English. Here's everything we show:
+        </p>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: 12 }}>
+          {[
+            { t: <>Temperature & rainfall</>, d: <>How hot and how wet it gets, month by month, with the <Term k="anomaly">change from today</Term>.</> },
+            { t: <><Term k="heat_stress_day">Heat</Term> & <Term k="humid_heat_days">humid heat</Term></>, d: <>Dangerously hot days, and the <Term k="wet_bulb">wet-bulb</Term> days when humidity stops your body cooling down.</> },
+            { t: <><Term k="fire_weather">Fire weather</Term></>, d: <>How many days a year have weather dry and hot enough for wildfires to spread fast.</> },
+            { t: <><Term k="river_flood">Floods</Term> & heavy rain</>, d: <>The risk of intense downpours and how much nearby land sits in a big river flood's path.</> },
+            { t: <><Term k="water_stress">Freshwater</Term></>, d: <>Whether the region is running short of water as demand creeps up on supply.</> },
+            { t: <><Term k="crop_yield">Crops</Term></>, d: <>Whether staple harvests like wheat and maize grow better or worse here over time.</> },
+            { t: <><Term k="cold_season">Cold season</Term></>, d: <>How many <Term k="frost_days">frost days</Term> a winter still has as the climate warms.</> },
+            { t: <>Energy & <Term k="degree_days">degree-days</Term></>, d: <>Roughly how much heating and air-conditioning a place needs across the year.</> },
+            { t: <><Term k="sea_level_rise">Sea level</Term></>, d: <>How much the ocean rises near the coast — background context if you're inland.</> },
+            { t: <><Term k="amoc">AMOC / Gulf Stream</Term></>, d: <>For NW Europe and the North Atlantic: the ocean current that could cool the region even as the planet warms.</> },
+            { t: <><Term k="habitability_score">Habitability score</Term></>, d: <>One 0–100 number blending comfort, water and hazards, so you can compare places fast.</> },
+            { t: <><Term k="emissions_scenario">Emissions paths</Term></>, d: <>See the future on four "what if" paths, from fast cuts (<Term k="ssp126">SSP1-2.6</Term>) to worst case (<Term k="ssp585">SSP5-8.5</Term>).</> },
+          ].map((f, i) => (
+            <div key={i} style={{ border: `1px solid ${BORDER}`, background: CARD, borderRadius: 10, padding: "13px 14px" }}>
+              <div style={{ fontSize: 14, fontWeight: 700, marginBottom: 4 }}>{f.t}</div>
+              <div style={{ fontSize: 12.5, color: MUTED, lineHeight: 1.5 }}>{f.d}</div>
+            </div>
+          ))}
+        </div>
+        <p style={{ color: MUTED, fontSize: 11.5, lineHeight: 1.6, marginTop: 18, textAlign: "center" }}>
+          Every number traces to a real source (<Term k="cmip6">CMIP6</Term>, <Term k="ipcc">IPCC AR6</Term>, NASA and others). If we can't ground a value, we leave it blank instead of guessing — see the{" "}
+          <a href="/methodology" style={{ color: ACCENT, textDecoration: "underline", textUnderlineOffset: 2 }}>methodology</a>.
+        </p>
+      </section>
+
       <footer style={{ borderTop: `1px solid ${BORDER}`, padding: "16px 20px", textAlign: "center" }}>
         <p style={{ color: MUTED, fontSize: 10 }}>
           © {new Date().getFullYear()}{" "}

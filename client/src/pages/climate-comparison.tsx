@@ -7,6 +7,8 @@ import { Badge } from "@/components/ui/badge";
 import { MapPin, X, Plus, BarChart3, Globe, ArrowLeft, Crown, TrendingUp, Lightbulb, Thermometer, Droplet, Zap } from "lucide-react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { SCENARIOS, scenarioOptionLabel } from "@/lib/climate-constants";
+import { Term } from "@/components/climate-term";
+import type { GlossaryKey } from "@/lib/glossary";
 
 // ── Theme ──────────────────────────────────────────────────────────────────
 const BG = "hsl(222,47%,8%)";
@@ -349,6 +351,7 @@ function PrecipCompChart({ series, colors }: { series: number[][]; colors: strin
 
 interface TableRow {
   label: string;
+  termKey?: GlossaryKey;
   vals: string[];
   winnerIdx: number;
   bgs?: string[];
@@ -366,9 +369,9 @@ function CompareTable({ rows, names }: { rows: TableRow[]; names: string[] }) {
           </tr>
         </thead>
         <tbody>
-          {rows.map(({ label, vals, winnerIdx, bgs }) => (
+          {rows.map(({ label, termKey, vals, winnerIdx, bgs }) => (
             <tr key={label} style={{ borderBottom: "1px solid rgba(255,255,255,0.04)" }}>
-              <td style={{ padding: "8px 10px", color: MUTED, whiteSpace: "nowrap" }}>{label}</td>
+              <td style={{ padding: "8px 10px", color: MUTED, whiteSpace: "nowrap" }}>{termKey ? <Term k={termKey}>{label}</Term> : label}</td>
               {vals.map((v, vi) => (
                 <td
                   key={vi}
@@ -566,24 +569,28 @@ export default function ClimateComparison({ onBack }: ClimateComparisonProps) {
     ? [
         {
           label: "Heat Stress Days",
+          termKey: "heat_stress_day",
           vals: snapshots.map((d) => `${d.heatDays} days`),
           winnerIdx: argMin(snapshots.map((d) => d.heatDays)),
           bgs: snapshots.map((d) => (d.heatDays > 100 ? "rgba(239,68,68,0.14)" : d.heatDays > 20 ? "rgba(245,158,11,0.08)" : "rgba(16,185,129,0.07)")),
         },
         {
           label: "Drought Risk",
+          termKey: "drought_risk",
           vals: snapshots.map((d) => `${d.drought}%`),
           winnerIdx: argMin(snapshots.map((d) => d.drought)),
           bgs: snapshots.map((d) => (d.drought > 55 ? "rgba(239,68,68,0.14)" : d.drought > 30 ? "rgba(245,158,11,0.08)" : "rgba(255,255,255,0.03)")),
         },
         {
           label: "Flood Risk",
+          termKey: "flood_risk",
           vals: snapshots.map((d) => `${d.flood}%`),
           winnerIdx: argMin(snapshots.map((d) => d.flood)),
           bgs: snapshots.map((d) => (d.flood > 60 ? "rgba(239,68,68,0.14)" : d.flood > 30 ? "rgba(245,158,11,0.08)" : "rgba(255,255,255,0.03)")),
         },
         {
           label: "Sea Level Rise",
+          termKey: "sea_level_rise",
           vals: snapshots.map((d) => `${d.seaLevel}cm`),
           winnerIdx: argMin(snapshots.map((d) => d.seaLevel)),
           bgs: snapshots.map((d) => (d.seaLevel > 60 ? "rgba(239,68,68,0.14)" : d.seaLevel > 30 ? "rgba(245,158,11,0.08)" : "rgba(255,255,255,0.03)")),

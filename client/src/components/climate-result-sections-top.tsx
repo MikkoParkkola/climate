@@ -18,6 +18,7 @@ import {
 import type { ClimateAppVM } from "@/hooks/use-climate-app";
 import type { FreshwaterStress, FireWeather, FloodExposure, CropYield } from "@/lib/climate-types";
 import { EnrichmentEmptyState, SubstitutionNote } from "@/components/enrichment-coverage";
+import { Term, MetricTip } from "@/components/climate-term";
 
 // Aqueduct water-stress category (-1 arid .. 4 extremely high) -> theme colour.
 function freshwaterCategoryColor(category: number | null): string {
@@ -429,7 +430,7 @@ export default function ClimateResultSectionsTop({ vm }: { vm: ClimateAppVM }) {
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, flexWrap: "wrap", marginBottom: 10 }}>
               <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                 <AlertTriangle style={{ width: 15, height: 15, color: PURPLE }} />
-                <h2 style={{ fontSize: 12, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.07em", color: MUTED }}>AMOC / Gulf Stream risk · IPCC AR6 + literature</h2>
+                <h2 style={{ fontSize: 12, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.07em", color: MUTED }}><Term k="amoc">AMOC / Gulf Stream</Term> risk · IPCC AR6 + literature</h2>
               </div>
               <span style={{ fontSize: 9.5, color: PURPLE, border: `1px solid ${PURPLE}44`, borderRadius: 999, padding: "2px 8px", textTransform: "uppercase", letterSpacing: "0.05em" }}>qualitative context</span>
             </div>
@@ -483,10 +484,12 @@ export default function ClimateResultSectionsTop({ vm }: { vm: ClimateAppVM }) {
               <>
                 {fwIsSub && <SubstitutionNote scenario={fwShown.aqueductScenarioLabel} note={fwCoverage?.nearestScenario?.note} servedScenario={fwCoverage?.servedScenario} accent={BLUE} />}
                 <div style={{ display: "flex", alignItems: "baseline", gap: 10, flexWrap: "wrap", marginBottom: 4 }}>
-                  <span style={{ fontSize: 22, fontWeight: 800, color: freshwaterCategoryColor(fwActive.category) }}>
-                    {fwActive.label ?? "No data"}
-                  </span>
-                  <span style={{ fontSize: 11, color: MUTED }}>water stress · {fwActive.year} horizon{fwActive.year !== displayYear ? ` (nearest to ${displayYear})` : ""}</span>
+                  <MetricTip k="water_stress" value={fwActive.category}>
+                    <span style={{ fontSize: 22, fontWeight: 800, color: freshwaterCategoryColor(fwActive.category) }}>
+                      {fwActive.label ?? "No data"}
+                    </span>
+                  </MetricTip>
+                  <span style={{ fontSize: 11, color: MUTED }}><Term k="water_stress">water stress</Term> · {fwActive.year} horizon{fwActive.year !== displayYear ? ` (nearest to ${displayYear})` : ""}</span>
                 </div>
                 <p style={{ margin: "0 0 10px", fontSize: 12.5, lineHeight: 1.58, color: "rgba(255,255,255,0.78)" }}>
                   Annual water withdrawal versus available supply for the surrounding sub-basin under the {fwShown.aqueductScenarioLabel} scenario.
@@ -536,10 +539,12 @@ export default function ClimateResultSectionsTop({ vm }: { vm: ClimateAppVM }) {
               <>
                 {fireIsSub && <SubstitutionNote scenario={fireShown.scenarioLabel} note={fireCoverage?.nearestScenario?.note} servedScenario={fireCoverage?.servedScenario} accent={ORANGE} />}
                 <div style={{ display: "flex", alignItems: "baseline", gap: 10, flexWrap: "wrap", marginBottom: 4 }}>
-                  <span style={{ fontSize: 22, fontWeight: 800, color: ORANGE }}>
-                    {fireActive.extremeFireWeatherDays != null ? `${fireActive.extremeFireWeatherDays.toFixed(0)} days/yr` : "No data"}
-                  </span>
-                  <span style={{ fontSize: 11, color: MUTED }}>extreme fire-weather days · {fireActive.year} horizon{fireActive.year !== displayYear ? ` (nearest to ${displayYear})` : ""}</span>
+                  <MetricTip k="extreme_fire_days" value={fireActive.extremeFireWeatherDays}>
+                    <span style={{ fontSize: 22, fontWeight: 800, color: ORANGE }}>
+                      {fireActive.extremeFireWeatherDays != null ? `${fireActive.extremeFireWeatherDays.toFixed(0)} days/yr` : "No data"}
+                    </span>
+                  </MetricTip>
+                  <span style={{ fontSize: 11, color: MUTED }}><Term k="extreme_fire_days">extreme fire-weather days</Term> · {fireActive.year} horizon{fireActive.year !== displayYear ? ` (nearest to ${displayYear})` : ""}</span>
                 </div>
                 <p style={{ margin: "0 0 10px", fontSize: 12.5, lineHeight: 1.58, color: "rgba(255,255,255,0.78)" }}>
                   Multi-model ensemble-mean fire-weather indicators for the surrounding ~250 km cell under the {fireShown.scenarioLabel} pathway.
@@ -587,9 +592,11 @@ export default function ClimateResultSectionsTop({ vm }: { vm: ClimateAppVM }) {
               <>
                 {floodIsSub && <SubstitutionNote scenario={floodShown.aqueductScenarioLabel} note={floodCoverage?.nearestScenario?.note} servedScenario={floodCoverage?.servedScenario} accent={CYAN} />}
                 <div style={{ display: "flex", alignItems: "baseline", gap: 10, flexWrap: "wrap", marginBottom: 4 }}>
-                  <span style={{ fontSize: 22, fontWeight: 800, color: floodActive.floodedFraction > 0.01 ? CYAN : MUTED }}>
-                    {(floodActive.floodedFraction * 100).toFixed(floodActive.floodedFraction >= 0.1 ? 0 : 1)}%
-                  </span>
+                  <MetricTip k="river_flood" value={floodActive.floodedFraction * 100}>
+                    <span style={{ fontSize: 22, fontWeight: 800, color: floodActive.floodedFraction > 0.01 ? CYAN : MUTED }}>
+                      {(floodActive.floodedFraction * 100).toFixed(floodActive.floodedFraction >= 0.1 ? 0 : 1)}%
+                    </span>
+                  </MetricTip>
                   <span style={{ fontSize: 11, color: MUTED }}>of the surrounding ~10 km in the modeled floodplain · {floodActive.year} horizon{floodActive.year !== displayYear ? ` (nearest to ${displayYear})` : ""}</span>
                 </div>
                 <p style={{ margin: "0 0 10px", fontSize: 12.5, lineHeight: 1.58, color: "rgba(255,255,255,0.78)" }}>
@@ -650,9 +657,11 @@ export default function ClimateResultSectionsTop({ vm }: { vm: ClimateAppVM }) {
                     return (
                       <div key={cropSeries.crop} style={{ flex: "1 1 120px", border: `1px solid ${BORDER}`, borderRadius: 8, padding: "8px 10px" }}>
                         <div style={{ fontSize: 10, color: MUTED, textTransform: "uppercase", letterSpacing: "0.05em" }}>{cropSeries.label}</div>
-                        <div style={{ fontSize: 16, fontWeight: 800, color, lineHeight: 1.3 }}>
-                          {pct == null ? "No data" : `${pct >= 0 ? "+" : ""}${pct.toFixed(0)}%`}
-                        </div>
+                        <MetricTip k="crop_yield" value={pct}>
+                          <div style={{ fontSize: 16, fontWeight: 800, color, lineHeight: 1.3 }}>
+                            {pct == null ? "No data" : `${pct >= 0 ? "+" : ""}${pct.toFixed(0)}%`}
+                          </div>
+                        </MetricTip>
                         <div style={{ fontSize: 9.5, color: MUTED, marginTop: 2 }}>{active.year} horizon{active.year !== displayYear ? ` (nearest to ${displayYear})` : ""}</div>
                       </div>
                     );
@@ -689,10 +698,12 @@ export default function ClimateResultSectionsTop({ vm }: { vm: ClimateAppVM }) {
             {humidHeat && humidActive ? (
               <>
                 <div style={{ display: "flex", alignItems: "baseline", gap: 10, marginBottom: 6 }}>
-                  <span style={{ fontSize: 22, fontWeight: 800, color: (humidActive.daysAbove28 ?? 0) > 30 ? RED : (humidActive.daysAbove28 ?? 0) > 5 ? ORANGE : MUTED }}>
-                    {humidActive.daysAbove28 != null ? `${humidActive.daysAbove28.toFixed(0)} days/yr` : "No data"}
-                  </span>
-                  <span style={{ fontSize: 11, color: MUTED }}>wet-bulb above 28 °C · {humidActive.year} horizon{humidActive.year !== displayYear ? ` (nearest to ${displayYear})` : ""}</span>
+                  <MetricTip k="humid_heat_days" value={humidActive.daysAbove28}>
+                    <span style={{ fontSize: 22, fontWeight: 800, color: (humidActive.daysAbove28 ?? 0) > 30 ? RED : (humidActive.daysAbove28 ?? 0) > 5 ? ORANGE : MUTED }}>
+                      {humidActive.daysAbove28 != null ? `${humidActive.daysAbove28.toFixed(0)} days/yr` : "No data"}
+                    </span>
+                  </MetricTip>
+                  <span style={{ fontSize: 11, color: MUTED }}><Term k="wet_bulb">wet-bulb</Term> above 28 °C · {humidActive.year} horizon{humidActive.year !== displayYear ? ` (nearest to ${displayYear})` : ""}</span>
                 </div>
                 <p style={{ margin: "0 0 10px", fontSize: 12.5, lineHeight: 1.58, color: "rgba(255,255,255,0.78)" }}>
                   Modeled days per year with a daily-mean wet-bulb above 28 °C ({humidActive.daysAbove31 != null ? `${humidActive.daysAbove31.toFixed(0)} above 31 °C, ` : ""}{humidActive.daysAbove35 != null ? `${humidActive.daysAbove35.toFixed(0)} above 35 °C` : ""}) for the surrounding ~25 km cell.
@@ -732,9 +743,11 @@ export default function ClimateResultSectionsTop({ vm }: { vm: ClimateAppVM }) {
             {coldSeason && coldActive ? (
               <>
                 <div style={{ display: "flex", alignItems: "baseline", gap: 10, marginBottom: 6 }}>
-                  <span style={{ fontSize: 22, fontWeight: 800, color: (coldActive.frostDays ?? 0) > 60 ? CYAN : (coldActive.frostDays ?? 0) > 5 ? BLUE : MUTED }}>
-                    {coldActive.frostDays != null ? `${coldActive.frostDays.toFixed(0)} frost days/yr` : "No data"}
-                  </span>
+                  <MetricTip k="frost_days" value={coldActive.frostDays}>
+                    <span style={{ fontSize: 22, fontWeight: 800, color: (coldActive.frostDays ?? 0) > 60 ? CYAN : (coldActive.frostDays ?? 0) > 5 ? BLUE : MUTED }}>
+                      {coldActive.frostDays != null ? `${coldActive.frostDays.toFixed(0)} frost days/yr` : "No data"}
+                    </span>
+                  </MetricTip>
                   <span style={{ fontSize: 11, color: MUTED }}>tasmin below 0 °C · {coldActive.year} horizon{coldActive.year !== displayYear ? ` (nearest to ${displayYear})` : ""}</span>
                 </div>
                 <p style={{ margin: "0 0 10px", fontSize: 12.5, lineHeight: 1.58, color: "rgba(255,255,255,0.78)" }}>
@@ -775,16 +788,23 @@ export default function ClimateResultSectionsTop({ vm }: { vm: ClimateAppVM }) {
               <>
                 <div style={{ display: "flex", gap: 16, flexWrap: "wrap", marginBottom: 6 }}>
                   <div>
-                    <span style={{ fontSize: 22, fontWeight: 800, color: AMBER }}>{ddActive.coolingDegreeDays != null ? ddActive.coolingDegreeDays.toFixed(0) : "—"}</span>
-                    <span style={{ fontSize: 11, color: MUTED }}> cooling °C·days/yr</span>
+                    <MetricTip k="cooling_degree_days" value={ddActive.coolingDegreeDays}>
+                      <span style={{ fontSize: 22, fontWeight: 800, color: AMBER }}>{ddActive.coolingDegreeDays != null ? ddActive.coolingDegreeDays.toFixed(0) : "—"}</span>
+                    </MetricTip>
+                    <span style={{ fontSize: 11, color: MUTED }}> cooling <Term k="degree_day_unit">°C·days/yr</Term></span>
                   </div>
                   <div>
-                    <span style={{ fontSize: 22, fontWeight: 800, color: BLUE }}>{ddActive.heatingDegreeDays != null ? ddActive.heatingDegreeDays.toFixed(0) : "—"}</span>
-                    <span style={{ fontSize: 11, color: MUTED }}> heating °C·days/yr</span>
+                    <MetricTip k="heating_degree_days" value={ddActive.heatingDegreeDays}>
+                      <span style={{ fontSize: 22, fontWeight: 800, color: BLUE }}>{ddActive.heatingDegreeDays != null ? ddActive.heatingDegreeDays.toFixed(0) : "—"}</span>
+                    </MetricTip>
+                    <span style={{ fontSize: 11, color: MUTED }}> heating <Term k="degree_day_unit">°C·days/yr</Term></span>
                   </div>
                 </div>
+                <p style={{ margin: "0 0 8px", fontSize: 13, lineHeight: 1.55, color: "white", fontWeight: 600 }}>
+                  What this means: a big heating number = a cold place that needs a lot of heating; a big cooling number = a hot place that needs a lot of air-conditioning. As the world warms, the heating number falls and the cooling number rises.
+                </p>
                 <p style={{ margin: "0 0 10px", fontSize: 12.5, lineHeight: 1.58, color: "rgba(255,255,255,0.78)" }}>
-                  Modeled base-{degreeDays.degreeDayBaseC} °C cooling and heating degree-days for the surrounding ~25 km cell at the {ddActive.year} horizon{ddActive.year !== displayYear ? ` (nearest to ${displayYear})` : ""} — a screen for thermal energy demand, not a building-level estimate.
+                  Modeled base-{degreeDays.degreeDayBaseC} °C cooling and heating <Term k="degree_days">degree-days</Term> for the surrounding ~25 km cell at the {ddActive.year} horizon{ddActive.year !== displayYear ? ` (nearest to ${displayYear})` : ""} — a screen for thermal energy demand, not a building-level estimate.
                 </p>
                 <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 8 }}>
                   {degreeDays.horizons.map((h) => (

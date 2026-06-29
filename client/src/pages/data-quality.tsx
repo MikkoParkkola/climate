@@ -184,6 +184,12 @@ export default function DataQualityPage() {
               ranking catalog coverage, trajectory-audit coverage, and known limitations for
               the current fupit build.
             </p>
+            <p className="mt-3 max-w-3xl rounded border border-[hsl(24,88%,56%)]/30 bg-[hsl(24,88%,56%)]/5 p-3 text-sm text-slate-200">
+              <span className="font-semibold text-[hsl(24,88%,66%)]">In plain words:</span> this is the
+              receipts page. It lists exactly which datasets every number comes from, the version of each
+              one, and where the data is weak or missing. The whole point is that you can check our work
+              instead of taking it on trust — nothing here is hidden.
+            </p>
           </div>
         </header>
 
