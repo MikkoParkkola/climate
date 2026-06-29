@@ -1,7 +1,7 @@
 ---
-generated: 2026-06-29T01:32:54Z
+generated: 2026-06-29T20:00:29Z
 skill: codebase-map v0.1
-git-commit: 09b8f21
+git-commit: 9b65ba9
 ---
 
 # Codebase Map
@@ -10,11 +10,11 @@ Auto-generated table of contents for `climate/`. Scan before opening files. Rege
 
 | Folder | Description |
 | ------ | ----------- |
-| `client/` | contains: climate-result-view.tsx, shared-lens-banner.tsx, use-climate-app.ts |
-| `data/` | contains: hindcast-validation.openmeteo.json, manifest.json, population-centers… |
-| `docs/` | contains: CUSTOMIZATION_KNOBS.md, BASELINE_CALIBRATION.md, CURRENT_STATE.md |
+| `client/` | contains: climate-charts.tsx, climate-comparison.tsx, tooltip.tsx |
+| `data/` | contains: amoc-collapse.i16.gz, amoc-collapse.json, source-registry.json |
+| `docs/` | contains: ENRICHMENT_ROADMAP.md, CUSTOMIZATION_KNOBS.md, BASELINE_CALIBRATION.md |
 | `ingest/` | Builds the global forecast grid from real climate science, then loads it into P… |
 | `migrations/` | contains: 0001_model_cache_identity.sql |
-| `scripts/` | contains: copy-og-assets.mjs, smoke-educational-report.mjs, smoke-guided-explai… |
-| `server/` | contains: LICENSE.txt, PublicSans-Bold.ttf, PublicSans-Regular.ttf |
+| `scripts/` | contains: build_nahosmip_amoc.py, smoke-amoc-impact.ts, validate-artifacts.mjs |
+| `server/` | contains: amoc-impact.ts, amoc.ts, data-quality.ts |
 | `shared/` | contains: schema.ts |
