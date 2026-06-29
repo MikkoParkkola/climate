@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { GitCompare, Loader2, Search, MapPin } from "lucide-react";
 import {
   ACCENT, BORDER, CARD, MUTED, RED, SCENARIOS, DEFAULT_SCENARIO,
@@ -7,6 +8,8 @@ import {
 import { parseScenario } from "@/lib/climate-helpers";
 import type { LocationOption, ScenarioId } from "@/lib/climate-types";
 import { ReceiptDetails } from "@/components/climate-charts";
+import { Term } from "@/components/climate-term";
+import { useBirthYear } from "@/lib/use-birth-year";
 
 export default function ClimateLanding({
   locationText, setLocationText, setSelectedLocation, suggestions, showSuggestions,
@@ -24,13 +27,41 @@ export default function ClimateLanding({
   changeScenario: (next: ScenarioId) => void;
   isLoading: boolean;
   selectedScenario: { id: ScenarioId; label: string; caption: string };
-  generate: () => void;
+  generate: (locationOverride?: LocationOption) => void;
   loadingStep: number;
   error: string | null;
 }) {
+  const currentYear = new Date().getFullYear();
+  const [birthYear, setBirthYear] = useBirthYear();
+  const [geoBusy, setGeoBusy] = useState(false);
+  // "Use my location" — browser geolocation (explicit consent, precise). Only the
+  // coordinates leave the browser; the city name is resolved on our server, so the
+  // user's IP is never handed to a geocoder.
+  const useMyLocation = () => {
+    if (typeof navigator === "undefined" || !navigator.geolocation) return;
+    setGeoBusy(true);
+    navigator.geolocation.getCurrentPosition(
+      async (pos) => {
+        const { latitude, longitude } = pos.coords;
+        let option: LocationOption = {
+          name: `${latitude.toFixed(2)}, ${longitude.toFixed(2)}`, lat: latitude, lng: longitude, country: "", city: "Your location",
+        };
+        try {
+          const resp = await fetch(`/api/locations/reverse?lat=${latitude.toFixed(4)}&lng=${longitude.toFixed(4)}`);
+          const loc = await resp.json();
+          if (loc?.name) option = { name: loc.name, lat: loc.lat ?? latitude, lng: loc.lng ?? longitude, country: loc.country ?? "", city: String(loc.name).split(",")[0] };
+        } catch { /* coordinates still drive the forecast */ }
+        setGeoBusy(false);
+        selectLocation(option);
+        generate(option);
+      },
+      () => setGeoBusy(false),
+      { enableHighAccuracy: false, timeout: 8000, maximumAge: 600000 },
+    );
+  };
   return (
     <div className="fupit-landing">
-      <header style={{ background: "hsl(28,13%,9%)", borderBottom: `1px solid ${BORDER}` }}>
+      <header style={{ background: "hsl(222,16%,9%)", borderBottom: `1px solid ${BORDER}` }}>
         <div style={{ maxWidth: 1200, margin: "0 auto", padding: "0 20px", height: 56, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
             <img src="/favicon.svg" alt="" width={30} height={30} style={{ width: 30, height: 30, borderRadius: 7, display: "block" }} />
@@ -56,6 +87,12 @@ export default function ClimateLanding({
             Watch any place on Earth heat up, year by year from now to 2100 — and compare them side by side to find where stays livable long enough to matter. Where do you want to grow old? Where will your kids?
           </p>
 
+          <button type="button" onClick={useMyLocation} disabled={geoBusy}
+            style={{ display: "inline-flex", alignItems: "center", gap: 6, marginBottom: 10, padding: "6px 11px", borderRadius: 999, border: `1px solid ${BORDER}`, background: "rgba(255,255,255,0.04)", color: geoBusy ? MUTED : ACCENT, fontSize: 12, cursor: geoBusy ? "wait" : "pointer" }}>
+            {geoBusy ? <Loader2 style={{ width: 13, height: 13, animation: "spin 1s linear infinite" }} /> : <MapPin style={{ width: 13, height: 13 }} />}
+            {geoBusy ? "Locating…" : "Use my location"}
+          </button>
+
           <div className="location-input-container" style={{ position: "relative", textAlign: "left" }}>
             <div style={{ position: "relative" }}>
               <Search style={{ width: 18, height: 18, color: MUTED, position: "absolute", left: 14, top: "50%", transform: "translateY(-50%)" }} />
@@ -68,7 +105,7 @@ export default function ClimateLanding({
               />
             </div>
             {showSuggestions && suggestions.length > 0 && (
-              <div style={{ position: "absolute", top: "calc(100% + 6px)", left: 0, right: 0, background: "hsl(28,13%,13%)", border: `1px solid ${BORDER}`, borderRadius: 6, overflow: "hidden", zIndex: 20 }}>
+              <div style={{ position: "absolute", top: "calc(100% + 6px)", left: 0, right: 0, background: "hsl(222,15%,13%)", border: `1px solid ${BORDER}`, borderRadius: 6, overflow: "hidden", zIndex: 20 }}>
                 {suggestions.slice(0, 6).map((s, i) => (
                   <div key={i} onClick={() => selectLocation(s)}
                     style={{ padding: "11px 14px", display: "flex", alignItems: "center", gap: 10, cursor: "pointer", borderBottom: i < Math.min(suggestions.length, 6) - 1 ? `1px solid ${BORDER}` : "none" }}
@@ -82,24 +119,55 @@ export default function ClimateLanding({
             )}
           </div>
 
-          <div style={{ marginTop: 12, display: "flex", alignItems: "center", gap: 10, textAlign: "left", padding: 10, borderRadius: 10, border: `1px solid ${BORDER}`, background: "rgba(255,255,255,0.035)" }}>
-            <label htmlFor="scenario-select" style={{ fontSize: 11, color: MUTED, textTransform: "uppercase", letterSpacing: "0.05em", flexShrink: 0 }}>Scenario</label>
-            <select
-              id="scenario-select"
-              value={scenario}
-              onChange={(e) => changeScenario(parseScenario(e.target.value))}
-              disabled={isLoading}
-              style={{ flex: "0 0 132px", border: `1px solid ${BORDER}`, borderRadius: 7, background: "rgba(8,11,18,0.94)", color: "white", padding: "7px 9px", fontSize: 13, fontWeight: 700, outline: "none" }}
-            >
-              {SCENARIOS.map((s) => <option key={s.id} value={s.id}>{s.label}</option>)}
-            </select>
+          {/* Optional age — client-side only, powers the personal-lifetime framing */}
+          <div style={{ marginTop: 12, display: "flex", alignItems: "center", gap: 10, textAlign: "left" }}>
+            <label htmlFor="age-input" style={{ fontSize: 11, color: MUTED, textTransform: "uppercase", letterSpacing: "0.05em", flexShrink: 0 }}>Your age</label>
+            <input
+              id="age-input"
+              type="number"
+              min={1}
+              max={119}
+              inputMode="numeric"
+              value={birthYear ? String(currentYear - birthYear) : ""}
+              onChange={(e) => {
+                const a = Number(e.target.value);
+                setBirthYear(Number.isFinite(a) && a > 0 && a < 120 ? currentYear - a : null);
+              }}
+              placeholder="optional"
+              style={{ flex: "0 0 88px", border: `1px solid ${BORDER}`, borderRadius: 7, background: "rgba(255,255,255,0.05)", color: "white", padding: "7px 9px", fontSize: 13, outline: "none" }}
+            />
             <span style={{ color: MUTED, fontSize: 12, lineHeight: 1.35 }}>
-              {selectedScenario.caption}. The shared forecast URL keeps this scenario.
+              See the forecast against your own lifetime. Stays in your browser — never sent anywhere.
             </span>
-            {scenario === DEFAULT_SCENARIO && (
-              <ReceiptDetails label="why default" text={`${DEFAULT_SCENARIO_EXPLANATION} Version: ${DEFAULT_SCENARIO_POLICY_VERSION}.`} />
-            )}
           </div>
+
+          {/* Scenario lives behind a disclosure: sensible default, no clutter on the main view */}
+          <details style={{ marginTop: 12, textAlign: "left" }}>
+            <summary style={{ cursor: "pointer", fontSize: 12, color: MUTED }}>
+              Options — using the {selectedScenario.label} (
+              <Term k="current_policy">current-policy</Term>) path by default
+            </summary>
+            <div style={{ marginTop: 10, display: "flex", alignItems: "center", gap: 10, padding: 10, borderRadius: 10, border: `1px solid ${BORDER}`, background: "rgba(255,255,255,0.035)" }}>
+              <label htmlFor="scenario-select" style={{ fontSize: 11, color: MUTED, textTransform: "uppercase", letterSpacing: "0.05em", flexShrink: 0 }}>
+                <Term k="emissions_scenario">Scenario</Term>
+              </label>
+              <select
+                id="scenario-select"
+                value={scenario}
+                onChange={(e) => changeScenario(parseScenario(e.target.value))}
+                disabled={isLoading}
+                style={{ flex: "0 0 132px", border: `1px solid ${BORDER}`, borderRadius: 7, background: "rgba(8,11,18,0.94)", color: "white", padding: "7px 9px", fontSize: 13, fontWeight: 700, outline: "none" }}
+              >
+                {SCENARIOS.map((s) => <option key={s.id} value={s.id}>{s.label}</option>)}
+              </select>
+              <span style={{ color: MUTED, fontSize: 12, lineHeight: 1.35 }}>
+                {selectedScenario.caption}. The shared forecast URL keeps this scenario.
+              </span>
+              {scenario === DEFAULT_SCENARIO && (
+                <ReceiptDetails label="why default" text={`${DEFAULT_SCENARIO_EXPLANATION} Version: ${DEFAULT_SCENARIO_POLICY_VERSION}.`} />
+              )}
+            </div>
+          </details>
 
           <button
             onClick={() => generate()}
@@ -107,7 +175,7 @@ export default function ClimateLanding({
             style={{
               marginTop: 16, width: "100%", padding: "14px", borderRadius: 10, border: "none", fontSize: 15, fontWeight: 700,
               cursor: isLoading ? "wait" : "pointer",
-              background: "linear-gradient(135deg, hsl(192,91%,40%) 0%, hsl(215,91%,55%) 100%)",
+              background: "linear-gradient(135deg, hsl(24,88%,56%) 0%, hsl(12,80%,50%) 100%)",
               color: "white",
               opacity: isLoading ? 0.72 : 1,
               display: "flex", alignItems: "center", justifyContent: "center", gap: 8,

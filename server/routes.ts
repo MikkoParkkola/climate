@@ -79,6 +79,28 @@ async function geocodePlaces(query: string, signal?: AbortSignal): Promise<Geoco
   });
 }
 
+// Resolve coordinates -> a human place name. Used by the browser "use my location"
+// button: the browser obtains the user's coordinates with explicit consent and
+// sends only those coordinates here; we resolve the name server-side so the
+// user's IP never reaches a third-party geocoder. Coordinates always work for the
+// forecast even if the name lookup fails, so this degrades gracefully.
+// ponytail: BigDataCloud free no-key reverse endpoint; swap if it rate-limits.
+function coordLabel(lat: number, lng: number): GeocodeHit {
+  return { name: `${lat.toFixed(2)}, ${lng.toFixed(2)}`, latitude: lat, longitude: lng, country: null, region: null, lat, lng };
+}
+async function reverseGeocode(lat: number, lng: number, signal?: AbortSignal): Promise<GeocodeHit> {
+  const url = `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${lng}&localityLanguage=en`;
+  const resp = await fetch(url, { signal });
+  if (!resp.ok) throw new Error(`reverse geocoder ${resp.status}`);
+  const r = (await resp.json()) as Record<string, any>;
+  const city = r.city || r.locality || r.principalSubdivision || null;
+  const region = r.principalSubdivision ?? null;
+  const country = r.countryName ?? null;
+  const label = [city, region, country].filter(Boolean).join(", ");
+  return label ? { name: label, latitude: lat, longitude: lng, country, region, lat, lng } : coordLabel(lat, lng);
+}
+
+
 
 // Runs the climate model for a single (lat, lng, year). Kept as a narrow wrapper
 // for legacy call sites and single-year cache fills.
@@ -431,6 +453,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (isDatabaseUnavailable(error)) return res.json([]);
       console.error("Error searching locations:", error);
       res.status(500).json({ message: "Failed to search locations" });
+    }
+  });
+
+  app.get("/api/locations/reverse", async (req, res) => {
+    const lat = Number(req.query.lat);
+    const lng = Number(req.query.lng);
+    if (!Number.isFinite(lat) || !Number.isFinite(lng) || lat < -90 || lat > 90 || lng < -180 || lng > 180) {
+      return res.status(400).json({ message: "valid lat and lng required" });
+    }
+    try {
+      return res.json(await reverseGeocode(lat, lng));
+    } catch (e) {
+      console.warn("Reverse geocoder unavailable:", (e as Error).message);
+      return res.json(coordLabel(lat, lng)); // coordinates still drive the forecast
     }
   });
 

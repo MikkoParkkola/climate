@@ -2,11 +2,11 @@ import type { CSSProperties } from "react";
 import type { ScenarioId } from "./climate-types";
 
 // ── Theme: "field report" — warm ink, ember accent, opaque hairline panels ──
-export const BG = "hsl(28,13%,8%)";
-export const CARD = "hsl(28,13%,11.5%)";
-export const BORDER = "hsl(34,12%,22%)";
+export const BG = "hsl(222,16%,8%)";
+export const CARD = "hsl(222,15%,12%)";
+export const BORDER = "hsl(220,13%,22%)";
 export const ACCENT = "hsl(24,88%,56%)";
-export const MUTED = "hsl(38,11%,60%)";
+export const MUTED = "hsl(220,9%,63%)";
 export const RED = "hsl(6,72%,57%)";
 export const BLUE = "hsl(200,45%,58%)";
 export const ORANGE = "hsl(28,82%,56%)";
