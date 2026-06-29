@@ -151,6 +151,6 @@ export function _selfCheck(): void {
   console.log("\n✅ _selfCheck passed");
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) {
+if (typeof process !== "undefined" && import.meta.url === `file://${process.argv[1]}`) {
   _selfCheck();
 }

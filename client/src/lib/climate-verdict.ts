@@ -236,6 +236,6 @@ export function _selfCheck(): void {
 }
 
 // tsx runs this when the file is the entry point.
-if (import.meta.url === `file://${process.argv[1]}`) {
+if (typeof process !== "undefined" && import.meta.url === `file://${process.argv[1]}`) {
   _selfCheck();
 }
