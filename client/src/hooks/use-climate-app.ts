@@ -20,7 +20,7 @@ import {
   feedbackTag, componentScoreEffect, isDriverComponent, perDecade, describeSignalLevel,
   heatLifeText, countMonthlyFreezeContext, coldSeasonLifeText, precipitationLifeText,
   circulationContextFor, scenarioInfo, scenarioRole, contrastSnapshot, roadmapDriver,
-  roadmapSnapshot, jsonFileSlug, parseScenario, forecastUrl, linkLocationFromParams, crossYear,
+  roadmapSnapshot, jsonFileSlug, parseScenario, forecastUrl, linkLocationFromParams, linkLocationFromPlaceRoute, parseCoordinateSlugClient, crossYear,
 } from "@/lib/climate-helpers";
 import { buildShareImageSvg, svgToPngBlob, downloadBlob, copyToClipboard } from "@/lib/share-card";
 import { useBirthYear } from "@/lib/use-birth-year";
@@ -125,14 +125,45 @@ export function useClimateApp() {
   }, []);
 
   useEffect(() => {
-    const linked = linkLocationFromParams();
-    if (!linked) return;
-    setSelectedLocation(linked.location);
-    setLocationText(linked.location.name);
-    setShowSuggestions(false);
-    if (linked.year) setYear(linked.year);
-    setScenario(linked.scenario);
-    deepLinkRunRef.current = linked.autoRun;
+    // Deep links: ?lat=&lng=... share URLs first, then per-location pages.
+    const apply = (linked: { location: typeof selectedLocation; year?: number; scenario: typeof scenario; autoRun: boolean }) => {
+      if (!linked.location) return;
+      setSelectedLocation(linked.location);
+      setLocationText(linked.location.name);
+      setShowSuggestions(false);
+      // Per-location pages headline the year-2100 projection; honour an explicit
+      // year when present, else default to MAX_YEAR for the "in 2100" hook.
+      setYear(linked.year ?? (window.location.pathname.startsWith("/place/") ? MAX_YEAR : CURRENT_FORECAST_YEAR));
+      setScenario(linked.scenario);
+      deepLinkRunRef.current = linked.autoRun;
+    };
+
+    const fromParams = linkLocationFromParams();
+    if (fromParams) { apply(fromParams); return; }
+
+    const fromPlace = linkLocationFromPlaceRoute();
+    if (fromPlace) { apply(fromPlace); return; }
+
+    // Catalog slug reached by client-side navigation (no server island): resolve
+    // coordinates via the model-free resolver endpoint, then auto-run.
+    const m = window.location.pathname.match(/^\/place\/(.+)$/);
+    if (!m) return;
+    const slug = decodeURIComponent(m[1]);
+    if (parseCoordinateSlugClient(slug)) return; // already handled by linkLocationFromPlaceRoute
+    let cancelled = false;
+    fetch(`/api/place/${encodeURIComponent(slug)}`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data: { name?: string; country?: string; lat?: number; lng?: number } | null) => {
+        if (cancelled || !data || typeof data.lat !== "number" || typeof data.lng !== "number") return;
+        const name = (data.name && data.name.trim()) || `${data.lat.toFixed(2)}, ${data.lng.toFixed(2)}`;
+        apply({
+          location: { name, lat: data.lat, lng: data.lng, country: data.country || "", city: name.split(",")[0] || name },
+          scenario: DEFAULT_SCENARIO,
+          autoRun: true,
+        });
+      })
+      .catch(() => { /* unknown slug -> SPA shows the default landing */ });
+    return () => { cancelled = true; };
   }, []);
 
   useEffect(() => {

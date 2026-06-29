@@ -19,6 +19,8 @@ import { amocAssessment } from "./amoc";
 import { climateTwinQuerySchema, findClimateTwin, loadClimateAnalogCatalog } from "./climate-twin";
 import { climateTrajectory, projectClimate } from "./grounded-node-model";
 import { parseOgParams, renderOgPng } from "./og-image";
+import { resolvePlaceSlug } from "./location-catalog";
+import { extractHeadline, buildLocationSeo, injectLocationSeoHtml, type LocationSeo } from "./location-seo";
 import { createHash } from "node:crypto";
 import {
   checkRateLimit,
@@ -593,6 +595,128 @@ function makeSeoHandler(page: SeoPage) {
   };
 }
 
+// Per-location crawlable pages (place/:slug).
+// Every catalog city (and any coordinate point) gets its own indexable,
+// shareable URL with a grounded, climate-twin-led head. This is the biggest
+// missing growth lever: a crawlable/linkable page per location. The forecast
+// engine is in-process (~1 ms), so the headline numbers are computed server-side
+// for the first byte; the SPA then resolves the same slug and renders the live
+// result view. Cardinal rule: only grounded values reach the head.
+const LOCATION_PAGE_YEAR = MAX_FORECAST_YEAR; // headline year — the shareable "in 2100" hook
+
+// Live request origin (honours Replit/CDN forwarding headers) so the OG image is
+// fetched from the host the crawler actually hit; canonical stays SEO_BASE.
+function requestOrigin(req: any): string | null {
+  const host = req?.headers?.["x-forwarded-host"] || req?.headers?.host;
+  if (!host) return null;
+  const proto = String(req?.headers?.["x-forwarded-proto"] || "https").split(",")[0].trim() || "https";
+  return `${proto}://${String(host).split(",")[0].trim()}`;
+}
+
+// Compute the full SEO payload for a resolved location: run the in-process model,
+// find the climate twin, extract grounded headline numbers, build the head.
+function computeLocationSeo(req: any, slugParam: string): LocationSeo | null {
+  const place = resolvePlaceSlug(slugParam);
+  if (!place) return null;
+
+  const yearRaw = Number(req?.query?.year);
+  const year =
+    Number.isFinite(yearRaw) && yearRaw >= MIN_FORECAST_YEAR && yearRaw <= MAX_FORECAST_YEAR
+      ? Math.round(yearRaw)
+      : LOCATION_PAGE_YEAR;
+  const scenarioRaw = typeof req?.query?.scenario === "string" ? req.query.scenario : "";
+  const scenario = (CLIMATE_SCENARIOS as readonly string[]).includes(scenarioRaw)
+    ? scenarioRaw
+    : DEFAULT_CLIMATE_SCENARIO;
+
+  const projection = projectClimate(place.lat, place.lng, year, scenario);
+  let twin: unknown = null;
+  try {
+    twin = findClimateTwin({
+      catalog: loadClimateAnalogCatalog(),
+      projection: projection as Parameters<typeof findClimateTwin>[0]["projection"],
+      lat: place.lat,
+      lng: place.lng,
+      year,
+      scenario,
+      limit: 1,
+    });
+  } catch {
+    twin = null; // analog catalog missing -> honest fallback (no twin claim)
+  }
+
+  const headline = extractHeadline(projection, twin);
+  const ogBase = requestOrigin(req) ?? SEO_BASE;
+  return buildLocationSeo(place, year, scenario, headline, SEO_BASE, ogBase);
+}
+
+// Development dev-server HTML for a location page. Mirrors buildDevHtml: it MUST
+// include the Vite client + @vitejs/plugin-react preamble before the entry module
+// or React never mounts (see .agents/memory/spa-seo-injection.md).
+function buildLocationDevHtml(seo: LocationSeo): string {
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>${seo.title}</title>
+<meta name="description" content="${seo.description}">
+<meta property="og:title" content="${seo.title}">
+<meta property="og:description" content="${seo.description}">
+<meta property="og:type" content="website">
+<meta property="og:url" content="${seo.canonical}">
+<meta property="og:image" content="${seo.ogImageUrl}">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="${seo.title}">
+<meta name="twitter:description" content="${seo.description}">
+<meta name="twitter:image" content="${seo.ogImageUrl}">
+<link rel="canonical" href="${seo.canonical}">
+<link rel="alternate" hreflang="en" href="${seo.canonical}">
+<link rel="alternate" hreflang="x-default" href="${seo.canonical}">
+<script type="application/ld+json" id="page-schema">${seo.jsonLd}</script>
+<script type="application/json" id="fupit-place">${seo.island.replace(/</g, "\\u003c")}</script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<!-- Vite dev client + @vitejs/plugin-react refresh preamble — see buildDevHtml. -->
+<script type="module" src="/@vite/client"></script>
+<script type="module">
+import RefreshRuntime from "/@react-refresh"
+RefreshRuntime.injectIntoGlobalHook(window)
+window.$RefreshReg$ = () => {}
+window.$RefreshSig$ = () => (type) => type
+window.__vite_plugin_react_preamble_installed__ = true
+</script>
+</head>
+<body>
+<div id="root">${seo.bodyHtml}</div>
+<script type="module" src="/src/main.tsx"></script>
+</body>
+</html>`;
+}
+
+// Handler for GET place/:slug. Works in BOTH dev and prod (registered before
+// serveStatic and before the dev catch-all). Valid slug -> grounded SSR page;
+// invalid -> next() so the 404 guard returns a real 404 (no soft-404).
+function makeLocationSeoHandler() {
+  return (req: any, res: any, next: any) => {
+    try {
+      const seo = computeLocationSeo(req, String(req?.params?.slug ?? ""));
+      if (!seo) return next();
+      const indexFile = path.resolve(import.meta.dirname, "public", "index.html");
+      const html = fs.existsSync(indexFile)
+        ? injectLocationSeoHtml(fs.readFileSync(indexFile, "utf-8"), seo, SEO_BASE)
+        : buildLocationDevHtml(seo);
+      res
+        .status(200)
+        .set({ "Content-Type": "text/html; charset=utf-8", "Cache-Control": "public, max-age=300" })
+        .send(html);
+    } catch {
+      next();
+    }
+  };
+}
+
 function readBuildInfo() {
   try {
     const file = path.resolve(import.meta.dirname, "build-info.json");
@@ -749,6 +873,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
       app.get(page.path, makeSeoHandler(page));
     }
   }
+
+  // Per-location crawlable page. Registered in BOTH dev and prod (the handler
+  // serves dev HTML when there is no built index.html), and BEFORE serveStatic /
+  // the dev catch-all / the 404 guard below, so it intercepts the place route first.
+  app.get("/place/:slug", makeLocationSeoHandler());
+
+  // Resolve a place slug to coordinates (catalog city or coordinate slug). Cheap,
+  // model-free; used by the SPA as a fallback when it navigates client-side
+  // (no server-injected island). 404 on an unknown slug.
+  app.get("/api/place/:slug", (req, res) => {
+    const place = resolvePlaceSlug(String(req.params.slug ?? ""));
+    if (!place) {
+      setNoCacheHeaders(res);
+      return res.status(404).json({ message: "Unknown location slug." });
+    }
+    setForecastCacheHeaders(res);
+    res.json({
+      name: place.name,
+      country: place.country,
+      lat: place.lat,
+      lng: place.lng,
+      slug: place.slug,
+      source: place.source,
+    });
+  });
 
   // Climate location routes
   app.get("/api/locations/search", async (req, res) => {

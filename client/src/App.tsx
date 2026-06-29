@@ -15,6 +15,7 @@ function Router() {
   return (
     <Switch>
       <Route path="/" component={ClimateApp} />
+      <Route path="/place/:slug" component={ClimateApp} />
       <Route path="/comparison" component={() => <ClimateComparison onBack={() => window.location.href = '/'} />} />
       <Route path="/rankings" component={RankingsPage} />
       <Route path="/methodology" component={Methodology} />
