@@ -383,6 +383,24 @@
       "method": "Single representative downscaled model (ACCESS-CM2 r1i1p1f1). Daily-mean wet-bulb via the published Stull (2011) approximation from tas+hurs, counted above 28/31/35 degC; WMO ETCCDI frost/ice/TNn cold indices from tasmin/tasmax plus a fixed 0-degC 6-day cold-spell screen; base-18 degC degree-days from tas. Window-mean days per year over 5-year periods. A regional ~25 km humidity-heat and thermal screen, not measured WBGT and not a single-model forecast of any one year.",
       "displayPolicy": "show-as-derived-screening-context-not-advice",
       "reviewedAt": "2026-06-29"
+    },
+    {
+      "sourceId": "nahosmip-amoc-collapse-v1",
+      "provider": "NAHosMIP (North Atlantic Hosing Model Intercomparison), CEDA",
+      "version": "u03-hos 0.3 Sv hosing ensemble; EC-Earth3, HadGEM3-GC31-LL, HadGEM3-GC31-MM; collapsed-minus-baseline anomalies on a 1-degree grid",
+      "stableUrl": "https://catalogue.ceda.ac.uk/uuid/07bc349e42f94117b83e6f8289834eb7",
+      "citation": "Jackson, L.C. et al. (2023), Understanding AMOC stability: the North Atlantic Hosing Model Intercomparison Project, Geosci. Model Dev. 16, 1975-1995, DOI 10.5194/gmd-16-1975-2023. Data: NAHosMIP, CEDA Archive.",
+      "license": "cc-by-sa-4.0",
+      "licenseText": "NAHosMIP data are released under CC-BY-SA-4.0 (Creative Commons Attribution-ShareAlike 4.0): public, commercial reuse and redistribution permitted with attribution and share-alike. See https://dap.ceda.ac.uk/badc/nahosmip/00README_catalogue_and_licence.txt.",
+      "commercialReuse": "permitted-with-attribution-sharealike",
+      "redistribution": "permitted-with-attribution-sharealike",
+      "variables": ["near-surface air temperature anomaly (tas, degC)", "precipitation anomaly (pr, mm/day and %)", "regional dynamic sea-level anomaly (zos, cm, global-ocean mean removed)", "sea-level-pressure anomaly (psl, hPa)"],
+      "spatialResolution": "regridded to 1 degree from native model grids",
+      "temporalResolution": "collapsed state (last 30 yr of hosing run) minus pre-collapse baseline (first 20 yr); no calendar year asserted",
+      "scenarioCoverage": "scenario-independent low-probability AMOC-collapse tail; not tied to any SSP",
+      "method": "Idealised 0.3 Sv North Atlantic freshwater hosing (u03-hos) drives an AMOC collapse. Per model the anomaly is the mean of the last 30 years minus the first 20 years of the same run; multi-model mean and across-model spread (standard deviation) over the available models. Served as a clearly labelled high-impact tail scenario, not a central forecast and not a local deterministic correction.",
+      "displayPolicy": "show-as-collapse-tail-scenario-not-central-forecast",
+      "reviewedAt": "2026-06-29"
     }
   ]
 }

@@ -228,6 +228,39 @@ export interface AmocAssessment {
   collapseRisk?: string;
   europeImpact?: string;
   citations?: Array<AmocCitation | string>;
+  collapseProfile?: AmocCollapseProfile | null;
+}
+
+// Grounded, quantified AMOC-collapse tail profile (NAHosMIP 0.3 Sv hosing ensemble).
+// A low-probability, high-impact tail scenario — never the central forecast.
+export interface AmocDimension {
+  mean: number;
+  spread: number;
+  unit: string;
+}
+
+export interface AmocPrecipDimension extends AmocDimension {
+  pct: number | null;
+}
+
+export interface AmocCollapseProfile {
+  sourceId: string;
+  version: string;
+  provider: string;
+  license: string;
+  attribution: string;
+  stableUrl: string;
+  doi: string;
+  experiment: string;
+  models: string[];
+  modelCount: number;
+  scenarioApplicability: string;
+  temperature: AmocDimension | null;
+  precipitation: AmocPrecipDimension | null;
+  seaLevel: AmocDimension | null;
+  pressure: AmocDimension | null;
+  method: string;
+  caveats: string[];
 }
 
 export interface FreshwaterHorizon {

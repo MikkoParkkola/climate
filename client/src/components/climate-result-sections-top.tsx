@@ -452,6 +452,78 @@ export default function ClimateResultSectionsTop({ vm }: { vm: ClimateAppVM }) {
             <p style={{ margin: "0 0 8px", fontSize: 11, lineHeight: 1.55, color: MUTED }}>
               This is a real, honestly-bounded regional risk, not a local temperature correction: fupit applies no AMOC-driven cooling or warming number, no collapse date, and no deterministic local impact. A weakening circulation could partly offset greenhouse warming over NW Europe while raining disruption on storms, sea level, and rainfall patterns elsewhere.
             </p>
+
+            {/* GROUNDED collapse-tail profile (NAHosMIP 0.3 Sv hosing ensemble).
+                Quantified, multi-model, with spread. A low-probability, high-impact
+                tail scenario — visually and semantically distinct from the likely
+                weakening above, and never the central forecast. */}
+            {amoc.collapseProfile && (() => {
+              const cp = amoc.collapseProfile!;
+              const fmt = (v: number, dp = 1) => `${v >= 0 ? "+" : ""}${v.toFixed(dp)}`;
+              const tiles: Array<{ label: string; value: string; spread: string; note: string } | null> = [
+                cp.temperature
+                  ? {
+                      label: "Cooler",
+                      value: `${fmt(cp.temperature.mean)} °C`,
+                      spread: `± ${cp.temperature.spread.toFixed(1)} across models`,
+                      note: cp.temperature.mean < 0 ? "regional cooling even as the planet warms" : "regional temperature change",
+                    }
+                  : null,
+                cp.precipitation
+                  ? {
+                      label: (cp.precipitation.pct ?? cp.precipitation.mean) >= 0 ? "Wetter" : "Drier",
+                      value: cp.precipitation.pct !== null ? `${fmt(cp.precipitation.pct, 0)} %` : `${fmt(cp.precipitation.mean, 2)} mm/day`,
+                      spread: `± ${cp.precipitation.spread.toFixed(2)} mm/day across models`,
+                      note: "shift in average rainfall",
+                    }
+                  : null,
+                cp.seaLevel
+                  ? {
+                      label: "Higher sea level",
+                      value: `${fmt(cp.seaLevel.mean, 0)} cm`,
+                      spread: `± ${cp.seaLevel.spread.toFixed(0)} cm across models`,
+                      note: "regional dynamic sea level, on top of global rise",
+                    }
+                  : null,
+                cp.pressure
+                  ? {
+                      label: "Stormier",
+                      value: `${fmt(cp.pressure.mean, 1)} hPa`,
+                      spread: `± ${cp.pressure.spread.toFixed(1)} hPa across models`,
+                      note: "change in sea-level pressure / circulation",
+                    }
+                  : null,
+              ];
+              const shown = tiles.filter(Boolean) as Array<{ label: string; value: string; spread: string; note: string }>;
+              if (shown.length === 0) return null;
+              return (
+                <div style={{ border: `1px solid ${RED}40`, borderRadius: 10, padding: 13, marginBottom: 10, background: `${RED}0c` }}>
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, flexWrap: "wrap", marginBottom: 9 }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 7 }}>
+                      <Waves style={{ width: 14, height: 14, color: RED }} />
+                      <span style={{ fontSize: 11, fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.06em", color: "white" }}>If the AMOC collapses · grounded impact profile</span>
+                    </div>
+                    <span style={{ fontSize: 9, color: RED, border: `1px solid ${RED}55`, borderRadius: 999, padding: "2px 8px", textTransform: "uppercase", letterSpacing: "0.05em", fontWeight: 700 }}>low-probability · high-impact tail</span>
+                  </div>
+                  <p style={{ margin: "0 0 10px", fontSize: 11, lineHeight: 1.5, color: "rgba(255,255,255,0.78)" }}>
+                    This is the collapse tail, not the central forecast and not tied to any year. The numbers are the multi-model average from the NAHosMIP 0.3 Sv hosing experiments ({cp.modelCount} models: {cp.models.join(", ")}); the spread across models is shown so you can see how much they disagree.
+                  </p>
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))", gap: 9 }}>
+                    {shown.map((t) => (
+                      <div key={t.label} style={{ border: `1px solid ${BORDER}`, borderRadius: 8, padding: 11, background: "rgba(0,0,0,0.18)" }}>
+                        <div style={{ fontSize: 9, color: RED, textTransform: "uppercase", letterSpacing: "0.06em", fontWeight: 800, marginBottom: 4 }}>{t.label}</div>
+                        <div style={{ fontSize: 20, fontWeight: 800, color: "white", lineHeight: 1.1 }}>{t.value}</div>
+                        <div style={{ fontSize: 9.5, color: MUTED, marginTop: 3 }}>{t.spread}</div>
+                        <div style={{ fontSize: 10, color: "rgba(255,255,255,0.6)", marginTop: 4, lineHeight: 1.4 }}>{t.note}</div>
+                      </div>
+                    ))}
+                  </div>
+                  <p style={{ margin: "9px 0 0", fontSize: 9.5, lineHeight: 1.45, color: MUTED }}>
+                    Source: NAHosMIP (Jackson et al. 2023, doi:10.5194/gmd-16-1975-2023), CC-BY-SA-4.0. Collapsed-state minus pre-collapse baseline, regridded to 1°. Headline studies put the transient cooling at over 3 °C per decade and extra coastal sea-level rise up to about 50 cm (van Westen et al. 2024); those are cited context, not served here.
+                  </p>
+                </div>
+              );
+            })()}
             {amoc.citations && amoc.citations.length > 0 && (
               <ul style={{ margin: "8px 0 0", paddingLeft: 18, fontSize: 10.5, lineHeight: 1.5, color: MUTED }}>
                 {amoc.citations.map((c, i) => {

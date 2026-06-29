@@ -33,6 +33,10 @@ attached_assets/
 # The committed artifact is data/flood-river.aqueduct.*; raw source is not tracked.
 .flood-build/
 
+# NAHosMIP u03-hos NetCDF download staging for build_nahosmip_amoc.py (~5GB NetCDF).
+# The committed artifact is data/amoc-collapse.*; raw source is not tracked.
+.nahosmip-build/
+
 # ISIMIP GGCMI crop-yield download staging for build_isimip_crops.py (~0.9GB NetCDF).
 # The committed artifact is data/crop-yield.isimip-ggcmi.*; raw source is not tracked.
 .crop-build/

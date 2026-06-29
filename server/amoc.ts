@@ -11,7 +11,14 @@
  * It applies NO deterministic local temperature correction. Per the cardinal
  * no-fabricated-science rule, `europeImpact` is a plain-language explanation of the
  * cooling-amid-warming paradox, not an invented local number or collapse date.
+ *
+ * Separately, `collapseProfile` carries the GROUNDED, QUANTIFIED low-probability /
+ * high-impact collapse tail from the NAHosMIP 0.3 Sv hosing ensemble (see
+ * server/amoc-impact.ts). It is real published model output, kept strictly distinct
+ * from the qualitative likely-weakening fields above and never presented as the
+ * central case. null when the artifact is absent or the cell has no data.
  */
+import { lookupAmocCollapse, type AmocCollapseProfile } from "./amoc-impact";
 
 export interface AmocCitation {
   /** Registered source id (see data/source-registry.json). */
@@ -30,6 +37,12 @@ export interface AmocAssessment {
   collapseRisk: string;
   europeImpact: string;
   citations: AmocCitation[];
+  /**
+   * Grounded, quantified low-probability/high-impact collapse-tail profile (NAHosMIP
+   * 0.3 Sv hosing ensemble). Distinct from the qualitative fields above; null when no
+   * artifact data exists for this cell. NEVER the central forecast.
+   */
+  collapseProfile: AmocCollapseProfile | null;
 }
 
 /**
@@ -84,5 +97,6 @@ export function amocAssessment(lat: number, lng: number): AmocAssessment {
     europeImpact:
       "If the AMOC weakens substantially, NW Europe could warm more slowly than the global average — or cool in places — because less warm tropical water reaches the North Atlantic. This is the cooling-amid-warming paradox: the planet keeps warming while one region loses imported ocean heat. fupit applies no local temperature correction for this; it is shown as qualitative, cited context only.",
     citations: CITATIONS,
+    collapseProfile: lookupAmocCollapse(lat, lng),
   };
 }

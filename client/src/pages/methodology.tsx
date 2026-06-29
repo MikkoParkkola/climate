@@ -285,6 +285,24 @@ export default function Methodology() {
               qualitative IPCC and literature context, never a local number: no AMOC-driven
               degrees, no collapse year, no deterministic local correction is applied.
             </p>
+            <p>
+              Alongside that qualitative note, the same panel now shows a grounded,
+              quantified <strong>collapse-tail impact profile</strong>. This is a separate,
+              clearly labeled low-probability, high-impact scenario, not the central
+              forecast. The numbers are the multi-model average of the NAHosMIP 0.3 Sv North
+              Atlantic hosing experiments (Jackson et al. 2023, doi:10.5194/gmd-16-1975-2023;
+              models EC-Earth3, HadGEM3-GC31-LL and HadGEM3-GC31-MM; CC-BY-SA-4.0), taken as
+              the collapsed state minus the pre-collapse state of each run and regridded to a
+              1-degree grid. For each location it reports the change in temperature,
+              precipitation, regional dynamic sea level and pressure, each with the spread
+              across models so disagreement is visible. We deliberately keep this distinct
+              from the likely weakening, which is mostly reduced warming over European land
+              rather than absolute cooling. Headline magnitudes from the wider literature
+              (transient cooling over 3 degrees Celsius per decade, extra coastal sea-level
+              rise up to about 50 cm; van Westen et al. 2024) are cited as context, not
+              served as numbers. Timing remains a contested range and is never shown as a
+              single year.
+            </p>
 
             <h2>When a scenario has no published value</h2>
             <p>
