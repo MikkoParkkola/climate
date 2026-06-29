@@ -329,6 +329,42 @@
       "method": "Multi-member ensemble mean (model-democracy) of ISIMIP3b GGCMI phase 3 rainfed, default-CO2 yield output, expressed as percentage change in annual yield at 2030/2050/2080 relative to a 2015-2034 baseline, on the native 0.5 degree grid. A model-ensemble crop signal, not a field-level yield forecast; holds 2015 land use and management fixed.",
       "displayPolicy": "show-with-crop-ensemble-caveat",
       "reviewedAt": "2026-06-29"
+    },
+    {
+      "sourceId": "ditlevsen-2023-amoc",
+      "provider": "Nature Communications / Ditlevsen & Ditlevsen",
+      "version": "2023 published article",
+      "stableUrl": "https://doi.org/10.1038/s41467-023-39810-w",
+      "citation": "Ditlevsen, P. and Ditlevsen, S. (2023), Warning of a forthcoming collapse of the Atlantic meridional overturning circulation, Nature Communications 14, 4254. DOI 10.1038/s41467-023-39810-w.",
+      "license": "cc-by-4.0",
+      "licenseText": "Open-access article distributed under the Creative Commons Attribution 4.0 International License. Reuse permitted with attribution; verify current terms before redistribution.",
+      "commercialReuse": "allowed-with-attribution",
+      "redistribution": "citation-required",
+      "variables": ["AMOC early-warning / tipping-risk context"],
+      "spatialResolution": "North Atlantic large-scale circulation assessment context",
+      "temporalResolution": "statistical early-warning estimate spanning the 21st century",
+      "scenarioCoverage": "qualitative tipping-risk context; not a per-scenario local layer",
+      "method": "Cited only as broad regional tail-risk context for AMOC-relevant regions; statistical early-warning indicators in sea-surface-temperature fingerprints. Not applied as a local deterministic correction or collapse date.",
+      "displayPolicy": "show-as-context-no-local-correction",
+      "reviewedAt": "2026-06-29"
+    },
+    {
+      "sourceId": "vanwesten-2024-amoc",
+      "provider": "Science Advances / van Westen, Kliphuis & Dijkstra",
+      "version": "2024 published article",
+      "stableUrl": "https://doi.org/10.1126/sciadv.adk1189",
+      "citation": "van Westen, R.M., Kliphuis, M. and Dijkstra, H.A. (2024), Physics-based early warning signal shows that AMOC is on tipping course, Science Advances 10, eadk1189. DOI 10.1126/sciadv.adk1189.",
+      "license": "review-required",
+      "licenseText": "Science Advances open-access article. Confirm the article's Creative Commons terms (CC BY-NC vs CC BY) before any redistribution; this registry uses only cited qualitative findings, not bulk reuse.",
+      "commercialReuse": "review-required",
+      "redistribution": "citation-required",
+      "variables": ["AMOC physics-based early-warning / tipping-course context"],
+      "spatialResolution": "coupled-climate-model North Atlantic circulation assessment context",
+      "temporalResolution": "model-based early-warning signal; no real-ocean collapse date asserted",
+      "scenarioCoverage": "qualitative tipping-risk context; not a per-scenario local layer",
+      "method": "Cited only as broad regional tail-risk context for AMOC-relevant regions; a physics-based early-warning signal in a coupled climate model indicating a tipping course and severe NW-Europe cooling on collapse. Not applied as a local deterministic correction or collapse date.",
+      "displayPolicy": "show-as-context-no-local-correction",
+      "reviewedAt": "2026-06-29"
     }
   ]
 }

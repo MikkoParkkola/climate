@@ -14,6 +14,8 @@ import { lookupFreshwater } from "./freshwater";
 import { lookupFireWeather } from "./fire-weather";
 import { lookupRiverFlood } from "./floods";
 import { lookupCropYield } from "./crops";
+import { buildCoverageStatus } from "./enrichment-coverage";
+import { amocAssessment } from "./amoc";
 import { climateTwinQuerySchema, findClimateTwin, loadClimateAnalogCatalog } from "./climate-twin";
 import { climateTrajectory, projectClimate } from "./grounded-node-model";
 import { parseOgParams, renderOgPng } from "./og-image";
@@ -318,7 +320,19 @@ async function buildTrajectoryData(
     console.warn("crop-yield lookup failed:", (cropErr as Error).message);
   }
 
-  return { coordinates, points, cachedCount, freshwater, fireWeather, floodRiver, cropYield };
+  // Per-enrichment coverage status. When the requested scenario is unpublished but the
+  // source has an adjacent pathway, coverage.<k>.nearestScenario carries the REAL nearest
+  // value, explicitly labeled — never interpolated or fabricated. Both GET and POST emit this.
+  const coverage = {
+    freshwater: buildCoverageStatus("freshwater", coordinates.lat, coordinates.lng, scenario, freshwater),
+    cropYield: buildCoverageStatus("cropYield", coordinates.lat, coordinates.lng, scenario, cropYield),
+    floodRiver: buildCoverageStatus("floodRiver", coordinates.lat, coordinates.lng, scenario, floodRiver),
+    fireWeather: buildCoverageStatus("fireWeather", coordinates.lat, coordinates.lng, scenario, fireWeather),
+  };
+  // AMOC / Gulf Stream qualitative risk signal (context-only, region-gated, cited).
+  const amoc = amocAssessment(coordinates.lat, coordinates.lng);
+
+  return { coordinates, points, cachedCount, freshwater, fireWeather, floodRiver, cropYield, coverage, amoc };
 }
 
 // ── SEO: per-route HTML head injection (production only) ────────────────────
