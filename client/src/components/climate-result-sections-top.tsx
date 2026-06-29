@@ -1,4 +1,4 @@
-import { GitCompare, Loader2, Download, Search, MapPin, ArrowLeft, Play, Pause, ShieldCheck, ExternalLink, Share2, Check } from "lucide-react";
+import { GitCompare, Loader2, Download, Search, MapPin, ArrowLeft, Play, Pause, ShieldCheck, ExternalLink, Share2, Check, Wind, ClipboardList, TrendingUp, Lightbulb } from "lucide-react";
 import GuidedClimateExplainer from "@/components/guided-climate-explainer";
 import ScenarioSmallMultiples, { type ScenarioSmallMultipleMetric } from "@/components/scenario-small-multiples";
 import {
@@ -55,7 +55,7 @@ export default function ClimateResultSectionsTop({ vm }: { vm: ClimateAppVM }) {
               </div>
               <div style={{ marginTop: 8, display: "flex", gap: 6, flexWrap: "wrap" }}>
                 {d!.circulation && (
-                  <span style={{ background: `${BLUE}14`, border: `1px solid ${BLUE}28`, color: BLUE, padding: "2px 8px", borderRadius: 6, fontSize: 10, fontWeight: 500 }}>🔄 {d!.circulation.split(/[-–(]/)[0].trim()}</span>
+                  <span style={{ background: `${BLUE}14`, border: `1px solid ${BLUE}28`, color: BLUE, padding: "2px 8px", borderRadius: 6, fontSize: 10, fontWeight: 500, display: "inline-flex", alignItems: "center", gap: 4 }}><Wind style={{ width: 12, height: 12 }} /> {d!.circulation.split(/[-–(]/)[0].trim()}</span>
                 )}
                 {d!.feedbacks.slice(0, 3).map((f, i) => {
                   const t = feedbackTag(f);
@@ -76,7 +76,7 @@ export default function ClimateResultSectionsTop({ vm }: { vm: ClimateAppVM }) {
         {/* Climate Outlook — plain-language summary (updates live with the slider) */}
         <div style={{ ...card, padding: 18, marginBottom: 14, borderLeft: `3px solid ${ACCENT}` }}>
           <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 9 }}>
-            <span style={{ fontSize: 15 }}>📋</span>
+            <span style={{ fontSize: 15, display: "inline-flex", color: MUTED }}><ClipboardList style={{ width: 15, height: 15 }} /></span>
             <h2 style={{ fontSize: 12, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.07em", color: MUTED }}>Climate Outlook · {displayYear}</h2>
           </div>
           <p style={{ fontSize: 14.5, lineHeight: 1.75, color: "rgba(255,255,255,0.9)", margin: 0 }}>
@@ -535,7 +535,7 @@ export default function ClimateResultSectionsTop({ vm }: { vm: ClimateAppVM }) {
         <div style={{ ...card, padding: 18, marginBottom: 14 }}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-              <span style={{ fontSize: 16 }}>📈</span>
+              <span style={{ fontSize: 16, display: "inline-flex" }}><TrendingUp style={{ width: 16, height: 16 }} /></span>
               <h2 style={{ fontSize: 15, fontWeight: 700 }}>Metric Trajectories</h2>
               <span style={{ fontSize: 10, color: MUTED, marginLeft: 4 }}>{BASELINE_YEAR} baseline to {MAX_YEAR}</span>
             </div>
@@ -620,7 +620,7 @@ export default function ClimateResultSectionsTop({ vm }: { vm: ClimateAppVM }) {
             />
           </div>
           <div style={{ marginTop: 12, padding: "6px 10px", background: `${ACCENT}07`, border: `1px solid ${ACCENT}18`, borderRadius: 8, fontSize: 10, color: MUTED }}>
-            💡 Drag the year slider to move the marker across all seven charts simultaneously and see how each metric evolves. Hover plotted years for values, or open values for keyboard/touch access. Translucent bands show grounded low-high ranges where the API exposes comparable uncertainty fields; labeled dashed horizontal lines mark documented risk/context thresholds.
+            <Lightbulb style={{ width: 14, height: 14, display: "inline", verticalAlign: "-2px", marginRight: 4 }} /> Drag the year slider to move the marker across all seven charts simultaneously and see how each metric evolves. Hover plotted years for values, or open values for keyboard/touch access. Translucent bands show grounded low-high ranges where the API exposes comparable uncertainty fields; labeled dashed horizontal lines mark documented risk/context thresholds.
           </div>
         </div>
 

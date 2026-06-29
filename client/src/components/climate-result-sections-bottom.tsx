@@ -1,4 +1,4 @@
-import { GitCompare, Loader2, Download, Search, MapPin, ArrowLeft, Play, Pause, ShieldCheck, ExternalLink, Share2, Check } from "lucide-react";
+import { GitCompare, Loader2, Download, Search, MapPin, ArrowLeft, Play, Pause, ShieldCheck, ExternalLink, Share2, Check, Atom, Timer } from "lucide-react";
 import GuidedClimateExplainer from "@/components/guided-climate-explainer";
 import ScenarioSmallMultiples, { type ScenarioSmallMultipleMetric } from "@/components/scenario-small-multiples";
 import {
@@ -201,7 +201,7 @@ export default function ClimateResultSectionsBottom({ vm }: { vm: ClimateAppVM }
         {/* Atmospheric Physics */}
         <details style={{ ...card, padding: 18, marginBottom: 14 }}>
           <summary style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", listStyle: "none" }}>
-            <span style={{ fontSize: 18 }}>⚛️</span>
+            <span style={{ fontSize: 18, display: "inline-flex" }}><Atom style={{ width: 18, height: 18 }} /></span>
             <h3 style={{ fontFamily: FONT_DISPLAY, fontSize: 16, fontWeight: 600, margin: 0 }}>Atmospheric Physics</h3>
             <span style={{ marginLeft: "auto", fontSize: 10, color: MUTED, textTransform: "uppercase", letterSpacing: "0.06em" }}>expand ▾</span>
           </summary>
@@ -330,7 +330,7 @@ export default function ClimateResultSectionsBottom({ vm }: { vm: ClimateAppVM }
         {/* Tipping Points */}
         <details style={{ ...card, padding: 18, marginBottom: 14 }}>
           <summary style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 14, cursor: "pointer", listStyle: "none" }}>
-            <span style={{ fontSize: 18 }}>⏱️</span>
+            <span style={{ fontSize: 18, display: "inline-flex" }}><Timer style={{ width: 18, height: 18 }} /></span>
             <h2 style={{ fontFamily: FONT_DISPLAY, fontSize: 16, fontWeight: 600, margin: 0 }}>Tipping Point Timeline</h2>
             <span style={{ marginLeft: "auto", fontSize: 10, color: MUTED, textTransform: "uppercase", letterSpacing: "0.06em" }}>expand ▾</span>
           </summary>

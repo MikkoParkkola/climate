@@ -4,7 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { MapPin, X, Plus, BarChart3, Globe, ArrowLeft } from "lucide-react";
+import { MapPin, X, Plus, BarChart3, Globe, ArrowLeft, Crown, TrendingUp, Lightbulb, Thermometer, Droplet, Zap } from "lucide-react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { SCENARIOS, scenarioOptionLabel } from "@/lib/climate-constants";
 
@@ -828,7 +828,7 @@ export default function ClimateComparison({ onBack }: ClimateComparisonProps) {
                 const isLeader = ranked[0].i === ci;
                 return (
                   <div key={ci} style={{ ...card, padding: 18, borderTop: `3px solid ${t.color}`, position: "relative", textAlign: "center" }}>
-                    {isLeader && <div style={{ position: "absolute", top: 12, right: 12, fontSize: 16 }}>👑</div>}
+                    {isLeader && <div style={{ position: "absolute", top: 12, right: 12, display: "inline-flex", color: ACCENT }}><Crown style={{ width: 16, height: 16 }} /></div>}
                     <div style={{ fontSize: 17, fontWeight: 700, marginBottom: 2 }}>{names[ci]}</div>
                     <div style={{ fontSize: 11, color: MUTED, marginBottom: 12 }}>{t.location.country}</div>
                     <ScoreRing score={d.score} color={t.color} />
@@ -871,7 +871,7 @@ export default function ClimateComparison({ onBack }: ClimateComparisonProps) {
             {/* Habitability Score Trajectory */}
             <div style={{ ...card, padding: 18, marginBottom: 14 }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12, flexWrap: "wrap", gap: 8 }}>
-                <h3 style={{ fontSize: 15, fontWeight: 700 }}>📈 Habitability Score Trajectory ({BASELINE_YEAR} baseline to {MAX_YEAR})</h3>
+                <h3 style={{ fontSize: 15, fontWeight: 700, display: "inline-flex", alignItems: "center", gap: 8 }}><TrendingUp style={{ width: 16, height: 16 }} /> Habitability Score Trajectory ({BASELINE_YEAR} baseline to {MAX_YEAR})</h3>
                 <div style={{ display: "flex", gap: 10, fontSize: 10, flexWrap: "wrap" }}>
                   {trajectories.map((t, i) => (
                     <div key={i} style={{ display: "flex", alignItems: "center", gap: 4 }}>
@@ -883,27 +883,27 @@ export default function ClimateComparison({ onBack }: ClimateComparisonProps) {
               </div>
               <TrajectoryChart trajectories={trajScores} colors={colors} year={year} />
               <div style={{ marginTop: 8, padding: "8px 12px", background: `${ACCENT}08`, border: `1px solid ${ACCENT}20`, borderRadius: 8, fontSize: 10, color: MUTED }}>
-                💡 The vertical cyan line tracks the year slider. Lines connect {BASELINE_YEAR}, {CURRENT_FORECAST_YEAR}, and 5-year model runs through {MAX_YEAR}.
+                <Lightbulb style={{ width: 14, height: 14, display: "inline", verticalAlign: "-2px", marginRight: 4 }} /> The vertical cyan line tracks the year slider. Lines connect {BASELINE_YEAR}, {CURRENT_FORECAST_YEAR}, and 5-year model runs through {MAX_YEAR}.
               </div>
             </div>
 
             {/* Temperature Comparison */}
             <div style={{ ...card, padding: 18, marginBottom: 14 }}>
-              <h3 style={{ fontSize: 15, fontWeight: 700, marginBottom: 12 }}>🌡️ Temperature Comparison · {year}</h3>
+              <h3 style={{ fontSize: 15, fontWeight: 700, marginBottom: 12, display: "inline-flex", alignItems: "center", gap: 8 }}><Thermometer style={{ width: 16, height: 16 }} /> Temperature Comparison · {year}</h3>
               <TempCompChart series={snapshots.map((d) => d.monthlyTemps)} colors={colors} />
               <CompareTable rows={tempRows} names={names} />
             </div>
 
             {/* Precipitation Comparison */}
             <div style={{ ...card, padding: 18, marginBottom: 14 }}>
-              <h3 style={{ fontSize: 15, fontWeight: 700, marginBottom: 12 }}>💧 Precipitation Comparison · {year}</h3>
+              <h3 style={{ fontSize: 15, fontWeight: 700, marginBottom: 12, display: "inline-flex", alignItems: "center", gap: 8 }}><Droplet style={{ width: 16, height: 16 }} /> Precipitation Comparison · {year}</h3>
               <PrecipCompChart series={snapshots.map((d) => d.monthlyPrecip)} colors={colors} />
               <CompareTable rows={precipRows} names={names} />
             </div>
 
             {/* Risk Comparison */}
             <div style={{ ...card, padding: 18, marginBottom: 14 }}>
-              <h3 style={{ fontSize: 15, fontWeight: 700, marginBottom: 4 }}>⚡ Risk Comparison · {year}</h3>
+              <h3 style={{ fontSize: 15, fontWeight: 700, marginBottom: 4, display: "inline-flex", alignItems: "center", gap: 8 }}><Zap style={{ width: 16, height: 16 }} /> Risk Comparison · {year}</h3>
               <CompareTable rows={riskRows} names={names} />
             </div>
 
