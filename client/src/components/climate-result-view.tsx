@@ -22,6 +22,7 @@ import ClimateResultSectionsTop from "@/components/climate-result-sections-top";
 import ClimateResultSectionsBottom from "@/components/climate-result-sections-bottom";
 import { LivabilityRunway } from "@/components/livability-runway";
 import { YourConditionsDrawer } from "@/components/your-conditions-drawer";
+import { SharedLensBanner } from "@/components/shared-lens-banner";
 
 export default function ClimateResultView({ vm }: { vm: ClimateAppVM }) {
   const {
@@ -30,7 +31,7 @@ export default function ClimateResultView({ vm }: { vm: ClimateAppVM }) {
   isLoading, loadingStep, error, exporting, playing, shareCopied, shareStoryCopied,
   shareImageBusy, shareImageSaved, rawJsonCopied, reportSaved, analogCatalog, analogError,
   coastalArtifact, coastalArtifactError, scenarioContrast, scenarioContrastLoading,
-  scenarioContrastError, resultsRef, birthYear, scoredTrajectory,
+  scenarioContrastError, resultsRef, birthYear, scoredTrajectory, standardSnapshot,
   traj, d, displayYear, climateAnalog, coastalRelevance, scenarioContrastRows,
   scenarioSmallMultipleMetrics, scenarioContrastTakeaway, roadmapItems, scoreStory,
   scoreSensitivityInputs, dailyLifeSignals, tipping, selectedScenario, shownScenario,
@@ -157,6 +158,7 @@ export default function ClimateResultView({ vm }: { vm: ClimateAppVM }) {
       <main ref={resultsRef} style={{ maxWidth: 1200, margin: "0 auto", padding: "18px 20px" }}>
         {trajectory && selectedLocation && (
           <div style={{ marginBottom: 18 }}>
+            <SharedLensBanner standardScore={standardSnapshot?.score ?? null} personalScore={d?.score ?? null} />
             <LivabilityRunway
               points={scoredTrajectory ?? trajectory}
               locationName={selectedLocation.name}

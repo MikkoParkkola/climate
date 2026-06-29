@@ -54,6 +54,17 @@ function read(): Prefs {
 
 let current = read();
 
+// Did THIS page load arrive carrying a non-default lens in the URL (a shared link)?
+// Captured once at module init — before the deep-link effect calls history.replaceState
+// and wipes the query string. Lets us show the "shared custom lens" banner to a recipient
+// without false-firing for an owner whose own tuning lives in localStorage (pref-free URL).
+const arrivedWithLens =
+  typeof window !== "undefined" && !prefsAreDefault(decodePrefs(new URLSearchParams(window.location.search)));
+
+export function arrivedViaSharedLens(): boolean {
+  return arrivedWithLens;
+}
+
 export function setPrefs(next: Prefs): void {
   current = next;
   if (typeof window !== "undefined") {
@@ -75,4 +86,26 @@ function subscribe(cb: () => void): () => void {
 export function usePrefs(): [Prefs, (next: Prefs) => void] {
   const prefs = useSyncExternalStore(subscribe, () => current, () => DEFAULT_PREFS);
   return [prefs, setPrefs];
+}
+
+// ── Self-check (codec roundtrip). Run: npx tsx client/src/lib/use-prefs.ts
+export function _selfCheck(): void {
+  // Default prefs emit nothing -> clean URLs.
+  if (Object.keys(encodePrefs(DEFAULT_PREFS)).length !== 0) throw new Error("default prefs must encode to nothing");
+  // Non-default roundtrips losslessly, and only deviations are emitted.
+  const tuned: Prefs = { ...DEFAULT_PREFS, comfortOptimumC: 27, floodPer: 0.4 };
+  const enc = encodePrefs(tuned);
+  if (Object.keys(enc).length !== 2) throw new Error(`expected 2 encoded keys, got ${JSON.stringify(enc)}`);
+  const back = decodePrefs(new URLSearchParams(enc));
+  if (back.comfortOptimumC !== 27 || back.floodPer !== 0.4 || back.heatSlope !== DEFAULT_PREFS.heatSlope)
+    throw new Error(`roundtrip mismatch: ${JSON.stringify(back)}`);
+  // Garbage params are ignored, fall back to defaults.
+  const junk = decodePrefs(new URLSearchParams("co=notanumber"));
+  if (junk.comfortOptimumC !== DEFAULT_PREFS.comfortOptimumC) throw new Error("junk param should fall back to default");
+  console.log(`encoded ${JSON.stringify(enc)} -> decoded co=${back.comfortOptimumC} fp=${back.floodPer}`);
+  console.log("\n✅ _selfCheck passed");
+}
+
+if (typeof process !== "undefined" && import.meta.url === `file://${process.argv[1]}`) {
+  _selfCheck();
 }

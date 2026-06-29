@@ -24,7 +24,7 @@ import {
 import { buildShareImageSvg, svgToPngBlob, downloadBlob, copyToClipboard } from "@/lib/share-card";
 import { useBirthYear } from "@/lib/use-birth-year";
 import { rescoreTrajectory, parityDrift } from "@/lib/habitability";
-import { usePrefs } from "@/lib/use-prefs";
+import { usePrefs, encodePrefs } from "@/lib/use-prefs";
 import {
   deriveTraj, deriveSnapshot, deriveScoreStory, deriveScoreSensitivityInputs,
   deriveScenarioContrastRows, deriveScenarioContrastTakeaway, deriveRoadmapItems,
@@ -347,7 +347,20 @@ export function useClimateApp() {
 
   const selectedScenario = scenarioInfo(scenario);
   const shownScenario = scenarioInfo(d?.scenario ?? scenario);
-  const shareUrl = useMemo(() => selectedLocation ? forecastUrl(selectedLocation, displayYear, scenario, true) : "", [selectedLocation, displayYear, scenario]);
+  // Share URL carries the place + the sender's lens (their non-default prefs). Birth year
+  // is deliberately NOT encoded (it would leak the sender's age). Default prefs add nothing,
+  // so standard links stay clean. Prefs ride the page URL only — the API stays pref-free.
+  const shareUrl = useMemo(() => {
+    if (!selectedLocation) return "";
+    const base = forecastUrl(selectedLocation, displayYear, scenario, true);
+    const lens = encodePrefs(prefs);
+    if (Object.keys(lens).length === 0) return base;
+    const u = new URL(base);
+    for (const [k, v] of Object.entries(lens)) u.searchParams.set(k, v);
+    return u.toString();
+  }, [selectedLocation, displayYear, scenario, prefs]);
+  // Canonical (default-pref) snapshot — powers the shared-lens banner's "standard score".
+  const standardSnapshot = useMemo(() => deriveSnapshot(trajectory, year), [trajectory, year]);
   const shareStory = useMemo(() => deriveShareStory(selectedLocation, d, scoreStory, shareUrl, climateAnalog, analogCatalog, shownScenario.label, displayYear), [selectedLocation, d, scoreStory, shareUrl, climateAnalog, analogCatalog, shownScenario.label, displayYear]);
 
   const learningPrompts = useMemo<LearningPrompt[]>(() => deriveLearningPrompts(selectedLocation, d, scoreStory, displayYear, scenarioContrastTakeaway, scenarioContrastRows.length, climateAnalog, analogCatalog), [selectedLocation, d, scoreStory, displayYear, scenarioContrastTakeaway, scenarioContrastRows.length, climateAnalog, analogCatalog]);
@@ -566,7 +579,7 @@ export function useClimateApp() {
   return {
   locationText, setLocationText, selectedLocation, setSelectedLocation,
   suggestions, showSuggestions, setShowSuggestions, year, scenario, trajectory,
-  birthYear, setBirthYear, prefs, setPrefs, scoredTrajectory,
+  birthYear, setBirthYear, prefs, setPrefs, scoredTrajectory, standardSnapshot,
   isLoading, loadingStep, error, exporting, playing, shareCopied, shareStoryCopied,
   shareImageBusy, shareImageSaved, rawJsonCopied, reportSaved, analogCatalog, analogError,
   coastalArtifact, coastalArtifactError, scenarioContrast, scenarioContrastLoading,
