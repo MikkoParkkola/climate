@@ -102,6 +102,38 @@ async function runClimateTrajectory(
   return climateTrajectory(lat, lng, years, scenario);
 }
 
+// ── HTTP cache header helpers ────────────────────────────────────────────────
+// Applied only to deterministic, non-user-specific GET endpoints whose output
+// is stable until the next deploy (grid artifact + precomputed rankings are
+// baked into the build; source-registry and data-quality are static files).
+//
+// Lifetime rationale:
+//   max-age=300      — browser/private cache: 5 min. Keeps repeat visits fast
+//                      while staying fresh enough that a hot-fix deploy is
+//                      visible within minutes without a hard refresh.
+//   s-maxage=86400   — shared CDN/edge cache: 24 h. The CMIP6 grid does not
+//                      change between deploys; serving from edge saves origin
+//                      compute at scale. A deploy triggers a new ETag which
+//                      invalidates any CDN that respects conditional requests.
+//   stale-while-revalidate=86400 — CDN may serve a stale hit for up to 24 h
+//                      while it revalidates in the background; users see
+//                      zero extra latency on the hot path.
+//   Vary: Accept-Encoding — required when gzip/br compression may produce
+//                      different response bytes so CDNs key the cache correctly.
+//
+// Error / rate-limit paths MUST set no-store so a transient failure is never
+// pinned at the edge as a permanent bad response.
+function setForecastCacheHeaders(res: any): void {
+  res.set({
+    "Cache-Control": "public, max-age=300, s-maxage=86400, stale-while-revalidate=86400",
+    "Vary": "Accept-Encoding",
+  });
+}
+
+function setNoCacheHeaders(res: any): void {
+  res.set("Cache-Control", "no-store");
+}
+
 function projectionScenario(projection: unknown): string | undefined {
   if (!projection || typeof projection !== "object") return undefined;
   const p = projection as { scenario?: unknown; metadata?: { scenario?: unknown } };
@@ -638,16 +670,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/climate-twin", async (req, res) => {
     const clientIp = ((req.ip ?? "") || (req.socket?.remoteAddress ?? "unknown")).replace(/^::ffff:/, "");
     if (!checkRateLimit(clientIp)) {
+      setNoCacheHeaders(res);
       return res.status(429).json({ message: "Too many requests. Please try again later." });
     }
 
     const parsed = climateTwinQuerySchema.safeParse(req.query);
     if (!parsed.success) {
+      setNoCacheHeaders(res);
       return res.status(400).json({ message: "Invalid request parameters", errors: parsed.error.issues });
     }
 
     const { lat, lng, year, scenario, catalog, limit } = parsed.data;
     if (catalog !== "current") {
+      setNoCacheHeaders(res);
       return res.status(404).json({
         message: "No climate twin catalog for those parameters.",
         availableCatalogs: ["current"],
@@ -678,13 +713,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
 
       if (!twin) {
+        setNoCacheHeaders(res);
         return res.status(422).json({ message: "Climate twin could not be computed from the current catalog." });
       }
 
-      res
-        .set("Cache-Control", "public, max-age=300")
-        .json({ success: true, data: { ...twin, cachedProjection } });
+      setForecastCacheHeaders(res);
+      res.json({ success: true, data: { ...twin, cachedProjection } });
     } catch (err) {
+      setNoCacheHeaders(res);
       if (isDatabaseUnavailable(err)) return databaseUnavailable(res);
       const msg = (err as Error).message;
       if (msg === "timeout") {
@@ -697,10 +733,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get("/api/source-registry", (_req, res) => {
     try {
-      res
-        .set("Cache-Control", "public, max-age=300")
-        .json(loadSourceRegistry());
+      setForecastCacheHeaders(res);
+      res.json(loadSourceRegistry());
     } catch (err) {
+      setNoCacheHeaders(res);
       console.error("source-registry failed:", (err as Error).message);
       res.status(500).json({ message: "Source registry unavailable." });
     }
@@ -708,10 +744,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get("/api/data-quality", (_req, res) => {
     try {
-      res
-        .set("Cache-Control", "public, max-age=300")
-        .json(loadDataQuality());
+      setForecastCacheHeaders(res);
+      res.json(loadDataQuality());
     } catch (err) {
+      setNoCacheHeaders(res);
       console.error("data-quality failed:", (err as Error).message);
       res.status(500).json({ message: "Data-quality report unavailable." });
     }
@@ -721,19 +757,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/climate/global-rankings", async (req, res) => {
     const clientIp = ((req.ip ?? "") || (req.socket?.remoteAddress ?? "unknown")).replace(/^::ffff:/, "");
     if (!checkRateLimit(clientIp)) {
+      setNoCacheHeaders(res);
       return res.status(429).json({ message: "Too many requests. Please try again later." });
     }
     const parsed = rankingQuerySchema.safeParse(req.query);
     if (!parsed.success) {
+      setNoCacheHeaders(res);
       return res.status(400).json({ message: "Invalid request parameters", errors: parsed.error.issues });
     }
     const ranking = getRanking(parsed.data);
     if (!ranking) {
+      setNoCacheHeaders(res);
       return res.status(404).json({ message: "No precomputed ranking for those parameters." });
     }
-    res
-      .set("Cache-Control", "public, max-age=300")
-      .json(ranking);
+    setForecastCacheHeaders(res);
+    res.json(ranking);
   });
 
   // Semantic content for each known public route.
