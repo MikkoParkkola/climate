@@ -12,6 +12,7 @@ import { loadSourceRegistry } from "./source-registry";
 import { loadDataQuality } from "./data-quality";
 import { climateTwinQuerySchema, findClimateTwin, loadClimateAnalogCatalog } from "./climate-twin";
 import { climateTrajectory, projectClimate } from "./grounded-node-model";
+import { parseOgParams, renderOgPng } from "./og-image";
 
 // Forecasts run in-process via the Node grid engine (grounded-node-model.ts);
 // the legacy Python serving subprocess has been removed.
@@ -79,6 +80,28 @@ async function geocodePlaces(query: string, signal?: AbortSignal): Promise<Geoco
   });
 }
 
+// Resolve coordinates -> a human place name. Used by the browser "use my location"
+// button: the browser obtains the user's coordinates with explicit consent and
+// sends only those coordinates here; we resolve the name server-side so the
+// user's IP never reaches a third-party geocoder. Coordinates always work for the
+// forecast even if the name lookup fails, so this degrades gracefully.
+// ponytail: BigDataCloud free no-key reverse endpoint; swap if it rate-limits.
+function coordLabel(lat: number, lng: number): GeocodeHit {
+  return { name: `${lat.toFixed(2)}, ${lng.toFixed(2)}`, latitude: lat, longitude: lng, country: null, region: null, lat, lng };
+}
+async function reverseGeocode(lat: number, lng: number, signal?: AbortSignal): Promise<GeocodeHit> {
+  const url = `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${lng}&localityLanguage=en`;
+  const resp = await fetch(url, { signal });
+  if (!resp.ok) throw new Error(`reverse geocoder ${resp.status}`);
+  const r = (await resp.json()) as Record<string, any>;
+  const city = r.city || r.locality || r.principalSubdivision || null;
+  const region = r.principalSubdivision ?? null;
+  const country = r.countryName ?? null;
+  const label = [city, region, country].filter(Boolean).join(", ");
+  return label ? { name: label, latitude: lat, longitude: lng, country, region, lat, lng } : coordLabel(lat, lng);
+}
+
+
 
 // Runs the climate model for a single (lat, lng, year). Kept as a narrow wrapper
 // for legacy call sites and single-year cache fills.
@@ -100,6 +123,38 @@ async function runClimateTrajectory(
   scenario = DEFAULT_CLIMATE_SCENARIO,
 ): Promise<any> {
   return climateTrajectory(lat, lng, years, scenario);
+}
+
+// ── HTTP cache header helpers ────────────────────────────────────────────────
+// Applied only to deterministic, non-user-specific GET endpoints whose output
+// is stable until the next deploy (grid artifact + precomputed rankings are
+// baked into the build; source-registry and data-quality are static files).
+//
+// Lifetime rationale:
+//   max-age=300      — browser/private cache: 5 min. Keeps repeat visits fast
+//                      while staying fresh enough that a hot-fix deploy is
+//                      visible within minutes without a hard refresh.
+//   s-maxage=86400   — shared CDN/edge cache: 24 h. The CMIP6 grid does not
+//                      change between deploys; serving from edge saves origin
+//                      compute at scale. A deploy triggers a new ETag which
+//                      invalidates any CDN that respects conditional requests.
+//   stale-while-revalidate=86400 — CDN may serve a stale hit for up to 24 h
+//                      while it revalidates in the background; users see
+//                      zero extra latency on the hot path.
+//   Vary: Accept-Encoding — required when gzip/br compression may produce
+//                      different response bytes so CDNs key the cache correctly.
+//
+// Error / rate-limit paths MUST set no-store so a transient failure is never
+// pinned at the edge as a permanent bad response.
+function setForecastCacheHeaders(res: any): void {
+  res.set({
+    "Cache-Control": "public, max-age=300, s-maxage=86400, stale-while-revalidate=86400",
+    "Vary": "Accept-Encoding",
+  });
+}
+
+function setNoCacheHeaders(res: any): void {
+  res.set("Cache-Control", "no-store");
 }
 
 function projectionScenario(projection: unknown): string | undefined {
@@ -242,6 +297,29 @@ function pageUrl(pagePath: string): string {
   return `${SEO_BASE}${pagePath === "/" ? "/" : pagePath}`;
 }
 
+// Build the absolute social-preview image URL for a page. For the forecast home
+// route (which carries place, lat, lng, year, scenario on shared links) we point
+// at the dynamic og endpoint on THIS host, forwarding only the params present.
+// Other pages keep the static branded card.
+// Honesty: we deliberately do NOT forward `score` — the og endpoint recomputes it
+// from the grounded model cache so a hand-edited URL can never fake a number.
+function buildOgImageUrl(page: SeoPage, req: any): string {
+  const staticDefault = `${SEO_BASE}/og-image.png`;
+  if (!req || page.path !== "/") return staticDefault;
+  const host = req.headers?.["x-forwarded-host"] || req.headers?.host;
+  if (!host) return staticDefault;
+  const proto = String(req.headers?.["x-forwarded-proto"] || "https").split(",")[0].trim() || "https";
+  const base = `${proto}://${host}`;
+  const query = (req.query ?? {}) as Record<string, string | undefined>;
+  const sp = new URLSearchParams();
+  for (const key of ["place", "lat", "lng", "year", "scenario", "country"]) {
+    const value = query[key];
+    if (typeof value === "string" && value.trim() !== "") sp.set(key, value);
+  }
+  const qs = sp.toString();
+  return qs ? `${base}/api/og?${qs}` : `${base}/api/og`;
+}
+
 function pageSchema(page: SeoPage) {
   const url = pageUrl(page.path);
   if (page.path === "/") {
@@ -284,11 +362,14 @@ function pageSchema(page: SeoPage) {
   };
 }
 
-function injectSeoHtml(template: string, page: SeoPage): string {
+function injectSeoHtml(template: string, page: SeoPage, req?: any): string {
   const url = pageUrl(page.path);
-  const ogImage = `${SEO_BASE}/og-image.png`;
+  const ogImage = buildOgImageUrl(page, req);
+  // Escape & for safe embedding in HTML attribute values (the og URL may carry
+  // multiple query params). URLSearchParams already percent-encodes the rest.
+  const ogImageAttr = ogImage.replace(/&/g, "&amp;");
   const jsonLd = JSON.stringify(pageSchema(page));
-  return template
+  let html = template
     .split("https://global-geo-selector-mikkoparkkola.replit.app")
     .join(SEO_BASE)
     .split("https://climate-projections.replit.app")
@@ -298,23 +379,40 @@ function injectSeoHtml(template: string, page: SeoPage): string {
     .replace(/<meta property="og:title" content="[^"]*"\s*\/?>/, `<meta property="og:title" content="${page.title}" />`)
     .replace(/<meta property="og:description" content="[^"]*"\s*\/?>/, `<meta property="og:description" content="${page.description}" />`)
     .replace(/<meta property="og:url" content="[^"]*"\s*\/?>/, `<meta property="og:url" content="${url}" />`)
-    .replace(/<meta property="og:image" content="[^"]*"\s*\/?>/, `<meta property="og:image" content="${ogImage}" />`)
+    .replace(/<meta property="og:image" content="[^"]*"\s*\/?>/, `<meta property="og:image" content="${ogImageAttr}" />`)
     .replace(/<meta name="twitter:title" content="[^"]*"\s*\/?>/, `<meta name="twitter:title" content="${page.title}" />`)
     .replace(/<meta name="twitter:description" content="[^"]*"\s*\/?>/, `<meta name="twitter:description" content="${page.description}" />`)
-    .replace(/<meta name="twitter:image" content="[^"]*"\s*\/?>/, `<meta name="twitter:image" content="${ogImage}" />`)
+    .replace(/<meta name="twitter:image" content="[^"]*"\s*\/?>/, `<meta name="twitter:image" content="${ogImageAttr}" />`)
     .replace(/<link rel="canonical" href="[^"]*"\s*\/?>/, `<link rel="canonical" href="${url}" />`)
     .replace(
       /<script type="application\/ld\+json" id="page-schema">[\s\S]*?<\/script>/,
       `<script type="application/ld+json" id="page-schema">${jsonLd}</script>`,
     )
     .replace(/<div id="root"><\/div>/, `<div id="root">${page.bodyHtml}</div>`);
+
+  // Ensure summary_large_image + explicit image dimensions for rich social
+  // unfurls. twitter:card is already summary_large_image in the source HTML;
+  // og:image:width/height are not, so inject them next to og:image when absent.
+  if (!/property="og:image:width"/.test(html)) {
+    html = html.replace(
+      /(<meta property="og:image" content="[^"]*"\s*\/?>)/,
+      `$1\n    <meta property="og:image:width" content="1200" />\n    <meta property="og:image:height" content="630" />`,
+    );
+  }
+  if (!/name="twitter:card"/.test(html)) {
+    html = html.replace(
+      /(<meta name="twitter:image" content="[^"]*"\s*\/?>)/,
+      `<meta name="twitter:card" content="summary_large_image" />\n    $1`,
+    );
+  }
+  return html;
 }
 
 function makeSeoHandler(page: SeoPage) {
-  return (_req: any, res: any, next: any) => {
+  return (req: any, res: any, next: any) => {
     try {
       const file = path.resolve(import.meta.dirname, "public", "index.html");
-      const html = injectSeoHtml(fs.readFileSync(file, "utf-8"), page);
+      const html = injectSeoHtml(fs.readFileSync(file, "utf-8"), page, req);
       res
         .status(200)
         .set({
@@ -391,6 +489,81 @@ export async function registerRoutes(app: Express): Promise<Server> {
     });
   });
 
+  // ── Dynamic social-preview (Open Graph) image ────────────────────────────────
+  // Grounded score for the OG card — cache-only, never trusts the URL. Interpolates
+  // between the two cached checkpoint years bracketing the requested year, matching
+  // what the visitor saw in-app. Returns null on any miss/failure, so a tampered
+  // ?score=, an uncached location, or a DB outage all render a card with NO number
+  // (cardinal rule: never show a number we cannot ground). No model spawn here — this
+  // is a public, crawler-hit endpoint and must not become a model-spawn DoS vector;
+  // any location a real user viewed + shared is already cached by the trajectory route.
+  const OG_CHECKPOINT_YEARS = (() => {
+    const BASELINE = 2025;
+    const current = Math.min(2100, Math.max(BASELINE + 1, new Date().getUTCFullYear()));
+    const five = Array.from({ length: 15 }, (_, i) => 2030 + i * 5).filter((y) => y >= current);
+    return Array.from(new Set([BASELINE, current, ...five])).sort((a, b) => a - b);
+  })();
+
+  async function groundedOgScore(lat: number, lng: number, year: number, scenario: string): Promise<number | null> {
+    try {
+      const latKey = roundCacheKey(lat);
+      const lngKey = roundCacheKey(lng);
+      const scoreAt = async (y: number): Promise<number | null> => {
+        const proj = (await storage.getCachedModelProjection(latKey, lngKey, y, scenario)) as any;
+        if (!proj || projectionScenario(proj) !== scenario) return null;
+        const s = proj?.habitability?.score;
+        return typeof s === "number" && Number.isFinite(s) ? s : null;
+      };
+      const ys = OG_CHECKPOINT_YEARS;
+      const clamped = Math.max(ys[0], Math.min(ys[ys.length - 1], year));
+      const bound = (v: number) => Math.round(Math.max(0, Math.min(100, v)));
+      // Exact checkpoint (the common case — share years are usually checkpoints): use it directly.
+      if (ys.includes(clamped)) { const s = await scoreAt(clamped); return s == null ? null : bound(s); }
+      // Otherwise interpolate between the two cached checkpoints bracketing the year.
+      let lo = ys[0], hi = ys[ys.length - 1];
+      for (let i = 0; i < ys.length - 1; i++) {
+        if (clamped >= ys[i] && clamped <= ys[i + 1]) { lo = ys[i]; hi = ys[i + 1]; break; }
+      }
+      const [sLo, sHi] = await Promise.all([scoreAt(lo), scoreAt(hi)]);
+      if (sLo == null || sHi == null) return null;
+      const t = (clamped - lo) / (hi - lo || 1);
+      return bound(sLo + (sHi - sLo) * t);
+    } catch {
+      return null; // DB down / unexpected -> honest: no number on the card
+    }
+  }
+
+  // GET /api/og?place=&lat=&lng=&year=&scenario= -> 1200x630 PNG.
+  // Rendered with satori + @resvg/resvg-wasm (pure JS + WASM, no native deps).
+  // Honesty: the score is recomputed server-side from the grounded model cache
+  // (groundedOgScore), NEVER read from the URL. Uncached/invalid -> no number.
+  app.get("/api/og", async (req, res) => {
+    try {
+      const params = parseOgParams(req.query as Record<string, string | undefined>);
+      // Cardinal rule: never trust a client-supplied score — recompute from cache.
+      let grounded: number | null = null;
+      if (
+        typeof params.lat === "number" && typeof params.lng === "number" &&
+        typeof params.year === "number" && typeof params.scenario === "string" &&
+        (CLIMATE_SCENARIOS as readonly string[]).includes(params.scenario)
+      ) {
+        grounded = await groundedOgScore(params.lat, params.lng, params.year, params.scenario);
+      }
+      const png = await renderOgPng({ ...params, score: grounded ?? undefined });
+      res
+        .status(200)
+        .set({
+          "Content-Type": "image/png",
+          // Same cache convention as the grounded forecast endpoints.
+          "Cache-Control": "public, max-age=300",
+        })
+        .end(png);
+    } catch (err) {
+      console.error("og image failed:", (err as Error).message);
+      res.status(500).json({ message: "OG image unavailable." });
+    }
+  });
+
   // ── Per-route SEO head injection ─────────────────────────────────────────────
   // Social crawlers and search engines do not execute JavaScript, so each public
   // route must receive distinct <title>, <meta description>, <link canonical>,
@@ -431,6 +604,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (isDatabaseUnavailable(error)) return res.json([]);
       console.error("Error searching locations:", error);
       res.status(500).json({ message: "Failed to search locations" });
+    }
+  });
+
+  app.get("/api/locations/reverse", async (req, res) => {
+    const lat = Number(req.query.lat);
+    const lng = Number(req.query.lng);
+    if (!Number.isFinite(lat) || !Number.isFinite(lng) || lat < -90 || lat > 90 || lng < -180 || lng > 180) {
+      return res.status(400).json({ message: "valid lat and lng required" });
+    }
+    try {
+      return res.json(await reverseGeocode(lat, lng));
+    } catch (e) {
+      console.warn("Reverse geocoder unavailable:", (e as Error).message);
+      return res.json(coordLabel(lat, lng)); // coordinates still drive the forecast
     }
   });
 
@@ -638,16 +825,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/climate-twin", async (req, res) => {
     const clientIp = ((req.ip ?? "") || (req.socket?.remoteAddress ?? "unknown")).replace(/^::ffff:/, "");
     if (!checkRateLimit(clientIp)) {
+      setNoCacheHeaders(res);
       return res.status(429).json({ message: "Too many requests. Please try again later." });
     }
 
     const parsed = climateTwinQuerySchema.safeParse(req.query);
     if (!parsed.success) {
+      setNoCacheHeaders(res);
       return res.status(400).json({ message: "Invalid request parameters", errors: parsed.error.issues });
     }
 
     const { lat, lng, year, scenario, catalog, limit } = parsed.data;
     if (catalog !== "current") {
+      setNoCacheHeaders(res);
       return res.status(404).json({
         message: "No climate twin catalog for those parameters.",
         availableCatalogs: ["current"],
@@ -678,13 +868,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
 
       if (!twin) {
+        setNoCacheHeaders(res);
         return res.status(422).json({ message: "Climate twin could not be computed from the current catalog." });
       }
 
-      res
-        .set("Cache-Control", "public, max-age=300")
-        .json({ success: true, data: { ...twin, cachedProjection } });
+      setForecastCacheHeaders(res);
+      res.json({ success: true, data: { ...twin, cachedProjection } });
     } catch (err) {
+      setNoCacheHeaders(res);
       if (isDatabaseUnavailable(err)) return databaseUnavailable(res);
       const msg = (err as Error).message;
       if (msg === "timeout") {
@@ -697,10 +888,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get("/api/source-registry", (_req, res) => {
     try {
-      res
-        .set("Cache-Control", "public, max-age=300")
-        .json(loadSourceRegistry());
+      setForecastCacheHeaders(res);
+      res.json(loadSourceRegistry());
     } catch (err) {
+      setNoCacheHeaders(res);
       console.error("source-registry failed:", (err as Error).message);
       res.status(500).json({ message: "Source registry unavailable." });
     }
@@ -708,10 +899,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get("/api/data-quality", (_req, res) => {
     try {
-      res
-        .set("Cache-Control", "public, max-age=300")
-        .json(loadDataQuality());
+      setForecastCacheHeaders(res);
+      res.json(loadDataQuality());
     } catch (err) {
+      setNoCacheHeaders(res);
       console.error("data-quality failed:", (err as Error).message);
       res.status(500).json({ message: "Data-quality report unavailable." });
     }
@@ -721,19 +912,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/climate/global-rankings", async (req, res) => {
     const clientIp = ((req.ip ?? "") || (req.socket?.remoteAddress ?? "unknown")).replace(/^::ffff:/, "");
     if (!checkRateLimit(clientIp)) {
+      setNoCacheHeaders(res);
       return res.status(429).json({ message: "Too many requests. Please try again later." });
     }
     const parsed = rankingQuerySchema.safeParse(req.query);
     if (!parsed.success) {
+      setNoCacheHeaders(res);
       return res.status(400).json({ message: "Invalid request parameters", errors: parsed.error.issues });
     }
     const ranking = getRanking(parsed.data);
     if (!ranking) {
+      setNoCacheHeaders(res);
       return res.status(404).json({ message: "No precomputed ranking for those parameters." });
     }
-    res
-      .set("Cache-Control", "public, max-age=300")
-      .json(ranking);
+    setForecastCacheHeaders(res);
+    res.json(ranking);
   });
 
   // Semantic content for each known public route.
@@ -803,7 +996,7 @@ window.__vite_plugin_react_preamble_installed__ = true
         // Production: inject semantic content into the built index.html so the
         // correct hashed bundle scripts are preserved.
         const template = await fs.promises.readFile(distIndexPath, "utf-8");
-        const html = injectSeoHtml(template, page);
+        const html = injectSeoHtml(template, page, req);
         return res.status(200).set("Content-Type", "text/html; charset=utf-8").end(html);
       }
       // Development: serve self-contained HTML with Vite dev entry point.

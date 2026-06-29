@@ -1,4 +1,5 @@
-import { GitCompare, Loader2, Download, Search, MapPin, ArrowLeft, Play, Pause, ShieldCheck, ExternalLink, Share2, Check } from "lucide-react";
+import { useState } from "react";
+import { GitCompare, Loader2, Download, Search, MapPin, ArrowLeft, Play, Pause, ShieldCheck, ExternalLink, Share2, Check, SlidersHorizontal } from "lucide-react";
 import GuidedClimateExplainer from "@/components/guided-climate-explainer";
 import ScenarioSmallMultiples, { type ScenarioSmallMultipleMetric } from "@/components/scenario-small-multiples";
 import ScoreSensitivity, { type ScoreSensitivityInput } from "@/components/score-sensitivity";
@@ -19,6 +20,9 @@ import {
 import type { ClimateAppVM } from "@/hooks/use-climate-app";
 import ClimateResultSectionsTop from "@/components/climate-result-sections-top";
 import ClimateResultSectionsBottom from "@/components/climate-result-sections-bottom";
+import { LivabilityRunway } from "@/components/livability-runway";
+import { YourConditionsDrawer } from "@/components/your-conditions-drawer";
+import { SharedLensBanner } from "@/components/shared-lens-banner";
 
 export default function ClimateResultView({ vm }: { vm: ClimateAppVM }) {
   const {
@@ -27,7 +31,7 @@ export default function ClimateResultView({ vm }: { vm: ClimateAppVM }) {
   isLoading, loadingStep, error, exporting, playing, shareCopied, shareStoryCopied,
   shareImageBusy, shareImageSaved, rawJsonCopied, reportSaved, analogCatalog, analogError,
   coastalArtifact, coastalArtifactError, scenarioContrast, scenarioContrastLoading,
-  scenarioContrastError, resultsRef,
+  scenarioContrastError, resultsRef, birthYear, scoredTrajectory, standardSnapshot,
   traj, d, displayYear, climateAnalog, coastalRelevance, scenarioContrastRows,
   scenarioSmallMultipleMetrics, scenarioContrastTakeaway, roadmapItems, scoreStory,
   scoreSensitivityInputs, dailyLifeSignals, tipping, selectedScenario, shownScenario,
@@ -37,6 +41,8 @@ export default function ClimateResultView({ vm }: { vm: ClimateAppVM }) {
   buildRawForecastJson, copyRawForecastJson, downloadRawForecastJson,
   buildEducationalReportMarkdown, downloadEducationalReport,
   } = vm;
+
+  const [conditionsOpen, setConditionsOpen] = useState(false);
 
   // ── Results ──────────────────────────────────────────────────────────────
   // Plain-language outlook, derived live from the real modeled values.
@@ -48,7 +54,7 @@ export default function ClimateResultView({ vm }: { vm: ClimateAppVM }) {
   return (
     <div style={{ backgroundColor: BG, color: "white", minHeight: "100vh", fontFamily: "Inter, system-ui, sans-serif" }}>
       {/* Sticky Header */}
-      <header style={{ background: "hsl(28,13%,9%)", borderBottom: `1px solid ${BORDER}`, position: "sticky", top: 0, zIndex: 50 }}>
+      <header style={{ background: "hsl(222,16%,9%)", borderBottom: `1px solid ${BORDER}`, position: "sticky", top: 0, zIndex: 50 }}>
         <div style={{ maxWidth: 1200, margin: "0 auto", padding: "0 20px", height: 48, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
             <img src="/favicon.svg" alt="" width={28} height={28} style={{ width: 28, height: 28, borderRadius: 6, display: "block" }} />
@@ -74,6 +80,9 @@ export default function ClimateResultView({ vm }: { vm: ClimateAppVM }) {
             {scenario === DEFAULT_SCENARIO && (
               <ReceiptDetails label="default" text={`${DEFAULT_SCENARIO_EXPLANATION} Version: ${DEFAULT_SCENARIO_POLICY_VERSION}.`} />
             )}
+            <button onClick={() => setConditionsOpen(true)} title="Tune the score to your ideal conditions" style={{ display: "flex", alignItems: "center", gap: 5, padding: "5px 12px", borderRadius: 6, border: `1px solid ${BORDER}`, background: CARD, color: "white", fontSize: 12, cursor: "pointer" }}>
+              <SlidersHorizontal style={{ width: 13, height: 13 }} /> Conditions
+            </button>
             <button onClick={newSearch} style={{ display: "flex", alignItems: "center", gap: 5, padding: "5px 12px", borderRadius: 6, border: `1px solid ${BORDER}`, background: CARD, color: MUTED, fontSize: 12, cursor: "pointer" }}>
               <ArrowLeft style={{ width: 13, height: 13 }} /> New Search
             </button>
@@ -91,7 +100,7 @@ export default function ClimateResultView({ vm }: { vm: ClimateAppVM }) {
       </header>
 
       {/* Year Slider — sticky */}
-      <div style={{ position: "sticky", top: 48, zIndex: 45, background: "hsl(28,13%,8.5%)", borderBottom: `1px solid ${BORDER}` }}>
+      <div style={{ position: "sticky", top: 48, zIndex: 45, background: "hsl(222,16%,8.5%)", borderBottom: `1px solid ${BORDER}` }}>
         <div style={{ maxWidth: 1200, margin: "0 auto", padding: "10px 20px 18px" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
             <button onClick={togglePlay} title={playing ? "Pause" : `Play ${CURRENT_FORECAST_YEAR} to ${MAX_YEAR}`} aria-label={playing ? "Pause timeline" : "Play timeline"}
@@ -147,6 +156,20 @@ export default function ClimateResultView({ vm }: { vm: ClimateAppVM }) {
       </div>
 
       <main ref={resultsRef} style={{ maxWidth: 1200, margin: "0 auto", padding: "18px 20px" }}>
+        {trajectory && selectedLocation && (
+          <div style={{ marginBottom: 18 }}>
+            <SharedLensBanner standardScore={standardSnapshot?.score ?? null} personalScore={d?.score ?? null} />
+            <LivabilityRunway
+              points={scoredTrajectory ?? trajectory}
+              locationName={selectedLocation.name}
+              birthYear={birthYear ?? undefined}
+              scenarioLabel={shownScenario.label}
+              scenarios={scenarioContrast}
+              onLoadScenarios={loadScenarioContrast}
+              scenariosLoading={scenarioContrastLoading}
+            />
+          </div>
+        )}
         <ClimateResultSectionsTop vm={vm} />
         <ClimateResultSectionsBottom vm={vm} />
       </main>
@@ -176,6 +199,7 @@ export default function ClimateResultView({ vm }: { vm: ClimateAppVM }) {
           </a>
         </p>
       </footer>
+      <YourConditionsDrawer open={conditionsOpen} onClose={() => setConditionsOpen(false)} />
       <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
     </div>
   );

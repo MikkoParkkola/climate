@@ -22,6 +22,9 @@ import {
   roadmapSnapshot, jsonFileSlug, parseScenario, forecastUrl, linkLocationFromParams, crossYear,
 } from "@/lib/climate-helpers";
 import { buildShareImageSvg, svgToPngBlob, downloadBlob, copyToClipboard } from "@/lib/share-card";
+import { useBirthYear } from "@/lib/use-birth-year";
+import { rescoreTrajectory, parityDrift } from "@/lib/habitability";
+import { usePrefs, encodePrefs } from "@/lib/use-prefs";
 import {
   deriveTraj, deriveSnapshot, deriveScoreStory, deriveScoreSensitivityInputs,
   deriveScenarioContrastRows, deriveScenarioContrastTakeaway, deriveRoadmapItems,
@@ -38,6 +41,10 @@ export function useClimateApp() {
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [year, setYear] = useState(CURRENT_FORECAST_YEAR);
   const [scenario, setScenario] = useState<ScenarioId>(DEFAULT_SCENARIO);
+  // Optional birth year — shared client-side store (localStorage), never sent to the server.
+  const [birthYear, setBirthYear] = useBirthYear();
+  // "Your conditions" — comfort prefs, also client-side. Re-scoring is local + instant.
+  const [prefs, setPrefs] = usePrefs();
   const [trajectory, setTrajectory] = useState<ProjectionPoint[] | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [loadingStep, setLoadingStep] = useState(0);
@@ -63,6 +70,13 @@ export function useClimateApp() {
   useEffect(() => {
     document.title = "fupit — see where the climate is still livable";
   }, []);
+
+  // Persist the optional birth year locally only.
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (birthYear && Number.isFinite(birthYear)) window.localStorage.setItem("fupit.birthYear", String(birthYear));
+    else window.localStorage.removeItem("fupit.birthYear");
+  }, [birthYear]);
 
   useEffect(() => {
     let cancelled = false;
@@ -288,10 +302,22 @@ export function useClimateApp() {
   };
 
   // Derived trend arrays (stable per trajectory)
-  const traj = useMemo(() => deriveTraj(trajectory), [trajectory]);
+  // Re-score for the user's comfort prefs. Identity (same ref) at defaults, so the
+  // canonical grounded score is preserved and memoization stays cheap. Everything the
+  // user *experiences* derives from this; raw exports below stay canonical.
+  const scoredTrajectory = useMemo(() => rescoreTrajectory(trajectory, prefs), [trajectory, prefs]);
+
+  // Dev-only parity guard: our default-pref score must match the server's (ε rounding).
+  useEffect(() => {
+    if (!import.meta.env?.DEV || !trajectory) return;
+    const drift = parityDrift(trajectory);
+    if (drift > 0.6) console.warn(`[habitability parity] client/server score drift ${drift.toFixed(2)} > 0.6 — TS port may be out of sync with grounded_model.py`);
+  }, [trajectory]);
+
+  const traj = useMemo(() => deriveTraj(scoredTrajectory), [scoredTrajectory]);
 
   // Snapshot at current slider year
-  const d = useMemo(() => deriveSnapshot(trajectory, year), [trajectory, year]);
+  const d = useMemo(() => deriveSnapshot(scoredTrajectory, year), [scoredTrajectory, year]);
 
   const displayYear = Math.round(year);
 
@@ -308,20 +334,33 @@ export function useClimateApp() {
 
   const scenarioContrastTakeaway = useMemo(() => deriveScenarioContrastTakeaway(scenarioContrastRows, displayYear), [scenarioContrastRows, displayYear]);
 
-  const roadmapItems = useMemo(() => deriveRoadmapItems(trajectory, scenarioContrast, ROADMAP_YEARS), [trajectory, scenarioContrast]);
+  const roadmapItems = useMemo(() => deriveRoadmapItems(scoredTrajectory, scenarioContrast, ROADMAP_YEARS), [scoredTrajectory, scenarioContrast]);
 
-  const scoreStory = useMemo(() => deriveScoreStory(trajectory, d, displayYear), [trajectory, d, displayYear]);
+  const scoreStory = useMemo(() => deriveScoreStory(scoredTrajectory, d, displayYear), [scoredTrajectory, d, displayYear]);
 
   const scoreSensitivityInputs = useMemo<ScoreSensitivityInput[]>(() => deriveScoreSensitivityInputs(d), [d]);
 
   const dailyLifeSignals = useMemo(() => deriveDailyLifeSignals(d, scoreStory, scenario, selectedLocation, coastalRelevance), [d, scoreStory, scenario, selectedLocation, coastalRelevance]);
 
   // Tipping points computed from real interpolated trajectory
-  const tipping = useMemo(() => deriveTipping(trajectory, coastalRelevance), [trajectory, coastalRelevance]);
+  const tipping = useMemo(() => deriveTipping(scoredTrajectory, coastalRelevance), [scoredTrajectory, coastalRelevance]);
 
   const selectedScenario = scenarioInfo(scenario);
   const shownScenario = scenarioInfo(d?.scenario ?? scenario);
-  const shareUrl = useMemo(() => selectedLocation ? forecastUrl(selectedLocation, displayYear, scenario, true) : "", [selectedLocation, displayYear, scenario]);
+  // Share URL carries the place + the sender's lens (their non-default prefs). Birth year
+  // is deliberately NOT encoded (it would leak the sender's age). Default prefs add nothing,
+  // so standard links stay clean. Prefs ride the page URL only — the API stays pref-free.
+  const shareUrl = useMemo(() => {
+    if (!selectedLocation) return "";
+    const base = forecastUrl(selectedLocation, displayYear, scenario, true);
+    const lens = encodePrefs(prefs);
+    if (Object.keys(lens).length === 0) return base;
+    const u = new URL(base);
+    for (const [k, v] of Object.entries(lens)) u.searchParams.set(k, v);
+    return u.toString();
+  }, [selectedLocation, displayYear, scenario, prefs]);
+  // Canonical (default-pref) snapshot — powers the shared-lens banner's "standard score".
+  const standardSnapshot = useMemo(() => deriveSnapshot(trajectory, year), [trajectory, year]);
   const shareStory = useMemo(() => deriveShareStory(selectedLocation, d, scoreStory, shareUrl, climateAnalog, analogCatalog, shownScenario.label, displayYear), [selectedLocation, d, scoreStory, shareUrl, climateAnalog, analogCatalog, shownScenario.label, displayYear]);
 
   const learningPrompts = useMemo<LearningPrompt[]>(() => deriveLearningPrompts(selectedLocation, d, scoreStory, displayYear, scenarioContrastTakeaway, scenarioContrastRows.length, climateAnalog, analogCatalog), [selectedLocation, d, scoreStory, displayYear, scenarioContrastTakeaway, scenarioContrastRows.length, climateAnalog, analogCatalog]);
@@ -540,6 +579,7 @@ export function useClimateApp() {
   return {
   locationText, setLocationText, selectedLocation, setSelectedLocation,
   suggestions, showSuggestions, setShowSuggestions, year, scenario, trajectory,
+  birthYear, setBirthYear, prefs, setPrefs, scoredTrajectory, standardSnapshot,
   isLoading, loadingStep, error, exporting, playing, shareCopied, shareStoryCopied,
   shareImageBusy, shareImageSaved, rawJsonCopied, reportSaved, analogCatalog, analogError,
   coastalArtifact, coastalArtifactError, scenarioContrast, scenarioContrastLoading,

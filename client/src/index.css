@@ -4,24 +4,24 @@
 @tailwind utilities;
 
 :root {
-  --background: hsl(28, 13%, 8%);
-  --foreground: hsl(40, 24%, 92%);
-  --muted: hsl(30, 10%, 16%);
-  --muted-foreground: hsl(38, 11%, 60%);
-  --popover: hsl(28, 13%, 11%);
-  --popover-foreground: hsl(40, 24%, 92%);
-  --card: hsl(28, 13%, 11%);
-  --card-foreground: hsl(40, 24%, 92%);
-  --border: hsl(34, 12%, 22%);
-  --input: hsl(30, 10%, 16%);
+  --background: hsl(222, 16%, 8%);
+  --foreground: hsl(220, 16%, 93%);
+  --muted: hsl(220, 10%, 16%);
+  --muted-foreground: hsl(220, 9%, 63%);
+  --popover: hsl(222, 15%, 12%);
+  --popover-foreground: hsl(220, 16%, 93%);
+  --card: hsl(222, 15%, 12%);
+  --card-foreground: hsl(220, 16%, 93%);
+  --border: hsl(220, 13%, 22%);
+  --input: hsl(220, 10%, 16%);
   --primary: hsl(24, 88%, 56%);
-  --primary-foreground: hsl(28, 30%, 8%);
-  --secondary: hsl(30, 10%, 16%);
-  --secondary-foreground: hsl(40, 24%, 92%);
-  --accent: hsl(30, 12%, 18%);
-  --accent-foreground: hsl(40, 24%, 92%);
+  --primary-foreground: hsl(222, 16%, 9%);
+  --secondary: hsl(220, 10%, 16%);
+  --secondary-foreground: hsl(220, 16%, 93%);
+  --accent: hsl(220, 11%, 18%);
+  --accent-foreground: hsl(220, 16%, 93%);
   --destructive: hsl(4, 70%, 52%);
-  --destructive-foreground: hsl(40, 24%, 96%);
+  --destructive-foreground: hsl(220, 16%, 96%);
   --ring: hsl(24, 88%, 56%);
   --radius: 0.25rem;
   --chart-1: hsl(24, 88%, 56%);
@@ -36,9 +36,9 @@
   --climate-orange: hsl(28, 82%, 55%);
 
   /* opaque warm panels — no glassmorphism */
-  --glass-bg: hsl(28, 13%, 12%);
-  --glass-border: hsl(34, 12%, 22%);
-  --glass-hover: hsl(30, 12%, 15%);
+  --glass-bg: hsl(222, 15%, 13%);
+  --glass-border: hsl(220, 13%, 22%);
+  --glass-hover: hsl(220, 11%, 15%);
 
   --font-display: 'Fraunces', Georgia, 'Times New Roman', serif;
   --font-body: 'Public Sans', system-ui, sans-serif;
@@ -46,24 +46,24 @@
 }
 
 .dark {
-  --background: hsl(28, 13%, 8%);
-  --foreground: hsl(40, 24%, 92%);
-  --muted: hsl(30, 10%, 16%);
-  --muted-foreground: hsl(38, 11%, 60%);
-  --popover: hsl(28, 13%, 11%);
-  --popover-foreground: hsl(40, 24%, 92%);
-  --card: hsl(28, 13%, 11%);
-  --card-foreground: hsl(40, 24%, 92%);
-  --border: hsl(34, 12%, 22%);
-  --input: hsl(30, 10%, 16%);
+  --background: hsl(222, 16%, 8%);
+  --foreground: hsl(220, 16%, 93%);
+  --muted: hsl(220, 10%, 16%);
+  --muted-foreground: hsl(220, 9%, 63%);
+  --popover: hsl(222, 15%, 12%);
+  --popover-foreground: hsl(220, 16%, 93%);
+  --card: hsl(222, 15%, 12%);
+  --card-foreground: hsl(220, 16%, 93%);
+  --border: hsl(220, 13%, 22%);
+  --input: hsl(220, 10%, 16%);
   --primary: hsl(24, 88%, 56%);
-  --primary-foreground: hsl(28, 30%, 8%);
-  --secondary: hsl(30, 10%, 16%);
-  --secondary-foreground: hsl(40, 24%, 92%);
-  --accent: hsl(30, 12%, 18%);
-  --accent-foreground: hsl(40, 24%, 92%);
+  --primary-foreground: hsl(222, 16%, 9%);
+  --secondary: hsl(220, 10%, 16%);
+  --secondary-foreground: hsl(220, 16%, 93%);
+  --accent: hsl(220, 11%, 18%);
+  --accent-foreground: hsl(220, 16%, 93%);
   --destructive: hsl(4, 70%, 52%);
-  --destructive-foreground: hsl(40, 24%, 96%);
+  --destructive-foreground: hsl(220, 16%, 96%);
   --ring: hsl(24, 88%, 56%);
   --chart-1: hsl(24, 88%, 56%);
   --chart-2: hsl(150, 38%, 48%);
@@ -84,8 +84,8 @@
   body {
     @apply antialiased;
     font-family: var(--font-body);
-    background-color: hsl(28, 13%, 8%);
-    color: hsl(40, 24%, 92%);
+    background-color: hsl(222, 16%, 8%);
+    color: hsl(220, 16%, 93%);
   }
 
   h1, h2, h3, h4, h5, h6 {
@@ -111,8 +111,8 @@
 .fupit-landing {
   position: relative;
   overflow: hidden;
-  background: hsl(28, 13%, 8%);
-  color: hsl(40, 24%, 94%);
+  background: hsl(222, 16%, 8%);
+  color: hsl(220, 16%, 94%);
   min-height: 100vh;
   font-family: var(--font-body);
   display: flex;
