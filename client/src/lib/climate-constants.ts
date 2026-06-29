@@ -29,12 +29,24 @@ export const QUICK_YEAR_BUTTONS = Array.from(new Set([CURRENT_FORECAST_YEAR, 203
 export const ROADMAP_YEARS = Array.from(new Set([CURRENT_FORECAST_YEAR, 2030, 2040, 2050, 2060, 2070, 2080, 2090, 2100].filter((year) => year >= CURRENT_FORECAST_YEAR && year <= MAX_YEAR))).sort((a, b) => a - b);
 export const FREEZING_MONTHLY_MEAN_C = 0;
 
+// Emissions scenarios. `short` is the plain-language name a normal visitor reads;
+// `label` is the scientific acronym kept for the niche/expert audience and shown in
+// parentheses after the plain name (see scenarioOptionLabel). `caption` is a one-line
+// plain explanation that includes the headline warming level. `warming` is the IPCC
+// AR6 best-estimate global warming by 2081–2100 vs 1850–1900 (WG1 SPM Table SPM.1).
+// SINGLE SOURCE OF TRUTH — pages import this, never re-declare it, so the wording
+// can't drift across the landing, comparison and rankings views.
 export const SCENARIOS = [
-  { id: "ssp126", label: "SSP1-2.6", caption: "low emissions; strong mitigation" },
-  { id: "ssp245", label: "SSP2-4.5", caption: "middle path; current-policy-adjacent reference" },
-  { id: "ssp370", label: "SSP3-7.0", caption: "high emissions; weak mitigation stress case" },
-  { id: "ssp585", label: "SSP5-8.5", caption: "very high emissions; low-likelihood stress test" },
+  { id: "ssp126", short: "Strong climate action", label: "SSP1-2.6", warming: "~1.8°C", caption: "If the world cuts emissions hard and fast — about 1.8°C of global warming by 2100." },
+  { id: "ssp245", short: "Roughly today's policies", label: "SSP2-4.5", warming: "~2.7°C", caption: "Close to where current policies point, not the best case nor the worst — about 2.7°C of global warming by 2100." },
+  { id: "ssp370", short: "High emissions", label: "SSP3-7.0", warming: "~3.6°C", caption: "If emissions keep climbing and climate action stalls — about 3.6°C of global warming by 2100." },
+  { id: "ssp585", short: "Very high emissions", label: "SSP5-8.5", warming: "~4.4°C", caption: "A worst-case stress test, now seen as unlikely — about 4.4°C of global warming by 2100." },
 ] as const;
+
+// Plain name first, acronym in parentheses for the experts: "Roughly today's policies (SSP2-4.5)".
+export function scenarioOptionLabel(s: { short: string; label: string }): string {
+  return `${s.short} (${s.label})`;
+}
 
 export const DEFAULT_SCENARIO: ScenarioId = "ssp245";
 export const DEFAULT_SCENARIO_POLICY_VERSION = "current-policy-reference-2025";

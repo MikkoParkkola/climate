@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { MapPin, X, Plus, BarChart3, Globe, ArrowLeft } from "lucide-react";
 import { useQuery, useMutation } from "@tanstack/react-query";
+import { SCENARIOS, scenarioOptionLabel } from "@/lib/climate-constants";
 
 // ── Theme ──────────────────────────────────────────────────────────────────
 const BG = "hsl(222,47%,8%)";
@@ -37,12 +38,7 @@ const FIVE_YEAR_CHECKPOINTS = Array.from({ length: 15 }, (_, i) => 2030 + i * 5)
 const CHECKPOINTS = Array.from(new Set([BASELINE_YEAR, CURRENT_FORECAST_YEAR, ...FIVE_YEAR_CHECKPOINTS])).sort((a, b) => a - b);
 const YEAR_TICKS = CHECKPOINTS;
 const QUICK_YEAR_BUTTONS = Array.from(new Set([CURRENT_FORECAST_YEAR, 2030, 2050, 2075, 2100].filter((year) => year >= CURRENT_FORECAST_YEAR)));
-const SCENARIOS = [
-  { id: "ssp126", label: "SSP1-2.6", caption: "low emissions; strong mitigation" },
-  { id: "ssp245", label: "SSP2-4.5", caption: "middle path; current-policy-adjacent reference" },
-  { id: "ssp370", label: "SSP3-7.0", caption: "high emissions; weak mitigation stress case" },
-  { id: "ssp585", label: "SSP5-8.5", caption: "very high emissions; low-likelihood stress test" },
-] as const;
+// SCENARIOS imported from climate-constants — single source of truth for scenario wording.
 type ScenarioId = (typeof SCENARIOS)[number]["id"];
 const DEFAULT_SCENARIO: ScenarioId = "ssp245";
 const DEFAULT_SCENARIO_POLICY_VERSION = "current-policy-reference-2025";
@@ -630,7 +626,7 @@ export default function ClimateComparison({ onBack }: ClimateComparisonProps) {
                     className="h-9 rounded-md border border-slate-700 bg-slate-950 px-3 text-sm font-semibold text-white"
                     aria-label="Climate comparison scenario"
                   >
-                    {SCENARIOS.map((s) => <option key={s.id} value={s.id}>{s.label}</option>)}
+                    {SCENARIOS.map((s) => <option key={s.id} value={s.id}>{scenarioOptionLabel(s)}</option>)}
                   </select>
                   <span className="text-xs text-gray-400">{selectedScenario.caption}</span>
                   {scenario === DEFAULT_SCENARIO && (

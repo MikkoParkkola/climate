@@ -2,7 +2,7 @@ import { useState } from "react";
 import { GitCompare, Loader2, Search, MapPin } from "lucide-react";
 import {
   ACCENT, BORDER, CARD, MUTED, RED, SCENARIOS, DEFAULT_SCENARIO,
-  DEFAULT_SCENARIO_EXPLANATION, DEFAULT_SCENARIO_POLICY_VERSION,
+  DEFAULT_SCENARIO_EXPLANATION, DEFAULT_SCENARIO_POLICY_VERSION, scenarioOptionLabel,
   CHECKPOINTS, BASELINE_YEAR, CURRENT_FORECAST_YEAR, MAX_YEAR,
 } from "@/lib/climate-constants";
 import { parseScenario } from "@/lib/climate-helpers";
@@ -26,7 +26,7 @@ export default function ClimateLanding({
   scenario: ScenarioId;
   changeScenario: (next: ScenarioId) => void;
   isLoading: boolean;
-  selectedScenario: { id: ScenarioId; label: string; caption: string };
+  selectedScenario: { id: ScenarioId; short: string; label: string; caption: string };
   generate: (locationOverride?: LocationOption) => void;
   loadingStep: number;
   error: string | null;
@@ -64,8 +64,10 @@ export default function ClimateLanding({
       <header style={{ background: "hsl(222,16%,9%)", borderBottom: `1px solid ${BORDER}` }}>
         <div style={{ maxWidth: 1200, margin: "0 auto", padding: "0 20px", height: 56, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            <img src="/favicon.svg" alt="" width={30} height={30} style={{ width: 30, height: 30, borderRadius: 7, display: "block" }} />
-            <span style={{ fontWeight: 700, fontSize: 17 }}>fupit</span>
+            <a href="/" aria-label="fupit home" style={{ display: "flex", alignItems: "center", gap: 10, textDecoration: "none", color: "inherit", cursor: "pointer" }}>
+              <img src="/favicon.svg" alt="" width={30} height={30} style={{ width: 30, height: 30, borderRadius: 7, display: "block" }} />
+              <span style={{ fontWeight: 700, fontSize: 17 }}>fupit</span>
+            </a>
           </div>
           <button onClick={() => (window.location.href = "/comparison")}
             style={{ display: "flex", alignItems: "center", gap: 6, padding: "7px 14px", borderRadius: 7, border: `1px solid ${BORDER}`, background: CARD, color: "white", fontSize: 13, cursor: "pointer" }}>
@@ -144,8 +146,8 @@ export default function ClimateLanding({
           {/* Scenario lives behind a disclosure: sensible default, no clutter on the main view */}
           <details style={{ marginTop: 12, textAlign: "left" }}>
             <summary style={{ cursor: "pointer", fontSize: 12, color: MUTED }}>
-              Options — using the {selectedScenario.label} (
-              <Term k="current_policy">current-policy</Term>) path by default
+              Options — forecasting on the {selectedScenario.short} ({selectedScenario.label}){" "}
+              <Term k="emissions_scenario">emissions path</Term> by default
             </summary>
             <div style={{ marginTop: 10, display: "flex", alignItems: "center", gap: 10, padding: 10, borderRadius: 10, border: `1px solid ${BORDER}`, background: "rgba(255,255,255,0.035)" }}>
               <label htmlFor="scenario-select" style={{ fontSize: 11, color: MUTED, textTransform: "uppercase", letterSpacing: "0.05em", flexShrink: 0 }}>
@@ -158,7 +160,7 @@ export default function ClimateLanding({
                 disabled={isLoading}
                 style={{ flex: "0 0 132px", border: `1px solid ${BORDER}`, borderRadius: 7, background: "rgba(8,11,18,0.94)", color: "white", padding: "7px 9px", fontSize: 13, fontWeight: 700, outline: "none" }}
               >
-                {SCENARIOS.map((s) => <option key={s.id} value={s.id}>{s.label}</option>)}
+                {SCENARIOS.map((s) => <option key={s.id} value={s.id}>{scenarioOptionLabel(s)}</option>)}
               </select>
               <span style={{ color: MUTED, fontSize: 12, lineHeight: 1.35 }}>
                 {selectedScenario.caption}. The shared forecast URL keeps this scenario.

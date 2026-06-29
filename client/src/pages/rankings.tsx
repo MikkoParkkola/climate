@@ -2,13 +2,9 @@ import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { BarChart3, Database, ExternalLink, Info, ShieldAlert } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
+import { SCENARIOS, scenarioOptionLabel } from "@/lib/climate-constants";
 
-const SCENARIOS = [
-  { id: "ssp126", label: "Low pathway (SSP1-2.6)" },
-  { id: "ssp245", label: "Current-policy reference (SSP2-4.5)" },
-  { id: "ssp370", label: "High pathway (SSP3-7.0)" },
-  { id: "ssp585", label: "Very high stress test (SSP5-8.5)" },
-] as const;
+// SCENARIOS imported from climate-constants — single source of truth for scenario wording.
 const DEFAULT_SCENARIO = "ssp245";
 const DEFAULT_SCENARIO_POLICY_VERSION = "current-policy-reference-2025";
 const DEFAULT_SCENARIO_EXPLANATION =
@@ -167,7 +163,7 @@ export default function RankingsPage() {
           <label className="space-y-1 text-sm">
             <span className="font-medium text-slate-700">Scenario</span>
             <select value={scenario} onChange={(event) => setScenario(event.target.value)} className="w-full rounded border border-slate-300 bg-white px-3 py-2">
-              {SCENARIOS.map((item) => <option key={item.id} value={item.id}>{item.label}</option>)}
+              {SCENARIOS.map((item) => <option key={item.id} value={item.id}>{scenarioOptionLabel(item)}</option>)}
             </select>
             {scenario === DEFAULT_SCENARIO && (
               <span className="block text-xs leading-5 text-slate-500">

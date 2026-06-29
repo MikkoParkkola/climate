@@ -411,7 +411,7 @@ export function circulationContextFor(lat?: number, lng?: number): { region: str
 }
 
 // ── Scenario helpers ─────────────────────────────────────────────────────────
-export function scenarioInfo(id?: string): { id: ScenarioId; label: string; caption: string } {
+export function scenarioInfo(id?: string): { id: ScenarioId; short: string; label: string; caption: string } {
   return SCENARIOS.find((s) => s.id === id) ?? SCENARIOS.find((s) => s.id === DEFAULT_SCENARIO)!;
 }
 

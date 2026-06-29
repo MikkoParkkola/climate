@@ -57,8 +57,10 @@ export default function ClimateResultView({ vm }: { vm: ClimateAppVM }) {
       <header style={{ background: "hsl(222,16%,9%)", borderBottom: `1px solid ${BORDER}`, position: "sticky", top: 0, zIndex: 50 }}>
         <div style={{ maxWidth: 1200, margin: "0 auto", padding: "0 20px", height: 48, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            <img src="/favicon.svg" alt="" width={28} height={28} style={{ width: 28, height: 28, borderRadius: 6, display: "block" }} />
-            <span style={{ fontWeight: 700, fontSize: 16 }}>fupit</span>
+            <a href="/" aria-label="fupit home" style={{ display: "flex", alignItems: "center", gap: 10, textDecoration: "none", color: "inherit", cursor: "pointer" }}>
+              <img src="/favicon.svg" alt="" width={28} height={28} style={{ width: 28, height: 28, borderRadius: 6, display: "block" }} />
+              <span style={{ fontWeight: 700, fontSize: 16 }}>fupit</span>
+            </a>
             <div style={{ width: 1, height: 14, background: BORDER }} />
             <span style={{ fontSize: 13 }}>{selectedLocation?.name}</span>
             <span style={{ fontSize: 13, color: MUTED }}>·</span>
@@ -115,7 +117,15 @@ export default function ClimateResultView({ vm }: { vm: ClimateAppVM }) {
                 </button>
               ))}
             </div>
-            <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 0 }}>
+            <div style={{ flex: 1, position: "relative", paddingTop: 18, display: "flex", flexDirection: "column", gap: 0 }}>
+              {/* Dynamic readout: rides the thumb, shows the exact selected year. Uses the
+                  same fraction + thumb-inset math as the ticks below so it stays aligned. */}
+              {(() => {
+                const tf = (year - BASELINE_YEAR) / (MAX_YEAR - BASELINE_YEAR);
+                return (
+                  <div style={{ position: "absolute", top: 0, left: `calc(${tf * 100}% + ${(0.5 - tf) * 16}px)`, transform: "translateX(-50%)", fontSize: 11, fontWeight: 800, color: ACCENT, whiteSpace: "nowrap", pointerEvents: "none" }} aria-hidden="true">{displayYear}</div>
+                );
+              })()}
               <div style={{ position: "relative" }}>
                 <div style={{ position: "absolute", top: 8, left: 0, right: 0, height: 4, borderRadius: 2, pointerEvents: "none", background: `linear-gradient(to right, ${GREEN} 0%, ${AMBER} 40%, ${ORANGE} 65%, ${RED} 100%)`, opacity: 0.3 }} />
                 <input type="range" min={BASELINE_YEAR} max={MAX_YEAR} step={0.1} value={year}
@@ -133,7 +143,7 @@ export default function ClimateResultView({ vm }: { vm: ClimateAppVM }) {
                   return (
                     <div key={y} style={{ position: "absolute", top: 0, left: `calc(${frac * 100}% + ${(0.5 - frac) * THUMB}px)`, transform: "translateX(-50%)", display: "flex", flexDirection: "column", alignItems: "center", gap: 1 }}>
                       <div style={{ width: 1, height: major ? 6 : 3, background: major ? MUTED : "rgba(255,255,255,0.18)" }} />
-                      {(y === CURRENT_FORECAST_YEAR || major) && <span style={{ fontSize: 8, color: MUTED, whiteSpace: "nowrap" }}>{y}</span>}
+                      {major && <span style={{ fontSize: 8, color: MUTED, whiteSpace: "nowrap" }}>{y}</span>}
                     </div>
                   );
                 })}
