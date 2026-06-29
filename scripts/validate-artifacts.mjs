@@ -37,6 +37,8 @@ for (const relativePath of [
   "data/observed-climatology-validation.nasa-power.json",
   "data/freshwater-stress.aqueduct40.json",
   "data/freshwater-stress.aqueduct40.u16.gz",
+  "data/amoc-collapse.json",
+  "data/amoc-collapse.i16.gz",
   "data/fire-weather.quilcaille2023.json",
   "data/fire-weather.quilcaille2023.u16.gz",
   "data/flood-river.aqueduct.json",
@@ -63,6 +65,7 @@ assert(sourceIds.has("natural-earth-coastline-110m-v5"), "Natural Earth coastlin
 assert(sourceIds.has("natural-earth-populated-places-110m-v5"), "Natural Earth population-place source row missing");
 assert(sourceIds.has("natural-earth-country-population-weighted-v1"), "Natural Earth country aggregate source row missing");
 assert(sourceIds.has("wri-aqueduct-40-water-stress-v1"), "WRI Aqueduct freshwater source row missing");
+assert(sourceIds.has("nahosmip-amoc-collapse-v1"), "NAHosMIP AMOC-collapse source row missing");
 assert(sourceIds.has("nasa-power-meteorology-monthly-v10"), "NASA POWER observed-climatology validation source row missing");
 const requireRegisteredSources = (ids, context) => {
   assert(Array.isArray(ids) && ids.length > 0, `${context} source ids missing`);
@@ -164,6 +167,30 @@ assert(
   "freshwater display policy mismatch",
 );
 assert(getSourceRow(freshwater.sourceId)?.license === "attribution", "freshwater registry license must be attribution");
+
+const amoc = readJson("data/amoc-collapse.json");
+assert(amoc.sourceId === "nahosmip-amoc-collapse-v1", "amoc-collapse artifact source id mismatch");
+assert(amoc.license === "CC-BY-SA-4.0", "amoc-collapse artifact license must be CC-BY-SA-4.0");
+assert(typeof amoc.attribution === "string" && amoc.attribution.includes("NAHosMIP"), "amoc-collapse attribution missing");
+assert(amoc.doi === "10.5194/gmd-16-1975-2023", "amoc-collapse design DOI mismatch");
+assert(Array.isArray(amoc.models) && amoc.models.length === amoc.modelCount && amoc.modelCount >= 2, "amoc-collapse model list incomplete");
+assert(
+  amoc.caveats?.some((c) => c.toLowerCase().includes("low-probability") || c.toLowerCase().includes("not the central")),
+  "amoc-collapse tail-scenario caveat missing",
+);
+const amocLayerNames = (amoc.layers ?? []).map((l) => l.name);
+for (const need of ["tas_mean", "tas_spread", "pr_mean", "pr_spread", "zos_mean", "zos_spread", "psl_mean", "psl_spread"]) {
+  assert(amocLayerNames.includes(need), `amoc-collapse layer ${need} missing`);
+}
+const amocGrid = amoc.grid;
+assert(amocGrid?.file === "amoc-collapse.i16.gz" && amocGrid?.encoding === "gzip+int16le", "amoc-collapse raster manifest mismatch");
+const amocBytes = gunzipSync(readFileSync(path.join(repoRoot, "data", amocGrid.file)));
+assert(amocBytes.length === amocGrid.nlat * amocGrid.nlon * amoc.layers.length * 2, "amoc-collapse raster size mismatch vs manifest grid");
+requireRegisteredSources([amoc.sourceId], "amoc-collapse artifact");
+assert(
+  getSourceRow(amoc.sourceId)?.displayPolicy === "show-as-collapse-tail-scenario-not-central-forecast",
+  "amoc-collapse display policy mismatch",
+);
 
 const fireWeather = readJson("data/fire-weather.quilcaille2023.json");
 assert(fireWeather.sourceId === "quilcaille-2023-fire-weather-v1", "fire-weather artifact source id mismatch");

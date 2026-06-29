@@ -4,6 +4,7 @@ import path from "node:path";
 import { MODEL_CACHE_VERSION, SOURCE_REGISTRY_VERSION } from "./model-cache-version";
 import { loadSourceRegistry } from "./source-registry";
 import { freshwaterArtifactSummary } from "./freshwater";
+import { amocCollapseArtifactSummary } from "./amoc-impact";
 import { fireWeatherArtifactSummary } from "./fire-weather";
 import { floodRiverArtifactSummary } from "./floods";
 import { cropYieldArtifactSummary } from "./crops";
@@ -108,10 +109,10 @@ const ENRICHMENT_READINESS = [
   {
     key: "amoc_context",
     label: "AMOC/Gulf Stream",
-    status: "context-only",
-    publicBehavior: "Surfaced as a prominent, region-gated risk signal (the amoc object) in the climate-trajectory API and result page: IPCC AR6 weakening assessment, abrupt-collapse tail-risk, and the NW Europe cooling-amid-warming explanation, with citations. No local temperature correction is applied.",
-    groundedBasis: "IPCC AR6 WGI assessment language plus recent peer-reviewed early-warning literature (Ditlevsen & Ditlevsen 2023, Nature Communications; van Westen et al. 2024, Science Advances), all registered as sources.",
-    missingForFullUse: "Still qualitative: no deterministic local cooling/warming correction, no collapse date, and no quantified local-impact layer.",
+    status: "partial",
+    publicBehavior: "Two clearly separated layers in the region-gated amoc object on the climate-trajectory API and result page. (1) Likely weakening: the qualitative, cited IPCC AR6 assessment (very likely to weaken; mostly reduced warming over NW European land, not absolute cooling) — no local number applied. (2) Collapse tail (amoc.collapseProfile): a GROUNDED, QUANTIFIED low-probability/high-impact profile from the NAHosMIP 0.3 Sv hosing ensemble — multi-model mean and across-model spread of temperature, precipitation, regional dynamic sea-level, and pressure anomalies — labelled as a tail scenario, never the central forecast, with no calendar date.",
+    groundedBasis: "Weakening: IPCC AR6 WGI assessment language plus recent peer-reviewed early-warning literature (Ditlevsen & Ditlevsen 2023, Nature Communications; van Westen et al. 2024, Science Advances). Collapse tail: NAHosMIP u03-hos 0.3 Sv hosing ensemble (Jackson et al. 2023, GMD, doi:10.5194/gmd-16-1975-2023; models EC-Earth3, HadGEM3-GC31-LL, HadGEM3-GC31-MM), collapsed-minus-baseline anomalies on a 1-degree grid, CC-BY-SA-4.0. All registered as sources.",
+    missingForFullUse: "The collapse profile is a 3-model idealised-hosing ensemble (spread is indicative, not exhaustive) with a conservative within-run baseline, no real-world probability or timing, and 1-degree resolution; timing remains a contested range, never a single year. The weakening layer is still qualitative with no deterministic local correction.",
   },
   {
     key: "freshwater",
@@ -286,6 +287,8 @@ export function loadDataQuality(): Record<string, unknown> {
       artifactInfo("client/public/coastal-proximity.natural-earth-110m.json"),
       artifactInfo("data/freshwater-stress.aqueduct40.json"),
       artifactInfo("data/freshwater-stress.aqueduct40.u16.gz"),
+      artifactInfo("data/amoc-collapse.json"),
+      artifactInfo("data/amoc-collapse.i16.gz"),
       artifactInfo("data/fire-weather.quilcaille2023.json"),
       artifactInfo("data/fire-weather.quilcaille2023.u16.gz"),
       artifactInfo("data/flood-river.aqueduct.json"),
@@ -382,6 +385,7 @@ export function loadDataQuality(): Record<string, unknown> {
     },
     enrichmentReadiness: ENRICHMENT_READINESS,
     freshwaterStress: freshwaterArtifactSummary(),
+    amocCollapse: amocCollapseArtifactSummary(),
     fireWeather: fireWeatherArtifactSummary(),
     floodRiver: floodRiverArtifactSummary(),
     cropYield: cropYieldArtifactSummary(),
