@@ -106,9 +106,10 @@ One dataset grounds **humid_heat (daily), cold_season (daily), and infrastructur
 
 Three sub-layers, three verdicts — not one source.
 
-- **Subsidence (FREE WIN):** switch the **already-ingested AR6 sea-level data to its `with-VLM`
-  variant** (VLM = vertical land motion). Captures first-order coastal land-sinking at no new dataset
-  cost. Fine-scale groundwater hotspots (Jakarta/Houston-class) stay a declared gap.
+- **Subsidence (ALREADY GROUNDED):** `ingest/fetch_sealevel.py` already ingests the AR6 **`total`
+  component WITH vertical land motion** (regional relative sea level, the number a coast actually
+  experiences) — broad coastal land-sinking is already captured. No work needed. Fine-scale
+  groundwater hotspots (Jakarta/Houston-class) have no open global product and stay a declared gap.
 - **Elevation:** NASADEM or Copernicus GLO-30 (both open). Caveat: these are *surface* models (include
   buildings/trees), so they bias coastlines toward looking safer — label "surface elevation," not
   "ground height." **Reject** CoastalDEM (paid) and MERIT DEM (share-alike license — would infect the
@@ -140,7 +141,8 @@ Three sub-layers, three verdicts — not one source.
 ## Sequencing
 
 1. **E1 NEX-GDDP first** — three gaps, CC0, future-proof, one pipeline. Biggest move.
-2. **E5 subsidence (with-VLM)** — free, no new dataset; do it alongside E1.
+2. **E5 subsidence — DONE** (AR6 `total`/with-VLM already ingested; verified 2026-06-29). E5b/c
+   (elevation, surge) remain for finer sea-level detail.
 3. **E2 Aqueduct Floods** — reuses cleared license, completes infrastructure with E1's degree-days.
 4. **E3 agriculture**, then **E4 fire** — independent, lower urgency.
 5. **Biodiversity** — keep withheld; add static context only if desired.
