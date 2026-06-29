@@ -128,6 +128,19 @@ export default function Methodology() {
               "business as usual." We cite the scenario and show the raw output so readers
               can judge the pathway instead of being forced into a single narrative.
             </p>
+            <p>
+              The scenario selector labels each pathway by policy-realism, not just by its
+              SSP code. The best-estimate warming figures are IPCC AR6 (2081-2100 versus
+              pre-industrial): SSP1-2.6 about 1.8°C (ahead of what today's policies deliver),
+              SSP2-4.5 about 2.7°C (closest to current policies, the default view), SSP3-7.0
+              about 3.6°C (a real risk if progress reverses, not the central expectation),
+              and SSP5-8.5 about 4.4°C (a high-end worst case now considered unlikely;
+              Hausfather and Peters, Nature 2020). Where current policies point is shown as a
+              band rather than a point: roughly 2.6 to 2.8°C by 2100, with the Climate Action
+              Tracker at 2.6°C (November 2025) and the UN Emissions Gap Report 2025 at 2.8°C.
+              Full delivery of national pledges would lower this to about 2.3 to 2.5°C, but a
+              wide gap remains between what governments promise and what they have enacted.
+            </p>
 
             <h2>Risk thresholds (exact bands)</h2>
             <p>
@@ -319,6 +332,19 @@ export default function Methodology() {
               cultivars, irrigation expansion, pests, or markets. Cells where a crop is barely
               grown return no value. The data is public domain (CC0 1.0); we cite ISIMIP as
               good practice on the result page and below.
+            </p>
+
+            <h2>Methane and single-event leaks (context)</h2>
+            <p>
+              For perspective on how emissions sources compare: the September 2022 Nord Stream
+              pipeline sabotage released roughly 220,000 to 480,000 tonnes of methane, the
+              largest single methane release ever recorded, about 17 to 38 million tonnes of
+              CO2-equivalent over a 20-year basis (GWP-20). On a global scale it was minor.
+              The oil and gas industry leaks roughly this much methane every day through
+              ordinary operations. A record-setting single event, climatically small, and a
+              useful measure of how large routine fossil-fuel leakage really is. This is
+              background context and does not feed any forecast number. Sources: Jia et al.
+              2024 (Atmospheric Chemistry and Physics); iScience 2023; IEA methane estimates.
             </p>
 
             <h2>Honesty notes</h2>

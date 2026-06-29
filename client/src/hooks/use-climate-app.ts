@@ -220,8 +220,10 @@ export function useClimateApp() {
         fireWeather: (data.data.fireWeather as FireWeather | null) ?? null,
         floodRiver: (data.data.floodRiver as FloodExposure | null) ?? null,
         cropYield: (data.data.cropYield as CropYield | null) ?? null,
-        coverage: (data.data.coverage as EnrichmentCoverage | null) ?? null,
-        amoc: (data.data.amoc as AmocAssessment | null) ?? null,
+        // Coverage + AMOC live at the top level of the response in the final
+        // contract; fall back to data.data.* so either placement degrades fine.
+        coverage: (data.coverage ?? data.data.coverage ?? null) as EnrichmentCoverage | null,
+        amoc: (data.amoc ?? data.data.amoc ?? null) as AmocAssessment | null,
       };
     }
     throw new Error("Invalid response from climate model.");

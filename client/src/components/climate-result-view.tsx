@@ -6,7 +6,7 @@ import {
   BG, CARD, BORDER, ACCENT, MUTED, RED, BLUE, ORANGE, GREEN, AMBER, PURPLE, CYAN,
   FONT_DISPLAY, FONT_MONO, card, MONTHS, BASELINE_YEAR, MAX_YEAR, CURRENT_FORECAST_YEAR,
   YEAR_TICKS, QUICK_YEAR_BUTTONS, FREEZING_MONTHLY_MEAN_C, SCENARIOS, DEFAULT_SCENARIO, DEFAULT_SCENARIO_POLICY_VERSION,
-  DEFAULT_SCENARIO_EXPLANATION, SCENARIO_LINE_COLORS,
+  DEFAULT_SCENARIO_EXPLANATION, SCENARIO_LINE_COLORS, CURRENT_POLICIES_BAND,
 } from "@/lib/climate-constants";
 import {
   riskScore, signedNumber, roundedValue, prettify, confidenceColor, feedbackTag,
@@ -72,15 +72,16 @@ export default function ClimateResultView({ vm }: { vm: ClimateAppVM }) {
               value={scenario}
               onChange={(e) => changeScenario(parseScenario(e.target.value))}
               disabled={isLoading}
-              title="Climate scenario"
+              title={SCENARIOS.find((s) => s.id === scenario)?.realism ?? "Climate scenario"}
               aria-label="Climate scenario"
               style={{ height: 29, borderRadius: 6, border: `1px solid ${BORDER}`, background: CARD, color: "white", fontSize: 12, fontWeight: 700, padding: "0 8px", cursor: isLoading ? "wait" : "pointer" }}
             >
-              {SCENARIOS.map((s) => <option key={s.id} value={s.id}>{s.label}</option>)}
+              {SCENARIOS.map((s) => <option key={s.id} value={s.id} title={s.realism}>{s.label}</option>)}
             </select>
             {scenario === DEFAULT_SCENARIO && (
               <ReceiptDetails label="default" text={`${DEFAULT_SCENARIO_EXPLANATION} Version: ${DEFAULT_SCENARIO_POLICY_VERSION}.`} />
             )}
+            <ReceiptDetails label="current policies" text={CURRENT_POLICIES_BAND} />
             <button onClick={() => setConditionsOpen(true)} title="Tune the score to your ideal conditions" style={{ display: "flex", alignItems: "center", gap: 5, padding: "5px 12px", borderRadius: 6, border: `1px solid ${BORDER}`, background: CARD, color: "white", fontSize: 12, cursor: "pointer" }}>
               <SlidersHorizontal style={{ width: 13, height: 13 }} /> Conditions
             </button>

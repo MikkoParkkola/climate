@@ -37,11 +37,17 @@ export const FREEZING_MONTHLY_MEAN_C = 0;
 // SINGLE SOURCE OF TRUTH — pages import this, never re-declare it, so the wording
 // can't drift across the landing, comparison and rankings views.
 export const SCENARIOS = [
-  { id: "ssp126", short: "Strong climate action", label: "SSP1-2.6", warming: "~1.8°C", caption: "If the world cuts emissions hard and fast. About 1.8°C of global warming by 2100." },
-  { id: "ssp245", short: "Roughly today's policies", label: "SSP2-4.5", warming: "~2.7°C", caption: "Close to where current policies point, not the best case nor the worst. About 2.7°C of global warming by 2100." },
-  { id: "ssp370", short: "High emissions", label: "SSP3-7.0", warming: "~3.6°C", caption: "If emissions keep climbing and climate action stalls. About 3.6°C of global warming by 2100." },
-  { id: "ssp585", short: "Very high emissions", label: "SSP5-8.5", warming: "~4.4°C", caption: "A worst-case stress test, now seen as unlikely. About 4.4°C of global warming by 2100." },
+  { id: "ssp126", short: "Strong climate action", label: "SSP1-2.6", warming: "~1.8°C", caption: "If the world cuts emissions hard and fast. About 1.8°C of global warming by 2100.", realism: "About 1.8°C by 2100. Strong, fast emission cuts in line with the Paris goal. Achievable, but ahead of what today's policies deliver." },
+  { id: "ssp245", short: "Roughly today's policies", label: "SSP2-4.5", warming: "~2.7°C", caption: "Close to where current policies point, not the best case nor the worst. About 2.7°C of global warming by 2100.", realism: "About 2.7°C by 2100. Closest to current policies, where the world is actually heading on present trends. This is the default view." },
+  { id: "ssp370", short: "High emissions", label: "SSP3-7.0", warming: "~3.6°C", caption: "If emissions keep climbing and climate action stalls. About 3.6°C of global warming by 2100.", realism: "About 3.6°C by 2100. A fragmented world where climate cooperation stalls. A real risk if progress reverses, not the central expectation." },
+  { id: "ssp585", short: "Very high emissions", label: "SSP5-8.5", warming: "~4.4°C", caption: "A worst-case stress test, now seen as unlikely. About 4.4°C of global warming by 2100.", realism: "About 4.4°C by 2100. High-end worst case, now considered unlikely. Useful as a stress test; mainstream science no longer treats it as business as usual (Hausfather and Peters, Nature 2020)." },
 ] as const;
+
+// Best-estimate global warming figures are IPCC AR6 (2081-2100 vs pre-industrial).
+// Current-policy band cites Climate Action Tracker (Nov 2025) and UNEP Emissions
+// Gap Report 2025; shown near the scenario selector so the default is honest.
+export const CURRENT_POLICIES_BAND =
+  "Where current policies point: roughly 2.6 to 2.8°C by 2100. The Climate Action Tracker puts current policies at 2.6°C (Nov 2025); the UN Emissions Gap Report 2025 puts them at 2.8°C. Full delivery of national pledges would lower this to about 2.3 to 2.5°C, but a wide gap remains between what governments promise and what they have enacted.";
 
 // Plain name first, acronym in parentheses for the experts: "Roughly today's policies (SSP2-4.5)".
 export function scenarioOptionLabel(s: { short: string; label: string }): string {

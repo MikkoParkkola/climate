@@ -186,7 +186,11 @@ export type CoverageStatusKind =
 
 export interface CoverageNearestScenario {
   scenario: string;
-  value?: number | string | null;
+  // The full enrichment object for the nearest pathway (same shape as the
+  // top-level freshwater/fireWeather/floodRiver/cropYield). Rendered like a
+  // served value but labeled as a substitution via `note`. Each section casts
+  // to its own enrichment type at the render site.
+  value?: FreshwaterStress | FireWeather | FloodExposure | CropYield | null;
   note?: string;
 }
 
@@ -198,24 +202,23 @@ export interface CoverageStatus {
 }
 
 // Top-level coverage map (used when the enrichment object is null but the
-// backend still wants to explain the gap). Keys mirror the response fields.
+// backend still wants to explain the gap). Keys mirror the response fields
+// exactly: freshwater / fireWeather / floodRiver / cropYield.
 export interface EnrichmentCoverage {
   freshwater?: CoverageStatus | null;
-  crops?: CoverageStatus | null;
-  floods?: CoverageStatus | null;
   fireWeather?: CoverageStatus | null;
-  humidHeat?: CoverageStatus | null;
-  coldSeason?: CoverageStatus | null;
-  degreeDays?: CoverageStatus | null;
+  floodRiver?: CoverageStatus | null;
+  cropYield?: CoverageStatus | null;
 }
 
 // AMOC / Gulf Stream qualitative risk assessment (IPCC AR6 + literature).
 // Deliberately not a local number — bounded, citation-backed regional context.
 export interface AmocCitation {
-  label?: string;
-  source?: string;
-  citation?: string;
+  sourceId?: string;
+  title?: string;
+  doi?: string;
   url?: string;
+  finding?: string;
 }
 
 export interface AmocAssessment {
