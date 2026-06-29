@@ -138,7 +138,12 @@ export function TrendChart({
   const annualLow = hasRange ? annualYears.map((yr) => interpArr(years, rangeLow, yr)) : [];
   const annualHigh = hasRange ? annualYears.map((yr) => interpArr(years, rangeHigh, yr)) : [];
   const scaleValues = hasRange ? [...annualValues, ...annualLow, ...annualHigh] : annualValues;
-  const mn = Math.min(...scaleValues), mx = Math.max(...scaleValues), rng = mx - mn || 1;
+  const mn = Math.min(...scaleValues), mx = Math.max(...scaleValues);
+  // Floor the range relative to magnitude so a near-flat metric isn't stretched into
+  // fake drama (sub-unit noise filling the chart). Only binds when the metric barely
+  // moves; varying metrics (temperature, sea level) are unaffected. The exact value
+  // is always shown in the callout, so a flat line low in the frame stays readable.
+  const rng = Math.max(mx - mn, ((Math.abs(mn) + Math.abs(mx)) / 2) * 0.04) || 1;
   const xOf = (yr: number) => px + ((yr - BASELINE_YEAR) / (MAX_YEAR - BASELINE_YEAR)) * cW;
   const yOf = (v: number) => py + cH - ((v - mn) / rng) * cH;
   const fmt = (v: number) => (decimals > 0 ? v.toFixed(decimals) : Math.round(v).toString());
