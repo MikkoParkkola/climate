@@ -12,6 +12,7 @@ import { loadSourceRegistry } from "./source-registry";
 import { loadDataQuality } from "./data-quality";
 import { climateTwinQuerySchema, findClimateTwin, loadClimateAnalogCatalog } from "./climate-twin";
 import { climateTrajectory, projectClimate } from "./grounded-node-model";
+import { parseOgParams, renderOgPng } from "./og-image";
 
 // Forecasts run in-process via the Node grid engine (grounded-node-model.ts);
 // the legacy Python serving subprocess has been removed.
@@ -296,6 +297,29 @@ function pageUrl(pagePath: string): string {
   return `${SEO_BASE}${pagePath === "/" ? "/" : pagePath}`;
 }
 
+// Build the absolute social-preview image URL for a page. For the forecast home
+// route (which carries place, lat, lng, year, scenario and optional score on
+// shared links) we point at the dynamic og endpoint on THIS host, forwarding
+// only the params that are present. Other pages keep the static branded card.
+// Honesty: score is forwarded only when the caller supplied it; the og endpoint
+// renders no number when it is absent.
+function buildOgImageUrl(page: SeoPage, req: any): string {
+  const staticDefault = `${SEO_BASE}/og-image.png`;
+  if (!req || page.path !== "/") return staticDefault;
+  const host = req.headers?.["x-forwarded-host"] || req.headers?.host;
+  if (!host) return staticDefault;
+  const proto = String(req.headers?.["x-forwarded-proto"] || "https").split(",")[0].trim() || "https";
+  const base = `${proto}://${host}`;
+  const query = (req.query ?? {}) as Record<string, string | undefined>;
+  const sp = new URLSearchParams();
+  for (const key of ["place", "lat", "lng", "year", "scenario", "country", "score"]) {
+    const value = query[key];
+    if (typeof value === "string" && value.trim() !== "") sp.set(key, value);
+  }
+  const qs = sp.toString();
+  return qs ? `${base}/api/og?${qs}` : `${base}/api/og`;
+}
+
 function pageSchema(page: SeoPage) {
   const url = pageUrl(page.path);
   if (page.path === "/") {
@@ -338,11 +362,14 @@ function pageSchema(page: SeoPage) {
   };
 }
 
-function injectSeoHtml(template: string, page: SeoPage): string {
+function injectSeoHtml(template: string, page: SeoPage, req?: any): string {
   const url = pageUrl(page.path);
-  const ogImage = `${SEO_BASE}/og-image.png`;
+  const ogImage = buildOgImageUrl(page, req);
+  // Escape & for safe embedding in HTML attribute values (the og URL may carry
+  // multiple query params). URLSearchParams already percent-encodes the rest.
+  const ogImageAttr = ogImage.replace(/&/g, "&amp;");
   const jsonLd = JSON.stringify(pageSchema(page));
-  return template
+  let html = template
     .split("https://global-geo-selector-mikkoparkkola.replit.app")
     .join(SEO_BASE)
     .split("https://climate-projections.replit.app")
@@ -352,23 +379,40 @@ function injectSeoHtml(template: string, page: SeoPage): string {
     .replace(/<meta property="og:title" content="[^"]*"\s*\/?>/, `<meta property="og:title" content="${page.title}" />`)
     .replace(/<meta property="og:description" content="[^"]*"\s*\/?>/, `<meta property="og:description" content="${page.description}" />`)
     .replace(/<meta property="og:url" content="[^"]*"\s*\/?>/, `<meta property="og:url" content="${url}" />`)
-    .replace(/<meta property="og:image" content="[^"]*"\s*\/?>/, `<meta property="og:image" content="${ogImage}" />`)
+    .replace(/<meta property="og:image" content="[^"]*"\s*\/?>/, `<meta property="og:image" content="${ogImageAttr}" />`)
     .replace(/<meta name="twitter:title" content="[^"]*"\s*\/?>/, `<meta name="twitter:title" content="${page.title}" />`)
     .replace(/<meta name="twitter:description" content="[^"]*"\s*\/?>/, `<meta name="twitter:description" content="${page.description}" />`)
-    .replace(/<meta name="twitter:image" content="[^"]*"\s*\/?>/, `<meta name="twitter:image" content="${ogImage}" />`)
+    .replace(/<meta name="twitter:image" content="[^"]*"\s*\/?>/, `<meta name="twitter:image" content="${ogImageAttr}" />`)
     .replace(/<link rel="canonical" href="[^"]*"\s*\/?>/, `<link rel="canonical" href="${url}" />`)
     .replace(
       /<script type="application\/ld\+json" id="page-schema">[\s\S]*?<\/script>/,
       `<script type="application/ld+json" id="page-schema">${jsonLd}</script>`,
     )
     .replace(/<div id="root"><\/div>/, `<div id="root">${page.bodyHtml}</div>`);
+
+  // Ensure summary_large_image + explicit image dimensions for rich social
+  // unfurls. twitter:card is already summary_large_image in the source HTML;
+  // og:image:width/height are not, so inject them next to og:image when absent.
+  if (!/property="og:image:width"/.test(html)) {
+    html = html.replace(
+      /(<meta property="og:image" content="[^"]*"\s*\/?>)/,
+      `$1\n    <meta property="og:image:width" content="1200" />\n    <meta property="og:image:height" content="630" />`,
+    );
+  }
+  if (!/name="twitter:card"/.test(html)) {
+    html = html.replace(
+      /(<meta name="twitter:image" content="[^"]*"\s*\/?>)/,
+      `<meta name="twitter:card" content="summary_large_image" />\n    $1`,
+    );
+  }
+  return html;
 }
 
 function makeSeoHandler(page: SeoPage) {
-  return (_req: any, res: any, next: any) => {
+  return (req: any, res: any, next: any) => {
     try {
       const file = path.resolve(import.meta.dirname, "public", "index.html");
-      const html = injectSeoHtml(fs.readFileSync(file, "utf-8"), page);
+      const html = injectSeoHtml(fs.readFileSync(file, "utf-8"), page, req);
       res
         .status(200)
         .set({
@@ -443,6 +487,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
         id: process.env.REPLIT_DEPLOYMENT_ID || null,
       },
     });
+  });
+
+  // ── Dynamic social-preview (Open Graph) image ────────────────────────────────
+  // GET /api/og?place=&lat=&lng=&year=&score=&scenario= -> 1200x630 PNG.
+  // Rendered with satori + @resvg/resvg-wasm (pure JS + WASM, no native deps).
+  // Honesty: the score shown is exactly the value passed in. Missing/invalid
+  // params render a generic branded default card with NO fabricated number.
+  app.get("/api/og", async (req, res) => {
+    try {
+      const params = parseOgParams(req.query as Record<string, string | undefined>);
+      const png = await renderOgPng(params);
+      res
+        .status(200)
+        .set({
+          "Content-Type": "image/png",
+          // Same cache convention as the grounded forecast endpoints.
+          "Cache-Control": "public, max-age=300",
+        })
+        .end(png);
+    } catch (err) {
+      console.error("og image failed:", (err as Error).message);
+      res.status(500).json({ message: "OG image unavailable." });
+    }
   });
 
   // ── Per-route SEO head injection ─────────────────────────────────────────────
@@ -877,7 +944,7 @@ window.__vite_plugin_react_preamble_installed__ = true
         // Production: inject semantic content into the built index.html so the
         // correct hashed bundle scripts are preserved.
         const template = await fs.promises.readFile(distIndexPath, "utf-8");
-        const html = injectSeoHtml(template, page);
+        const html = injectSeoHtml(template, page, req);
         return res.status(200).set("Content-Type", "text/html; charset=utf-8").end(html);
       }
       // Development: serve self-contained HTML with Vite dev entry point.
