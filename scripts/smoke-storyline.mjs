@@ -19,7 +19,8 @@ const hook = fs.readFileSync(path.join(repoRoot, "client", "src", "hooks", "use-
 const resultView = fs.readFileSync(path.join(repoRoot, "client", "src", "components", "climate-result-view.tsx"), "utf8");
 const sectionsTop = fs.readFileSync(path.join(repoRoot, "client", "src", "components", "climate-result-sections-top.tsx"), "utf8");
 const sectionsBottom = fs.readFileSync(path.join(repoRoot, "client", "src", "components", "climate-result-sections-bottom.tsx"), "utf8");
-const all = [source, helpers, charts, shareCard, constants, types, derivations, landing, hook, resultView, sectionsTop, sectionsBottom].join("\n");
+const conditionsDrawer = fs.readFileSync(path.join(repoRoot, "client", "src", "components", "your-conditions-drawer.tsx"), "utf8");
+const all = [source, helpers, charts, shareCard, constants, types, derivations, landing, hook, resultView, sectionsTop, sectionsBottom, conditionsDrawer].join("\n");
 const methodology = fs.readFileSync(methodologyPath, "utf8");
 const scoreSensitivity = fs.readFileSync(scoreSensitivityPath, "utf8");
 
@@ -76,13 +77,13 @@ assert.match(all, /makeInput\("humid_heat_penalty"/, "score sensitivity includes
 assert.match(all, /makeInput\("heat_stress_penalty"/, "score sensitivity includes heat-stress penalty from habitability.breakdown");
 assert.match(all, /makeInput\("drought_penalty"/, "score sensitivity includes drought penalty from habitability.breakdown");
 assert.match(all, /makeInput\("flood_penalty"/, "score sensitivity includes flood penalty from habitability.breakdown");
-assert.match(all, /<ScoreSensitivity modelScore=\{d!\.score\} category=\{d!\.category\} inputs=\{scoreSensitivityInputs\} \/>/, "result page renders the score-sensitivity component with selected model score and inputs");
-assert.match(scoreSensitivity, /Score sensitivity/, "score-sensitivity panel has an explicit heading");
-assert.match(scoreSensitivity, /type="checkbox"/, "score-sensitivity panel lets users hide visible score components");
-assert.match(scoreSensitivity, /type="range"/, "score-sensitivity panel lets users adjust component weights");
-assert.match(scoreSensitivity, /clamp 10-100 of visible contribution components minus visible penalty components/, "score-sensitivity panel discloses the formula receipt");
-assert.match(scoreSensitivity, /not a new climate forecast/, "score-sensitivity panel caveats what-if values as non-forecast");
-assert.match(scoreSensitivity, /Missing domains such as local adaptation quality/, "score-sensitivity panel discloses missing domains");
+assert.match(all, /breakdown=\{scoreSensitivityInputs\}/, "result page wires the selected score-sensitivity inputs into the conditions drawer");
+assert.match(all, /<ScoreBreakdown inputs=\{breakdown\} modelScore=\{modelScore\} category=\{category\} \/>/, "conditions drawer renders the score breakdown with selected model score, category, and inputs");
+assert.match(scoreSensitivity, /How this score is built/, "score breakdown panel has an explicit heading");
+assert.match(scoreSensitivity, /These are the grounded pieces of your score/, "score breakdown discloses its components are grounded, not a separate what-if forecast");
+assert.match(scoreSensitivity, /kind: "contribution" \| "penalty"/, "score breakdown distinguishes grounded contributions from penalties");
+assert.match(scoreSensitivity, /\{modelScore\}\/100/, "score breakdown shows the grounded model score out of 100");
+assert.match(methodology, /Habitability score/, "methodology documents how the habitability score is built (formula transparency)");
 assert.match(all, /What this means for daily life/, "result page renders the required daily-life interpretation section");
 assert.match(all, /function circulationContextFor/, "storyline can surface registered AMOC/Gulf Stream context for relevant broad regions");
 assert.match(all, /AMOC\/Gulf Stream context/, "daily-life section includes AMOC/Gulf Stream context when regionally relevant");
