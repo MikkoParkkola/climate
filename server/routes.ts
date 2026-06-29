@@ -298,11 +298,11 @@ function pageUrl(pagePath: string): string {
 }
 
 // Build the absolute social-preview image URL for a page. For the forecast home
-// route (which carries place, lat, lng, year, scenario and optional score on
-// shared links) we point at the dynamic og endpoint on THIS host, forwarding
-// only the params that are present. Other pages keep the static branded card.
-// Honesty: score is forwarded only when the caller supplied it; the og endpoint
-// renders no number when it is absent.
+// route (which carries place, lat, lng, year, scenario on shared links) we point
+// at the dynamic og endpoint on THIS host, forwarding only the params present.
+// Other pages keep the static branded card.
+// Honesty: we deliberately do NOT forward `score` — the og endpoint recomputes it
+// from the grounded model cache so a hand-edited URL can never fake a number.
 function buildOgImageUrl(page: SeoPage, req: any): string {
   const staticDefault = `${SEO_BASE}/og-image.png`;
   if (!req || page.path !== "/") return staticDefault;
@@ -312,7 +312,7 @@ function buildOgImageUrl(page: SeoPage, req: any): string {
   const base = `${proto}://${host}`;
   const query = (req.query ?? {}) as Record<string, string | undefined>;
   const sp = new URLSearchParams();
-  for (const key of ["place", "lat", "lng", "year", "scenario", "country", "score"]) {
+  for (const key of ["place", "lat", "lng", "year", "scenario", "country"]) {
     const value = query[key];
     if (typeof value === "string" && value.trim() !== "") sp.set(key, value);
   }
@@ -490,14 +490,66 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // ── Dynamic social-preview (Open Graph) image ────────────────────────────────
-  // GET /api/og?place=&lat=&lng=&year=&score=&scenario= -> 1200x630 PNG.
+  // Grounded score for the OG card — cache-only, never trusts the URL. Interpolates
+  // between the two cached checkpoint years bracketing the requested year, matching
+  // what the visitor saw in-app. Returns null on any miss/failure, so a tampered
+  // ?score=, an uncached location, or a DB outage all render a card with NO number
+  // (cardinal rule: never show a number we cannot ground). No model spawn here — this
+  // is a public, crawler-hit endpoint and must not become a model-spawn DoS vector;
+  // any location a real user viewed + shared is already cached by the trajectory route.
+  const OG_CHECKPOINT_YEARS = (() => {
+    const BASELINE = 2025;
+    const current = Math.min(2100, Math.max(BASELINE + 1, new Date().getUTCFullYear()));
+    const five = Array.from({ length: 15 }, (_, i) => 2030 + i * 5).filter((y) => y >= current);
+    return Array.from(new Set([BASELINE, current, ...five])).sort((a, b) => a - b);
+  })();
+
+  async function groundedOgScore(lat: number, lng: number, year: number, scenario: string): Promise<number | null> {
+    try {
+      const latKey = roundCacheKey(lat);
+      const lngKey = roundCacheKey(lng);
+      const scoreAt = async (y: number): Promise<number | null> => {
+        const proj = (await storage.getCachedModelProjection(latKey, lngKey, y, scenario)) as any;
+        if (!proj || projectionScenario(proj) !== scenario) return null;
+        const s = proj?.habitability?.score;
+        return typeof s === "number" && Number.isFinite(s) ? s : null;
+      };
+      const ys = OG_CHECKPOINT_YEARS;
+      const clamped = Math.max(ys[0], Math.min(ys[ys.length - 1], year));
+      const bound = (v: number) => Math.round(Math.max(0, Math.min(100, v)));
+      // Exact checkpoint (the common case — share years are usually checkpoints): use it directly.
+      if (ys.includes(clamped)) { const s = await scoreAt(clamped); return s == null ? null : bound(s); }
+      // Otherwise interpolate between the two cached checkpoints bracketing the year.
+      let lo = ys[0], hi = ys[ys.length - 1];
+      for (let i = 0; i < ys.length - 1; i++) {
+        if (clamped >= ys[i] && clamped <= ys[i + 1]) { lo = ys[i]; hi = ys[i + 1]; break; }
+      }
+      const [sLo, sHi] = await Promise.all([scoreAt(lo), scoreAt(hi)]);
+      if (sLo == null || sHi == null) return null;
+      const t = (clamped - lo) / (hi - lo || 1);
+      return bound(sLo + (sHi - sLo) * t);
+    } catch {
+      return null; // DB down / unexpected -> honest: no number on the card
+    }
+  }
+
+  // GET /api/og?place=&lat=&lng=&year=&scenario= -> 1200x630 PNG.
   // Rendered with satori + @resvg/resvg-wasm (pure JS + WASM, no native deps).
-  // Honesty: the score shown is exactly the value passed in. Missing/invalid
-  // params render a generic branded default card with NO fabricated number.
+  // Honesty: the score is recomputed server-side from the grounded model cache
+  // (groundedOgScore), NEVER read from the URL. Uncached/invalid -> no number.
   app.get("/api/og", async (req, res) => {
     try {
       const params = parseOgParams(req.query as Record<string, string | undefined>);
-      const png = await renderOgPng(params);
+      // Cardinal rule: never trust a client-supplied score — recompute from cache.
+      let grounded: number | null = null;
+      if (
+        typeof params.lat === "number" && typeof params.lng === "number" &&
+        typeof params.year === "number" && typeof params.scenario === "string" &&
+        (CLIMATE_SCENARIOS as readonly string[]).includes(params.scenario)
+      ) {
+        grounded = await groundedOgScore(params.lat, params.lng, params.year, params.scenario);
+      }
+      const png = await renderOgPng({ ...params, score: grounded ?? undefined });
       res
         .status(200)
         .set({
