@@ -10,6 +10,7 @@ import type {
   ScenarioId, CoastCoord, LocationOption, ProjectionPoint, AnalogCandidate, AnalogCatalog,
   CoastalProximityArtifact, CoastalRelevance, ClimateAnalogMatch, ScenarioContrastRow,
   RoadmapItem, ShareStory, LearningPromptAction, LearningPrompt, FreshwaterStress, FireWeather, FloodExposure, CropYield,
+  EnrichmentCoverage, AmocAssessment,
 } from "@/lib/climate-types";
 import {
   lerp, interpScalar, interpOptionalScalar, riskScore, interpArr, nearestPoint, categoryFor,
@@ -50,6 +51,11 @@ export function useClimateApp() {
   const [fireWeather, setFireWeather] = useState<FireWeather | null>(null);
   const [floodRiver, setFloodRiver] = useState<FloodExposure | null>(null);
   const [cropYield, setCropYield] = useState<CropYield | null>(null);
+  // Coverage map + AMOC assessment travel alongside the enrichments so a null
+  // enrichment can still explain itself, and NW-Europe coastal points get the
+  // AMOC/Gulf Stream risk panel. Both optional in the contract.
+  const [coverage, setCoverage] = useState<EnrichmentCoverage | null>(null);
+  const [amoc, setAmoc] = useState<AmocAssessment | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [loadingStep, setLoadingStep] = useState(0);
   const [error, setError] = useState<string | null>(null);
@@ -194,7 +200,7 @@ export function useClimateApp() {
     setShowSuggestions(false);
   };
 
-  const fetchTrajectory = async (targetLocation: LocationOption, scenarioOverride: ScenarioId): Promise<{ points: ProjectionPoint[]; freshwater: FreshwaterStress | null; fireWeather: FireWeather | null; floodRiver: FloodExposure | null; cropYield: CropYield | null }> => {
+  const fetchTrajectory = async (targetLocation: LocationOption, scenarioOverride: ScenarioId): Promise<{ points: ProjectionPoint[]; freshwater: FreshwaterStress | null; fireWeather: FireWeather | null; floodRiver: FloodExposure | null; cropYield: CropYield | null; coverage: EnrichmentCoverage | null; amoc: AmocAssessment | null }> => {
     const response = await fetch("/api/climate-trajectory", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -208,7 +214,17 @@ export function useClimateApp() {
     const data = await response.json();
     if (data.success && data.data?.points?.length) {
       const points = [...data.data.points].sort((a: ProjectionPoint, b: ProjectionPoint) => a.year - b.year);
-      return { points, freshwater: (data.data.freshwater as FreshwaterStress | null) ?? null, fireWeather: (data.data.fireWeather as FireWeather | null) ?? null, floodRiver: (data.data.floodRiver as FloodExposure | null) ?? null, cropYield: (data.data.cropYield as CropYield | null) ?? null };
+      return {
+        points,
+        freshwater: (data.data.freshwater as FreshwaterStress | null) ?? null,
+        fireWeather: (data.data.fireWeather as FireWeather | null) ?? null,
+        floodRiver: (data.data.floodRiver as FloodExposure | null) ?? null,
+        cropYield: (data.data.cropYield as CropYield | null) ?? null,
+        // Coverage + AMOC live at the top level of the response in the final
+        // contract; fall back to data.data.* so either placement degrades fine.
+        coverage: (data.coverage ?? data.data.coverage ?? null) as EnrichmentCoverage | null,
+        amoc: (data.amoc ?? data.data.amoc ?? null) as AmocAssessment | null,
+      };
     }
     throw new Error("Invalid response from climate model.");
   };
@@ -223,6 +239,8 @@ export function useClimateApp() {
     setFireWeather(null);
     setFloodRiver(null);
     setCropYield(null);
+    setCoverage(null);
+    setAmoc(null);
     setScenarioContrast(null);
     setScenarioContrastError(null);
     try {
@@ -232,6 +250,8 @@ export function useClimateApp() {
       setFireWeather(result.fireWeather);
       setFloodRiver(result.floodRiver);
       setCropYield(result.cropYield);
+      setCoverage(result.coverage);
+      setAmoc(result.amoc);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Network error. Please check your connection.");
     } finally {
@@ -278,6 +298,8 @@ export function useClimateApp() {
     setFireWeather(null);
     setFloodRiver(null);
     setCropYield(null);
+    setCoverage(null);
+    setAmoc(null);
     setError(null);
     setShareCopied(false);
     setRawJsonCopied(false);
@@ -596,7 +618,7 @@ export function useClimateApp() {
 
   return {
   locationText, setLocationText, selectedLocation, setSelectedLocation,
-  suggestions, showSuggestions, setShowSuggestions, year, scenario, trajectory, freshwater, fireWeather, floodRiver, cropYield,
+  suggestions, showSuggestions, setShowSuggestions, year, scenario, trajectory, freshwater, fireWeather, floodRiver, cropYield, coverage, amoc,
   birthYear, setBirthYear, prefs, setPrefs, scoredTrajectory, standardSnapshot,
   isLoading, loadingStep, error, exporting, playing, shareCopied, shareStoryCopied,
   shareImageBusy, shareImageSaved, rawJsonCopied, reportSaved, analogCatalog, analogError,

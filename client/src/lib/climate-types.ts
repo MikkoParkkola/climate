@@ -173,6 +173,63 @@ export interface CoastalRelevance {
   distanceKm?: number;
 }
 
+// ── Coverage status (why an enrichment is shown, substituted, or withheld) ──
+// Backend contract: each enrichment may carry a coverageStatus; when the
+// enrichment object itself is null, the same shape may arrive on a top-level
+// coverage map keyed by enrichment. All fields optional so the UI degrades
+// gracefully when the backend has not yet populated them.
+export type CoverageStatusKind =
+  | "available"
+  | "unavailable_scenario"
+  | "unavailable_location"
+  | "withheld";
+
+export interface CoverageNearestScenario {
+  scenario: string;
+  // The full enrichment object for the nearest pathway (same shape as the
+  // top-level freshwater/fireWeather/floodRiver/cropYield). Rendered like a
+  // served value but labeled as a substitution via `note`. Each section casts
+  // to its own enrichment type at the render site.
+  value?: FreshwaterStress | FireWeather | FloodExposure | CropYield | null;
+  note?: string;
+}
+
+export interface CoverageStatus {
+  status: CoverageStatusKind;
+  reason?: string;
+  servedScenario?: string;
+  nearestScenario?: CoverageNearestScenario | null;
+}
+
+// Top-level coverage map (used when the enrichment object is null but the
+// backend still wants to explain the gap). Keys mirror the response fields
+// exactly: freshwater / fireWeather / floodRiver / cropYield.
+export interface EnrichmentCoverage {
+  freshwater?: CoverageStatus | null;
+  fireWeather?: CoverageStatus | null;
+  floodRiver?: CoverageStatus | null;
+  cropYield?: CoverageStatus | null;
+}
+
+// AMOC / Gulf Stream qualitative risk assessment (IPCC AR6 + literature).
+// Deliberately not a local number — bounded, citation-backed regional context.
+export interface AmocCitation {
+  sourceId?: string;
+  title?: string;
+  doi?: string;
+  url?: string;
+  finding?: string;
+}
+
+export interface AmocAssessment {
+  regionRelevant: boolean;
+  status?: string;
+  weakeningAssessment?: string;
+  collapseRisk?: string;
+  europeImpact?: string;
+  citations?: Array<AmocCitation | string>;
+}
+
 export interface FreshwaterHorizon {
   year: number;
   category: number | null;
@@ -197,6 +254,7 @@ export interface FreshwaterStress {
   horizons: FreshwaterHorizon[];
   method: string;
   caveats: string[];
+  coverageStatus?: CoverageStatus | null;
 }
 
 export interface FireWeatherHorizon {
@@ -221,6 +279,7 @@ export interface FireWeather {
   horizons: FireWeatherHorizon[];
   method: string;
   caveats: string[];
+  coverageStatus?: CoverageStatus | null;
 }
 
 export interface FloodHorizon {
@@ -245,6 +304,7 @@ export interface FloodExposure {
   horizons: FloodHorizon[];
   method: string;
   caveats: string[];
+  coverageStatus?: CoverageStatus | null;
 }
 
 export interface CropHorizon {
@@ -273,6 +333,7 @@ export interface CropYield {
   crops: CropSeries[];
   method: string;
   caveats: string[];
+  coverageStatus?: CoverageStatus | null;
 }
 
 export interface ClimateAnalogMatch {

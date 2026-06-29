@@ -1,4 +1,4 @@
-import { GitCompare, Loader2, Download, Search, MapPin, ArrowLeft, Play, Pause, ShieldCheck, ExternalLink, Share2, Check, Wind, ClipboardList, TrendingUp, Lightbulb } from "lucide-react";
+import { GitCompare, Loader2, Download, Search, MapPin, ArrowLeft, Play, Pause, ShieldCheck, ExternalLink, Share2, Check, Wind, ClipboardList, TrendingUp, Lightbulb, Waves, AlertTriangle } from "lucide-react";
 import GuidedClimateExplainer from "@/components/guided-climate-explainer";
 import ScenarioSmallMultiples, { type ScenarioSmallMultipleMetric } from "@/components/scenario-small-multiples";
 import {
@@ -16,6 +16,8 @@ import {
 } from "@/components/climate-charts";
 
 import type { ClimateAppVM } from "@/hooks/use-climate-app";
+import type { FreshwaterStress, FireWeather, FloodExposure, CropYield } from "@/lib/climate-types";
+import { EnrichmentEmptyState, SubstitutionNote } from "@/components/enrichment-coverage";
 
 // Aqueduct water-stress category (-1 arid .. 4 extremely high) -> theme colour.
 function freshwaterCategoryColor(category: number | null): string {
@@ -34,7 +36,7 @@ function freshwaterCategoryColor(category: number | null): string {
 export default function ClimateResultSectionsTop({ vm }: { vm: ClimateAppVM }) {
   const {
   locationText, setLocationText, selectedLocation, setSelectedLocation,
-  suggestions, showSuggestions, setShowSuggestions, year, scenario, trajectory, freshwater, fireWeather, floodRiver, cropYield,
+  suggestions, showSuggestions, setShowSuggestions, year, scenario, trajectory, freshwater, fireWeather, floodRiver, cropYield, coverage, amoc,
   isLoading, loadingStep, error, exporting, playing, shareCopied, shareStoryCopied,
   shareImageBusy, shareImageSaved, rawJsonCopied, reportSaved, analogCatalog, analogError,
   coastalArtifact, coastalArtifactError, scenarioContrast, scenarioContrastLoading,
@@ -50,20 +52,37 @@ export default function ClimateResultSectionsTop({ vm }: { vm: ClimateAppVM }) {
   } = vm;
   const placeName = selectedLocation?.name?.split(",")[0] ?? "This location";
   const heatDelta = d!.heatDays - d!.baseHeatDays;
-  // Freshwater horizon nearest the displayed year (Aqueduct horizons are 2030/2050/2080).
-  const fwActive = freshwater
-    ? freshwater.horizons.reduce((best, h) => (Math.abs(h.year - displayYear) < Math.abs(best.year - displayYear) ? h : best))
-    : null;
-  // Fire-weather horizon nearest the displayed year (Quilcaille horizons are 2030/2050/2080).
-  const fireActive = fireWeather
-    ? fireWeather.horizons.reduce((best, h) => (Math.abs(h.year - displayYear) < Math.abs(best.year - displayYear) ? h : best))
-    : null;
-  // Flood horizon nearest the displayed year (Aqueduct horizons are 2030/2050/2080).
-  const floodActive = floodRiver
-    ? floodRiver.horizons.reduce((best, h) => (Math.abs(h.year - displayYear) < Math.abs(best.year - displayYear) ? h : best))
-    : null;
   const nextTip = tipping.find((t) => t.year != null && (t.year as number) > displayYear);
   const crossedTips = tipping.filter((t) => t.year != null && (t.year as number) <= displayYear).length;
+  // Resolve each enrichment's coverage from the top-level coverage map (exact
+  // keys: freshwater / fireWeather / floodRiver / cropYield), falling back to a
+  // status carried on the enrichment object. Optional-chaining throughout.
+  const fwCoverage = coverage?.freshwater ?? freshwater?.coverageStatus ?? null;
+  const fireCoverage = coverage?.fireWeather ?? fireWeather?.coverageStatus ?? null;
+  const floodCoverage = coverage?.floodRiver ?? floodRiver?.coverageStatus ?? null;
+  const cropCoverage = coverage?.cropYield ?? cropYield?.coverageStatus ?? null;
+  // When a scenario has no served value but the backend offers the nearest
+  // pathway's full enrichment object, render that as a clearly-labeled
+  // substitute. "shown" is the object each section actually renders.
+  const fwShown = freshwater ?? (fwCoverage?.nearestScenario?.value as FreshwaterStress | null | undefined) ?? null;
+  const fireShown = fireWeather ?? (fireCoverage?.nearestScenario?.value as FireWeather | null | undefined) ?? null;
+  const floodShown = floodRiver ?? (floodCoverage?.nearestScenario?.value as FloodExposure | null | undefined) ?? null;
+  const cropShown = cropYield ?? (cropCoverage?.nearestScenario?.value as CropYield | null | undefined) ?? null;
+  const fwIsSub = !freshwater && !!fwShown;
+  const fireIsSub = !fireWeather && !!fireShown;
+  const floodIsSub = !floodRiver && !!floodShown;
+  const cropIsSub = !cropYield && !!cropShown;
+  // Active horizon nearest the displayed year, computed from the shown object
+  // (Aqueduct / Quilcaille horizons are 2030/2050/2080).
+  const fwActive = fwShown
+    ? fwShown.horizons.reduce((best, h) => (Math.abs(h.year - displayYear) < Math.abs(best.year - displayYear) ? h : best))
+    : null;
+  const fireActive = fireShown
+    ? fireShown.horizons.reduce((best, h) => (Math.abs(h.year - displayYear) < Math.abs(best.year - displayYear) ? h : best))
+    : null;
+  const floodActive = floodShown
+    ? floodShown.horizons.reduce((best, h) => (Math.abs(h.year - displayYear) < Math.abs(best.year - displayYear) ? h : best))
+    : null;
 
   return (
     <>
@@ -357,6 +376,91 @@ export default function ClimateResultSectionsTop({ vm }: { vm: ClimateAppVM }) {
           </div>
         )}
 
+        {/* Sea-level rise — promoted to a prominent widget for coastal points.
+            Previously this only appeared as a buried "context" line, which made
+            it easy to miss for exactly the coastal cities it matters most to. */}
+        {trajectory && d!.seaLevelApplicable && (
+          <div style={{ ...card, padding: 18, marginBottom: 14, borderLeft: `3px solid ${CYAN}` }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, flexWrap: "wrap", marginBottom: 10 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <Waves style={{ width: 15, height: 15, color: CYAN }} />
+                <h2 style={{ fontSize: 12, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.07em", color: MUTED }}>Sea-level rise · IPCC AR6 regional</h2>
+              </div>
+              {coastalRelevance?.shortLabel && (
+                <span style={{ fontSize: 10, color: MUTED, border: `1px solid ${BORDER}`, borderRadius: 999, padding: "2px 8px" }}>{coastalRelevance.shortLabel}</span>
+              )}
+            </div>
+            <div style={{ display: "flex", alignItems: "baseline", gap: 12, flexWrap: "wrap", marginBottom: 4 }}>
+              <span style={{ fontSize: 30, fontWeight: 800, color: CYAN }}>+{d!.seaLevel} cm</span>
+              <span style={{ fontSize: 11, color: MUTED }}>regional rise by {displayYear}</span>
+              {d!.seaLow != null && d!.seaHigh != null && (
+                <span style={{ fontSize: 12, fontWeight: 700, color: "rgba(255,255,255,0.7)" }}>
+                  likely range {Math.round(d!.seaLow)}–{Math.round(d!.seaHigh)} cm
+                </span>
+              )}
+            </div>
+            <p style={{ margin: "0 0 10px", fontSize: 12.5, lineHeight: 1.58, color: "rgba(255,255,255,0.78)" }}>
+              {coastalRelevance?.summary ?? "Regional AR6 sea-level rise for the nearest coast."} Local exposure still depends on elevation, tides, subsidence, defenses, rivers, drainage, and storm surge — this is a regional figure, not a parcel-level coastal-flood assessment.
+            </p>
+            {floodRiver && floodActive && floodActive.floodedFraction > 0.005 && (
+              <div style={{ display: "inline-flex", alignItems: "center", gap: 8, padding: "6px 11px", borderRadius: 8, border: `1px solid ${CYAN}33`, background: `${CYAN}10`, marginBottom: 8 }}>
+                <span style={{ fontSize: 10, color: MUTED, textTransform: "uppercase", letterSpacing: "0.05em" }}>River-flood exposure</span>
+                <span style={{ fontSize: 14, fontWeight: 800, color: CYAN }}>{(floodActive.floodedFraction * 100).toFixed(floodActive.floodedFraction >= 0.1 ? 0 : 1)}%</span>
+                <span style={{ fontSize: 10.5, color: MUTED }}>of the surrounding ~10 km · see the river-flood section below</span>
+              </div>
+            )}
+            <ReceiptDetails
+              label="source"
+              text={`Regional AR6 sea-level rise via the registered NASA/IPCC AR6 source trail. ${coastalRelevance?.receipt ?? "Coastal relevance is a coarse Natural Earth nearest-coast screen, not a local exposure model."}`}
+            />
+          </div>
+        )}
+
+        {/* AMOC / Gulf Stream risk panel — qualitative IPCC AR6 + literature
+            context for NW Europe and similar regions. Not a local number. */}
+        {amoc?.regionRelevant && (
+          <div style={{ ...card, padding: 18, marginBottom: 14, borderLeft: `3px solid ${PURPLE}` }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, flexWrap: "wrap", marginBottom: 10 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <AlertTriangle style={{ width: 15, height: 15, color: PURPLE }} />
+                <h2 style={{ fontSize: 12, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.07em", color: MUTED }}>AMOC / Gulf Stream risk · IPCC AR6 + literature</h2>
+              </div>
+              <span style={{ fontSize: 9.5, color: PURPLE, border: `1px solid ${PURPLE}44`, borderRadius: 999, padding: "2px 8px", textTransform: "uppercase", letterSpacing: "0.05em" }}>qualitative context</span>
+            </div>
+            {amoc.status && (
+              <p style={{ margin: "0 0 10px", fontSize: 14, fontWeight: 700, lineHeight: 1.5, color: "white" }}>{amoc.status}</p>
+            )}
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 10, marginBottom: 10 }}>
+              {[
+                { label: "Weakening assessment", text: amoc.weakeningAssessment },
+                { label: "Collapse risk", text: amoc.collapseRisk },
+                { label: "Europe impact — cooling amid warming", text: amoc.europeImpact },
+              ].filter((item) => item.text).map((item) => (
+                <div key={item.label} style={{ border: `1px solid ${BORDER}`, borderRadius: 8, padding: 11, background: "rgba(255,255,255,0.032)" }}>
+                  <div style={{ fontSize: 9, color: PURPLE, textTransform: "uppercase", letterSpacing: "0.06em", fontWeight: 800, marginBottom: 5 }}>{item.label}</div>
+                  <p style={{ margin: 0, fontSize: 12.5, lineHeight: 1.55, color: "rgba(255,255,255,0.82)" }}>{item.text}</p>
+                </div>
+              ))}
+            </div>
+            <p style={{ margin: "0 0 8px", fontSize: 11, lineHeight: 1.55, color: MUTED }}>
+              This is a real, honestly-bounded regional risk, not a local temperature correction: fupit applies no AMOC-driven cooling or warming number, no collapse date, and no deterministic local impact. A weakening circulation could partly offset greenhouse warming over NW Europe while raining disruption on storms, sea level, and rainfall patterns elsewhere.
+            </p>
+            {amoc.citations && amoc.citations.length > 0 && (
+              <ul style={{ margin: "8px 0 0", paddingLeft: 18, fontSize: 10.5, lineHeight: 1.5, color: MUTED }}>
+                {amoc.citations.map((c, i) => {
+                  const text = typeof c === "string" ? c : [c.title, c.finding, c.sourceId].filter(Boolean).join(" — ");
+                  const url = typeof c === "string" ? undefined : (c.url ?? (c.doi ? `https://doi.org/${c.doi}` : undefined));
+                  return (
+                    <li key={i}>
+                      {url ? <a href={url} target="_blank" rel="noopener noreferrer" style={{ color: MUTED, textDecoration: "underline", textUnderlineOffset: 2 }}>{text || url}</a> : text}
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+          </div>
+        )}
+
         {/* Freshwater availability — grounded WRI Aqueduct 4.0 sub-basin water stress */}
         {trajectory && (
           <div style={{ ...card, padding: 18, marginBottom: 14, borderLeft: `3px solid ${BLUE}` }}>
@@ -364,13 +468,14 @@ export default function ClimateResultSectionsTop({ vm }: { vm: ClimateAppVM }) {
               <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                 <h2 style={{ fontSize: 12, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.07em", color: MUTED }}>Freshwater availability · WRI Aqueduct 4.0</h2>
               </div>
-              {freshwater && (
-                <span style={{ fontSize: 10, color: MUTED }}>{freshwater.aqueductScenarioLabel} pathway</span>
+              {fwShown && (
+                <span style={{ fontSize: 10, color: MUTED }}>{fwShown.aqueductScenarioLabel} pathway{fwIsSub ? " · substitute" : ""}</span>
               )}
             </div>
 
-            {freshwater && fwActive ? (
+            {fwShown && fwActive ? (
               <>
+                {fwIsSub && <SubstitutionNote scenario={fwShown.aqueductScenarioLabel} note={fwCoverage?.nearestScenario?.note} servedScenario={fwCoverage?.servedScenario} accent={BLUE} />}
                 <div style={{ display: "flex", alignItems: "baseline", gap: 10, flexWrap: "wrap", marginBottom: 4 }}>
                   <span style={{ fontSize: 22, fontWeight: 800, color: freshwaterCategoryColor(fwActive.category) }}>
                     {fwActive.label ?? "No data"}
@@ -378,11 +483,11 @@ export default function ClimateResultSectionsTop({ vm }: { vm: ClimateAppVM }) {
                   <span style={{ fontSize: 11, color: MUTED }}>water stress · {fwActive.year} horizon{fwActive.year !== displayYear ? ` (nearest to ${displayYear})` : ""}</span>
                 </div>
                 <p style={{ margin: "0 0 10px", fontSize: 12.5, lineHeight: 1.58, color: "rgba(255,255,255,0.78)" }}>
-                  Annual water withdrawal versus available supply for the surrounding sub-basin under the {freshwater.aqueductScenarioLabel} scenario.
+                  Annual water withdrawal versus available supply for the surrounding sub-basin under the {fwShown.aqueductScenarioLabel} scenario.
                   This is a basin-level prioritization screen, not a guarantee for your exact address.
                 </p>
                 <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 8 }}>
-                  {freshwater.horizons.map((h) => (
+                  {fwShown.horizons.map((h) => (
                     <div key={h.year} style={{ flex: "1 1 90px", border: `1px solid ${BORDER}`, borderRadius: 8, padding: "7px 9px" }}>
                       <div style={{ fontSize: 9, color: MUTED, textTransform: "uppercase", letterSpacing: "0.05em" }}>{h.year}</div>
                       <div style={{ fontSize: 12, fontWeight: 800, color: freshwaterCategoryColor(h.category), lineHeight: 1.3 }}>{h.label ?? "No data"}</div>
@@ -392,19 +497,19 @@ export default function ClimateResultSectionsTop({ vm }: { vm: ClimateAppVM }) {
                 </div>
                 <ReceiptDetails
                   label="source"
-                  text={`${freshwater.attribution} ${freshwater.method} Sub-basin pfaf_id ${freshwater.pfafId ?? "n/a"}${freshwater.fallbackRings > 0 ? ` (nearest classified sub-basin, ${freshwater.fallbackRings} cell(s) away)` : ""}. License: attribution (WRI requests proper attribution).`}
+                  text={`${fwShown.attribution} ${fwShown.method} Sub-basin pfaf_id ${fwShown.pfafId ?? "n/a"}${fwShown.fallbackRings > 0 ? ` (nearest classified sub-basin, ${fwShown.fallbackRings} cell(s) away)` : ""}. License: attribution (WRI requests proper attribution).`}
                 />
                 <ul style={{ margin: "8px 0 0", paddingLeft: 18, fontSize: 10.5, lineHeight: 1.5, color: MUTED }}>
-                  {freshwater.caveats.map((caveat) => <li key={caveat}>{caveat}</li>)}
+                  {fwShown.caveats.map((caveat) => <li key={caveat}>{caveat}</li>)}
                 </ul>
               </>
             ) : (
-              <p style={{ margin: 0, fontSize: 12.5, lineHeight: 1.58, color: MUTED }}>
-                Freshwater water-stress is not shown here.{" "}
-                {scenario === "ssp245"
-                  ? "SSP2-4.5 has no matching WRI Aqueduct scenario, so no value is shown rather than guessing one."
+              <EnrichmentEmptyState
+                coverage={fwCoverage}
+                fallback={scenario === "ssp245"
+                  ? "Freshwater water-stress is not published for SSP2-4.5 by WRI Aqueduct, so no value is shown rather than guessing one."
                   : "WRI Aqueduct has no classified sub-basin for this point (for example open ocean), so no value is shown rather than guessing one."}
-              </p>
+              />
             )}
           </div>
         )}
@@ -416,13 +521,14 @@ export default function ClimateResultSectionsTop({ vm }: { vm: ClimateAppVM }) {
               <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                 <h2 style={{ fontSize: 12, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.07em", color: MUTED }}>Fire weather · Quilcaille 2023 (CMIP6 FWI)</h2>
               </div>
-              {fireWeather && (
-                <span style={{ fontSize: 10, color: MUTED }}>{fireWeather.scenarioLabel} · {fireWeather.modelCount}-model mean</span>
+              {fireShown && (
+                <span style={{ fontSize: 10, color: MUTED }}>{fireShown.scenarioLabel} · {fireShown.modelCount}-model mean{fireIsSub ? " · substitute" : ""}</span>
               )}
             </div>
 
-            {fireWeather && fireActive ? (
+            {fireShown && fireActive ? (
               <>
+                {fireIsSub && <SubstitutionNote scenario={fireShown.scenarioLabel} note={fireCoverage?.nearestScenario?.note} servedScenario={fireCoverage?.servedScenario} accent={ORANGE} />}
                 <div style={{ display: "flex", alignItems: "baseline", gap: 10, flexWrap: "wrap", marginBottom: 4 }}>
                   <span style={{ fontSize: 22, fontWeight: 800, color: ORANGE }}>
                     {fireActive.extremeFireWeatherDays != null ? `${fireActive.extremeFireWeatherDays.toFixed(0)} days/yr` : "No data"}
@@ -430,11 +536,11 @@ export default function ClimateResultSectionsTop({ vm }: { vm: ClimateAppVM }) {
                   <span style={{ fontSize: 11, color: MUTED }}>extreme fire-weather days · {fireActive.year} horizon{fireActive.year !== displayYear ? ` (nearest to ${displayYear})` : ""}</span>
                 </div>
                 <p style={{ margin: "0 0 10px", fontSize: 12.5, lineHeight: 1.58, color: "rgba(255,255,255,0.78)" }}>
-                  Multi-model ensemble-mean fire-weather indicators for the surrounding ~250 km cell under the {fireWeather.scenarioLabel} pathway.
+                  Multi-model ensemble-mean fire-weather indicators for the surrounding ~250 km cell under the {fireShown.scenarioLabel} pathway.
                   This is a coarse weather screen for fire-conducive conditions, not a measure of actual fire risk, fuel, or ignition at your address.
                 </p>
                 <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 8 }}>
-                  {fireWeather.horizons.map((h) => (
+                  {fireShown.horizons.map((h) => (
                     <div key={h.year} style={{ flex: "1 1 90px", border: `1px solid ${BORDER}`, borderRadius: 8, padding: "7px 9px" }}>
                       <div style={{ fontSize: 9, color: MUTED, textTransform: "uppercase", letterSpacing: "0.05em" }}>{h.year}</div>
                       <div style={{ fontSize: 12, fontWeight: 800, color: ORANGE, lineHeight: 1.3 }}>{h.extremeFireWeatherDays != null ? `${h.extremeFireWeatherDays.toFixed(0)} days` : "No data"}</div>
@@ -444,16 +550,17 @@ export default function ClimateResultSectionsTop({ vm }: { vm: ClimateAppVM }) {
                 </div>
                 <ReceiptDetails
                   label="source"
-                  text={`${fireWeather.attribution} ${fireWeather.method}${fireWeather.fallbackRings > 0 ? ` Nearest land cell, ${fireWeather.fallbackRings} cell(s) away.` : ""} License: CC-BY 4.0.`}
+                  text={`${fireShown.attribution} ${fireShown.method}${fireShown.fallbackRings > 0 ? ` Nearest land cell, ${fireShown.fallbackRings} cell(s) away.` : ""} License: CC-BY 4.0.`}
                 />
                 <ul style={{ margin: "8px 0 0", paddingLeft: 18, fontSize: 10.5, lineHeight: 1.5, color: MUTED }}>
-                  {fireWeather.caveats.map((caveat) => <li key={caveat}>{caveat}</li>)}
+                  {fireShown.caveats.map((caveat) => <li key={caveat}>{caveat}</li>)}
                 </ul>
               </>
             ) : (
-              <p style={{ margin: 0, fontSize: 12.5, lineHeight: 1.58, color: MUTED }}>
-                Fire-weather is not shown here. The Quilcaille fire-weather index covers land only and the four SSP pathways; over open ocean no value is shown rather than guessing one.
-              </p>
+              <EnrichmentEmptyState
+                coverage={fireCoverage}
+                fallback="Fire-weather is not shown here. The Quilcaille fire-weather index covers land only and the four SSP pathways; over open ocean no value is shown rather than guessing one."
+              />
             )}
           </div>
         )}
@@ -465,13 +572,14 @@ export default function ClimateResultSectionsTop({ vm }: { vm: ClimateAppVM }) {
               <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                 <h2 style={{ fontSize: 12, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.07em", color: MUTED }}>River-flood exposure · WRI Aqueduct Floods</h2>
               </div>
-              {floodRiver && (
-                <span style={{ fontSize: 10, color: MUTED }}>{floodRiver.aqueductScenarioLabel} · 1-in-100-year</span>
+              {floodShown && (
+                <span style={{ fontSize: 10, color: MUTED }}>{floodShown.aqueductScenarioLabel} · 1-in-100-year{floodIsSub ? " · substitute" : ""}</span>
               )}
             </div>
 
-            {floodRiver && floodActive ? (
+            {floodShown && floodActive ? (
               <>
+                {floodIsSub && <SubstitutionNote scenario={floodShown.aqueductScenarioLabel} note={floodCoverage?.nearestScenario?.note} servedScenario={floodCoverage?.servedScenario} accent={CYAN} />}
                 <div style={{ display: "flex", alignItems: "baseline", gap: 10, flexWrap: "wrap", marginBottom: 4 }}>
                   <span style={{ fontSize: 22, fontWeight: 800, color: floodActive.floodedFraction > 0.01 ? CYAN : MUTED }}>
                     {(floodActive.floodedFraction * 100).toFixed(floodActive.floodedFraction >= 0.1 ? 0 : 1)}%
@@ -484,7 +592,7 @@ export default function ClimateResultSectionsTop({ vm }: { vm: ClimateAppVM }) {
                     : <>This area shows little or no modeled 1-in-100-year river-flood exposure. Local drainage, smaller streams, and coastal surge are not captured here.</>}
                 </p>
                 <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 8 }}>
-                  {floodRiver.horizons.map((h) => (
+                  {floodShown.horizons.map((h) => (
                     <div key={h.year} style={{ flex: "1 1 90px", border: `1px solid ${BORDER}`, borderRadius: 8, padding: "7px 9px" }}>
                       <div style={{ fontSize: 9, color: MUTED, textTransform: "uppercase", letterSpacing: "0.05em" }}>{h.year}</div>
                       <div style={{ fontSize: 12, fontWeight: 800, color: h.floodedFraction > 0.01 ? CYAN : MUTED, lineHeight: 1.3 }}>{(h.floodedFraction * 100).toFixed(h.floodedFraction >= 0.1 ? 0 : 1)}% flooded</div>
@@ -494,16 +602,17 @@ export default function ClimateResultSectionsTop({ vm }: { vm: ClimateAppVM }) {
                 </div>
                 <ReceiptDetails
                   label="source"
-                  text={`${floodRiver.attribution} ${floodRiver.method} License: attribution (WRI requests proper attribution).`}
+                  text={`${floodShown.attribution} ${floodShown.method} License: attribution (WRI requests proper attribution).`}
                 />
                 <ul style={{ margin: "8px 0 0", paddingLeft: 18, fontSize: 10.5, lineHeight: 1.5, color: MUTED }}>
-                  {floodRiver.caveats.map((caveat) => <li key={caveat}>{caveat}</li>)}
+                  {floodShown.caveats.map((caveat) => <li key={caveat}>{caveat}</li>)}
                 </ul>
               </>
             ) : (
-              <p style={{ margin: 0, fontSize: 12.5, lineHeight: 1.58, color: MUTED }}>
-                River-flood exposure is not shown here. WRI Aqueduct Floods covers RCP4.5 (shown for SSP2-4.5) and RCP8.5 (shown for SSP5-8.5); SSP1-2.6 and SSP3-7.0 have no matching Aqueduct scenario, so no value is shown rather than guessing one.
-              </p>
+              <EnrichmentEmptyState
+                coverage={floodCoverage}
+                fallback="River-flood exposure is not shown here. WRI Aqueduct Floods covers RCP4.5 (shown for SSP2-4.5) and RCP8.5 (shown for SSP5-8.5); SSP1-2.6 and SSP3-7.0 have no matching Aqueduct scenario, so no value is shown rather than guessing one."
+              />
             )}
           </div>
         )}
@@ -515,19 +624,20 @@ export default function ClimateResultSectionsTop({ vm }: { vm: ClimateAppVM }) {
               <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                 <h2 style={{ fontSize: 12, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.07em", color: MUTED }}>Crop yields · ISIMIP GGCMI</h2>
               </div>
-              {cropYield && (
-                <span style={{ fontSize: 10, color: MUTED }}>{cropYield.scenarioLabel} · vs {cropYield.baselinePeriod}</span>
+              {cropShown && (
+                <span style={{ fontSize: 10, color: MUTED }}>{cropShown.scenarioLabel} · vs {cropShown.baselinePeriod}{cropIsSub ? " · substitute" : ""}</span>
               )}
             </div>
 
-            {cropYield ? (
+            {cropShown ? (
               <>
+                {cropIsSub && <SubstitutionNote scenario={cropShown.scenarioLabel} note={cropCoverage?.nearestScenario?.note} servedScenario={cropCoverage?.servedScenario} accent={GREEN} />}
                 <p style={{ margin: "0 0 10px", fontSize: 12.5, lineHeight: 1.58, color: "rgba(255,255,255,0.78)" }}>
-                  Modeled change in rainfed yield of staple crops for the surrounding 0.5° cell under the {cropYield.scenarioLabel} pathway, as a multi-model ensemble mean.
+                  Modeled change in rainfed yield of staple crops for the surrounding 0.5° cell under the {cropShown.scenarioLabel} pathway, as a multi-model ensemble mean.
                   This is a model-ensemble crop signal, not a field-level forecast for a specific farm.
                 </p>
                 <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 8 }}>
-                  {cropYield.crops.map((cropSeries) => {
+                  {cropShown.crops.map((cropSeries) => {
                     const active = cropSeries.horizons.reduce((best, h) => (Math.abs(h.year - displayYear) < Math.abs(best.year - displayYear) ? h : best));
                     const pct = active.yieldChangePercent;
                     const color = pct == null ? MUTED : pct >= 2 ? GREEN : pct <= -2 ? RED : AMBER;
@@ -544,19 +654,19 @@ export default function ClimateResultSectionsTop({ vm }: { vm: ClimateAppVM }) {
                 </div>
                 <ReceiptDetails
                   label="source"
-                  text={`${cropYield.attribution} ${cropYield.method} License: CC0 1.0 (public domain).`}
+                  text={`${cropShown.attribution} ${cropShown.method} License: CC0 1.0 (public domain).`}
                 />
                 <ul style={{ margin: "8px 0 0", paddingLeft: 18, fontSize: 10.5, lineHeight: 1.5, color: MUTED }}>
-                  {cropYield.caveats.map((caveat) => <li key={caveat}>{caveat}</li>)}
+                  {cropShown.caveats.map((caveat) => <li key={caveat}>{caveat}</li>)}
                 </ul>
               </>
             ) : (
-              <p style={{ margin: 0, fontSize: 12.5, lineHeight: 1.58, color: MUTED }}>
-                Crop-yield change is not shown here.{" "}
-                {scenario === "ssp245"
-                  ? "SSP2-4.5 is not in the ISIMIP GGCMI phase 3 core protocol, so no value is shown rather than guessing one."
+              <EnrichmentEmptyState
+                coverage={cropCoverage}
+                fallback={scenario === "ssp245"
+                  ? "Crop-yield change is not in the ISIMIP GGCMI phase 3 core protocol for SSP2-4.5, so no value is shown rather than guessing one."
                   : "No staple crop is grown in the ISIMIP GGCMI cell for this point (for example open ocean or desert), so no value is shown rather than guessing one."}
-              </p>
+              />
             )}
           </div>
         )}

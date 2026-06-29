@@ -3,6 +3,7 @@ import { GitCompare, Loader2, Search, MapPin } from "lucide-react";
 import {
   ACCENT, BORDER, CARD, MUTED, RED, SCENARIOS, DEFAULT_SCENARIO,
   DEFAULT_SCENARIO_EXPLANATION, DEFAULT_SCENARIO_POLICY_VERSION, scenarioOptionLabel,
+  CURRENT_POLICIES_BAND,
   CHECKPOINTS, BASELINE_YEAR, CURRENT_FORECAST_YEAR, MAX_YEAR,
 } from "@/lib/climate-constants";
 import { parseScenario } from "@/lib/climate-helpers";
@@ -160,7 +161,7 @@ export default function ClimateLanding({
                 disabled={isLoading}
                 style={{ flex: "0 0 132px", border: `1px solid ${BORDER}`, borderRadius: 7, background: "rgba(8,11,18,0.94)", color: "white", padding: "7px 9px", fontSize: 13, fontWeight: 700, outline: "none" }}
               >
-                {SCENARIOS.map((s) => <option key={s.id} value={s.id}>{scenarioOptionLabel(s)}</option>)}
+                {SCENARIOS.map((s) => <option key={s.id} value={s.id} title={s.realism}>{scenarioOptionLabel(s)}</option>)}
               </select>
               <span style={{ color: MUTED, fontSize: 12, lineHeight: 1.35 }}>
                 {selectedScenario.caption} The shared forecast URL keeps this scenario.
@@ -168,6 +169,7 @@ export default function ClimateLanding({
               {scenario === DEFAULT_SCENARIO && (
                 <ReceiptDetails label="why default" text={`${DEFAULT_SCENARIO_EXPLANATION} Version: ${DEFAULT_SCENARIO_POLICY_VERSION}.`} />
               )}
+              <ReceiptDetails label="current policies" text={CURRENT_POLICIES_BAND} />
             </div>
           </details>
 
