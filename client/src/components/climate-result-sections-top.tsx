@@ -34,7 +34,7 @@ function freshwaterCategoryColor(category: number | null): string {
 export default function ClimateResultSectionsTop({ vm }: { vm: ClimateAppVM }) {
   const {
   locationText, setLocationText, selectedLocation, setSelectedLocation,
-  suggestions, showSuggestions, setShowSuggestions, year, scenario, trajectory, freshwater,
+  suggestions, showSuggestions, setShowSuggestions, year, scenario, trajectory, freshwater, fireWeather,
   isLoading, loadingStep, error, exporting, playing, shareCopied, shareStoryCopied,
   shareImageBusy, shareImageSaved, rawJsonCopied, reportSaved, analogCatalog, analogError,
   coastalArtifact, coastalArtifactError, scenarioContrast, scenarioContrastLoading,
@@ -53,6 +53,10 @@ export default function ClimateResultSectionsTop({ vm }: { vm: ClimateAppVM }) {
   // Freshwater horizon nearest the displayed year (Aqueduct horizons are 2030/2050/2080).
   const fwActive = freshwater
     ? freshwater.horizons.reduce((best, h) => (Math.abs(h.year - displayYear) < Math.abs(best.year - displayYear) ? h : best))
+    : null;
+  // Fire-weather horizon nearest the displayed year (Quilcaille horizons are 2030/2050/2080).
+  const fireActive = fireWeather
+    ? fireWeather.horizons.reduce((best, h) => (Math.abs(h.year - displayYear) < Math.abs(best.year - displayYear) ? h : best))
     : null;
   const nextTip = tipping.find((t) => t.year != null && (t.year as number) > displayYear);
   const crossedTips = tipping.filter((t) => t.year != null && (t.year as number) <= displayYear).length;
@@ -396,6 +400,55 @@ export default function ClimateResultSectionsTop({ vm }: { vm: ClimateAppVM }) {
                 {scenario === "ssp245"
                   ? "SSP2-4.5 has no matching WRI Aqueduct scenario, so no value is shown rather than guessing one."
                   : "WRI Aqueduct has no classified sub-basin for this point (for example open ocean), so no value is shown rather than guessing one."}
+              </p>
+            )}
+          </div>
+        )}
+
+        {/* Fire weather — grounded Quilcaille 2023 CMIP6 Fire Weather Index */}
+        {trajectory && (
+          <div style={{ ...card, padding: 18, marginBottom: 14, borderLeft: `3px solid ${ORANGE}` }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, flexWrap: "wrap", marginBottom: 12 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <h2 style={{ fontSize: 12, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.07em", color: MUTED }}>Fire weather · Quilcaille 2023 (CMIP6 FWI)</h2>
+              </div>
+              {fireWeather && (
+                <span style={{ fontSize: 10, color: MUTED }}>{fireWeather.scenarioLabel} · {fireWeather.modelCount}-model mean</span>
+              )}
+            </div>
+
+            {fireWeather && fireActive ? (
+              <>
+                <div style={{ display: "flex", alignItems: "baseline", gap: 10, flexWrap: "wrap", marginBottom: 4 }}>
+                  <span style={{ fontSize: 22, fontWeight: 800, color: ORANGE }}>
+                    {fireActive.extremeFireWeatherDays != null ? `${fireActive.extremeFireWeatherDays.toFixed(0)} days/yr` : "No data"}
+                  </span>
+                  <span style={{ fontSize: 11, color: MUTED }}>extreme fire-weather days · {fireActive.year} horizon{fireActive.year !== displayYear ? ` (nearest to ${displayYear})` : ""}</span>
+                </div>
+                <p style={{ margin: "0 0 10px", fontSize: 12.5, lineHeight: 1.58, color: "rgba(255,255,255,0.78)" }}>
+                  Multi-model ensemble-mean fire-weather indicators for the surrounding ~250 km cell under the {fireWeather.scenarioLabel} pathway.
+                  This is a coarse weather screen for fire-conducive conditions, not a measure of actual fire risk, fuel, or ignition at your address.
+                </p>
+                <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 8 }}>
+                  {fireWeather.horizons.map((h) => (
+                    <div key={h.year} style={{ flex: "1 1 90px", border: `1px solid ${BORDER}`, borderRadius: 8, padding: "7px 9px" }}>
+                      <div style={{ fontSize: 9, color: MUTED, textTransform: "uppercase", letterSpacing: "0.05em" }}>{h.year}</div>
+                      <div style={{ fontSize: 12, fontWeight: 800, color: ORANGE, lineHeight: 1.3 }}>{h.extremeFireWeatherDays != null ? `${h.extremeFireWeatherDays.toFixed(0)} days` : "No data"}</div>
+                      {h.fireSeasonLengthDays != null && <div style={{ fontSize: 9.5, color: MUTED, marginTop: 2 }}>season {h.fireSeasonLengthDays.toFixed(0)} days</div>}
+                    </div>
+                  ))}
+                </div>
+                <ReceiptDetails
+                  label="source"
+                  text={`${fireWeather.attribution} ${fireWeather.method}${fireWeather.fallbackRings > 0 ? ` Nearest land cell, ${fireWeather.fallbackRings} cell(s) away.` : ""} License: CC-BY 4.0.`}
+                />
+                <ul style={{ margin: "8px 0 0", paddingLeft: 18, fontSize: 10.5, lineHeight: 1.5, color: MUTED }}>
+                  {fireWeather.caveats.map((caveat) => <li key={caveat}>{caveat}</li>)}
+                </ul>
+              </>
+            ) : (
+              <p style={{ margin: 0, fontSize: 12.5, lineHeight: 1.58, color: MUTED }}>
+                Fire-weather is not shown here. The Quilcaille fire-weather index covers land only and the four SSP pathways; over open ocean no value is shown rather than guessing one.
               </p>
             )}
           </div>

@@ -11,6 +11,7 @@ import { getRanking, rankingQuerySchema } from "./precomputed-rankings";
 import { loadSourceRegistry } from "./source-registry";
 import { loadDataQuality } from "./data-quality";
 import { lookupFreshwater } from "./freshwater";
+import { lookupFireWeather } from "./fire-weather";
 import { climateTwinQuerySchema, findClimateTwin, loadClimateAnalogCatalog } from "./climate-twin";
 import { climateTrajectory, projectClimate } from "./grounded-node-model";
 import { parseOgParams, renderOgPng } from "./og-image";
@@ -271,7 +272,7 @@ const SEO_PAGES: Record<string, SeoPage> = {
     <li>Which trend-review flags still require human scientific review.</li>
   </ul>
   <h2>Enrichment readiness ledger</h2>
-  <p>The data-quality report marks humid heat, sea-level relevance, cold-season context, and freshwater water-stress (WRI Aqueduct 4.0) as partial, AMOC as context-only, and daily cold stress, fire weather, agriculture, infrastructure, and biodiversity as withheld until a registered source and method exist.</p>
+  <p>The data-quality report marks humid heat, sea-level relevance, cold-season context, freshwater water-stress (WRI Aqueduct 4.0), and fire weather (Quilcaille et al. 2023, CMIP6 Fire Weather Index) as partial, AMOC as context-only, and daily cold stress, agriculture, infrastructure, and biodiversity as withheld until a registered source and method exist.</p>
   <p>Use this page with <a href="/methodology">the methodology</a> and <a href="${GITHUB_REPO_URL}">the source repository</a>. It does not prove that the public Replit deployment has already been republished or that production cache purge has been completed.</p>
 </main>`,
   },
@@ -817,7 +818,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       } catch (fwErr) {
         console.warn("freshwater lookup failed:", (fwErr as Error).message);
       }
-      res.json({ success: true, data: { coordinates, points, cachedCount, freshwater } });
+      // Grounded fire-weather enrichment: Quilcaille 2023 CMIP6 FWI ensemble-mean indicators
+      // for the containing 2.5-degree land cell under the requested scenario. null for
+      // unsupported scenarios (ssp119) or open ocean — never fabricated.
+      let fireWeather = null;
+      try {
+        fireWeather = lookupFireWeather(coordinates.lat, coordinates.lng, scenario);
+      } catch (fireErr) {
+        console.warn("fire-weather lookup failed:", (fireErr as Error).message);
+      }
+      res.json({ success: true, data: { coordinates, points, cachedCount, freshwater, fireWeather } });
     } catch (err) {
       if (isDatabaseUnavailable(err)) return databaseUnavailable(res);
       const msg = (err as Error).message;

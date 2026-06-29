@@ -275,6 +275,24 @@
       "method": "Water-stress category for the HydroBASINS sub-basin containing the queried point, looked up from a 0.1 degree rasterization of Aqueduct 4.0 future-annual polygons. A sub-basin prioritization screen, not a local or parcel-level water guarantee; covers water stress only, not drought, flood, quality, or sanitation access.",
       "displayPolicy": "show-with-subbasin-prioritization-caveat",
       "reviewedAt": "2026-06-29"
+    },
+    {
+      "sourceId": "quilcaille-2023-fire-weather-v1",
+      "provider": "Quilcaille et al. 2023 (ETH Zurich), CMIP6 Canadian Fire Weather Index",
+      "version": "ETH Research Collection record (doi:10.3929/ethz-b-000583391), annual FWI indicators",
+      "stableUrl": "https://doi.org/10.3929/ethz-b-000583391",
+      "citation": "Quilcaille, Y., Batibeniz, F., Ribeiro, A.F.S., Padron, R.S., Seneviratne, S.I. (2023), Showcasing global fire-weather projections in CMIP6 using a fully formulated Canadian Fire Weather Index. Earth System Science Data, doi:10.3929/ethz-b-000583391; code doi:10.5281/zenodo.7971275.",
+      "license": "cc-by-4.0",
+      "licenseText": "Creative Commons Attribution 4.0 International (CC-BY 4.0). Verbatim from the ETH Research Collection record metadata: dc.rights.license = 'Creative Commons Attribution 4.0 International', dc.rights.uri = http://creativecommons.org/licenses/by/4.0/.",
+      "commercialReuse": "allowed-with-attribution",
+      "redistribution": "reduced-derived-output-only",
+      "variables": ["extreme fire-weather days per year", "fire-season length (days per year)"],
+      "spatialResolution": "2.5 degree CMIP6 grid (~250 km)",
+      "temporalResolution": "future horizons 2030, 2050, 2080 (each a 20-year window mean)",
+      "scenarioCoverage": "ssp126, ssp245, ssp370, ssp585 served directly (native SSP data, full coverage); ssp119 and over/434/460 experiments present in the archive but not served",
+      "method": "Multi-model ensemble mean (model-democracy) of the annual Canadian Fire Weather Index indicators extreme-fire-weather days and fire-season length, computed by Quilcaille et al. from daily mean relative humidity (hurs) and regridded to 2.5 degrees. Open-ocean cells are masked out. A coarse fire-conducive-weather screen, not actual fire risk, ignition, fuel, or land management.",
+      "displayPolicy": "show-with-fire-weather-screening-caveat",
+      "reviewedAt": "2026-06-29"
     }
   ]
 }

@@ -4,6 +4,7 @@ import path from "node:path";
 import { MODEL_CACHE_VERSION, SOURCE_REGISTRY_VERSION } from "./model-cache-version";
 import { loadSourceRegistry } from "./source-registry";
 import { freshwaterArtifactSummary } from "./freshwater";
+import { fireWeatherArtifactSummary } from "./fire-weather";
 
 type RankingArtifact = {
   methodVersion: string;
@@ -128,10 +129,10 @@ const ENRICHMENT_READINESS = [
   {
     key: "fire_weather",
     label: "Fire weather",
-    status: "withheld",
-    publicBehavior: "Not shown as a quantified fire-weather metric.",
-    groundedBasis: "No registered fire-weather artifact in this build.",
-    missingForFullUse: "Needs humidity, wind, precipitation/drought, fuel/aridity method and source-registry approval.",
+    status: "partial",
+    publicBehavior: "Shows multi-model ensemble-mean extreme-fire-weather days and fire-season length for the surrounding 2.5-degree cell at 2030/2050/2080, with a coarse-resolution screening caveat.",
+    groundedBasis: "Quilcaille et al. 2023 CMIP6 Canadian Fire Weather Index (extreme-fire-weather days and fire-season length) computed from daily mean relative humidity, model-democracy ensemble mean, 2.5-degree, ssp126/245/370/585 served directly; open-ocean cells masked out.",
+    missingForFullUse: "Coarse ~250 km grid; no ignition, fuel load, land management, or burned-area model; daily mean (not afternoon-minimum) humidity; ensemble-mean only (model spread not shown); a fire-conducive-weather screen, not fire risk to a property.",
   },
   {
     key: "food_agriculture",
@@ -282,6 +283,8 @@ export function loadDataQuality(): Record<string, unknown> {
       artifactInfo("client/public/coastal-proximity.natural-earth-110m.json"),
       artifactInfo("data/freshwater-stress.aqueduct40.json"),
       artifactInfo("data/freshwater-stress.aqueduct40.u16.gz"),
+      artifactInfo("data/fire-weather.quilcaille2023.json"),
+      artifactInfo("data/fire-weather.quilcaille2023.u16.gz"),
     ],
     sourceRegistry: {
       version: registry.version,
@@ -370,6 +373,7 @@ export function loadDataQuality(): Record<string, unknown> {
     },
     enrichmentReadiness: ENRICHMENT_READINESS,
     freshwaterStress: freshwaterArtifactSummary(),
+    fireWeather: fireWeatherArtifactSummary(),
     trajectoryAudit: {
       artifactGeneratedAt: audit.generatedAt,
       version: audit.version,

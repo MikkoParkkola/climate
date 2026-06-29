@@ -199,6 +199,30 @@ export interface FreshwaterStress {
   caveats: string[];
 }
 
+export interface FireWeatherHorizon {
+  year: number;
+  window: string | null;
+  extremeFireWeatherDays: number | null;
+  fireSeasonLengthDays: number | null;
+}
+
+export interface FireWeather {
+  sourceId: string;
+  version: string;
+  indicator: string;
+  indicatorLabel: string;
+  attribution: string;
+  license: string;
+  stableUrl: string;
+  scenario: string;
+  scenarioLabel: string;
+  modelCount: number;
+  fallbackRings: number;
+  horizons: FireWeatherHorizon[];
+  method: string;
+  caveats: string[];
+}
+
 export interface ClimateAnalogMatch {
   candidate: AnalogCandidate;
   distance: number;

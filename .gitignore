@@ -24,3 +24,7 @@ attached_assets/
 # WRI Aqueduct download/extract staging for build:freshwater (261MB zip + GDB).
 # The committed artifact is data/freshwater-stress.aqueduct40.*; raw source is not tracked.
 .aqueduct-build/
+
+# Quilcaille 2023 fire-weather download/extract staging for build_fire_weather.py (~2GB zips).
+# The committed artifact is data/fire-weather.quilcaille2023.*; raw source is not tracked.
+.fire-build/

@@ -37,6 +37,8 @@ for (const relativePath of [
   "data/observed-climatology-validation.nasa-power.json",
   "data/freshwater-stress.aqueduct40.json",
   "data/freshwater-stress.aqueduct40.u16.gz",
+  "data/fire-weather.quilcaille2023.json",
+  "data/fire-weather.quilcaille2023.u16.gz",
   "docs/VALIDATION_REPORT.md",
   "client/public/climate-analog-catalog.current.json",
   "client/public/coastal-proximity.natural-earth-110m.json",
@@ -156,6 +158,34 @@ assert(
   "freshwater display policy mismatch",
 );
 assert(getSourceRow(freshwater.sourceId)?.license === "attribution", "freshwater registry license must be attribution");
+
+const fireWeather = readJson("data/fire-weather.quilcaille2023.json");
+assert(fireWeather.sourceId === "quilcaille-2023-fire-weather-v1", "fire-weather artifact source id mismatch");
+assert(fireWeather.indicator === "fire_weather", "fire-weather artifact indicator mismatch");
+assert(fireWeather.license === "cc-by-4.0", "fire-weather artifact license must be cc-by-4.0");
+assert(typeof fireWeather.attribution === "string" && fireWeather.attribution.includes("Quilcaille"), "fire-weather attribution missing");
+assert(JSON.stringify(fireWeather.years) === JSON.stringify([2030, 2050, 2080]), "fire-weather horizons mismatch");
+assert(
+  fireWeather.scenarioMap?.ssp126 === "ssp126" &&
+    fireWeather.scenarioMap?.ssp245 === "ssp245" &&
+    fireWeather.scenarioMap?.ssp370 === "ssp370" &&
+    fireWeather.scenarioMap?.ssp585 === "ssp585",
+  "fire-weather scenario map must serve all four SSPs directly",
+);
+assert(fireWeather.modelCount >= 20, "fire-weather model count too small");
+assert(fireWeather.indicators?.fwixd && fireWeather.indicators?.fwils, "fire-weather indicators missing");
+assert(Array.isArray(fireWeather.layers) && fireWeather.layers.length === 24, "fire-weather expects 24 layers (2 indicators x 4 scenarios x 3 horizons)");
+assert(fireWeather.caveats?.some((c) => c.toLowerCase().includes("ocean")), "fire-weather ocean-masking caveat missing");
+const fireRaster = fireWeather.raster;
+assert(fireRaster?.file === "fire-weather.quilcaille2023.u16.gz" && fireRaster?.encoding === "gzip+uint16le", "fire-weather raster manifest mismatch");
+const fireBytes = gunzipSync(readFileSync(path.join(repoRoot, "data", fireRaster.file)));
+assert(fireBytes.length === fireWeather.layers.length * fireRaster.layerCells * 2, "fire-weather raster size mismatch vs manifest layers");
+requireRegisteredSources([fireWeather.sourceId], "fire-weather artifact");
+assert(
+  getSourceRow(fireWeather.sourceId)?.displayPolicy === "show-with-fire-weather-screening-caveat",
+  "fire-weather display policy mismatch",
+);
+assert(getSourceRow(fireWeather.sourceId)?.license === "cc-by-4.0", "fire-weather registry license must be cc-by-4.0");
 
 const rankingArtifacts = [
   readJson("data/rankings.curated-cities.json"),
