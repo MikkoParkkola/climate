@@ -2,7 +2,6 @@ import { useState } from "react";
 import { GitCompare, Loader2, Download, Search, MapPin, ArrowLeft, Play, Pause, ShieldCheck, ExternalLink, Share2, Check, SlidersHorizontal } from "lucide-react";
 import GuidedClimateExplainer from "@/components/guided-climate-explainer";
 import ScenarioSmallMultiples, { type ScenarioSmallMultipleMetric } from "@/components/scenario-small-multiples";
-import ScoreSensitivity, { type ScoreSensitivityInput } from "@/components/score-sensitivity";
 import {
   BG, CARD, BORDER, ACCENT, MUTED, RED, BLUE, ORANGE, GREEN, AMBER, PURPLE, CYAN,
   FONT_DISPLAY, FONT_MONO, card, MONTHS, BASELINE_YEAR, MAX_YEAR, CURRENT_FORECAST_YEAR,
@@ -209,7 +208,13 @@ export default function ClimateResultView({ vm }: { vm: ClimateAppVM }) {
           </a>
         </p>
       </footer>
-      <YourConditionsDrawer open={conditionsOpen} onClose={() => setConditionsOpen(false)} />
+      <YourConditionsDrawer
+        open={conditionsOpen}
+        onClose={() => setConditionsOpen(false)}
+        breakdown={scoreSensitivityInputs}
+        modelScore={d?.score ?? 0}
+        category={d?.category ?? ""}
+      />
       <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
     </div>
   );

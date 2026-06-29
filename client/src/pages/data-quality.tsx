@@ -144,9 +144,9 @@ function formatList(values?: string[]) {
 
 function Stat({ label, value }: { label: string; value: string | number }) {
   return (
-    <div className="rounded border border-slate-200 bg-white px-3 py-2">
-      <div className="text-xs uppercase tracking-wide text-slate-500">{label}</div>
-      <div className="mt-1 text-lg font-semibold text-slate-900">{value}</div>
+    <div className="rounded border border-[hsl(220,13%,22%)] bg-[hsl(222,15%,16%)] px-3 py-2">
+      <div className="text-xs uppercase tracking-wide text-slate-400">{label}</div>
+      <div className="mt-1 text-lg font-semibold text-white">{value}</div>
     </div>
   );
 }
@@ -155,18 +155,18 @@ export default function DataQualityPage() {
   const { data, isLoading, error } = useQuery<DataQuality>({ queryKey: ["/api/data-quality"] });
 
   return (
-    <div className="min-h-screen w-full bg-slate-50 px-4 py-10 text-slate-900">
+    <div className="min-h-screen w-full bg-[hsl(222,16%,8%)] px-4 py-10 text-white">
       <div className="mx-auto max-w-5xl space-y-6">
         <header className="space-y-3">
           <nav className="flex flex-wrap gap-4 text-sm">
-            <a href="/" className="text-blue-700 hover:underline">Back to the map</a>
-            <a href="/methodology" className="text-blue-700 hover:underline">Methodology</a>
-            <a href="https://github.com/MikkoParkkola/climate" className="text-blue-700 hover:underline">Source</a>
+            <a href="/" className="text-[hsl(24,88%,66%)] hover:underline">Back to the map</a>
+            <a href="/methodology" className="text-[hsl(24,88%,66%)] hover:underline">Methodology</a>
+            <a href="https://github.com/MikkoParkkola/climate" className="text-[hsl(24,88%,66%)] hover:underline">Source</a>
           </nav>
           <div>
-            <p className="text-sm font-semibold uppercase tracking-wide text-amber-700">Data quality</p>
+            <p className="text-sm font-semibold uppercase tracking-wide text-amber-400">Data quality</p>
             <h1 className="text-3xl font-bold">What this build can prove</h1>
-            <p className="mt-2 max-w-3xl text-slate-600">
+            <p className="mt-2 max-w-3xl text-slate-400">
               This page reports the packaged model versions, source registry, artifact hashes,
               ranking catalog coverage, trajectory-audit coverage, and known limitations for
               the current fupit build.
@@ -174,8 +174,8 @@ export default function DataQualityPage() {
           </div>
         </header>
 
-        {isLoading && <Card><CardContent className="py-6 text-sm text-slate-600">Loading data-quality report...</CardContent></Card>}
-        {error && <Card><CardContent className="py-6 text-sm text-red-700">Data-quality report is unavailable.</CardContent></Card>}
+        {isLoading && <Card><CardContent className="py-6 text-sm text-slate-400">Loading data-quality report...</CardContent></Card>}
+        {error && <Card><CardContent className="py-6 text-sm text-red-400">Data-quality report is unavailable.</CardContent></Card>}
 
         {data && (
           <>
@@ -190,13 +190,13 @@ export default function DataQualityPage() {
               <Card>
                 <CardContent className="space-y-3 pt-6">
                   <div className="flex items-center gap-2">
-                    <GitBranch className="h-5 w-5 text-blue-700" aria-hidden />
+                    <GitBranch className="h-5 w-5 text-[hsl(24,88%,66%)]" aria-hidden />
                     <h2 className="text-xl font-semibold">Versions</h2>
                   </div>
                   <dl className="space-y-2 text-sm">
-                    <div><dt className="font-medium text-slate-500">Model cache</dt><dd className="break-all">{data.methodVersion}</dd></div>
-                    <div><dt className="font-medium text-slate-500">Source registry</dt><dd>{data.sourceRegistryVersion}</dd></div>
-                    <div><dt className="font-medium text-slate-500">Default scenario policy</dt><dd>{data.defaultScenarioPolicy.policyVersion} · {data.defaultScenarioPolicy.scenario}</dd></div>
+                    <div><dt className="font-medium text-slate-400">Model cache</dt><dd className="break-all">{data.methodVersion}</dd></div>
+                    <div><dt className="font-medium text-slate-400">Source registry</dt><dd>{data.sourceRegistryVersion}</dd></div>
+                    <div><dt className="font-medium text-slate-400">Default scenario policy</dt><dd>{data.defaultScenarioPolicy.policyVersion} · {data.defaultScenarioPolicy.scenario}</dd></div>
                   </dl>
                 </CardContent>
               </Card>
@@ -204,14 +204,14 @@ export default function DataQualityPage() {
               <Card>
                 <CardContent className="space-y-3 pt-6">
                   <div className="flex items-center gap-2">
-                    <Database className="h-5 w-5 text-blue-700" aria-hidden />
+                    <Database className="h-5 w-5 text-[hsl(24,88%,66%)]" aria-hidden />
                     <h2 className="text-xl font-semibold">Grid coverage</h2>
                   </div>
-                  <p className="text-sm text-slate-600">
+                  <p className="text-sm text-slate-400">
                     Primary projection grid: {data.grids.primary.resolution}, {data.grids.primary.cells.toLocaleString()} cells.
                     Observed baseline: {data.grids.observedBaseline.resolution}, {data.grids.observedBaseline.period}.
                   </p>
-                  <p className="text-xs text-slate-500">{data.grids.observedBaseline.citation}</p>
+                  <p className="text-xs text-slate-400">{data.grids.observedBaseline.citation}</p>
                 </CardContent>
               </Card>
             </section>
@@ -219,20 +219,20 @@ export default function DataQualityPage() {
             <Card>
               <CardContent className="space-y-3 pt-6">
                 <div className="flex items-center gap-2">
-                  <ShieldCheck className="h-5 w-5 text-blue-700" aria-hidden />
+                  <ShieldCheck className="h-5 w-5 text-[hsl(24,88%,66%)]" aria-hidden />
                   <h2 className="text-xl font-semibold">Default scenario policy</h2>
                 </div>
-                <p className="text-sm text-slate-600">{data.defaultScenarioPolicy.basis}</p>
+                <p className="text-sm text-slate-400">{data.defaultScenarioPolicy.basis}</p>
                 <div className="grid gap-3 sm:grid-cols-3">
                   <Stat label="Default" value={data.defaultScenarioPolicy.scenario} />
                   <Stat label="Policy version" value={data.defaultScenarioPolicy.policyVersion} />
                   <Stat label="Forecast scenarios" value={data.defaultScenarioPolicy.supportedFullForecastScenarios.join(", ")} />
                 </div>
-                <p className="break-words text-xs text-slate-500">
+                <p className="break-words text-xs text-slate-400">
                   Policy context sources: {data.defaultScenarioPolicy.sourceIds.join(", ")}
                 </p>
                 {data.defaultScenarioPolicy.gridHash && (
-                  <p className="break-all text-xs text-slate-500">Primary grid hash: {data.defaultScenarioPolicy.gridHash}</p>
+                  <p className="break-all text-xs text-slate-400">Primary grid hash: {data.defaultScenarioPolicy.gridHash}</p>
                 )}
               </CardContent>
             </Card>
@@ -240,10 +240,10 @@ export default function DataQualityPage() {
             <Card>
               <CardContent className="space-y-4 pt-6">
                 <div className="flex items-center gap-2">
-                  <ShieldCheck className="h-5 w-5 text-blue-700" aria-hidden />
+                  <ShieldCheck className="h-5 w-5 text-[hsl(24,88%,66%)]" aria-hidden />
                   <h2 className="text-xl font-semibold">Coastal relevance screen</h2>
                 </div>
-                <p className="text-sm text-slate-600">
+                <p className="text-sm text-slate-400">
                   {data.coastalProximity.label} uses {data.coastalProximity.lineCount.toLocaleString()} generalized coastline lines
                   and {data.coastalProximity.pointCount.toLocaleString()} points from {data.coastalProximity.sourceId}.
                   It gates sea-level wording only; it is not a parcel exposure or flood model.
@@ -253,8 +253,8 @@ export default function DataQualityPage() {
                   <Stat label="Near-coastal" value={`${data.coastalProximity.thresholdsKm.nearCoastal} km`} />
                   <Stat label="Regional context" value={`${data.coastalProximity.thresholdsKm.regional} km`} />
                 </div>
-                <p className="text-xs text-slate-500">{data.coastalProximity.method}</p>
-                <ul className="list-disc space-y-1 pl-5 text-sm text-slate-600">
+                <p className="text-xs text-slate-400">{data.coastalProximity.method}</p>
+                <ul className="list-disc space-y-1 pl-5 text-sm text-slate-400">
                   {data.coastalProximity.caveats.map((caveat) => <li key={caveat}>{caveat}</li>)}
                 </ul>
               </CardContent>
@@ -263,17 +263,17 @@ export default function DataQualityPage() {
             <Card>
               <CardContent className="space-y-4 pt-6">
                 <div className="flex items-center gap-2">
-                  <ShieldCheck className="h-5 w-5 text-blue-700" aria-hidden />
+                  <ShieldCheck className="h-5 w-5 text-[hsl(24,88%,66%)]" aria-hidden />
                   <h2 className="text-xl font-semibold">Enrichment readiness ledger</h2>
                 </div>
-                <p className="text-sm text-slate-600">
+                <p className="text-sm text-slate-400">
                   This ledger is the no-fabricated-science gate for living-condition enrichments:
                   partial or context-only rows may appear with caveats, while withheld rows stay out
                   of the public forecast until a registered source and method exist.
                 </p>
-                <div className="overflow-x-auto rounded border border-slate-200">
-                  <table className="min-w-full divide-y divide-slate-200 text-left text-sm">
-                    <thead className="bg-slate-100 text-xs uppercase tracking-wide text-slate-600">
+                <div className="overflow-x-auto rounded border border-[hsl(220,13%,22%)]">
+                  <table className="min-w-full divide-y divide-[hsl(220,13%,22%)] text-left text-sm">
+                    <thead className="bg-[hsl(222,15%,16%)] text-xs uppercase tracking-wide text-slate-400">
                       <tr>
                         <th scope="col" className="px-3 py-2 font-semibold">Domain</th>
                         <th scope="col" className="px-3 py-2 font-semibold">Status</th>
@@ -281,24 +281,24 @@ export default function DataQualityPage() {
                         <th scope="col" className="px-3 py-2 font-semibold">What is still missing</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-slate-200 bg-white align-top">
+                    <tbody className="divide-y divide-[hsl(220,13%,22%)] bg-[hsl(222,15%,12%)] align-top">
                       {data.enrichmentReadiness.map((item) => (
                         <tr key={item.key}>
-                          <td className="px-3 py-3 font-semibold text-slate-900">{item.label}</td>
+                          <td className="px-3 py-3 font-semibold text-white">{item.label}</td>
                           <td className="px-3 py-3">
                             <span className={
                               item.status === "withheld"
-                                ? "rounded border border-amber-200 bg-amber-50 px-2 py-1 text-xs font-medium text-amber-800"
-                                : "rounded border border-blue-200 bg-blue-50 px-2 py-1 text-xs font-medium text-blue-800"
+                                ? "rounded border border-amber-500/30 bg-amber-500/10 px-2 py-1 text-xs font-medium text-amber-300"
+                                : "rounded border border-[hsl(220,13%,22%)] bg-[hsl(24,88%,56%)]/10 px-2 py-1 text-xs font-medium text-[hsl(24,88%,66%)]"
                             }>
                               {item.status}
                             </span>
                           </td>
-                          <td className="max-w-md px-3 py-3 text-slate-700">
+                          <td className="max-w-md px-3 py-3 text-slate-300">
                             <div>{item.publicBehavior}</div>
-                            <div className="mt-1 text-xs text-slate-500">Basis: {item.groundedBasis}</div>
+                            <div className="mt-1 text-xs text-slate-400">Basis: {item.groundedBasis}</div>
                           </td>
-                          <td className="max-w-md px-3 py-3 text-slate-700">{item.missingForFullUse}</td>
+                          <td className="max-w-md px-3 py-3 text-slate-300">{item.missingForFullUse}</td>
                         </tr>
                       ))}
                     </tbody>
@@ -310,42 +310,42 @@ export default function DataQualityPage() {
             <Card>
               <CardContent className="space-y-4 pt-6">
                 <div className="flex items-center gap-2">
-                  <Activity className="h-5 w-5 text-blue-700" aria-hidden />
+                  <Activity className="h-5 w-5 text-[hsl(24,88%,66%)]" aria-hidden />
                   <h2 className="text-xl font-semibold">Trajectory audit</h2>
                 </div>
-                <p className="text-sm text-slate-600">
+                <p className="text-sm text-slate-400">
                   {data.trajectoryAudit.cityCount} fixture cities, {data.trajectoryAudit.scenarioCount} scenarios,
                   annual points from {data.trajectoryAudit.yearRange[0]} to {data.trajectoryAudit.yearRange[1]}.
                   The latest artifact reports {data.trajectoryAudit.trendReviewCount} trend-review items.
                 </p>
-                <div className="max-h-72 overflow-auto rounded border border-slate-200">
+                <div className="max-h-72 overflow-auto rounded border border-[hsl(220,13%,22%)]">
                   <table className="w-full text-left text-sm">
-                    <thead className="sticky top-0 bg-slate-100 text-slate-600">
+                    <thead className="sticky top-0 bg-[hsl(222,15%,16%)] text-slate-400">
                       <tr><th className="px-3 py-2">Scenario</th><th className="px-3 py-2">Place</th><th className="px-3 py-2">Review flags</th></tr>
                     </thead>
                     <tbody>
                       {data.trajectoryAudit.trendReview.map((item) => (
-                        <tr key={`${item.scenario}-${item.name}`} className="border-t border-slate-100">
+                        <tr key={`${item.scenario}-${item.name}`} className="border-t border-[hsl(220,13%,22%)]">
                           <td className="px-3 py-2 font-medium">{item.scenario}</td>
                           <td className="px-3 py-2">{item.name}</td>
-                          <td className="px-3 py-2 text-slate-600">{item.flags.join("; ")}</td>
+                          <td className="px-3 py-2 text-slate-400">{item.flags.join("; ")}</td>
                         </tr>
                       ))}
                     </tbody>
                   </table>
                 </div>
-                <p className="text-xs text-slate-500">{data.trajectoryAudit.note}</p>
+                <p className="text-xs text-slate-400">{data.trajectoryAudit.note}</p>
               </CardContent>
             </Card>
 
             <Card>
               <CardContent className="space-y-4 pt-6">
                 <div className="flex items-center gap-2">
-                  <FileCheck2 className="h-5 w-5 text-blue-700" aria-hidden />
+                  <FileCheck2 className="h-5 w-5 text-[hsl(24,88%,66%)]" aria-hidden />
                   <h2 className="text-xl font-semibold">Validation report</h2>
                 </div>
-                <p className="text-sm text-slate-600">
-                  The repository report at <code className="rounded bg-slate-100 px-1">{data.validationReport.repoPath}</code> summarizes
+                <p className="text-sm text-slate-400">
+                  The repository report at <code className="rounded bg-[hsl(222,15%,16%)] px-1">{data.validationReport.repoPath}</code> summarizes
                   the same trajectory-audit artifact and keeps historical hindcast status explicit:
                   <span className="font-medium"> {data.validationReport.historicalObservationHindcast}</span>.
                 </p>
@@ -353,34 +353,34 @@ export default function DataQualityPage() {
                   <Stat label="Trend review items" value={data.validationReport.trendReviewCount} />
                   <Stat label="Hindcast status" value={data.validationReport.historicalObservationHindcast} />
                 </div>
-                <div className="rounded border border-blue-100 bg-blue-50 p-3 text-sm text-slate-700">
-                  <div className="font-semibold text-slate-900">NASA POWER observed-climatology baseline check</div>
+                <div className="rounded border border-[hsl(220,13%,22%)] bg-[hsl(24,88%,56%)]/10 p-3 text-sm text-slate-300">
+                  <div className="font-semibold text-white">NASA POWER observed-climatology baseline check</div>
                   <p className="mt-1">
                     Status {data.observedClimatologyValidation.status}; {data.observedClimatologyValidation.cityCount} fixture cities,
                     period {data.observedClimatologyValidation.period.start}-{data.observedClimatologyValidation.period.end}.
                     Max absolute temperature difference {data.observedClimatologyValidation.summary.maxAbsTemperatureDifferenceC} C;
                     max absolute precipitation difference {data.observedClimatologyValidation.summary.maxAbsPrecipitationDifferenceMm} mm/year.
                   </p>
-                  <p className="mt-1 text-xs text-slate-600">
+                  <p className="mt-1 text-xs text-slate-400">
                     Sources: {data.observedClimatologyValidation.sourceIds.join(", ")}. This compares observed climatology products;
                     it is not a forecast correction or proof of future projection skill.
                   </p>
                   {data.observedClimatologyValidation.reviewFlags.length > 0 && (
                     <div className="mt-2 flex flex-wrap gap-2 text-xs">
                       {data.observedClimatologyValidation.reviewFlags.map((flag) => (
-                        <span key={`${flag.name}-${flag.flag}`} className="rounded border border-blue-200 bg-white px-2 py-1">
+                        <span key={`${flag.name}-${flag.flag}`} className="rounded border border-[hsl(220,13%,22%)] bg-[hsl(222,15%,16%)] px-2 py-1">
                           {flag.name}: {flag.flag}
                         </span>
                       ))}
                     </div>
                   )}
                 </div>
-                <ul className="list-disc space-y-1 pl-5 text-sm text-slate-600">
+                <ul className="list-disc space-y-1 pl-5 text-sm text-slate-400">
                   {data.validationReport.blockers.map((blocker) => <li key={blocker}>{blocker}</li>)}
                 </ul>
                 <div className="flex flex-wrap gap-2 text-xs">
                   {data.validationReport.trendReviewSummary.map((item) => (
-                    <span key={item.kind} className="rounded border border-slate-200 bg-white px-2 py-1">
+                    <span key={item.kind} className="rounded border border-[hsl(220,13%,22%)] bg-[hsl(222,15%,16%)] px-2 py-1">
                       {item.kind}: {item.count}
                     </span>
                   ))}
@@ -392,16 +392,16 @@ export default function DataQualityPage() {
               <Card className="lg:col-span-2">
                 <CardContent className="space-y-4 pt-6">
                   <div className="flex items-center gap-2">
-                    <ShieldCheck className="h-5 w-5 text-blue-700" aria-hidden />
+                    <ShieldCheck className="h-5 w-5 text-[hsl(24,88%,66%)]" aria-hidden />
                     <h2 className="text-xl font-semibold">Source and license registry</h2>
                   </div>
-                  <p className="text-sm text-slate-600">
+                  <p className="text-sm text-slate-400">
                     {data.sourceRegistry.policy} No registry row means no public metric, ranking,
                     exported field, or enrichment layer is allowed.
                   </p>
-                  <div className="overflow-x-auto rounded border border-slate-200">
-                    <table className="min-w-full divide-y divide-slate-200 text-left text-sm">
-                      <thead className="bg-slate-100 text-xs uppercase tracking-wide text-slate-600">
+                  <div className="overflow-x-auto rounded border border-[hsl(220,13%,22%)]">
+                    <table className="min-w-full divide-y divide-[hsl(220,13%,22%)] text-left text-sm">
+                      <thead className="bg-[hsl(222,15%,16%)] text-xs uppercase tracking-wide text-slate-400">
                         <tr>
                           <th scope="col" className="px-3 py-2 font-semibold">Source</th>
                           <th scope="col" className="px-3 py-2 font-semibold">Registered method</th>
@@ -409,23 +409,23 @@ export default function DataQualityPage() {
                           <th scope="col" className="px-3 py-2 font-semibold">License and reuse</th>
                         </tr>
                       </thead>
-                      <tbody className="divide-y divide-slate-200 bg-white align-top">
+                      <tbody className="divide-y divide-[hsl(220,13%,22%)] bg-[hsl(222,15%,12%)] align-top">
                         {data.sourceRegistry.rows.map((row) => (
                           <tr key={row.sourceId}>
                             <td className="max-w-xs px-3 py-3">
-                              <div className="font-semibold text-slate-900">{row.sourceId}</div>
-                              <div className="mt-1 text-slate-600">{row.provider}{row.version ? ` · ${row.version}` : ""}</div>
+                              <div className="font-semibold text-white">{row.sourceId}</div>
+                              <div className="mt-1 text-slate-400">{row.provider}{row.version ? ` · ${row.version}` : ""}</div>
                               {row.stableUrl && (
-                                <a href={row.stableUrl} className="mt-1 block break-all text-xs text-blue-700 hover:underline">
+                                <a href={row.stableUrl} className="mt-1 block break-all text-xs text-[hsl(24,88%,66%)] hover:underline">
                                   Source URL
                                 </a>
                               )}
-                              {row.citation && <div className="mt-1 text-xs text-slate-500">{row.citation}</div>}
+                              {row.citation && <div className="mt-1 text-xs text-slate-400">{row.citation}</div>}
                             </td>
-                            <td className="max-w-md px-3 py-3 text-slate-700">
+                            <td className="max-w-md px-3 py-3 text-slate-300">
                               <div>{row.method ?? "Method note not registered."}</div>
-                              <details className="mt-2 text-xs text-slate-600">
-                                <summary className="cursor-pointer font-medium text-slate-700">Coverage</summary>
+                              <details className="mt-2 text-xs text-slate-400">
+                                <summary className="cursor-pointer font-medium text-slate-300">Coverage</summary>
                                 <dl className="mt-2 space-y-1">
                                   <div><dt className="inline font-medium">Variables:</dt> <dd className="inline">{formatList(row.variables)}</dd></div>
                                   <div><dt className="inline font-medium">Spatial:</dt> <dd className="inline">{row.spatialResolution ?? "Not registered"}</dd></div>
@@ -435,16 +435,16 @@ export default function DataQualityPage() {
                               </details>
                             </td>
                             <td className="px-3 py-3">
-                              <span className="rounded border border-blue-200 bg-blue-50 px-2 py-1 text-xs font-medium text-blue-800">
+                              <span className="rounded border border-[hsl(220,13%,22%)] bg-[hsl(24,88%,56%)]/10 px-2 py-1 text-xs font-medium text-[hsl(24,88%,66%)]">
                                 {row.displayPolicy}
                               </span>
-                              {row.reviewedAt && <div className="mt-2 text-xs text-slate-500">Reviewed {row.reviewedAt}</div>}
+                              {row.reviewedAt && <div className="mt-2 text-xs text-slate-400">Reviewed {row.reviewedAt}</div>}
                             </td>
-                            <td className="max-w-sm px-3 py-3 text-slate-700">
+                            <td className="max-w-sm px-3 py-3 text-slate-300">
                               <div>{row.license ?? "License note not registered."}</div>
                               <div className="mt-2 flex flex-wrap gap-2 text-xs">
-                                <span className="rounded border border-slate-200 px-2 py-1">Commercial: {row.commercialReuse ?? "not registered"}</span>
-                                <span className="rounded border border-slate-200 px-2 py-1">Redistribution: {row.redistribution ?? "not registered"}</span>
+                                <span className="rounded border border-[hsl(220,13%,22%)] px-2 py-1">Commercial: {row.commercialReuse ?? "not registered"}</span>
+                                <span className="rounded border border-[hsl(220,13%,22%)] px-2 py-1">Redistribution: {row.redistribution ?? "not registered"}</span>
                               </div>
                             </td>
                           </tr>
@@ -458,14 +458,14 @@ export default function DataQualityPage() {
               <Card>
                 <CardContent className="space-y-3 pt-6">
                   <div className="flex items-center gap-2">
-                    <FileCheck2 className="h-5 w-5 text-blue-700" aria-hidden />
+                    <FileCheck2 className="h-5 w-5 text-[hsl(24,88%,66%)]" aria-hidden />
                     <h2 className="text-xl font-semibold">Artifact hashes</h2>
                   </div>
                   <ul className="space-y-2 text-xs">
                     {data.artifacts.map((artifact) => (
-                      <li key={artifact.path} className="rounded border border-slate-200 p-2">
+                      <li key={artifact.path} className="rounded border border-[hsl(220,13%,22%)] p-2">
                         <div className="font-medium">{artifact.path} · {formatBytes(artifact.bytes)}</div>
-                        <div className="break-all text-slate-500">sha256 {artifact.sha256}</div>
+                        <div className="break-all text-slate-400">sha256 {artifact.sha256}</div>
                       </li>
                     ))}
                   </ul>
@@ -477,23 +477,23 @@ export default function DataQualityPage() {
               <Card>
                 <CardContent className="space-y-3 pt-6">
                   <h2 className="text-xl font-semibold">Ranking coverage</h2>
-                  <p className="text-sm text-slate-600">
+                  <p className="text-sm text-slate-400">
                     {data.rankings.catalogCount} bounded catalogs cover {data.rankings.catalogSize} total place rows,
                     {data.rankings.entryCount} precomputed slices, scenarios {data.rankings.scenarios.join(", ")},
                     and years {data.rankings.yearRange[0]}-{data.rankings.yearRange[1]}.
                   </p>
                   <div className="space-y-2">
                     {data.rankings.catalogs.map((catalog) => (
-                      <div key={catalog.catalog} className="rounded border border-slate-200 bg-white p-3 text-sm">
+                      <div key={catalog.catalog} className="rounded border border-[hsl(220,13%,22%)] bg-[hsl(222,15%,16%)] p-3 text-sm">
                         <div className="font-medium">{catalog.label}</div>
-                        <div className="text-slate-600">
+                        <div className="text-slate-400">
                           {catalog.catalog} · {catalog.catalogSize} places · {catalog.entryCount} slices · years {catalog.yearRange[0]}-{catalog.yearRange[1]}
                         </div>
-                        <div className="mt-1 break-words text-xs text-slate-500">Sources: {catalog.sourceIds.join(", ")}</div>
+                        <div className="mt-1 break-words text-xs text-slate-400">Sources: {catalog.sourceIds.join(", ")}</div>
                       </div>
                     ))}
                   </div>
-                  <ul className="list-disc space-y-1 pl-5 text-sm text-slate-600">
+                  <ul className="list-disc space-y-1 pl-5 text-sm text-slate-400">
                     {data.rankings.caveats.map((caveat) => <li key={caveat}>{caveat}</li>)}
                   </ul>
                 </CardContent>
@@ -502,12 +502,12 @@ export default function DataQualityPage() {
               <Card>
                 <CardContent className="space-y-3 pt-6">
                   <div className="flex items-center gap-2">
-                    <FileCheck2 className="h-5 w-5 text-blue-700" aria-hidden />
+                    <FileCheck2 className="h-5 w-5 text-[hsl(24,88%,66%)]" aria-hidden />
                     <h2 className="text-xl font-semibold">Executable checks</h2>
                   </div>
                   <ul className="space-y-2 text-sm">
                     {data.executableChecks.map((check) => (
-                      <li key={check} className="rounded border border-slate-200 bg-white px-3 py-2 font-mono text-xs text-slate-700">
+                      <li key={check} className="rounded border border-[hsl(220,13%,22%)] bg-[hsl(222,15%,16%)] px-3 py-2 font-mono text-xs text-slate-300">
                         {check}
                       </li>
                     ))}
@@ -518,7 +518,7 @@ export default function DataQualityPage() {
               <Card>
                 <CardContent className="space-y-3 pt-6">
                   <h2 className="text-xl font-semibold">Known limits</h2>
-                  <ul className="list-disc space-y-1 pl-5 text-sm text-slate-600">
+                  <ul className="list-disc space-y-1 pl-5 text-sm text-slate-400">
                     {data.limitations.map((limit) => <li key={limit}>{limit}</li>)}
                   </ul>
                 </CardContent>

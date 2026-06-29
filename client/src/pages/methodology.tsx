@@ -8,20 +8,20 @@ import { Card, CardContent } from "@/components/ui/card";
  */
 export default function Methodology() {
   return (
-    <div className="min-h-screen w-full bg-gray-50 py-10 px-4">
+    <div className="min-h-screen w-full bg-[hsl(222,16%,8%)] py-10 px-4">
       <div className="mx-auto max-w-3xl space-y-6">
         <header className="space-y-2">
-          <a href="/" className="text-sm text-blue-600 hover:underline">← Back to the map</a>
-          <h1 className="text-3xl font-bold text-gray-900">How fupit gets its numbers</h1>
-          <p className="text-gray-600">
+          <a href="/" className="text-sm text-[hsl(24,88%,66%)] hover:underline">← Back to the map</a>
+          <h1 className="text-3xl font-bold text-white">How fupit gets its numbers</h1>
+          <p className="text-slate-400">
             Every value on this site traces to real climate science. We do not invent
             coefficients or warming rates. Where we cannot ground a number, we leave it
             blank rather than guess. This page shows the full chain.
           </p>
         </header>
 
-        <Card className="bg-white text-gray-900">
-          <CardContent className="prose prose-sm prose-slate max-w-none pt-6">
+        <Card className="bg-[hsl(222,15%,12%)] text-white">
+          <CardContent className="prose prose-sm prose-invert max-w-none pt-6">
             <h2>What the forecast is built from</h2>
             <ul>
               <li>
@@ -221,7 +221,7 @@ export default function Methodology() {
               </li>
             </ul>
 
-            <p className="text-gray-500">
+            <p className="text-slate-400">
               Sources: WorldClim v2.1 (Fick & Hijmans 2017); IPCC AR6 Working Group I;
               CMIP6 (Eyring et al. 2016); ETCCDI indices (Sillmann et al. 2013); Stull
               2011 wet-bulb approximation; IPCC AR6 sea-level projections; Natural Earth

@@ -10,6 +10,7 @@ import { ACCENT, BORDER, CARD, FONT_DISPLAY, FONT_MONO, MUTED } from "@/lib/clim
 import { DEFAULT_PREFS, prefsAreDefault, type Prefs } from "@/lib/habitability";
 import { usePrefs } from "@/lib/use-prefs";
 import { Term } from "@/components/climate-term";
+import { ScoreBreakdown, type ScoreSensitivityInput } from "@/components/score-sensitivity";
 import type { GlossaryKey } from "@/lib/glossary";
 
 interface Knob {
@@ -32,7 +33,13 @@ const KNOBS: Knob[] = [
   { field: "floodPer", label: "How much flooding bothers you", help: "Higher means flood-prone places lose points faster.", min: 0.1, max: 0.5, step: 0.05, termKey: "flood_risk", fmt: (v) => (v >= 0.4 ? "a lot" : v >= 0.2 ? "normal" : "a little") },
 ];
 
-export function YourConditionsDrawer({ open, onClose }: { open: boolean; onClose: () => void }) {
+export function YourConditionsDrawer({ open, onClose, breakdown, modelScore, category }: {
+  open: boolean;
+  onClose: () => void;
+  breakdown: ScoreSensitivityInput[];
+  modelScore: number;
+  category: string;
+}) {
   const [prefs, setPrefs] = usePrefs();
   const isDefault = prefsAreDefault(prefs);
 
@@ -68,6 +75,7 @@ export function YourConditionsDrawer({ open, onClose }: { open: boolean; onClose
         </div>
 
         <div style={{ padding: "16px 20px", display: "grid", gap: 20 }}>
+          <ScoreBreakdown inputs={breakdown} modelScore={modelScore} category={category} />
           {KNOBS.map((k) => {
             const value = prefs[k.field];
             return (

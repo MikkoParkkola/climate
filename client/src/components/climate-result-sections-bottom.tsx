@@ -1,7 +1,6 @@
 import { GitCompare, Loader2, Download, Search, MapPin, ArrowLeft, Play, Pause, ShieldCheck, ExternalLink, Share2, Check } from "lucide-react";
 import GuidedClimateExplainer from "@/components/guided-climate-explainer";
 import ScenarioSmallMultiples, { type ScenarioSmallMultipleMetric } from "@/components/scenario-small-multiples";
-import ScoreSensitivity, { type ScoreSensitivityInput } from "@/components/score-sensitivity";
 import {
   BG, CARD, BORDER, ACCENT, MUTED, RED, BLUE, ORANGE, GREEN, AMBER, PURPLE, CYAN,
   FONT_DISPLAY, FONT_MONO, card, MONTHS, BASELINE_YEAR, MAX_YEAR, CURRENT_FORECAST_YEAR,
@@ -29,7 +28,7 @@ export default function ClimateResultSectionsBottom({ vm }: { vm: ClimateAppVM }
   scenarioContrastError, resultsRef,
   traj, d, displayYear, climateAnalog, coastalRelevance, scenarioContrastRows,
   scenarioSmallMultipleMetrics, scenarioContrastTakeaway, roadmapItems, scoreStory,
-  scoreSensitivityInputs, dailyLifeSignals, tipping, selectedScenario, shownScenario,
+  dailyLifeSignals, tipping, selectedScenario, shownScenario,
   shareUrl, shareStory, learningPrompts, sc, tPct, maxBreakdown,
   togglePlay, setYearManual, selectLocation, generate, loadScenarioContrast, changeScenario,
   newSearch, exportPDF, openClimateTwinCity, copyShareStory, downloadShareImage, shareForecast,
