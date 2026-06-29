@@ -9,7 +9,7 @@ import {
 import type {
   ScenarioId, CoastCoord, LocationOption, ProjectionPoint, AnalogCandidate, AnalogCatalog,
   CoastalProximityArtifact, CoastalRelevance, ClimateAnalogMatch, ScenarioContrastRow,
-  RoadmapItem, ShareStory, LearningPromptAction, LearningPrompt, FreshwaterStress, FireWeather, FloodExposure,
+  RoadmapItem, ShareStory, LearningPromptAction, LearningPrompt, FreshwaterStress, FireWeather, FloodExposure, CropYield,
 } from "@/lib/climate-types";
 import {
   lerp, interpScalar, interpOptionalScalar, riskScore, interpArr, nearestPoint, categoryFor,
@@ -49,6 +49,7 @@ export function useClimateApp() {
   const [freshwater, setFreshwater] = useState<FreshwaterStress | null>(null);
   const [fireWeather, setFireWeather] = useState<FireWeather | null>(null);
   const [floodRiver, setFloodRiver] = useState<FloodExposure | null>(null);
+  const [cropYield, setCropYield] = useState<CropYield | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [loadingStep, setLoadingStep] = useState(0);
   const [error, setError] = useState<string | null>(null);
@@ -193,7 +194,7 @@ export function useClimateApp() {
     setShowSuggestions(false);
   };
 
-  const fetchTrajectory = async (targetLocation: LocationOption, scenarioOverride: ScenarioId): Promise<{ points: ProjectionPoint[]; freshwater: FreshwaterStress | null; fireWeather: FireWeather | null; floodRiver: FloodExposure | null }> => {
+  const fetchTrajectory = async (targetLocation: LocationOption, scenarioOverride: ScenarioId): Promise<{ points: ProjectionPoint[]; freshwater: FreshwaterStress | null; fireWeather: FireWeather | null; floodRiver: FloodExposure | null; cropYield: CropYield | null }> => {
     const response = await fetch("/api/climate-trajectory", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -207,7 +208,7 @@ export function useClimateApp() {
     const data = await response.json();
     if (data.success && data.data?.points?.length) {
       const points = [...data.data.points].sort((a: ProjectionPoint, b: ProjectionPoint) => a.year - b.year);
-      return { points, freshwater: (data.data.freshwater as FreshwaterStress | null) ?? null, fireWeather: (data.data.fireWeather as FireWeather | null) ?? null, floodRiver: (data.data.floodRiver as FloodExposure | null) ?? null };
+      return { points, freshwater: (data.data.freshwater as FreshwaterStress | null) ?? null, fireWeather: (data.data.fireWeather as FireWeather | null) ?? null, floodRiver: (data.data.floodRiver as FloodExposure | null) ?? null, cropYield: (data.data.cropYield as CropYield | null) ?? null };
     }
     throw new Error("Invalid response from climate model.");
   };
@@ -221,6 +222,7 @@ export function useClimateApp() {
     setFreshwater(null);
     setFireWeather(null);
     setFloodRiver(null);
+    setCropYield(null);
     setScenarioContrast(null);
     setScenarioContrastError(null);
     try {
@@ -229,6 +231,7 @@ export function useClimateApp() {
       setFreshwater(result.freshwater);
       setFireWeather(result.fireWeather);
       setFloodRiver(result.floodRiver);
+      setCropYield(result.cropYield);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Network error. Please check your connection.");
     } finally {
@@ -274,6 +277,7 @@ export function useClimateApp() {
     setFreshwater(null);
     setFireWeather(null);
     setFloodRiver(null);
+    setCropYield(null);
     setError(null);
     setShareCopied(false);
     setRawJsonCopied(false);
@@ -592,7 +596,7 @@ export function useClimateApp() {
 
   return {
   locationText, setLocationText, selectedLocation, setSelectedLocation,
-  suggestions, showSuggestions, setShowSuggestions, year, scenario, trajectory, freshwater, fireWeather, floodRiver,
+  suggestions, showSuggestions, setShowSuggestions, year, scenario, trajectory, freshwater, fireWeather, floodRiver, cropYield,
   birthYear, setBirthYear, prefs, setPrefs, scoredTrajectory, standardSnapshot,
   isLoading, loadingStep, error, exporting, playing, shareCopied, shareStoryCopied,
   shareImageBusy, shareImageSaved, rawJsonCopied, reportSaved, analogCatalog, analogError,

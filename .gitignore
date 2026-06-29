@@ -32,3 +32,7 @@ attached_assets/
 # WRI Aqueduct Floods download staging for build_aqueduct_floods.py (~1.4GB GeoTIFFs).
 # The committed artifact is data/flood-river.aqueduct.*; raw source is not tracked.
 .flood-build/
+
+# ISIMIP GGCMI crop-yield download staging for build_isimip_crops.py (~0.9GB NetCDF).
+# The committed artifact is data/crop-yield.isimip-ggcmi.*; raw source is not tracked.
+.crop-build/

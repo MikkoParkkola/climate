@@ -311,6 +311,24 @@
       "method": "5-GCM ensemble-mean of the WRI Aqueduct Floods v2 riverine inundation-depth maps for the 1-in-100-year return period, block-reduced from ~1 km to a 0.1 degree grid storing the flooded-area fraction (depth > 5 cm) and the mean flood depth over flooded pixels. A regional flood-hazard screen dependent on assumed protection standards, not a property-level guarantee; riverine only, not coastal storm surge.",
       "displayPolicy": "show-with-regional-flood-screening-caveat",
       "reviewedAt": "2026-06-29"
+    },
+    {
+      "sourceId": "isimip-ggcmi-phase3-yield-v1",
+      "provider": "ISIMIP3b GGCMI phase 3 (crop-model intercomparison)",
+      "version": "ISIMIP3b OutputData agriculture, GGCMI phase 3 yield (rainfed, default CO2)",
+      "stableUrl": "https://data.isimip.org/",
+      "citation": "Jagermeyr, J. et al. (2021), Climate impacts on global agriculture emerge earlier in new generation of climate and crop models, Nature Food; ISIMIP3b GGCMI phase 3, https://data.isimip.org/.",
+      "license": "cc0-1.0",
+      "licenseText": "CC0 1.0 Universal Public Domain Dedication. Verbatim from the ISIMIP data API per-dataset rights field: rights = 'CC0 1.0 Universal Public Domain Dedication', rights_uri = https://creativecommons.org/publicdomain/zero/1.0/. ISIMIP requests citation as good practice (not a license condition).",
+      "commercialReuse": "public-domain",
+      "redistribution": "public-domain",
+      "variables": ["rainfed yield change for maize, soybean, rice, winter wheat (percent vs 2015-2034 baseline)"],
+      "spatialResolution": "0.5 degree",
+      "temporalResolution": "future horizons 2030, 2050, 2080 (20-year window means)",
+      "scenarioCoverage": "ssp126, ssp370, ssp585 served directly; ssp245 is not in the GGCMI3b core protocol and returns no value",
+      "method": "Multi-member ensemble mean (model-democracy) of ISIMIP3b GGCMI phase 3 rainfed, default-CO2 yield output, expressed as percentage change in annual yield at 2030/2050/2080 relative to a 2015-2034 baseline, on the native 0.5 degree grid. A model-ensemble crop signal, not a field-level yield forecast; holds 2015 land use and management fixed.",
+      "displayPolicy": "show-with-crop-ensemble-caveat",
+      "reviewedAt": "2026-06-29"
     }
   ]
 }

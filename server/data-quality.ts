@@ -6,6 +6,7 @@ import { loadSourceRegistry } from "./source-registry";
 import { freshwaterArtifactSummary } from "./freshwater";
 import { fireWeatherArtifactSummary } from "./fire-weather";
 import { floodRiverArtifactSummary } from "./floods";
+import { cropYieldArtifactSummary } from "./crops";
 
 type RankingArtifact = {
   methodVersion: string;
@@ -138,10 +139,10 @@ const ENRICHMENT_READINESS = [
   {
     key: "food_agriculture",
     label: "Food and agriculture",
-    status: "withheld",
-    publicBehavior: "Not shown as crop yield or food-supply impact.",
-    groundedBasis: "No registered crop, growing-degree, soil, irrigation, or yield artifact in this build.",
-    missingForFullUse: "Needs crop/soil/water datasets and explicit non-advisory interpretation.",
+    status: "partial",
+    publicBehavior: "Shows ISIMIP GGCMI ensemble-mean rainfed yield change for maize, soybean, rice and winter wheat at 2030/2050/2080 (vs a 2015-2034 baseline) for the surrounding 0.5-degree cell, with a model-ensemble caveat.",
+    groundedBasis: "ISIMIP3b GGCMI phase 3 rainfed (default CO2) yield output, multi-member ensemble mean (model-democracy), 0.5-degree; ssp126/ssp370/ssp585 served directly, ssp245 returns no value.",
+    missingForFullUse: "Model-ensemble crop signal, not a field-level forecast; rainfed only; holds 2015 land use/management fixed; uncertain CO2 fertilization; no soil, irrigation expansion, pests, market, or adaptation model; cells where a crop is barely grown return no value.",
   },
   {
     key: "infrastructure",
@@ -288,6 +289,8 @@ export function loadDataQuality(): Record<string, unknown> {
       artifactInfo("data/fire-weather.quilcaille2023.u16.gz"),
       artifactInfo("data/flood-river.aqueduct.json"),
       artifactInfo("data/flood-river.aqueduct.u16.gz"),
+      artifactInfo("data/crop-yield.isimip-ggcmi.json"),
+      artifactInfo("data/crop-yield.isimip-ggcmi.u16.gz"),
     ],
     sourceRegistry: {
       version: registry.version,
@@ -378,6 +381,7 @@ export function loadDataQuality(): Record<string, unknown> {
     freshwaterStress: freshwaterArtifactSummary(),
     fireWeather: fireWeatherArtifactSummary(),
     floodRiver: floodRiverArtifactSummary(),
+    cropYield: cropYieldArtifactSummary(),
     trajectoryAudit: {
       artifactGeneratedAt: audit.generatedAt,
       version: audit.version,
@@ -451,7 +455,8 @@ export function loadDataQuality(): Record<string, unknown> {
       "Freshwater availability is now shown as a WRI Aqueduct 4.0 sub-basin water-stress category (a basin-level prioritization screen with WRI's own caveat), not a local supply, storage, demand, drought, flood, or water-quality guarantee.",
       "Fire weather is now shown as Quilcaille et al. 2023 CMIP6 Fire Weather Index indicators (a coarse ~250 km fire-conducive-weather screen), not a measure of ignition, fuel, or actual fire risk.",
       "Infrastructure pressure is now partially grounded on WRI Aqueduct Floods riverine 1-in-100-year flood exposure (a regional screen, riverine only); thermal/degree-day load and other infrastructure datasets remain missing.",
-      "Biodiversity, agriculture, and quantified AMOC local-impact layers remain withheld until source-registry approval and implementation.",
+      "Food and agriculture is now partially grounded on ISIMIP GGCMI ensemble-mean rainfed yield change for four staple crops (a model-ensemble signal at 0.5 degrees), not a field-level forecast; ssp245 returns no value.",
+      "Biodiversity and quantified AMOC local-impact layers remain withheld until source-registry approval and implementation.",
     ],
   };
 

@@ -41,6 +41,8 @@ for (const relativePath of [
   "data/fire-weather.quilcaille2023.u16.gz",
   "data/flood-river.aqueduct.json",
   "data/flood-river.aqueduct.u16.gz",
+  "data/crop-yield.isimip-ggcmi.json",
+  "data/crop-yield.isimip-ggcmi.u16.gz",
   "docs/VALIDATION_REPORT.md",
   "client/public/climate-analog-catalog.current.json",
   "client/public/coastal-proximity.natural-earth-110m.json",
@@ -214,6 +216,31 @@ assert(
   "flood display policy mismatch",
 );
 assert(getSourceRow(floodRiver.sourceId)?.license === "attribution", "flood registry license must be attribution");
+
+const cropYield = readJson("data/crop-yield.isimip-ggcmi.json");
+assert(cropYield.sourceId === "isimip-ggcmi-phase3-yield-v1", "crop artifact source id mismatch");
+assert(cropYield.indicator === "crop_yield", "crop artifact indicator mismatch");
+assert(cropYield.license === "cc0-1.0", "crop artifact license must be cc0-1.0");
+assert(typeof cropYield.attribution === "string" && cropYield.attribution.includes("ISIMIP"), "crop attribution missing");
+assert(JSON.stringify(cropYield.years) === JSON.stringify([2030, 2050, 2080]), "crop horizons mismatch");
+assert(
+  cropYield.scenarioMap?.ssp126 === "ssp126" && cropYield.scenarioMap?.ssp370 === "ssp370" && cropYield.scenarioMap?.ssp585 === "ssp585",
+  "crop scenario map must serve ssp126/ssp370/ssp585 directly",
+);
+assert(cropYield.scenarioMap?.ssp245 === null, "crop must leave ssp245 unmapped");
+assert(cropYield.crops?.mai && cropYield.crops?.soy && cropYield.crops?.ri1 && cropYield.crops?.wwh, "crop list incomplete");
+assert(Array.isArray(cropYield.layers) && cropYield.layers.length === 36, "crop expects 36 layers (4 crops x 3 scenarios x 3 horizons)");
+assert(cropYield.caveats?.some((c) => c.toLowerCase().includes("not a field-level")), "crop field-level caveat missing");
+const cropRaster = cropYield.raster;
+assert(cropRaster?.file === "crop-yield.isimip-ggcmi.u16.gz" && cropRaster?.encoding === "gzip+uint16le", "crop raster manifest mismatch");
+const cropBytes = gunzipSync(readFileSync(path.join(repoRoot, "data", cropRaster.file)));
+assert(cropBytes.length === cropYield.layers.length * cropRaster.layerCells * 2, "crop raster size mismatch vs manifest layers");
+requireRegisteredSources([cropYield.sourceId], "crop artifact");
+assert(
+  getSourceRow(cropYield.sourceId)?.displayPolicy === "show-with-crop-ensemble-caveat",
+  "crop display policy mismatch",
+);
+assert(getSourceRow(cropYield.sourceId)?.license === "cc0-1.0", "crop registry license must be cc0-1.0");
 
 const rankingArtifacts = [
   readJson("data/rankings.curated-cities.json"),

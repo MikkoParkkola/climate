@@ -13,6 +13,7 @@ import { loadDataQuality } from "./data-quality";
 import { lookupFreshwater } from "./freshwater";
 import { lookupFireWeather } from "./fire-weather";
 import { lookupRiverFlood } from "./floods";
+import { lookupCropYield } from "./crops";
 import { climateTwinQuerySchema, findClimateTwin, loadClimateAnalogCatalog } from "./climate-twin";
 import { climateTrajectory, projectClimate } from "./grounded-node-model";
 import { parseOgParams, renderOgPng } from "./og-image";
@@ -273,7 +274,7 @@ const SEO_PAGES: Record<string, SeoPage> = {
     <li>Which trend-review flags still require human scientific review.</li>
   </ul>
   <h2>Enrichment readiness ledger</h2>
-  <p>The data-quality report marks humid heat, sea-level relevance, cold-season context, freshwater water-stress (WRI Aqueduct 4.0), fire weather (Quilcaille et al. 2023, CMIP6 Fire Weather Index), and infrastructure (WRI Aqueduct Floods riverine 1-in-100-year exposure) as partial, AMOC as context-only, and daily cold stress, agriculture, and biodiversity as withheld until a registered source and method exist.</p>
+  <p>The data-quality report marks humid heat, sea-level relevance, cold-season context, freshwater water-stress (WRI Aqueduct 4.0), fire weather (Quilcaille et al. 2023, CMIP6 Fire Weather Index), infrastructure (WRI Aqueduct Floods riverine 1-in-100-year exposure), and food and agriculture (ISIMIP GGCMI crop-yield change) as partial, AMOC as context-only, and daily cold stress and biodiversity as withheld until a registered source and method exist.</p>
   <p>Use this page with <a href="/methodology">the methodology</a> and <a href="${GITHUB_REPO_URL}">the source repository</a>. It does not prove that the public Replit deployment has already been republished or that production cache purge has been completed.</p>
 </main>`,
   },
@@ -836,7 +837,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       } catch (floodErr) {
         console.warn("flood lookup failed:", (floodErr as Error).message);
       }
-      res.json({ success: true, data: { coordinates, points, cachedCount, freshwater, fireWeather, floodRiver } });
+      // Grounded crop-yield enrichment: ISIMIP GGCMI ensemble-mean rainfed yield change.
+      // null for ssp245 (not in GGCMI3b protocol) or cells with no staple crop — never fabricated.
+      let cropYield = null;
+      try {
+        cropYield = lookupCropYield(coordinates.lat, coordinates.lng, scenario);
+      } catch (cropErr) {
+        console.warn("crop-yield lookup failed:", (cropErr as Error).message);
+      }
+      res.json({ success: true, data: { coordinates, points, cachedCount, freshwater, fireWeather, floodRiver, cropYield } });
     } catch (err) {
       if (isDatabaseUnavailable(err)) return databaseUnavailable(res);
       const msg = (err as Error).message;

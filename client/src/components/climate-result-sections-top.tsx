@@ -34,7 +34,7 @@ function freshwaterCategoryColor(category: number | null): string {
 export default function ClimateResultSectionsTop({ vm }: { vm: ClimateAppVM }) {
   const {
   locationText, setLocationText, selectedLocation, setSelectedLocation,
-  suggestions, showSuggestions, setShowSuggestions, year, scenario, trajectory, freshwater, fireWeather, floodRiver,
+  suggestions, showSuggestions, setShowSuggestions, year, scenario, trajectory, freshwater, fireWeather, floodRiver, cropYield,
   isLoading, loadingStep, error, exporting, playing, shareCopied, shareStoryCopied,
   shareImageBusy, shareImageSaved, rawJsonCopied, reportSaved, analogCatalog, analogError,
   coastalArtifact, coastalArtifactError, scenarioContrast, scenarioContrastLoading,
@@ -503,6 +503,59 @@ export default function ClimateResultSectionsTop({ vm }: { vm: ClimateAppVM }) {
             ) : (
               <p style={{ margin: 0, fontSize: 12.5, lineHeight: 1.58, color: MUTED }}>
                 River-flood exposure is not shown here. WRI Aqueduct Floods covers RCP4.5 (shown for SSP2-4.5) and RCP8.5 (shown for SSP5-8.5); SSP1-2.6 and SSP3-7.0 have no matching Aqueduct scenario, so no value is shown rather than guessing one.
+              </p>
+            )}
+          </div>
+        )}
+
+        {/* Crop yields — grounded ISIMIP GGCMI ensemble-mean rainfed yield change */}
+        {trajectory && (
+          <div style={{ ...card, padding: 18, marginBottom: 14, borderLeft: `3px solid ${GREEN}` }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, flexWrap: "wrap", marginBottom: 12 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <h2 style={{ fontSize: 12, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.07em", color: MUTED }}>Crop yields · ISIMIP GGCMI</h2>
+              </div>
+              {cropYield && (
+                <span style={{ fontSize: 10, color: MUTED }}>{cropYield.scenarioLabel} · vs {cropYield.baselinePeriod}</span>
+              )}
+            </div>
+
+            {cropYield ? (
+              <>
+                <p style={{ margin: "0 0 10px", fontSize: 12.5, lineHeight: 1.58, color: "rgba(255,255,255,0.78)" }}>
+                  Modeled change in rainfed yield of staple crops for the surrounding 0.5° cell under the {cropYield.scenarioLabel} pathway, as a multi-model ensemble mean.
+                  This is a model-ensemble crop signal, not a field-level forecast for a specific farm.
+                </p>
+                <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 8 }}>
+                  {cropYield.crops.map((cropSeries) => {
+                    const active = cropSeries.horizons.reduce((best, h) => (Math.abs(h.year - displayYear) < Math.abs(best.year - displayYear) ? h : best));
+                    const pct = active.yieldChangePercent;
+                    const color = pct == null ? MUTED : pct >= 2 ? GREEN : pct <= -2 ? RED : AMBER;
+                    return (
+                      <div key={cropSeries.crop} style={{ flex: "1 1 120px", border: `1px solid ${BORDER}`, borderRadius: 8, padding: "8px 10px" }}>
+                        <div style={{ fontSize: 10, color: MUTED, textTransform: "uppercase", letterSpacing: "0.05em" }}>{cropSeries.label}</div>
+                        <div style={{ fontSize: 16, fontWeight: 800, color, lineHeight: 1.3 }}>
+                          {pct == null ? "No data" : `${pct >= 0 ? "+" : ""}${pct.toFixed(0)}%`}
+                        </div>
+                        <div style={{ fontSize: 9.5, color: MUTED, marginTop: 2 }}>{active.year} horizon{active.year !== displayYear ? ` (nearest to ${displayYear})` : ""}</div>
+                      </div>
+                    );
+                  })}
+                </div>
+                <ReceiptDetails
+                  label="source"
+                  text={`${cropYield.attribution} ${cropYield.method} License: CC0 1.0 (public domain).`}
+                />
+                <ul style={{ margin: "8px 0 0", paddingLeft: 18, fontSize: 10.5, lineHeight: 1.5, color: MUTED }}>
+                  {cropYield.caveats.map((caveat) => <li key={caveat}>{caveat}</li>)}
+                </ul>
+              </>
+            ) : (
+              <p style={{ margin: 0, fontSize: 12.5, lineHeight: 1.58, color: MUTED }}>
+                Crop-yield change is not shown here.{" "}
+                {scenario === "ssp245"
+                  ? "SSP2-4.5 is not in the ISIMIP GGCMI phase 3 core protocol, so no value is shown rather than guessing one."
+                  : "No staple crop is grown in the ISIMIP GGCMI cell for this point (for example open ocean or desert), so no value is shown rather than guessing one."}
               </p>
             )}
           </div>

@@ -247,6 +247,34 @@ export interface FloodExposure {
   caveats: string[];
 }
 
+export interface CropHorizon {
+  year: number;
+  yieldChangePercent: number | null;
+}
+
+export interface CropSeries {
+  crop: string;
+  label: string;
+  horizons: CropHorizon[];
+}
+
+export interface CropYield {
+  sourceId: string;
+  version: string;
+  indicator: string;
+  indicatorLabel: string;
+  attribution: string;
+  license: string;
+  stableUrl: string;
+  scenario: string;
+  scenarioLabel: string;
+  modelCount: number;
+  baselinePeriod: string;
+  crops: CropSeries[];
+  method: string;
+  caveats: string[];
+}
+
 export interface ClimateAnalogMatch {
   candidate: AnalogCandidate;
   distance: number;
