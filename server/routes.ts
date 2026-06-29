@@ -17,13 +17,19 @@ import { lookupCropYield } from "./crops";
 import { climateTwinQuerySchema, findClimateTwin, loadClimateAnalogCatalog } from "./climate-twin";
 import { climateTrajectory, projectClimate } from "./grounded-node-model";
 import { parseOgParams, renderOgPng } from "./og-image";
+import { createHash } from "node:crypto";
+import {
+  checkRateLimit,
+  lruGet,
+  lruSet,
+  projectionCacheKey,
+} from "./runtime-cache";
 
 // Forecasts run in-process via the Node grid engine (grounded-node-model.ts);
-// the legacy Python serving subprocess has been removed.
+// the legacy Python serving subprocess has been removed. The per-IP rate limit
+// and the LRU projection cache now live in ./runtime-cache (token-bucket +
+// bounded LRU) so this module stays focused on HTTP wiring.
 
-const RATE_LIMIT_WINDOW_MS = 60_000;
-const RATE_LIMIT_MAX_PER_WINDOW = 10;
-const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
 const MIN_FORECAST_YEAR = 2024;
 const MAX_FORECAST_YEAR = 2100;
 // SSP1-1.9 temperature/precipitation layers exist in the artifact, but the
@@ -32,17 +38,18 @@ const MAX_FORECAST_YEAR = 2100;
 const CLIMATE_SCENARIOS = ["ssp126", "ssp245", "ssp370", "ssp585"] as const;
 const DEFAULT_CLIMATE_SCENARIO = "ssp245";
 
-function checkRateLimit(ip: string): boolean {
-  const now = Date.now();
-  const entry = rateLimitMap.get(ip);
-  if (!entry || now > entry.resetAt) {
-    rateLimitMap.set(ip, { count: 1, resetAt: now + RATE_LIMIT_WINDOW_MS });
-    return true;
-  }
-  if (entry.count >= RATE_LIMIT_MAX_PER_WINDOW) return false;
-  entry.count++;
-  return true;
-}
+// Default trajectory checkpoint set for the cache-friendly GET variant when the
+// caller omits `years`: baseline + current forecast year + 5-year cadence to
+// 2100 (<=17 points). Mirrors the in-app POST request the SPA issues, so the GET
+// and POST payloads line up and the CDN caches exactly what users would compute.
+const DEFAULT_TRAJECTORY_YEARS: number[] = (() => {
+  const BASELINE = 2025;
+  const current = Math.min(MAX_FORECAST_YEAR, Math.max(BASELINE + 1, new Date().getUTCFullYear()));
+  const five = Array.from({ length: 15 }, (_, i) => 2030 + i * 5).filter(
+    (y) => y >= current && y <= MAX_FORECAST_YEAR,
+  );
+  return Array.from(new Set([BASELINE, current, ...five])).sort((a, b) => a - b);
+})();
 
 function isDatabaseUnavailable(error: unknown): boolean {
   return error instanceof DatabaseUnavailableError ||
@@ -170,6 +177,148 @@ function projectionScenario(projection: unknown): string | undefined {
 
 function roundCacheKey(n: number): number {
   return Math.round(n * 100) / 100;
+}
+
+// Aggressive edge-cacheable headers for the deterministic GET trajectory variant.
+// The forecast is immutable for a given (location, scenario, years, model
+// version), so a long shared-cache TTL is safe; a model-version bump changes the
+// ETag and the GET cache key, invalidating every edge entry automatically.
+//   max-age=86400    — browser keeps it a day.
+//   s-maxage=604800  — CDN (Cloudflare) keeps it a week.
+//   immutable        — compliant browsers skip revalidation entirely.
+function setEdgeImmutableCacheHeaders(res: any): void {
+  res.set({
+    "Cache-Control": "public, max-age=86400, s-maxage=604800, immutable",
+    "Vary": "Accept-Encoding",
+  });
+}
+
+// Strong ETag for a trajectory response. Derived only from inputs that fully
+// determine the payload (model + source-registry version, rounded coordinates,
+// scenario, checkpoint years), so identical requests across deploys share an
+// edge entry and a model bump invalidates them.
+function trajectoryEtag(latKey: number, lngKey: number, scenario: string, years: number[]): string {
+  const seed = `${MODEL_CACHE_VERSION}|${SOURCE_REGISTRY_VERSION}|${latKey}|${lngKey}|${scenario}|${years.join(",")}`;
+  return `"${createHash("sha1").update(seed).digest("hex").slice(0, 16)}"`;
+}
+
+// Read-through projection lookup: in-memory LRU first, then Postgres. A LRU hit
+// never touches the DB, so hot locations survive a DB outage and skip the
+// round-trip entirely. A DB read error (incl. DatabaseUnavailableError) is left
+// to propagate so the caller preserves the existing 503 contract on cold cache.
+async function readProjectionThrough(
+  latKey: number,
+  lngKey: number,
+  year: number,
+  scenario: string,
+): Promise<any> {
+  const key = projectionCacheKey(latKey, lngKey, year, scenario);
+  const mem = lruGet(key);
+  if (mem !== undefined) return mem;
+  const pg = await storage.getCachedModelProjection(latKey, lngKey, year, scenario);
+  if (pg !== undefined && projectionScenario(pg) === scenario) {
+    lruSet(key, pg);
+    return pg;
+  }
+  return undefined;
+}
+
+// Persist a freshly-computed projection. The LRU is updated synchronously (cheap,
+// in-process); the Postgres write is fire-and-forget so the ~1ms compute is never
+// gated on a DB round-trip. Write failures are logged, never thrown — the
+// response is already served from the computed value.
+function saveProjectionBestEffort(
+  latKey: number,
+  lngKey: number,
+  year: number,
+  scenario: string,
+  projection: any,
+): void {
+  lruSet(projectionCacheKey(latKey, lngKey, year, scenario), projection);
+  Promise.resolve()
+    .then(() => storage.saveModelProjection(latKey, lngKey, year, scenario, projection))
+    .catch((e) => console.warn("model-cache write failed (non-fatal):", (e as Error).message));
+}
+
+// Shared trajectory builder used by both the POST (app) and GET (CDN) routes so
+// the two return identical payloads. Reads through LRU -> Postgres, computes only
+// the missing years, then layers the grounded enrichments. Cardinal rule: every
+// enrichment defaults to null and is only set on a successful grounded lookup — a
+// failure logs and leaves null, never a fabricated value.
+async function buildTrajectoryData(
+  coordinates: { lat: number; lng: number },
+  years: number[],
+  scenario: string,
+): Promise<Record<string, any>> {
+  const latKey = roundCacheKey(coordinates.lat);
+  const lngKey = roundCacheKey(coordinates.lng);
+
+  const pointsByYear = new Map<number, any>();
+  const missingYears: number[] = [];
+  let cachedCount = 0;
+  for (const year of years) {
+    const cached = await readProjectionThrough(latKey, lngKey, year, scenario);
+    if (cached !== undefined) {
+      cachedCount++;
+      pointsByYear.set(year, { year, cached: true, ...(cached as object) });
+      continue;
+    }
+    missingYears.push(year);
+  }
+
+  if (missingYears.length > 0) {
+    const trajectory = await runClimateTrajectory(coordinates.lat, coordinates.lng, missingYears, scenario);
+    const projectedPoints = Array.isArray(trajectory?.points) ? trajectory.points : [];
+    for (const projection of projectedPoints) {
+      const year = Number(projection?.year);
+      if (!missingYears.includes(year)) continue;
+      saveProjectionBestEffort(latKey, lngKey, year, scenario, projection);
+      pointsByYear.set(year, { year, cached: false, ...projection });
+    }
+    for (const year of missingYears) {
+      if (!pointsByYear.has(year)) {
+        throw new Error("parse_error");
+      }
+    }
+  }
+
+  const points = years.map((year) => pointsByYear.get(year));
+  // Grounded Freshwater enrichment: Aqueduct 4.0 water-stress for the containing
+  // sub-basin under the requested scenario. null for ssp245 (no Aqueduct match)
+  // or open ocean / unclassified points — never fabricated.
+  let freshwater = null;
+  try {
+    freshwater = lookupFreshwater(coordinates.lat, coordinates.lng, scenario);
+  } catch (fwErr) {
+    console.warn("freshwater lookup failed:", (fwErr as Error).message);
+  }
+  // Grounded fire-weather enrichment: Quilcaille 2023 CMIP6 FWI ensemble-mean
+  // indicators for the containing 2.5-degree land cell. null for unsupported
+  // scenarios or open ocean — never fabricated.
+  let fireWeather = null;
+  try {
+    fireWeather = lookupFireWeather(coordinates.lat, coordinates.lng, scenario);
+  } catch (fireErr) {
+    console.warn("fire-weather lookup failed:", (fireErr as Error).message);
+  }
+  // Grounded riverine flood exposure: WRI Aqueduct Floods 1-in-100-year,
+  // RCP4.5->ssp245, RCP8.5->ssp585. null for ssp126/ssp370 — never fabricated.
+  let floodRiver = null;
+  try {
+    floodRiver = lookupRiverFlood(coordinates.lat, coordinates.lng, scenario);
+  } catch (floodErr) {
+    console.warn("flood lookup failed:", (floodErr as Error).message);
+  }
+  // Grounded crop-yield enrichment: ISIMIP GGCMI ensemble-mean rainfed yield
+  // change. null for ssp245 or cells with no staple crop — never fabricated.
+  let cropYield = null;
+  try {
+    cropYield = lookupCropYield(coordinates.lat, coordinates.lng, scenario);
+  } catch (cropErr) {
+    console.warn("crop-yield lookup failed:", (cropErr as Error).message);
+  }
+
+  return { coordinates, points, cachedCount, freshwater, fireWeather, floodRiver, cropYield };
 }
 
 // ── SEO: per-route HTML head injection (production only) ────────────────────
@@ -772,80 +921,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
     // De-duplicate and sort the checkpoint years ascending.
     const years = Array.from(new Set(parsed.data.years)).sort((a, b) => a - b);
 
-    // Round to a ~0.01° (~1 km) grid so the same location — or a near-identical
-    // one — reuses a previously cached grounded-model run.
-    // Storage also checks the JSON payload's grounded-grid cache version; old
-    // unversioned cbottle-era rows read as misses and are overwritten.
-    const latKey = roundCacheKey(coordinates.lat);
-    const lngKey = roundCacheKey(coordinates.lng);
-
     try {
-      const pointsByYear = new Map<number, any>();
-      const missingYears: number[] = [];
-      let cachedCount = 0;
-      for (const year of years) {
-        const cached = await storage.getCachedModelProjection(latKey, lngKey, year, scenario);
-        if (cached && projectionScenario(cached) === scenario) {
-          cachedCount++;
-          pointsByYear.set(year, { year, cached: true, ...(cached as object) });
-          continue;
-        }
-        missingYears.push(year);
-      }
-
-      if (missingYears.length > 0) {
-        // The grounded grid engine is offline — no API key needed for any location.
-        const trajectory = await runClimateTrajectory(coordinates.lat, coordinates.lng, missingYears, scenario);
-        const projectedPoints = Array.isArray(trajectory?.points) ? trajectory.points : [];
-        for (const projection of projectedPoints) {
-          const year = Number(projection?.year);
-          if (!missingYears.includes(year)) continue;
-          await storage.saveModelProjection(latKey, lngKey, year, scenario, projection);
-          pointsByYear.set(year, { year, cached: false, ...projection });
-        }
-        for (const year of missingYears) {
-          if (!pointsByYear.has(year)) {
-            throw new Error("parse_error");
-          }
-        }
-      }
-
-      const points = years.map((year) => pointsByYear.get(year));
-      // Grounded Freshwater enrichment: Aqueduct 4.0 water-stress for the containing
-      // sub-basin under the requested scenario. null for ssp245 (no Aqueduct match) or
-      // open ocean / unclassified points — never fabricated.
-      let freshwater = null;
-      try {
-        freshwater = lookupFreshwater(coordinates.lat, coordinates.lng, scenario);
-      } catch (fwErr) {
-        console.warn("freshwater lookup failed:", (fwErr as Error).message);
-      }
-      // Grounded fire-weather enrichment: Quilcaille 2023 CMIP6 FWI ensemble-mean indicators
-      // for the containing 2.5-degree land cell under the requested scenario. null for
-      // unsupported scenarios (ssp119) or open ocean — never fabricated.
-      let fireWeather = null;
-      try {
-        fireWeather = lookupFireWeather(coordinates.lat, coordinates.lng, scenario);
-      } catch (fireErr) {
-        console.warn("fire-weather lookup failed:", (fireErr as Error).message);
-      }
-      // Grounded riverine flood exposure: WRI Aqueduct Floods 1-in-100-year, RCP4.5->ssp245,
-      // RCP8.5->ssp585. null for ssp126/ssp370 (no Aqueduct match) — never fabricated.
-      let floodRiver = null;
-      try {
-        floodRiver = lookupRiverFlood(coordinates.lat, coordinates.lng, scenario);
-      } catch (floodErr) {
-        console.warn("flood lookup failed:", (floodErr as Error).message);
-      }
-      // Grounded crop-yield enrichment: ISIMIP GGCMI ensemble-mean rainfed yield change.
-      // null for ssp245 (not in GGCMI3b protocol) or cells with no staple crop — never fabricated.
-      let cropYield = null;
-      try {
-        cropYield = lookupCropYield(coordinates.lat, coordinates.lng, scenario);
-      } catch (cropErr) {
-        console.warn("crop-yield lookup failed:", (cropErr as Error).message);
-      }
-      res.json({ success: true, data: { coordinates, points, cachedCount, freshwater, fireWeather, floodRiver, cropYield } });
+      // Read-through LRU -> Postgres -> compute; Postgres writes are best-effort.
+      // The POST variant is the app's hot path and is intentionally NOT
+      // edge-cached (no cache headers) so the SPA always talks to the origin.
+      const data = await buildTrajectoryData(coordinates, years, scenario);
+      res.json({ success: true, data });
     } catch (err) {
       if (isDatabaseUnavailable(err)) return databaseUnavailable(res);
       const msg = (err as Error).message;
@@ -853,6 +934,78 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(504).json({ message: "Climate model timed out. Please try again." });
       }
       console.error("climate-trajectory failed:", msg);
+      res.status(500).json({ message: "Climate model failed. Please try again." });
+    }
+  });
+
+  // GET /api/climate-trajectory?lat=&lng=&scenario=&years= — cache-friendly twin
+  // of the POST route for CDN/edge caching (e.g. Cloudflare in front of Replit).
+  // Same payload as POST, plus a long-lived immutable Cache-Control and a strong
+  // ETag derived from MODEL_CACHE_VERSION + location + scenario + years, so the
+  // edge serves repeat hits with zero origin compute and a model-version bump
+  // changes the ETag (and the cache key) to invalidate every cached entry.
+  app.get("/api/climate-trajectory", async (req, res) => {
+    const clientIp = ((req.ip ?? "") || (req.socket?.remoteAddress ?? "0.0.0.0")).replace(/^::ffff:/, "");
+    if (!checkRateLimit(clientIp)) {
+      setNoCacheHeaders(res);
+      return res.status(429).json({ message: "Too many requests. Please try again later." });
+    }
+
+    const querySchema = z.object({
+      lat: z.coerce.number().min(-90).max(90),
+      lng: z.coerce.number().min(-180).max(180),
+      scenario: z.enum(CLIMATE_SCENARIOS).default(DEFAULT_CLIMATE_SCENARIO),
+      years: z.string().max(200).optional(),
+    });
+    const parsed = querySchema.safeParse(req.query);
+    if (!parsed.success) {
+      setNoCacheHeaders(res);
+      return res.status(400).json({ message: "Invalid request parameters" });
+    }
+
+    // Parse the optional comma-separated `years` list; default to the standard
+    // checkpoint set the SPA uses so the GET and POST payloads stay aligned.
+    let years: number[];
+    if (parsed.data.years) {
+      const raw = parsed.data.years.split(",").map((s) => s.trim()).filter(Boolean).map(Number);
+      const valid =
+        raw.length > 0 &&
+        raw.length <= 20 &&
+        raw.every((n) => Number.isInteger(n) && n >= MIN_FORECAST_YEAR && n <= MAX_FORECAST_YEAR);
+      if (!valid) {
+        setNoCacheHeaders(res);
+        return res.status(400).json({ message: "Invalid years parameter" });
+      }
+      years = Array.from(new Set(raw)).sort((a, b) => a - b);
+    } else {
+      years = DEFAULT_TRAJECTORY_YEARS;
+    }
+
+    const { lat, lng, scenario } = parsed.data;
+    const coordinates = { lat, lng };
+    const etag = trajectoryEtag(roundCacheKey(lat), roundCacheKey(lng), scenario, years);
+
+    // Conditional request: identical content => 304, no body, edge keeps its copy.
+    if (req.headers["if-none-match"] === etag) {
+      setEdgeImmutableCacheHeaders(res);
+      res.setHeader("ETag", etag);
+      return res.status(304).end();
+    }
+
+    try {
+      const data = await buildTrajectoryData(coordinates, years, scenario);
+      setEdgeImmutableCacheHeaders(res);
+      res.setHeader("ETag", etag);
+      res.json({ success: true, data });
+    } catch (err) {
+      // Errors / 503 must never be pinned at the edge.
+      setNoCacheHeaders(res);
+      if (isDatabaseUnavailable(err)) return databaseUnavailable(res);
+      const msg = (err as Error).message;
+      if (msg === "timeout") {
+        return res.status(504).json({ message: "Climate model timed out. Please try again." });
+      }
+      console.error("climate-trajectory (GET) failed:", msg);
       res.status(500).json({ message: "Climate model failed. Please try again." });
     }
   });

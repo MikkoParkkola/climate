@@ -15,6 +15,7 @@
     "report:validation": "node scripts/generate-validation-report.mjs",
     "validate:artifacts": "node scripts/validate-artifacts.mjs",
     "smoke:cache": "tsx scripts/smoke-cache-envelope.ts",
+    "smoke:runtime-cache": "tsx scripts/smoke-runtime-cache.ts",
     "smoke:rankings": "tsx scripts/smoke-ranking-artifacts.ts",
     "smoke:twin": "tsx scripts/smoke-climate-twin.ts",
     "smoke:comparison-layout": "node scripts/smoke-comparison-layout.mjs",
@@ -49,7 +50,7 @@
     "verify:live": "node scripts/verify-live-release.mjs",
     "db:purge-model-cache": "node scripts/purge-climate-model-cache.mjs",
     "db:purge-model-cache:dry-run": "node scripts/purge-climate-model-cache.mjs --dry-run",
-    "ci": "npm run check && npm run build && npm run audit:public && npm run smoke:db-free-release && npm run smoke:cache && npm run smoke:rankings && npm run smoke:twin && npm run smoke:comparison-layout && npm run smoke:projection-route && npm run smoke:raw-json && npm run smoke:storyline && npm run smoke:share-card && npm run smoke:og && npm run smoke:client-safety && npm run smoke:browser-mount && npm run smoke:educational-report && npm run smoke:guided-explainer && npm run smoke:scenario-contrast && npm run smoke:grid-reader && npm run smoke:node-model && npm run smoke:node-performance && npm run smoke:observed-baseline && npm run smoke:data-quality && npm run smoke:freshwater && npm run smoke:fire-weather && npm run smoke:floods && npm run smoke:crops && npm run smoke:cache-purge-script && npm run smoke:validation-report && npm run smoke:model && npm run audit:trajectories",
+    "ci": "npm run check && npm run build && npm run audit:public && npm run smoke:db-free-release && npm run smoke:cache && npm run smoke:runtime-cache && npm run smoke:rankings && npm run smoke:twin && npm run smoke:comparison-layout && npm run smoke:projection-route && npm run smoke:raw-json && npm run smoke:storyline && npm run smoke:share-card && npm run smoke:og && npm run smoke:client-safety && npm run smoke:browser-mount && npm run smoke:educational-report && npm run smoke:guided-explainer && npm run smoke:scenario-contrast && npm run smoke:grid-reader && npm run smoke:node-model && npm run smoke:node-performance && npm run smoke:observed-baseline && npm run smoke:data-quality && npm run smoke:freshwater && npm run smoke:fire-weather && npm run smoke:floods && npm run smoke:crops && npm run smoke:cache-purge-script && npm run smoke:validation-report && npm run smoke:model && npm run audit:trajectories",
     "db:push": "drizzle-kit push"
   },
   "dependencies": {

@@ -57,10 +57,12 @@ npm run db:push  # drizzle-kit push (apply schema to DB)
 2. **Express 5 wildcards** — `app.use("*")` must be `app.use("/{*any}")` (path-to-regexp 8.x) or the server crashes at startup. See `.agents/memory/express5-vite-wildcards.md`.
 3. **Heavy-model e2e times out** — the model is slow + rate-limited. A full browser end-to-end run blows the 10-min sandbox cap. **Verify in layers**: endpoint JSON asserts + `npm run build` + screenshot — never one giant e2e. See `.agents/memory/e2e-real-model-timeout.md`.
 
-## Operational guardrails (already in `server/routes.ts`)
+## Operational guardrails (already in `server/routes.ts` + `server/runtime-cache.ts`)
 
-- Rate limit: 10 requests / minute / IP on model endpoints.
-- Python concurrency: max 2 concurrent processes, 60s timeout, queued waiters.
+- Rate limit: per-IP **token bucket** (burst 60, refill 120/min) in `server/runtime-cache.ts` — replaced the legacy 10/min fixed window that guarded the now-removed Python subprocess. Limits are named constants (`RATE_LIMIT_BURST`, `RATE_LIMIT_REFILL_PER_MIN`).
+- Forecasts run in-process (`grounded-node-model.ts`, ~1 ms/trajectory); no Python subprocess remains.
+- Two-layer projection cache: in-memory **LRU** (cap 50k, keyed by latKey/lngKey/year/scenario/`MODEL_CACHE_VERSION`) in front of the `climate_model_cache` Postgres table. Read-through is memory -> Postgres -> compute; Postgres writes are fire-and-forget (best-effort, never block the response).
+- Cache-friendly `GET /api/climate-trajectory?lat=&lng=&scenario=&years=` mirrors the POST payload and sets `Cache-Control: public, max-age=86400, s-maxage=604800, immutable` + a strong ETag (from `MODEL_CACHE_VERSION` + location + scenario + years) for CDN/edge caching. A model-version bump changes the ETag and cache key, invalidating the edge automatically. The POST route stays the app's hot path (uncached).
 - Model output cached in `climate_model_cache` (rounded lat/lng/year grid, lossless full JSON). Caching is central to the product — see plan.
 
 ## Conventions
