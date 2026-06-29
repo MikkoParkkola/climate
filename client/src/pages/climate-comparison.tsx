@@ -212,9 +212,17 @@ function Sparkline({ data, years, color, year, w = 80, h = 22 }: { data: number[
   if (data.length < 2) return <svg viewBox={`0 0 ${w} ${h}`} style={{ width: w, height: h }} />;
   const mn = Math.min(...data);
   const mx = Math.max(...data);
-  const rng = mx - mn || 1;
+  // Honest scale: auto-scaling to the data's own min/max amplified sub-point noise
+  // into a fake dramatic dip for near-flat trajectories (a stable city's ~0.1-point
+  // wiggle filled the whole sparkline — the reported Prague "2062 dip"). Clamp the
+  // visible range to a minimum and center on it, so a flat livability line reads
+  // flat while a real decline keeps its slope. (TrajectoryChart uses fixed 0-100.)
+  const MIN_RANGE = 12;
+  const mid = (mn + mx) / 2;
+  const rng = Math.max(mx - mn, MIN_RANGE);
+  const pad = h * 0.12;
   const xForIdx = (i: number) => (i / (data.length - 1)) * w;
-  const yForVal = (v: number) => h - ((v - mn) / rng) * h * 0.88 + h * 0.06;
+  const yForVal = (v: number) => pad + (1 - ((v - mid) / rng + 0.5)) * (h - 2 * pad);
   const pts = data.map((v, i) => `${xForIdx(i)},${yForVal(v)}`).join(" ");
   // fractional index of the slider year within the checkpoint years
   const span = years[years.length - 1] - years[0] || 1;
