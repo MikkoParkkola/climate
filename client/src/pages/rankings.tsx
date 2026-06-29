@@ -3,6 +3,18 @@ import { useQuery } from "@tanstack/react-query";
 import { BarChart3, Database, ExternalLink, Info, ShieldAlert } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { SCENARIOS, scenarioOptionLabel } from "@/lib/climate-constants";
+import { GLOSSARY, type GlossaryKey } from "@/lib/glossary";
+
+// Plain-language glossary key for each ranking metric, so the picker can show a
+// teen-readable "what this measures" line instead of a bare label.
+const METRIC_TERMS: Record<string, GlossaryKey> = {
+  habitability_score: "habitability_score",
+  heat_stress_days: "heat_stress_day",
+  drought_risk: "drought_risk",
+  flood_risk: "flood_risk",
+  warming_anomaly_c: "anomaly",
+  sea_level_rise_cm: "sea_level_rise",
+};
 
 // SCENARIOS imported from climate-constants — single source of truth for scenario wording.
 const DEFAULT_SCENARIO = "ssp245";
@@ -130,6 +142,11 @@ export default function RankingsPage() {
               country aggregate derived from those places. They are not climate-haven,
               safety, full national-exposure, or complete winner/loser lists.
             </p>
+            <p className="mt-3 max-w-3xl rounded border border-[hsl(24,88%,56%)]/30 bg-[hsl(24,88%,56%)]/5 p-3 text-sm text-slate-200">
+              <span className="font-semibold text-[hsl(24,88%,66%)]">In plain words:</span> pick a
+              climate signal, a future year, and an emissions path, and this ranks a fixed list of places
+              from highest to lowest. It's a way to compare example cities, not a "best places to live" list.
+            </p>
           </div>
         </header>
 
@@ -159,6 +176,9 @@ export default function RankingsPage() {
             >
               {METRICS.map((item) => <option key={item.id} value={item.id}>{item.label}</option>)}
             </select>
+            {METRIC_TERMS[metric] && (
+              <span className="block text-xs leading-5 text-slate-400">{GLOSSARY[METRIC_TERMS[metric]].definition}</span>
+            )}
           </label>
           <label className="space-y-1 text-sm">
             <span className="font-medium text-slate-300">Scenario</span>

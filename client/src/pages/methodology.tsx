@@ -20,6 +20,25 @@ export default function Methodology() {
           </p>
         </header>
 
+        <Card className="border border-[hsl(24,88%,56%)]/30 bg-[hsl(24,88%,56%)]/5 text-white">
+          <CardContent className="space-y-2 pt-6 text-sm leading-relaxed text-slate-200">
+            <p className="font-semibold text-[hsl(24,88%,66%)]">In plain words</p>
+            <p>
+              Scientists run big climate models (called CMIP6) that the UN's climate report relies on.
+              We take their results — not made-up formulas — and show you what they mean for one place:
+              how hot and wet it gets, how often dangerous heat, fires, floods, droughts and water
+              shortages hit, what happens to crops and winters, and how high the sea sits if you're near
+              the coast. We blend the dangers into one 0–100 habitability score so places are easy to
+              compare.
+            </p>
+            <p>
+              We show four "what if" futures based on how much pollution the world keeps making, from
+              fast cuts to a worst case. The honest rule: if the science can't back a number, we leave it
+              blank instead of guessing. The rest of this page is the full, detailed version.
+            </p>
+          </CardContent>
+        </Card>
+
         <Card className="bg-[hsl(222,15%,12%)] text-white">
           <CardContent className="prose prose-sm prose-invert max-w-none pt-6">
             <h2>What the forecast is built from</h2>

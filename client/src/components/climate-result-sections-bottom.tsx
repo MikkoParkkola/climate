@@ -16,6 +16,8 @@ import {
 } from "@/components/climate-charts";
 
 import type { ClimateAppVM } from "@/hooks/use-climate-app";
+import { Term, MetricTip } from "@/components/climate-term";
+import type { GlossaryKey } from "@/lib/glossary";
 
 
 export default function ClimateResultSectionsBottom({ vm }: { vm: ClimateAppVM }) {
@@ -123,6 +125,8 @@ export default function ClimateResultSectionsBottom({ vm }: { vm: ClimateAppVM }
           {[
             {
               label: "Heat Stress",
+              termKey: "heat_stress_day" as GlossaryKey,
+              tipValue: d!.heatDays,
               value: d!.heatDays,
               unit: "days/yr",
               delta: `+${Math.max(0, d!.heatDays - d!.baseHeatDays)}d`,
@@ -132,6 +136,8 @@ export default function ClimateResultSectionsBottom({ vm }: { vm: ClimateAppVM }
             },
             {
               label: "Humid heat screen",
+              termKey: "wet_bulb" as GlossaryKey,
+              tipValue: d!.humidHeatWetBulb ?? null,
               value: d!.humidHeatWetBulb == null ? "n/a" : `${d!.humidHeatWetBulb.toFixed(1)}°C`,
               unit: "monthly mean wet-bulb",
               sub: d!.humidHeatMonth ?? "max month",
@@ -141,6 +147,8 @@ export default function ClimateResultSectionsBottom({ vm }: { vm: ClimateAppVM }
             },
             {
               label: "Cold-season context",
+              termKey: "cold_season" as GlossaryKey,
+              tipValue: d!.coldMonthCount,
               value: d!.coldMonthCount,
               unit: "monthly mean freeze months",
               sub: `${MONTHS[d!.minIdx]} ${d!.monthlyTemps[d!.minIdx].toFixed(1)}°C`,
@@ -150,6 +158,8 @@ export default function ClimateResultSectionsBottom({ vm }: { vm: ClimateAppVM }
             },
             {
               label: "Drought Risk",
+              termKey: "drought_risk" as GlossaryKey,
+              tipValue: d!.drought,
               value: `${d!.drought}%`,
               sub: d!.drought < 25 ? "Low" : d!.drought < 40 ? "Elevated" : "High",
               detail: `${roundedValue(d!.drySpellDays, " dry-spell days")} raw`,
@@ -159,6 +169,8 @@ export default function ClimateResultSectionsBottom({ vm }: { vm: ClimateAppVM }
             },
             {
               label: "Flood Risk",
+              termKey: "flood_risk" as GlossaryKey,
+              tipValue: d!.flood,
               value: `${d!.flood}%`,
               sub: d!.flood < 30 ? "Low" : d!.flood < 60 ? "Elevated" : "High",
               detail: `${roundedValue(d!.maxFiveDayRain, " mm Rx5day")} raw`,
@@ -168,16 +180,18 @@ export default function ClimateResultSectionsBottom({ vm }: { vm: ClimateAppVM }
             },
             {
               label: "Sea-level context",
+              termKey: "sea_level_rise" as GlossaryKey,
+              tipValue: d!.seaLevel,
               value: `${d!.seaLevel}cm`,
               sub: coastalRelevance?.isLocallyRelevant ? "Coastal screen" : "Regional AR6",
               detail: d!.seaLow != null && d!.seaHigh != null ? `${Math.round(d!.seaLow)}-${Math.round(d!.seaHigh)} cm range` : "range not exposed",
               color: CYAN,
               receipt: `Sea-level context uses the registered NASA/IPCC AR6 regional sea-level layer for ${shownScenario.label}. Selected range: ${d!.seaLow != null && d!.seaHigh != null ? `${Math.round(d!.seaLow)} to ${Math.round(d!.seaHigh)} cm` : "not exposed"}. ${coastalRelevance?.receipt ?? "Coastal relevance is not evaluated, so this is regional context only."}`,
             },
-          ].map(({ label, value, unit, delta, sub, detail, bar, color, receipt }) => (
+          ].map(({ label, termKey, tipValue, value, unit, delta, sub, detail, bar, color, receipt }) => (
             <div key={label} style={{ ...card, padding: 14, borderTop: `2px solid ${color}` }}>
               <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
-                <div style={{ fontSize: 10, color: MUTED }}>{label}</div>
+                <div style={{ fontSize: 10, color: MUTED }}>{termKey ? <MetricTip k={termKey} value={tipValue}>{label}</MetricTip> : label}</div>
                 <ReceiptDetails label="source" text={receipt} />
               </div>
               <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", marginTop: 6 }}>
@@ -207,15 +221,15 @@ export default function ClimateResultSectionsBottom({ vm }: { vm: ClimateAppVM }
           </summary>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(220px,1fr))", gap: "2px 18px", marginTop: 12 }}>
             {[
-              { label: "Circulation Pattern", value: d!.circulation ?? "—", color: BLUE },
-              { label: "Climate Sensitivity", value: d!.sensitivity != null ? `${d!.sensitivity.toFixed(1)}°C per CO₂ doubling` : "—", color: ORANGE },
-              { label: "Active Feedbacks", value: d!.feedbacks.length ? d!.feedbacks.map((f) => f.split(":")[0].trim()).join(" · ") : "—", color: PURPLE },
-              { label: "Model Confidence", value: prettify(d!.confidence), color: confidenceColor(d!.confidence) },
-              { label: "Model", value: d!.modelVersion ? `${d!.model} ${d!.modelVersion}` : d!.model, color: MUTED },
-              { label: "Resolution", value: d!.resolution ?? "—", color: MUTED },
-            ].map(({ label, value, color }) => (
+              { label: "Circulation Pattern", termKey: "circulation" as GlossaryKey | undefined, value: d!.circulation ?? "—", color: BLUE },
+              { label: "Climate Sensitivity", termKey: "climate_sensitivity" as GlossaryKey | undefined, value: d!.sensitivity != null ? `${d!.sensitivity.toFixed(1)}°C per CO₂ doubling` : "—", color: ORANGE },
+              { label: "Active Feedbacks", termKey: undefined as GlossaryKey | undefined, value: d!.feedbacks.length ? d!.feedbacks.map((f) => f.split(":")[0].trim()).join(" · ") : "—", color: PURPLE },
+              { label: "Model Confidence", termKey: "confidence" as GlossaryKey | undefined, value: prettify(d!.confidence), color: confidenceColor(d!.confidence) },
+              { label: "Model", termKey: "cmip6" as GlossaryKey | undefined, value: d!.modelVersion ? `${d!.model} ${d!.modelVersion}` : d!.model, color: MUTED },
+              { label: "Resolution", termKey: "resolution" as GlossaryKey | undefined, value: d!.resolution ?? "—", color: MUTED },
+            ].map(({ label, termKey, value, color }) => (
               <div key={label} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, borderBottom: "1px solid rgba(255,255,255,0.04)", paddingBottom: 6, marginBottom: 6, fontSize: 11 }}>
-                <span style={{ color: MUTED, flexShrink: 0 }}>{label}</span>
+                <span style={{ color: MUTED, flexShrink: 0 }}>{termKey ? <Term k={termKey}>{label}</Term> : label}</span>
                 <span style={{ fontWeight: 600, color, textAlign: "right" }}>{value}</span>
               </div>
             ))}
@@ -363,7 +377,7 @@ export default function ClimateResultSectionsBottom({ vm }: { vm: ClimateAppVM }
 
         {/* Habitability Assessment */}
         <div style={{ ...card, padding: 18, marginBottom: 14 }}>
-          <h2 style={{ fontSize: 15, fontWeight: 700, marginBottom: 14 }}>Habitability Assessment</h2>
+          <h2 style={{ fontSize: 15, fontWeight: 700, marginBottom: 14 }}><MetricTip k="habitability_score" value={d!.score}>Habitability Assessment</MetricTip></h2>
           <div style={{ display: "flex", gap: 28, alignItems: "flex-start", flexWrap: "wrap" }}>
             <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 6, minWidth: 110 }}>
               <div style={{ position: "relative", width: 100, height: 100 }}>
