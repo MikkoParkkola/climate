@@ -297,9 +297,13 @@ export function PrecipBars({ vals }: { vals: number[] }) {
 
 export function ScoreSparkline({ years, data, color, year }: { years: number[]; data: number[]; color: string; year: number }) {
   const W = 80, H = 22;
-  const mn = Math.min(...data), mx = Math.max(...data), rng = mx - mn || 1;
+  // Honest scale: clamp range to a 12-point minimum + center, so a near-flat score
+  // reads flat instead of having sub-point noise stretched into a fake dip (same fix
+  // as the comparison-card sparkline). Scores are 0-100.
+  const mn = Math.min(...data), mx = Math.max(...data);
+  const mid = (mn + mx) / 2, rng = Math.max(mx - mn, 12), pad = H * 0.12;
   const xOf = (yr: number) => ((yr - BASELINE_YEAR) / (MAX_YEAR - BASELINE_YEAR)) * W;
-  const yOf = (v: number) => H - ((v - mn) / rng) * H * 0.88 + H * 0.06;
+  const yOf = (v: number) => pad + (1 - ((v - mid) / rng + 0.5)) * (H - 2 * pad);
   const pts = data.map((v, i) => `${xOf(years[i])},${yOf(v)}`).join(" ");
   const cx = xOf(year);
   const cy = yOf(interpArr(years, data, year));
