@@ -173,6 +173,60 @@ export interface CoastalRelevance {
   distanceKm?: number;
 }
 
+// ── Coverage status (why an enrichment is shown, substituted, or withheld) ──
+// Backend contract: each enrichment may carry a coverageStatus; when the
+// enrichment object itself is null, the same shape may arrive on a top-level
+// coverage map keyed by enrichment. All fields optional so the UI degrades
+// gracefully when the backend has not yet populated them.
+export type CoverageStatusKind =
+  | "available"
+  | "unavailable_scenario"
+  | "unavailable_location"
+  | "withheld";
+
+export interface CoverageNearestScenario {
+  scenario: string;
+  value?: number | string | null;
+  note?: string;
+}
+
+export interface CoverageStatus {
+  status: CoverageStatusKind;
+  reason?: string;
+  servedScenario?: string;
+  nearestScenario?: CoverageNearestScenario | null;
+}
+
+// Top-level coverage map (used when the enrichment object is null but the
+// backend still wants to explain the gap). Keys mirror the response fields.
+export interface EnrichmentCoverage {
+  freshwater?: CoverageStatus | null;
+  crops?: CoverageStatus | null;
+  floods?: CoverageStatus | null;
+  fireWeather?: CoverageStatus | null;
+  humidHeat?: CoverageStatus | null;
+  coldSeason?: CoverageStatus | null;
+  degreeDays?: CoverageStatus | null;
+}
+
+// AMOC / Gulf Stream qualitative risk assessment (IPCC AR6 + literature).
+// Deliberately not a local number — bounded, citation-backed regional context.
+export interface AmocCitation {
+  label?: string;
+  source?: string;
+  citation?: string;
+  url?: string;
+}
+
+export interface AmocAssessment {
+  regionRelevant: boolean;
+  status?: string;
+  weakeningAssessment?: string;
+  collapseRisk?: string;
+  europeImpact?: string;
+  citations?: Array<AmocCitation | string>;
+}
+
 export interface FreshwaterHorizon {
   year: number;
   category: number | null;
@@ -197,6 +251,7 @@ export interface FreshwaterStress {
   horizons: FreshwaterHorizon[];
   method: string;
   caveats: string[];
+  coverageStatus?: CoverageStatus | null;
 }
 
 export interface FireWeatherHorizon {
@@ -221,6 +276,7 @@ export interface FireWeather {
   horizons: FireWeatherHorizon[];
   method: string;
   caveats: string[];
+  coverageStatus?: CoverageStatus | null;
 }
 
 export interface FloodHorizon {
@@ -245,6 +301,7 @@ export interface FloodExposure {
   horizons: FloodHorizon[];
   method: string;
   caveats: string[];
+  coverageStatus?: CoverageStatus | null;
 }
 
 export interface CropHorizon {
@@ -273,6 +330,7 @@ export interface CropYield {
   crops: CropSeries[];
   method: string;
   caveats: string[];
+  coverageStatus?: CoverageStatus | null;
 }
 
 export interface ClimateAnalogMatch {

@@ -229,6 +229,26 @@ export default function Methodology() {
               IPCC assessment. fupit does not apply a local cooling correction, warming
               correction, collapse date, or deterministic local impact from AMOC context.
             </p>
+            <p>
+              For regions where the circulation directly shapes the climate — north-west
+              Europe and the wider North Atlantic above all — this context is elevated into
+              a prominent risk panel rather than a single buried line. The panel states the
+              weakening assessment, the bounded collapse-risk framing, and the
+              cooling-amid-warming paradox for Europe, with citations. It is labeled
+              qualitative IPCC and literature context, never a local number: no AMOC-driven
+              degrees, no collapse year, no deterministic local correction is applied.
+            </p>
+
+            <h2>When a scenario has no published value</h2>
+            <p>
+              Several grounded layers do not cover every SSP pathway (for example WRI
+              Aqueduct water stress and ISIMIP crop yields have no SSP2-4.5 release). Rather
+              than guessing, fupit leaves the selected-scenario value out and labels why.
+              Where a real adjacent scenario exists, it may be shown as a clearly marked
+              "nearest available · context only" value, styled distinctly from the primary
+              numbers so it is never mistaken for the selected scenario. It is adjacent-pathway
+              context, not a substitute reading for the scenario you chose.
+            </p>
 
             <h2>Freshwater availability (water stress)</h2>
             <p>

@@ -1,4 +1,4 @@
-import { GitCompare, Loader2, Download, Search, MapPin, ArrowLeft, Play, Pause, ShieldCheck, ExternalLink, Share2, Check, Wind, ClipboardList, TrendingUp, Lightbulb } from "lucide-react";
+import { GitCompare, Loader2, Download, Search, MapPin, ArrowLeft, Play, Pause, ShieldCheck, ExternalLink, Share2, Check, Wind, ClipboardList, TrendingUp, Lightbulb, Waves, AlertTriangle } from "lucide-react";
 import GuidedClimateExplainer from "@/components/guided-climate-explainer";
 import ScenarioSmallMultiples, { type ScenarioSmallMultipleMetric } from "@/components/scenario-small-multiples";
 import {
@@ -16,6 +16,7 @@ import {
 } from "@/components/climate-charts";
 
 import type { ClimateAppVM } from "@/hooks/use-climate-app";
+import { EnrichmentEmptyState } from "@/components/enrichment-coverage";
 
 // Aqueduct water-stress category (-1 arid .. 4 extremely high) -> theme colour.
 function freshwaterCategoryColor(category: number | null): string {
@@ -34,7 +35,7 @@ function freshwaterCategoryColor(category: number | null): string {
 export default function ClimateResultSectionsTop({ vm }: { vm: ClimateAppVM }) {
   const {
   locationText, setLocationText, selectedLocation, setSelectedLocation,
-  suggestions, showSuggestions, setShowSuggestions, year, scenario, trajectory, freshwater, fireWeather, floodRiver, cropYield,
+  suggestions, showSuggestions, setShowSuggestions, year, scenario, trajectory, freshwater, fireWeather, floodRiver, cropYield, coverage, amoc,
   isLoading, loadingStep, error, exporting, playing, shareCopied, shareStoryCopied,
   shareImageBusy, shareImageSaved, rawJsonCopied, reportSaved, analogCatalog, analogError,
   coastalArtifact, coastalArtifactError, scenarioContrast, scenarioContrastLoading,
@@ -64,6 +65,13 @@ export default function ClimateResultSectionsTop({ vm }: { vm: ClimateAppVM }) {
     : null;
   const nextTip = tipping.find((t) => t.year != null && (t.year as number) > displayYear);
   const crossedTips = tipping.filter((t) => t.year != null && (t.year as number) <= displayYear).length;
+  // Resolve each enrichment's coverage status. It may ride on the enrichment
+  // object itself, or — when the enrichment is null — on the top-level coverage
+  // map. Optional-chaining throughout so missing fields degrade gracefully.
+  const fwCoverage = freshwater?.coverageStatus ?? coverage?.freshwater ?? null;
+  const fireCoverage = fireWeather?.coverageStatus ?? coverage?.fireWeather ?? null;
+  const floodCoverage = floodRiver?.coverageStatus ?? coverage?.floods ?? null;
+  const cropCoverage = cropYield?.coverageStatus ?? coverage?.crops ?? null;
 
   return (
     <>
@@ -357,6 +365,91 @@ export default function ClimateResultSectionsTop({ vm }: { vm: ClimateAppVM }) {
           </div>
         )}
 
+        {/* Sea-level rise — promoted to a prominent widget for coastal points.
+            Previously this only appeared as a buried "context" line, which made
+            it easy to miss for exactly the coastal cities it matters most to. */}
+        {trajectory && d!.seaLevelApplicable && (
+          <div style={{ ...card, padding: 18, marginBottom: 14, borderLeft: `3px solid ${CYAN}` }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, flexWrap: "wrap", marginBottom: 10 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <Waves style={{ width: 15, height: 15, color: CYAN }} />
+                <h2 style={{ fontSize: 12, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.07em", color: MUTED }}>Sea-level rise · IPCC AR6 regional</h2>
+              </div>
+              {coastalRelevance?.shortLabel && (
+                <span style={{ fontSize: 10, color: MUTED, border: `1px solid ${BORDER}`, borderRadius: 999, padding: "2px 8px" }}>{coastalRelevance.shortLabel}</span>
+              )}
+            </div>
+            <div style={{ display: "flex", alignItems: "baseline", gap: 12, flexWrap: "wrap", marginBottom: 4 }}>
+              <span style={{ fontSize: 30, fontWeight: 800, color: CYAN }}>+{d!.seaLevel} cm</span>
+              <span style={{ fontSize: 11, color: MUTED }}>regional rise by {displayYear}</span>
+              {d!.seaLow != null && d!.seaHigh != null && (
+                <span style={{ fontSize: 12, fontWeight: 700, color: "rgba(255,255,255,0.7)" }}>
+                  likely range {Math.round(d!.seaLow)}–{Math.round(d!.seaHigh)} cm
+                </span>
+              )}
+            </div>
+            <p style={{ margin: "0 0 10px", fontSize: 12.5, lineHeight: 1.58, color: "rgba(255,255,255,0.78)" }}>
+              {coastalRelevance?.summary ?? "Regional AR6 sea-level rise for the nearest coast."} Local exposure still depends on elevation, tides, subsidence, defenses, rivers, drainage, and storm surge — this is a regional figure, not a parcel-level coastal-flood assessment.
+            </p>
+            {floodActive && floodActive.floodedFraction > 0.005 && (
+              <div style={{ display: "inline-flex", alignItems: "center", gap: 8, padding: "6px 11px", borderRadius: 8, border: `1px solid ${CYAN}33`, background: `${CYAN}10`, marginBottom: 8 }}>
+                <span style={{ fontSize: 10, color: MUTED, textTransform: "uppercase", letterSpacing: "0.05em" }}>River-flood exposure</span>
+                <span style={{ fontSize: 14, fontWeight: 800, color: CYAN }}>{(floodActive.floodedFraction * 100).toFixed(floodActive.floodedFraction >= 0.1 ? 0 : 1)}%</span>
+                <span style={{ fontSize: 10.5, color: MUTED }}>of the surrounding ~10 km · see the river-flood section below</span>
+              </div>
+            )}
+            <ReceiptDetails
+              label="source"
+              text={`Regional AR6 sea-level rise via the registered NASA/IPCC AR6 source trail. ${coastalRelevance?.receipt ?? "Coastal relevance is a coarse Natural Earth nearest-coast screen, not a local exposure model."}`}
+            />
+          </div>
+        )}
+
+        {/* AMOC / Gulf Stream risk panel — qualitative IPCC AR6 + literature
+            context for NW Europe and similar regions. Not a local number. */}
+        {amoc?.regionRelevant && (
+          <div style={{ ...card, padding: 18, marginBottom: 14, borderLeft: `3px solid ${PURPLE}` }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, flexWrap: "wrap", marginBottom: 10 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <AlertTriangle style={{ width: 15, height: 15, color: PURPLE }} />
+                <h2 style={{ fontSize: 12, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.07em", color: MUTED }}>AMOC / Gulf Stream risk · IPCC AR6 + literature</h2>
+              </div>
+              <span style={{ fontSize: 9.5, color: PURPLE, border: `1px solid ${PURPLE}44`, borderRadius: 999, padding: "2px 8px", textTransform: "uppercase", letterSpacing: "0.05em" }}>qualitative context</span>
+            </div>
+            {amoc.status && (
+              <p style={{ margin: "0 0 10px", fontSize: 14, fontWeight: 700, lineHeight: 1.5, color: "white" }}>{amoc.status}</p>
+            )}
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 10, marginBottom: 10 }}>
+              {[
+                { label: "Weakening assessment", text: amoc.weakeningAssessment },
+                { label: "Collapse risk", text: amoc.collapseRisk },
+                { label: "Europe impact — cooling amid warming", text: amoc.europeImpact },
+              ].filter((item) => item.text).map((item) => (
+                <div key={item.label} style={{ border: `1px solid ${BORDER}`, borderRadius: 8, padding: 11, background: "rgba(255,255,255,0.032)" }}>
+                  <div style={{ fontSize: 9, color: PURPLE, textTransform: "uppercase", letterSpacing: "0.06em", fontWeight: 800, marginBottom: 5 }}>{item.label}</div>
+                  <p style={{ margin: 0, fontSize: 12.5, lineHeight: 1.55, color: "rgba(255,255,255,0.82)" }}>{item.text}</p>
+                </div>
+              ))}
+            </div>
+            <p style={{ margin: "0 0 8px", fontSize: 11, lineHeight: 1.55, color: MUTED }}>
+              This is a real, honestly-bounded regional risk, not a local temperature correction: fupit applies no AMOC-driven cooling or warming number, no collapse date, and no deterministic local impact. A weakening circulation could partly offset greenhouse warming over NW Europe while raining disruption on storms, sea level, and rainfall patterns elsewhere.
+            </p>
+            {amoc.citations && amoc.citations.length > 0 && (
+              <ul style={{ margin: "8px 0 0", paddingLeft: 18, fontSize: 10.5, lineHeight: 1.5, color: MUTED }}>
+                {amoc.citations.map((c, i) => {
+                  const text = typeof c === "string" ? c : [c.label, c.source, c.citation].filter(Boolean).join(" — ");
+                  const url = typeof c === "string" ? undefined : c.url;
+                  return (
+                    <li key={i}>
+                      {url ? <a href={url} target="_blank" rel="noopener noreferrer" style={{ color: MUTED, textDecoration: "underline", textUnderlineOffset: 2 }}>{text || url}</a> : text}
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+          </div>
+        )}
+
         {/* Freshwater availability — grounded WRI Aqueduct 4.0 sub-basin water stress */}
         {trajectory && (
           <div style={{ ...card, padding: 18, marginBottom: 14, borderLeft: `3px solid ${BLUE}` }}>
@@ -399,12 +492,13 @@ export default function ClimateResultSectionsTop({ vm }: { vm: ClimateAppVM }) {
                 </ul>
               </>
             ) : (
-              <p style={{ margin: 0, fontSize: 12.5, lineHeight: 1.58, color: MUTED }}>
-                Freshwater water-stress is not shown here.{" "}
-                {scenario === "ssp245"
-                  ? "SSP2-4.5 has no matching WRI Aqueduct scenario, so no value is shown rather than guessing one."
+              <EnrichmentEmptyState
+                coverage={fwCoverage}
+                accent={BLUE}
+                fallback={scenario === "ssp245"
+                  ? "Freshwater water-stress is not published for SSP2-4.5 by WRI Aqueduct, so no value is shown rather than guessing one."
                   : "WRI Aqueduct has no classified sub-basin for this point (for example open ocean), so no value is shown rather than guessing one."}
-              </p>
+              />
             )}
           </div>
         )}
@@ -451,9 +545,11 @@ export default function ClimateResultSectionsTop({ vm }: { vm: ClimateAppVM }) {
                 </ul>
               </>
             ) : (
-              <p style={{ margin: 0, fontSize: 12.5, lineHeight: 1.58, color: MUTED }}>
-                Fire-weather is not shown here. The Quilcaille fire-weather index covers land only and the four SSP pathways; over open ocean no value is shown rather than guessing one.
-              </p>
+              <EnrichmentEmptyState
+                coverage={fireCoverage}
+                accent={ORANGE}
+                fallback="Fire-weather is not shown here. The Quilcaille fire-weather index covers land only and the four SSP pathways; over open ocean no value is shown rather than guessing one."
+              />
             )}
           </div>
         )}
@@ -501,9 +597,11 @@ export default function ClimateResultSectionsTop({ vm }: { vm: ClimateAppVM }) {
                 </ul>
               </>
             ) : (
-              <p style={{ margin: 0, fontSize: 12.5, lineHeight: 1.58, color: MUTED }}>
-                River-flood exposure is not shown here. WRI Aqueduct Floods covers RCP4.5 (shown for SSP2-4.5) and RCP8.5 (shown for SSP5-8.5); SSP1-2.6 and SSP3-7.0 have no matching Aqueduct scenario, so no value is shown rather than guessing one.
-              </p>
+              <EnrichmentEmptyState
+                coverage={floodCoverage}
+                accent={CYAN}
+                fallback="River-flood exposure is not shown here. WRI Aqueduct Floods covers RCP4.5 (shown for SSP2-4.5) and RCP8.5 (shown for SSP5-8.5); SSP1-2.6 and SSP3-7.0 have no matching Aqueduct scenario, so no value is shown rather than guessing one."
+              />
             )}
           </div>
         )}
@@ -551,12 +649,13 @@ export default function ClimateResultSectionsTop({ vm }: { vm: ClimateAppVM }) {
                 </ul>
               </>
             ) : (
-              <p style={{ margin: 0, fontSize: 12.5, lineHeight: 1.58, color: MUTED }}>
-                Crop-yield change is not shown here.{" "}
-                {scenario === "ssp245"
-                  ? "SSP2-4.5 is not in the ISIMIP GGCMI phase 3 core protocol, so no value is shown rather than guessing one."
+              <EnrichmentEmptyState
+                coverage={cropCoverage}
+                accent={GREEN}
+                fallback={scenario === "ssp245"
+                  ? "Crop-yield change is not in the ISIMIP GGCMI phase 3 core protocol for SSP2-4.5, so no value is shown rather than guessing one."
                   : "No staple crop is grown in the ISIMIP GGCMI cell for this point (for example open ocean or desert), so no value is shown rather than guessing one."}
-              </p>
+              />
             )}
           </div>
         )}
