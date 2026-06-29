@@ -144,10 +144,10 @@ try {
   assert(methodology.res.status === 200, "GET /methodology returns 200");
   assert(methodology.text.includes("WorldClim v2.1"), "/methodology mentions WorldClim v2.1");
   assert(methodology.text.includes("Fick & Hijmans 2017"), "/methodology cites Fick & Hijmans 2017");
-  assert(methodology.text.includes("Humid heat screen"), "/methodology exposes humid heat screen copy");
+  assert(methodology.text.includes("exceedance days"), "/methodology exposes humid-heat wet-bulb exceedance-day copy");
   assert(methodology.text.includes("Stull 2011"), "/methodology cites Stull 2011 wet-bulb source");
   assert(methodology.text.includes("Cold-season context"), "/methodology exposes cold-season context copy");
-  assert(methodology.text.includes("daily freeze days"), "/methodology caveats cold-season context as non-daily");
+  assert(methodology.text.includes("daily ETCCDI"), "/methodology grounds cold-season context on daily ETCCDI indices");
   assert(methodology.text.includes("No fabricated") || methodology.text.includes("do not invent"), "/methodology carries no-fabricated-science copy");
 
   const rankingsPage = await getText("/rankings");
@@ -272,9 +272,9 @@ try {
     dataQuality.enrichmentReadiness?.some(
       (item) =>
         item.key === "cold_season_context" &&
-        String(item.missingForFullUse).includes("daily cold extreme indices"),
+        String(item.missingForFullUse).includes("Cold Spell Duration Index"),
     ),
-    "data-quality API keeps daily cold-stress gap explicit",
+    "data-quality API keeps the cold-spell (percentile CSDI) gap explicit",
   );
   assert(
     dataQuality.enrichmentReadiness?.some(

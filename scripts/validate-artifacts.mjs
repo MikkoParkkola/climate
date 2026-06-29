@@ -43,6 +43,8 @@ for (const relativePath of [
   "data/flood-river.aqueduct.u16.gz",
   "data/crop-yield.isimip-ggcmi.json",
   "data/crop-yield.isimip-ggcmi.u16.gz",
+  "data/nex-gddp.json",
+  "data/nex-gddp.u16.gz",
   "docs/VALIDATION_REPORT.md",
   "client/public/climate-analog-catalog.current.json",
   "client/public/coastal-proximity.natural-earth-110m.json",

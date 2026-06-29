@@ -7,6 +7,7 @@ import { freshwaterArtifactSummary } from "./freshwater";
 import { fireWeatherArtifactSummary } from "./fire-weather";
 import { floodRiverArtifactSummary } from "./floods";
 import { cropYieldArtifactSummary } from "./crops";
+import { nexGddpArtifactSummary } from "./nex-gddp";
 
 type RankingArtifact = {
   methodVersion: string;
@@ -92,9 +93,9 @@ const ENRICHMENT_READINESS = [
     key: "humid_heat",
     label: "Humid heat",
     status: "partial",
-    publicBehavior: "Shown as max monthly mean wet-bulb screen in the result page and API detail.",
-    groundedBasis: "CMIP6 monthly relative humidity baseline plus scenario delta, projected monthly temperature, Stull 2011 wet-bulb approximation.",
-    missingForFullUse: "No daily/hourly humid-heat exceedance days, no WBGT, no wind, sun/radiation, exposure, or occupational-safety model.",
+    publicBehavior: "Shows daily-mean wet-bulb exceedance days (Tw>28/31/35 degC) per year for the surrounding ~25 km cell at 2030/2050/2080, all four SSPs, with a regional-screen caveat.",
+    groundedBasis: "NASA NEX-GDDP-CMIP6 daily downscaled projections (single model ACCESS-CM2, ~25 km); daily-mean wet-bulb via the published Stull (2011) approximation from tas+hurs, counted above 28/31/35 degC as window-mean days per year over 5-year periods.",
+    missingForFullUse: "Single model (not an ensemble); daily-mean (not afternoon-peak) wet-bulb; no measured WBGT, wind, sun/radiation, exposure, or occupational-safety model.",
   },
   {
     key: "sea_level_local_relevance",
@@ -124,9 +125,9 @@ const ENRICHMENT_READINESS = [
     key: "cold_season_context",
     label: "Cold-season context",
     status: "partial",
-    publicBehavior: "Shown as monthly-mean freeze-month context in the result page and educational report.",
-    groundedBasis: "Selected-year monthly mean temperature trajectory from the grounded CMIP6/observed-baseline forecast.",
-    missingForFullUse: "Needs grounded daily cold extreme indices or observed/future cold-stress layer for daily freeze days, freeze-thaw, heating demand, road/crop damage, pests, or health risk.",
+    publicBehavior: "Shows daily ETCCDI cold indices (frost days, ice days, annual-minimum tasmin TNn) plus a cold-spell-days screen for the surrounding ~25 km cell at 2030/2050/2080, all four SSPs, alongside the existing monthly-mean freeze-month context.",
+    groundedBasis: "NASA NEX-GDDP-CMIP6 daily downscaled projections (single model ACCESS-CM2, ~25 km): WMO ETCCDI frost days (tasmin<0), ice days (tasmax<0), TNn (window-minimum tasmin), and a fixed-threshold (0 degC, 6-day) cold-spell screen, as window-mean per year over 5-year periods.",
+    missingForFullUse: "Single model (not an ensemble); cold-spell uses a fixed 0-degC threshold, not the WMO percentile-based Cold Spell Duration Index; no freeze-thaw, heating-demand, road/crop-damage, pest, or health-risk model.",
   },
   {
     key: "fire_weather",
@@ -148,9 +149,9 @@ const ENRICHMENT_READINESS = [
     key: "infrastructure",
     label: "Infrastructure pressure",
     status: "partial",
-    publicBehavior: "Shows 1-in-100-year riverine flood exposure (flooded-area fraction and mean flood depth) for the surrounding ~10 km cell at 2030/2050/2080, with a regional-screen caveat. Other infrastructure pressures are not yet quantified.",
-    groundedBasis: "WRI Aqueduct Floods v2 riverine inundation (1-in-100-year), 5-GCM ensemble mean, ~1 km maps reduced to a 0.1-degree grid; RCP4.5 served as ssp245, RCP8.5 as ssp585. ssp126/ssp370 are not published, so coverage falls back to the nearest published pathway (e.g. SSP2-4.5 or SSP5-8.5), labeled as a substitution.",
-    missingForFullUse: "Riverine flood only (no coastal storm surge); no thermal/degree-day load, drainage, grid, transport, or asset datasets; depends on assumed protection standards; SSP1-2.6/SSP3-7.0 are served only via labeled nearest-scenario fallback; a regional screen, not a property-level guarantee.",
+    publicBehavior: "Shows 1-in-100-year riverine flood exposure (flooded-area fraction and mean flood depth) for the surrounding ~10 km cell, plus base-18 degC cooling and heating degree-days per year for the surrounding ~25 km cell, at 2030/2050/2080. Other infrastructure pressures are not yet quantified.",
+    groundedBasis: "Flood: WRI Aqueduct Floods v2 riverine inundation (1-in-100-year), 5-GCM ensemble mean, ~1 km maps reduced to a 0.1-degree grid; RCP4.5 served as ssp245, RCP8.5 as ssp585; ssp126/ssp370 are not published, so coverage falls back to the nearest published pathway (e.g. SSP2-4.5 or SSP5-8.5), labeled as a substitution. Thermal load: NASA NEX-GDDP-CMIP6 daily tas (single model ACCESS-CM2, ~25 km) reduced to base-18 degC cooling/heating degree-days per year, all four SSPs.",
+    missingForFullUse: "Flood is riverine only (no coastal storm surge), depends on assumed protection standards, and SSP1-2.6/SSP3-7.0 are served only via labeled nearest-scenario fallback; degree-days are single-model, base-18 degC, daily-mean (real energy use depends on construction, behaviour, equipment); no drainage, grid, transport, or asset datasets; a regional screen, not a property-level guarantee.",
   },
   {
     key: "biodiversity",
@@ -291,6 +292,8 @@ export function loadDataQuality(): Record<string, unknown> {
       artifactInfo("data/flood-river.aqueduct.u16.gz"),
       artifactInfo("data/crop-yield.isimip-ggcmi.json"),
       artifactInfo("data/crop-yield.isimip-ggcmi.u16.gz"),
+      artifactInfo("data/nex-gddp.json"),
+      artifactInfo("data/nex-gddp.u16.gz"),
     ],
     sourceRegistry: {
       version: registry.version,
@@ -382,6 +385,7 @@ export function loadDataQuality(): Record<string, unknown> {
     fireWeather: fireWeatherArtifactSummary(),
     floodRiver: floodRiverArtifactSummary(),
     cropYield: cropYieldArtifactSummary(),
+    nexGddp: nexGddpArtifactSummary(),
     trajectoryAudit: {
       artifactGeneratedAt: audit.generatedAt,
       version: audit.version,
@@ -458,6 +462,7 @@ export function loadDataQuality(): Record<string, unknown> {
       "Food and agriculture is now partially grounded on ISIMIP GGCMI ensemble-mean rainfed yield change for four staple crops (a model-ensemble signal at 0.5 degrees), not a field-level forecast; ssp245 is served only via a labeled nearest-scenario fallback.",
       "Where a grounded enrichment does not publish the requested SSP, the climate-trajectory API returns a coverage status that may carry the nearest published pathway's real value, explicitly labeled (never interpolated or fabricated); it is a labeled adjacent-scenario substitution, not the requested scenario.",
       "AMOC / Gulf Stream is now surfaced as a prominent, region-gated, qualitative risk signal (IPCC AR6 plus Ditlevsen & Ditlevsen 2023 and van Westen et al. 2024), with no deterministic local temperature correction or collapse date.",
+      "Humid heat and cold-season context are now grounded on NASA NEX-GDDP-CMIP6 daily indices from a single ~25 km downscaled model (ACCESS-CM2): wet-bulb exceedance days via the published Stull (2011) approximation and WMO ETCCDI cold indices. These are regional single-model screens, not measured WBGT or multi-model ensembles.",
       "Biodiversity and quantified AMOC local-impact layers remain withheld until source-registry approval and implementation.",
     ],
   };

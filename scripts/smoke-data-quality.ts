@@ -74,7 +74,17 @@ assert.ok(report.enrichmentReadiness.some((item: any) => item.key === "freshwate
 assert.ok(report.enrichmentReadiness.some((item: any) => item.key === "freshwater" && String(item.publicBehavior).includes("water-stress")));
 assert.ok(report.enrichmentReadiness.some((item: any) => item.key === "biodiversity" && item.status === "withheld"));
 assert.ok(report.enrichmentReadiness.some((item: any) => item.key === "cold_season_context" && item.status === "partial" && String(item.publicBehavior).includes("monthly-mean freeze-month")));
-assert.ok(report.enrichmentReadiness.some((item: any) => item.key === "cold_season_context" && String(item.missingForFullUse).includes("daily cold extreme indices")));
+assert.ok(report.enrichmentReadiness.some((item: any) => item.key === "cold_season_context" && String(item.groundedBasis).includes("ETCCDI") && String(item.groundedBasis).includes("NEX-GDDP")));
+assert.ok(report.enrichmentReadiness.some((item: any) => item.key === "humid_heat" && String(item.groundedBasis).includes("Stull") && String(item.groundedBasis).includes("NEX-GDDP")));
+assert.ok(report.enrichmentReadiness.some((item: any) => item.key === "infrastructure" && String(item.groundedBasis).includes("degree-day")));
+assert.ok(report.sourceRegistry.rows.some((row: any) => row.sourceId === "nasa-nex-gddp-cmip6-v1" && row.license === "cc0-1.0" && row.commercialReuse === "public-domain"));
+assert.ok(report.artifacts.some((artifact: any) => artifact.path === "data/nex-gddp.json"));
+assert.ok(report.artifacts.some((artifact: any) => artifact.path === "data/nex-gddp.u16.gz"));
+assert.equal(report.nexGddp.sourceId, "nasa-nex-gddp-cmip6-v1");
+assert.equal(report.nexGddp.license, "cc0-1.0");
+assert.equal(report.nexGddp.resolutionDegrees, 0.25);
+assert.deepEqual(report.nexGddp.scenarios, ["ssp126", "ssp245", "ssp370", "ssp585"]);
+assert.ok(report.nexGddp.attribution.includes("NEX-GDDP") && report.nexGddp.attribution.includes("Stull"));
 assert.ok(report.artifacts.some((artifact: any) => artifact.path === "client/public/coastal-proximity.natural-earth-110m.json"));
 assert.ok(report.artifacts.some((artifact: any) => artifact.path === "data/freshwater-stress.aqueduct40.json"));
 assert.ok(report.artifacts.some((artifact: any) => artifact.path === "data/freshwater-stress.aqueduct40.u16.gz"));

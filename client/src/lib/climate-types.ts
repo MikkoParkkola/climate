@@ -336,6 +336,58 @@ export interface CropYield {
   coverageStatus?: CoverageStatus | null;
 }
 
+interface NexBase {
+  sourceId: string;
+  version: string;
+  model: string;
+  attribution: string;
+  license: string;
+  stableUrl: string;
+  scenario: string;
+  baselinePeriod: string;
+  resolutionDegrees: number;
+  method: string;
+  caveats: string[];
+}
+
+export interface HumidHeatHorizon {
+  window: string;
+  year: number | null;
+  period: string;
+  daysAbove28: number | null;
+  daysAbove31: number | null;
+  daysAbove35: number | null;
+}
+export interface HumidHeat extends NexBase {
+  thresholds: number[];
+  horizons: HumidHeatHorizon[];
+}
+
+export interface ColdSeasonHorizon {
+  window: string;
+  year: number | null;
+  period: string;
+  frostDays: number | null;
+  iceDays: number | null;
+  minTasminC: number | null;
+  coldSpellDays: number | null;
+}
+export interface ColdSeason extends NexBase {
+  horizons: ColdSeasonHorizon[];
+}
+
+export interface DegreeDayHorizon {
+  window: string;
+  year: number | null;
+  period: string;
+  coolingDegreeDays: number | null;
+  heatingDegreeDays: number | null;
+}
+export interface DegreeDays extends NexBase {
+  degreeDayBaseC: number;
+  horizons: DegreeDayHorizon[];
+}
+
 export interface ClimateAnalogMatch {
   candidate: AnalogCandidate;
   distance: number;
