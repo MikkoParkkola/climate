@@ -223,6 +223,30 @@ export interface FireWeather {
   caveats: string[];
 }
 
+export interface FloodHorizon {
+  year: number;
+  floodedFraction: number;
+  meanFloodDepth: number | null;
+}
+
+export interface FloodExposure {
+  sourceId: string;
+  version: string;
+  indicator: string;
+  indicatorLabel: string;
+  attribution: string;
+  license: string;
+  stableUrl: string;
+  returnPeriod: string;
+  scenario: string;
+  aqueductScenario: string;
+  aqueductScenarioLabel: string;
+  modelCount: number;
+  horizons: FloodHorizon[];
+  method: string;
+  caveats: string[];
+}
+
 export interface ClimateAnalogMatch {
   candidate: AnalogCandidate;
   distance: number;

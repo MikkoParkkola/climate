@@ -34,7 +34,7 @@ function freshwaterCategoryColor(category: number | null): string {
 export default function ClimateResultSectionsTop({ vm }: { vm: ClimateAppVM }) {
   const {
   locationText, setLocationText, selectedLocation, setSelectedLocation,
-  suggestions, showSuggestions, setShowSuggestions, year, scenario, trajectory, freshwater, fireWeather,
+  suggestions, showSuggestions, setShowSuggestions, year, scenario, trajectory, freshwater, fireWeather, floodRiver,
   isLoading, loadingStep, error, exporting, playing, shareCopied, shareStoryCopied,
   shareImageBusy, shareImageSaved, rawJsonCopied, reportSaved, analogCatalog, analogError,
   coastalArtifact, coastalArtifactError, scenarioContrast, scenarioContrastLoading,
@@ -57,6 +57,10 @@ export default function ClimateResultSectionsTop({ vm }: { vm: ClimateAppVM }) {
   // Fire-weather horizon nearest the displayed year (Quilcaille horizons are 2030/2050/2080).
   const fireActive = fireWeather
     ? fireWeather.horizons.reduce((best, h) => (Math.abs(h.year - displayYear) < Math.abs(best.year - displayYear) ? h : best))
+    : null;
+  // Flood horizon nearest the displayed year (Aqueduct horizons are 2030/2050/2080).
+  const floodActive = floodRiver
+    ? floodRiver.horizons.reduce((best, h) => (Math.abs(h.year - displayYear) < Math.abs(best.year - displayYear) ? h : best))
     : null;
   const nextTip = tipping.find((t) => t.year != null && (t.year as number) > displayYear);
   const crossedTips = tipping.filter((t) => t.year != null && (t.year as number) <= displayYear).length;
@@ -449,6 +453,56 @@ export default function ClimateResultSectionsTop({ vm }: { vm: ClimateAppVM }) {
             ) : (
               <p style={{ margin: 0, fontSize: 12.5, lineHeight: 1.58, color: MUTED }}>
                 Fire-weather is not shown here. The Quilcaille fire-weather index covers land only and the four SSP pathways; over open ocean no value is shown rather than guessing one.
+              </p>
+            )}
+          </div>
+        )}
+
+        {/* Riverine flood exposure — grounded WRI Aqueduct Floods 1-in-100-year */}
+        {trajectory && (
+          <div style={{ ...card, padding: 18, marginBottom: 14, borderLeft: `3px solid ${CYAN}` }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, flexWrap: "wrap", marginBottom: 12 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <h2 style={{ fontSize: 12, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.07em", color: MUTED }}>River-flood exposure · WRI Aqueduct Floods</h2>
+              </div>
+              {floodRiver && (
+                <span style={{ fontSize: 10, color: MUTED }}>{floodRiver.aqueductScenarioLabel} · 1-in-100-year</span>
+              )}
+            </div>
+
+            {floodRiver && floodActive ? (
+              <>
+                <div style={{ display: "flex", alignItems: "baseline", gap: 10, flexWrap: "wrap", marginBottom: 4 }}>
+                  <span style={{ fontSize: 22, fontWeight: 800, color: floodActive.floodedFraction > 0.01 ? CYAN : MUTED }}>
+                    {(floodActive.floodedFraction * 100).toFixed(floodActive.floodedFraction >= 0.1 ? 0 : 1)}%
+                  </span>
+                  <span style={{ fontSize: 11, color: MUTED }}>of the surrounding ~10 km in the modeled floodplain · {floodActive.year} horizon{floodActive.year !== displayYear ? ` (nearest to ${displayYear})` : ""}</span>
+                </div>
+                <p style={{ margin: "0 0 10px", fontSize: 12.5, lineHeight: 1.58, color: "rgba(255,255,255,0.78)" }}>
+                  {floodActive.floodedFraction > 0.01
+                    ? <>About {(floodActive.floodedFraction * 100).toFixed(floodActive.floodedFraction >= 0.1 ? 0 : 1)}% of this ~10 km area falls in the modeled 1-in-100-year river floodplain{floodActive.meanFloodDepth != null ? `, with a mean modeled depth of ${floodActive.meanFloodDepth.toFixed(1)} m where it floods` : ""}. This is a regional screen, not a statement about your exact address.</>
+                    : <>This area shows little or no modeled 1-in-100-year river-flood exposure. Local drainage, smaller streams, and coastal surge are not captured here.</>}
+                </p>
+                <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 8 }}>
+                  {floodRiver.horizons.map((h) => (
+                    <div key={h.year} style={{ flex: "1 1 90px", border: `1px solid ${BORDER}`, borderRadius: 8, padding: "7px 9px" }}>
+                      <div style={{ fontSize: 9, color: MUTED, textTransform: "uppercase", letterSpacing: "0.05em" }}>{h.year}</div>
+                      <div style={{ fontSize: 12, fontWeight: 800, color: h.floodedFraction > 0.01 ? CYAN : MUTED, lineHeight: 1.3 }}>{(h.floodedFraction * 100).toFixed(h.floodedFraction >= 0.1 ? 0 : 1)}% flooded</div>
+                      {h.meanFloodDepth != null && <div style={{ fontSize: 9.5, color: MUTED, marginTop: 2 }}>~{h.meanFloodDepth.toFixed(1)} m deep</div>}
+                    </div>
+                  ))}
+                </div>
+                <ReceiptDetails
+                  label="source"
+                  text={`${floodRiver.attribution} ${floodRiver.method} License: attribution (WRI requests proper attribution).`}
+                />
+                <ul style={{ margin: "8px 0 0", paddingLeft: 18, fontSize: 10.5, lineHeight: 1.5, color: MUTED }}>
+                  {floodRiver.caveats.map((caveat) => <li key={caveat}>{caveat}</li>)}
+                </ul>
+              </>
+            ) : (
+              <p style={{ margin: 0, fontSize: 12.5, lineHeight: 1.58, color: MUTED }}>
+                River-flood exposure is not shown here. WRI Aqueduct Floods covers RCP4.5 (shown for SSP2-4.5) and RCP8.5 (shown for SSP5-8.5); SSP1-2.6 and SSP3-7.0 have no matching Aqueduct scenario, so no value is shown rather than guessing one.
               </p>
             )}
           </div>

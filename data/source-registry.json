@@ -293,6 +293,24 @@
       "method": "Multi-model ensemble mean (model-democracy) of the annual Canadian Fire Weather Index indicators extreme-fire-weather days and fire-season length, computed by Quilcaille et al. from daily mean relative humidity (hurs) and regridded to 2.5 degrees. Open-ocean cells are masked out. A coarse fire-conducive-weather screen, not actual fire risk, ignition, fuel, or land management.",
       "displayPolicy": "show-with-fire-weather-screening-caveat",
       "reviewedAt": "2026-06-29"
+    },
+    {
+      "sourceId": "wri-aqueduct-floods-riverine-v1",
+      "provider": "World Resources Institute (WRI) Aqueduct Floods",
+      "version": "Aqueduct Floods v2 riverine inundation hazard maps (Ward et al. 2020)",
+      "stableUrl": "https://www.wri.org/data/aqueduct-floods-hazard-maps",
+      "citation": "Ward, P.J. et al. (2020), Aqueduct Floods methodology. WRI Technical Note; Aqueduct Floods hazard maps, World Resources Institute.",
+      "license": "attribution",
+      "licenseText": "WRI datasets are available without restriction on use or distribution. WRI requests proper attribution (WRI Open Data Commitment, same terms cleared for the Aqueduct 4.0 water-stress artifact).",
+      "commercialReuse": "allowed-with-attribution",
+      "redistribution": "reduced-derived-output-only",
+      "variables": ["1-in-100-year riverine flooded-area fraction", "mean riverine flood depth over flooded area"],
+      "spatialResolution": "native ~1 km (30 arc-sec) inundation maps, block-reduced to a 0.1 degree lookup grid",
+      "temporalResolution": "future horizons 2030, 2050, 2080",
+      "scenarioCoverage": "RCP4.5 served as ssp245, RCP8.5 served as ssp585; ssp126 and ssp370 have no matching Aqueduct scenario and return no value",
+      "method": "5-GCM ensemble-mean of the WRI Aqueduct Floods v2 riverine inundation-depth maps for the 1-in-100-year return period, block-reduced from ~1 km to a 0.1 degree grid storing the flooded-area fraction (depth > 5 cm) and the mean flood depth over flooded pixels. A regional flood-hazard screen dependent on assumed protection standards, not a property-level guarantee; riverine only, not coastal storm surge.",
+      "displayPolicy": "show-with-regional-flood-screening-caveat",
+      "reviewedAt": "2026-06-29"
     }
   ]
 }

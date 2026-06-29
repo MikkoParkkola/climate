@@ -28,3 +28,7 @@ attached_assets/
 # Quilcaille 2023 fire-weather download/extract staging for build_fire_weather.py (~2GB zips).
 # The committed artifact is data/fire-weather.quilcaille2023.*; raw source is not tracked.
 .fire-build/
+
+# WRI Aqueduct Floods download staging for build_aqueduct_floods.py (~1.4GB GeoTIFFs).
+# The committed artifact is data/flood-river.aqueduct.*; raw source is not tracked.
+.flood-build/

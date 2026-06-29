@@ -9,7 +9,7 @@ import {
 import type {
   ScenarioId, CoastCoord, LocationOption, ProjectionPoint, AnalogCandidate, AnalogCatalog,
   CoastalProximityArtifact, CoastalRelevance, ClimateAnalogMatch, ScenarioContrastRow,
-  RoadmapItem, ShareStory, LearningPromptAction, LearningPrompt, FreshwaterStress, FireWeather,
+  RoadmapItem, ShareStory, LearningPromptAction, LearningPrompt, FreshwaterStress, FireWeather, FloodExposure,
 } from "@/lib/climate-types";
 import {
   lerp, interpScalar, interpOptionalScalar, riskScore, interpArr, nearestPoint, categoryFor,
@@ -48,6 +48,7 @@ export function useClimateApp() {
   const [trajectory, setTrajectory] = useState<ProjectionPoint[] | null>(null);
   const [freshwater, setFreshwater] = useState<FreshwaterStress | null>(null);
   const [fireWeather, setFireWeather] = useState<FireWeather | null>(null);
+  const [floodRiver, setFloodRiver] = useState<FloodExposure | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [loadingStep, setLoadingStep] = useState(0);
   const [error, setError] = useState<string | null>(null);
@@ -192,7 +193,7 @@ export function useClimateApp() {
     setShowSuggestions(false);
   };
 
-  const fetchTrajectory = async (targetLocation: LocationOption, scenarioOverride: ScenarioId): Promise<{ points: ProjectionPoint[]; freshwater: FreshwaterStress | null; fireWeather: FireWeather | null }> => {
+  const fetchTrajectory = async (targetLocation: LocationOption, scenarioOverride: ScenarioId): Promise<{ points: ProjectionPoint[]; freshwater: FreshwaterStress | null; fireWeather: FireWeather | null; floodRiver: FloodExposure | null }> => {
     const response = await fetch("/api/climate-trajectory", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -206,7 +207,7 @@ export function useClimateApp() {
     const data = await response.json();
     if (data.success && data.data?.points?.length) {
       const points = [...data.data.points].sort((a: ProjectionPoint, b: ProjectionPoint) => a.year - b.year);
-      return { points, freshwater: (data.data.freshwater as FreshwaterStress | null) ?? null, fireWeather: (data.data.fireWeather as FireWeather | null) ?? null };
+      return { points, freshwater: (data.data.freshwater as FreshwaterStress | null) ?? null, fireWeather: (data.data.fireWeather as FireWeather | null) ?? null, floodRiver: (data.data.floodRiver as FloodExposure | null) ?? null };
     }
     throw new Error("Invalid response from climate model.");
   };
@@ -219,6 +220,7 @@ export function useClimateApp() {
     setTrajectory(null);
     setFreshwater(null);
     setFireWeather(null);
+    setFloodRiver(null);
     setScenarioContrast(null);
     setScenarioContrastError(null);
     try {
@@ -226,6 +228,7 @@ export function useClimateApp() {
       setTrajectory(result.points);
       setFreshwater(result.freshwater);
       setFireWeather(result.fireWeather);
+      setFloodRiver(result.floodRiver);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Network error. Please check your connection.");
     } finally {
@@ -270,6 +273,7 @@ export function useClimateApp() {
     setTrajectory(null);
     setFreshwater(null);
     setFireWeather(null);
+    setFloodRiver(null);
     setError(null);
     setShareCopied(false);
     setRawJsonCopied(false);
@@ -588,7 +592,7 @@ export function useClimateApp() {
 
   return {
   locationText, setLocationText, selectedLocation, setSelectedLocation,
-  suggestions, showSuggestions, setShowSuggestions, year, scenario, trajectory, freshwater, fireWeather,
+  suggestions, showSuggestions, setShowSuggestions, year, scenario, trajectory, freshwater, fireWeather, floodRiver,
   birthYear, setBirthYear, prefs, setPrefs, scoredTrajectory, standardSnapshot,
   isLoading, loadingStep, error, exporting, playing, shareCopied, shareStoryCopied,
   shareImageBusy, shareImageSaved, rawJsonCopied, reportSaved, analogCatalog, analogError,

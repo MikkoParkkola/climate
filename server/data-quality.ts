@@ -5,6 +5,7 @@ import { MODEL_CACHE_VERSION, SOURCE_REGISTRY_VERSION } from "./model-cache-vers
 import { loadSourceRegistry } from "./source-registry";
 import { freshwaterArtifactSummary } from "./freshwater";
 import { fireWeatherArtifactSummary } from "./fire-weather";
+import { floodRiverArtifactSummary } from "./floods";
 
 type RankingArtifact = {
   methodVersion: string;
@@ -145,10 +146,10 @@ const ENRICHMENT_READINESS = [
   {
     key: "infrastructure",
     label: "Infrastructure pressure",
-    status: "withheld",
-    publicBehavior: "Not shown as engineering exposure or asset-risk score.",
-    groundedBasis: "The current score has only a fixed adaptation allowance, not local infrastructure data.",
-    missingForFullUse: "Needs local infrastructure, design thresholds, drainage, grid, transport, or asset datasets.",
+    status: "partial",
+    publicBehavior: "Shows 1-in-100-year riverine flood exposure (flooded-area fraction and mean flood depth) for the surrounding ~10 km cell at 2030/2050/2080, with a regional-screen caveat. Other infrastructure pressures are not yet quantified.",
+    groundedBasis: "WRI Aqueduct Floods v2 riverine inundation (1-in-100-year), 5-GCM ensemble mean, ~1 km maps reduced to a 0.1-degree grid; RCP4.5 served as ssp245, RCP8.5 as ssp585 (ssp126/ssp370 return no value).",
+    missingForFullUse: "Riverine flood only (no coastal storm surge); no thermal/degree-day load, drainage, grid, transport, or asset datasets; depends on assumed protection standards; a regional screen, not a property-level guarantee.",
   },
   {
     key: "biodiversity",
@@ -285,6 +286,8 @@ export function loadDataQuality(): Record<string, unknown> {
       artifactInfo("data/freshwater-stress.aqueduct40.u16.gz"),
       artifactInfo("data/fire-weather.quilcaille2023.json"),
       artifactInfo("data/fire-weather.quilcaille2023.u16.gz"),
+      artifactInfo("data/flood-river.aqueduct.json"),
+      artifactInfo("data/flood-river.aqueduct.u16.gz"),
     ],
     sourceRegistry: {
       version: registry.version,
@@ -374,6 +377,7 @@ export function loadDataQuality(): Record<string, unknown> {
     enrichmentReadiness: ENRICHMENT_READINESS,
     freshwaterStress: freshwaterArtifactSummary(),
     fireWeather: fireWeatherArtifactSummary(),
+    floodRiver: floodRiverArtifactSummary(),
     trajectoryAudit: {
       artifactGeneratedAt: audit.generatedAt,
       version: audit.version,
@@ -445,7 +449,9 @@ export function loadDataQuality(): Record<string, unknown> {
       "Trend review flags are intentionally visible for scientific review and are not automatically hidden by green CI.",
       "NASA POWER observed-climatology validation compares the packaged baseline to an independent observation/reanalysis product; it is not a forecast correction or proof of future projection skill.",
       "Freshwater availability is now shown as a WRI Aqueduct 4.0 sub-basin water-stress category (a basin-level prioritization screen with WRI's own caveat), not a local supply, storage, demand, drought, flood, or water-quality guarantee.",
-      "Biodiversity, agriculture, infrastructure, and quantified AMOC local-impact layers remain withheld until source-registry approval and implementation.",
+      "Fire weather is now shown as Quilcaille et al. 2023 CMIP6 Fire Weather Index indicators (a coarse ~250 km fire-conducive-weather screen), not a measure of ignition, fuel, or actual fire risk.",
+      "Infrastructure pressure is now partially grounded on WRI Aqueduct Floods riverine 1-in-100-year flood exposure (a regional screen, riverine only); thermal/degree-day load and other infrastructure datasets remain missing.",
+      "Biodiversity, agriculture, and quantified AMOC local-impact layers remain withheld until source-registry approval and implementation.",
     ],
   };
 

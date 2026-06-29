@@ -39,6 +39,8 @@ for (const relativePath of [
   "data/freshwater-stress.aqueduct40.u16.gz",
   "data/fire-weather.quilcaille2023.json",
   "data/fire-weather.quilcaille2023.u16.gz",
+  "data/flood-river.aqueduct.json",
+  "data/flood-river.aqueduct.u16.gz",
   "docs/VALIDATION_REPORT.md",
   "client/public/climate-analog-catalog.current.json",
   "client/public/coastal-proximity.natural-earth-110m.json",
@@ -186,6 +188,32 @@ assert(
   "fire-weather display policy mismatch",
 );
 assert(getSourceRow(fireWeather.sourceId)?.license === "cc-by-4.0", "fire-weather registry license must be cc-by-4.0");
+
+const floodRiver = readJson("data/flood-river.aqueduct.json");
+assert(floodRiver.sourceId === "wri-aqueduct-floods-riverine-v1", "flood artifact source id mismatch");
+assert(floodRiver.indicator === "flood_river", "flood artifact indicator mismatch");
+assert(floodRiver.license === "attribution", "flood artifact license must be attribution");
+assert(typeof floodRiver.attribution === "string" && floodRiver.attribution.includes("Aqueduct"), "flood attribution missing");
+assert(JSON.stringify(floodRiver.years) === JSON.stringify([2030, 2050, 2080]), "flood horizons mismatch");
+assert(
+  floodRiver.scenarioMap?.ssp245 === "rcp4p5" && floodRiver.scenarioMap?.ssp585 === "rcp8p5",
+  "flood scenario map must serve RCP4.5->ssp245 and RCP8.5->ssp585",
+);
+assert(floodRiver.scenarioMap?.ssp126 === null && floodRiver.scenarioMap?.ssp370 === null, "flood must leave ssp126/ssp370 unmapped");
+assert(floodRiver.modelCount === 5, "flood model count must be 5");
+assert(floodRiver.indicators?.floodedFraction && floodRiver.indicators?.meanFloodDepth, "flood indicators missing");
+assert(Array.isArray(floodRiver.layers) && floodRiver.layers.length === 12, "flood expects 12 layers (2 indicators x 2 scenarios x 3 horizons)");
+assert(floodRiver.caveats?.some((c) => c.toLowerCase().includes("riverine")), "flood riverine-only caveat missing");
+const floodRaster = floodRiver.raster;
+assert(floodRaster?.file === "flood-river.aqueduct.u16.gz" && floodRaster?.encoding === "gzip+uint16le", "flood raster manifest mismatch");
+const floodBytes = gunzipSync(readFileSync(path.join(repoRoot, "data", floodRaster.file)));
+assert(floodBytes.length === floodRiver.layers.length * floodRaster.layerCells * 2, "flood raster size mismatch vs manifest layers");
+requireRegisteredSources([floodRiver.sourceId], "flood artifact");
+assert(
+  getSourceRow(floodRiver.sourceId)?.displayPolicy === "show-with-regional-flood-screening-caveat",
+  "flood display policy mismatch",
+);
+assert(getSourceRow(floodRiver.sourceId)?.license === "attribution", "flood registry license must be attribution");
 
 const rankingArtifacts = [
   readJson("data/rankings.curated-cities.json"),
