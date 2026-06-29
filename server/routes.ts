@@ -16,6 +16,7 @@ import { lookupRiverFlood } from "./floods";
 import { lookupCropYield } from "./crops";
 import { buildCoverageStatus } from "./enrichment-coverage";
 import { amocAssessment } from "./amoc";
+import { lookupHumidHeat, lookupColdSeason, lookupDegreeDays } from "./nex-gddp";
 import { climateTwinQuerySchema, findClimateTwin, loadClimateAnalogCatalog } from "./climate-twin";
 import { climateTrajectory, projectClimate } from "./grounded-node-model";
 import { parseOgParams, renderOgPng } from "./og-image";
@@ -322,6 +323,20 @@ async function buildTrajectoryData(
     console.warn("crop-yield lookup failed:", (cropErr as Error).message);
   }
 
+  // Grounded NASA NEX-GDDP-CMIP6 enrichments (one ~25 km downscaled model): humid-heat wet-bulb
+  // exceedance days (Stull 2011), ETCCDI cold-season indices, and base-18 degree-days. All four
+  // SSPs served; null over no-data cells or unbuilt windows — never fabricated.
+  let humidHeat = null;
+  let coldSeason = null;
+  let degreeDays = null;
+  try {
+    humidHeat = lookupHumidHeat(coordinates.lat, coordinates.lng, scenario);
+    coldSeason = lookupColdSeason(coordinates.lat, coordinates.lng, scenario);
+    degreeDays = lookupDegreeDays(coordinates.lat, coordinates.lng, scenario);
+  } catch (nexErr) {
+    console.warn("nex-gddp lookup failed:", (nexErr as Error).message);
+  }
+
   // Per-enrichment coverage status. When the requested scenario is unpublished but the
   // source has an adjacent pathway, coverage.<k>.nearestScenario carries the REAL nearest
   // value, explicitly labeled — never interpolated or fabricated. Both GET and POST emit this.
@@ -330,11 +345,14 @@ async function buildTrajectoryData(
     cropYield: buildCoverageStatus("cropYield", coordinates.lat, coordinates.lng, scenario, cropYield),
     floodRiver: buildCoverageStatus("floodRiver", coordinates.lat, coordinates.lng, scenario, floodRiver),
     fireWeather: buildCoverageStatus("fireWeather", coordinates.lat, coordinates.lng, scenario, fireWeather),
+    humidHeat: buildCoverageStatus("humidHeat", coordinates.lat, coordinates.lng, scenario, humidHeat),
+    coldSeason: buildCoverageStatus("coldSeason", coordinates.lat, coordinates.lng, scenario, coldSeason),
+    degreeDays: buildCoverageStatus("degreeDays", coordinates.lat, coordinates.lng, scenario, degreeDays),
   };
   // AMOC / Gulf Stream qualitative risk signal (context-only, region-gated, cited).
   const amoc = amocAssessment(coordinates.lat, coordinates.lng);
 
-  return { coordinates, points, cachedCount, freshwater, fireWeather, floodRiver, cropYield, coverage, amoc };
+  return { coordinates, points, cachedCount, freshwater, fireWeather, floodRiver, cropYield, humidHeat, coldSeason, degreeDays, coverage, amoc };
 }
 
 // ── SEO: per-route HTML head injection (production only) ────────────────────
@@ -407,8 +425,8 @@ const SEO_PAGES: Record<string, SeoPage> = {
     <li>Present-day baseline: WorldClim v2.1 observed monthly climatology (1970-2000, 10 arc-minutes) where available, with CMIP6 historical climatology as fallback.</li>
     <li>Sea-level rise: IPCC AR6 regional projections.</li>
     <li>Heat, drought, and flood risk: CMIP6 ETCCDI extreme-climate indices scored against documented thresholds.</li>
-    <li>Humid heat screen: CMIP6 relative humidity and monthly mean temperature through the Stull 2011 wet-bulb approximation; not WBGT or daily humid-heat days.</li>
-    <li>Cold-season context: monthly mean temperature months at or below 0°C; not daily freeze days, freeze-thaw, heating demand, crop damage, pests, or health risk.</li>
+    <li>Humid heat: NASA NEX-GDDP-CMIP6 daily-mean wet-bulb (Stull 2011) exceedance days above 28/31/35°C for the ~25 km cell; a regional screen, not measured WBGT.</li>
+    <li>Cold-season context: NASA NEX-GDDP-CMIP6 daily ETCCDI indices (frost days, ice days, coldest-night TNn, cold-spell screen) for the ~25 km cell, alongside monthly-mean freeze months.</li>
     <li>Climate twin: nearest present-day city in the indexed catalog by standardized monthly temperature and precipitation distance from grounded model output.</li>
   </ul>
   <h2>Honesty rules</h2>
@@ -439,7 +457,7 @@ const SEO_PAGES: Record<string, SeoPage> = {
     <li>Which trend-review flags still require human scientific review.</li>
   </ul>
   <h2>Enrichment readiness ledger</h2>
-  <p>The data-quality report marks humid heat, sea-level relevance, cold-season context, freshwater water-stress (WRI Aqueduct 4.0), fire weather (Quilcaille et al. 2023, CMIP6 Fire Weather Index), infrastructure (WRI Aqueduct Floods riverine 1-in-100-year exposure), and food and agriculture (ISIMIP GGCMI crop-yield change) as partial, AMOC as context-only, and daily cold stress and biodiversity as withheld until a registered source and method exist.</p>
+  <p>The data-quality report marks humid heat (NASA NEX-GDDP-CMIP6 daily wet-bulb, Stull 2011), sea-level relevance, cold-season context (NEX-GDDP daily ETCCDI indices), freshwater water-stress (WRI Aqueduct 4.0), fire weather (Quilcaille et al. 2023, CMIP6 Fire Weather Index), infrastructure (WRI Aqueduct Floods riverine 1-in-100-year exposure plus NEX-GDDP degree-days), and food and agriculture (ISIMIP GGCMI crop-yield change) as partial, AMOC as context-only, and biodiversity as withheld until a registered source and method exist.</p>
   <p>Use this page with <a href="/methodology">the methodology</a> and <a href="${GITHUB_REPO_URL}">the source repository</a>. It does not prove that the public Replit deployment has already been republished or that production cache purge has been completed.</p>
 </main>`,
   },

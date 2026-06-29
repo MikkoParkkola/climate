@@ -365,6 +365,24 @@
       "method": "Cited only as broad regional tail-risk context for AMOC-relevant regions; a physics-based early-warning signal in a coupled climate model indicating a tipping course and severe NW-Europe cooling on collapse. Not applied as a local deterministic correction or collapse date.",
       "displayPolicy": "show-as-context-no-local-correction",
       "reviewedAt": "2026-06-29"
+    },
+    {
+      "sourceId": "nasa-nex-gddp-cmip6-v1",
+      "provider": "NASA NCCS Earth Exchange (NEX-GDDP-CMIP6)",
+      "version": "NEX-GDDP-CMIP6 daily, single model ACCESS-CM2 r1i1p1f1, reduced to climatological indices",
+      "stableUrl": "https://doi.org/10.7917/OFSG3345",
+      "citation": "Thrasher, B. et al. (2022), NASA Global Daily Downscaled Projections, CMIP6, Scientific Data; NEX-GDDP-CMIP6, DOI 10.7917/OFSG3345. Wet-bulb: Stull, R. (2011), Wet-Bulb Temperature from Relative Humidity and Air Temperature, J. Appl. Meteor. Climatol., DOI 10.1175/JAMC-D-11-0143.1.",
+      "license": "cc0-1.0",
+      "licenseText": "CC0 1.0 Universal Public Domain Dedication. NEX-GDDP-CMIP6 is published as public domain on the AWS Open Data registry (s3://nex-gddp-cmip6), blanket since September 2022; NASA requests citation as good practice. DOI 10.7917/OFSG3345.",
+      "commercialReuse": "public-domain",
+      "redistribution": "public-domain",
+      "variables": ["humid-heat wet-bulb exceedance days (Tw>28/31/35 degC, Stull 2011)", "ETCCDI cold indices: frost days, ice days, TNn, fixed-threshold cold-spell days", "cooling and heating degree-days (base 18 degC)"],
+      "spatialResolution": "0.25 degree (~25 km)",
+      "temporalResolution": "5-year windows centered on 2030/2050/2080",
+      "scenarioCoverage": "ssp126, ssp245, ssp370, ssp585 all served directly (NEX-GDDP provides all four SSPs)",
+      "method": "Single representative downscaled model (ACCESS-CM2 r1i1p1f1). Daily-mean wet-bulb via the published Stull (2011) approximation from tas+hurs, counted above 28/31/35 degC; WMO ETCCDI frost/ice/TNn cold indices from tasmin/tasmax plus a fixed 0-degC 6-day cold-spell screen; base-18 degC degree-days from tas. Window-mean days per year over 5-year periods. A regional ~25 km humidity-heat and thermal screen, not measured WBGT and not a single-model forecast of any one year.",
+      "displayPolicy": "show-as-derived-screening-context-not-advice",
+      "reviewedAt": "2026-06-29"
     }
   ]
 }

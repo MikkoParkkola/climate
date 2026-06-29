@@ -36,7 +36,7 @@ function freshwaterCategoryColor(category: number | null): string {
 export default function ClimateResultSectionsTop({ vm }: { vm: ClimateAppVM }) {
   const {
   locationText, setLocationText, selectedLocation, setSelectedLocation,
-  suggestions, showSuggestions, setShowSuggestions, year, scenario, trajectory, freshwater, fireWeather, floodRiver, cropYield, coverage, amoc,
+  suggestions, showSuggestions, setShowSuggestions, year, scenario, trajectory, freshwater, fireWeather, floodRiver, cropYield, coverage, amoc, humidHeat, coldSeason, degreeDays,
   isLoading, loadingStep, error, exporting, playing, shareCopied, shareStoryCopied,
   shareImageBusy, shareImageSaved, rawJsonCopied, reportSaved, analogCatalog, analogError,
   coastalArtifact, coastalArtifactError, scenarioContrast, scenarioContrastLoading,
@@ -83,6 +83,12 @@ export default function ClimateResultSectionsTop({ vm }: { vm: ClimateAppVM }) {
   const floodActive = floodShown
     ? floodShown.horizons.reduce((best, h) => (Math.abs(h.year - displayYear) < Math.abs(best.year - displayYear) ? h : best))
     : null;
+  // NEX-GDDP horizons nearest the displayed year (windows are 2030/2050/2080; year is numeric there).
+  const nearestNex = <T extends { year: number | null }>(hs: T[]): T | null =>
+    hs.length ? hs.reduce((best, h) => (Math.abs((h.year ?? displayYear) - displayYear) < Math.abs((best.year ?? displayYear) - displayYear) ? h : best)) : null;
+  const humidActive = humidHeat ? nearestNex(humidHeat.horizons) : null;
+  const coldActive = coldSeason ? nearestNex(coldSeason.horizons) : null;
+  const ddActive = degreeDays ? nearestNex(degreeDays.horizons) : null;
 
   return (
     <>
@@ -671,7 +677,137 @@ export default function ClimateResultSectionsTop({ vm }: { vm: ClimateAppVM }) {
           </div>
         )}
 
-        {/* Climate Twin — nearest present-day analog from the grounded catalog */}
+        {/* Humid heat — grounded NASA NEX-GDDP-CMIP6 daily wet-bulb (Stull 2011) exceedance days */}
+        {trajectory && (
+          <div style={{ ...card, padding: 18, marginBottom: 14, borderLeft: `3px solid ${RED}` }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, flexWrap: "wrap", marginBottom: 12 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <h2 style={{ fontSize: 12, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.07em", color: MUTED }}>Humid heat · NASA NEX-GDDP-CMIP6</h2>
+              </div>
+              {humidHeat && <span style={{ fontSize: 10, color: MUTED }}>{humidHeat.model} · ~25 km</span>}
+            </div>
+            {humidHeat && humidActive ? (
+              <>
+                <div style={{ display: "flex", alignItems: "baseline", gap: 10, marginBottom: 6 }}>
+                  <span style={{ fontSize: 22, fontWeight: 800, color: (humidActive.daysAbove28 ?? 0) > 30 ? RED : (humidActive.daysAbove28 ?? 0) > 5 ? ORANGE : MUTED }}>
+                    {humidActive.daysAbove28 != null ? `${humidActive.daysAbove28.toFixed(0)} days/yr` : "No data"}
+                  </span>
+                  <span style={{ fontSize: 11, color: MUTED }}>wet-bulb above 28 °C · {humidActive.year} horizon{humidActive.year !== displayYear ? ` (nearest to ${displayYear})` : ""}</span>
+                </div>
+                <p style={{ margin: "0 0 10px", fontSize: 12.5, lineHeight: 1.58, color: "rgba(255,255,255,0.78)" }}>
+                  Modeled days per year with a daily-mean wet-bulb above 28 °C ({humidActive.daysAbove31 != null ? `${humidActive.daysAbove31.toFixed(0)} above 31 °C, ` : ""}{humidActive.daysAbove35 != null ? `${humidActive.daysAbove35.toFixed(0)} above 35 °C` : ""}) for the surrounding ~25 km cell.
+                  A regional humidity-heat screen, not measured WBGT.
+                </p>
+                <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 8 }}>
+                  {humidHeat.horizons.map((h) => (
+                    <div key={h.window} style={{ flex: "1 1 120px", border: `1px solid ${BORDER}`, borderRadius: 8, padding: "8px 10px" }}>
+                      <div style={{ fontSize: 10, color: MUTED, textTransform: "uppercase", letterSpacing: "0.05em" }}>{h.year} · Tw&gt;28</div>
+                      <div style={{ fontSize: 16, fontWeight: 800, color: RED, lineHeight: 1.3 }}>{h.daysAbove28 != null ? `${h.daysAbove28.toFixed(0)} days` : "No data"}</div>
+                      {h.daysAbove35 != null && <div style={{ fontSize: 9.5, color: MUTED, marginTop: 2 }}>{h.daysAbove35.toFixed(0)} d &gt;35 °C</div>}
+                    </div>
+                  ))}
+                </div>
+                <ReceiptDetails label="source" text={`${humidHeat.attribution} ${humidHeat.method} License: CC0 1.0 (public domain).`} />
+                <ul style={{ margin: "8px 0 0", paddingLeft: 18, fontSize: 10.5, lineHeight: 1.5, color: MUTED }}>
+                  {humidHeat.caveats.map((caveat) => <li key={caveat}>{caveat}</li>)}
+                </ul>
+              </>
+            ) : (
+              <p style={{ margin: 0, fontSize: 12.5, lineHeight: 1.58, color: MUTED }}>
+                Humid-heat exceedance days are not shown for this point (outside the modeled grid), so no value is shown rather than guessing one.
+              </p>
+            )}
+          </div>
+        )}
+
+        {/* Cold-season context — grounded NASA NEX-GDDP-CMIP6 daily ETCCDI cold indices */}
+        {trajectory && (
+          <div style={{ ...card, padding: 18, marginBottom: 14, borderLeft: `3px solid ${BLUE}` }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, flexWrap: "wrap", marginBottom: 12 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <h2 style={{ fontSize: 12, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.07em", color: MUTED }}>Cold season · NASA NEX-GDDP-CMIP6 (ETCCDI)</h2>
+              </div>
+              {coldSeason && <span style={{ fontSize: 10, color: MUTED }}>{coldSeason.model} · ~25 km</span>}
+            </div>
+            {coldSeason && coldActive ? (
+              <>
+                <div style={{ display: "flex", alignItems: "baseline", gap: 10, marginBottom: 6 }}>
+                  <span style={{ fontSize: 22, fontWeight: 800, color: (coldActive.frostDays ?? 0) > 60 ? CYAN : (coldActive.frostDays ?? 0) > 5 ? BLUE : MUTED }}>
+                    {coldActive.frostDays != null ? `${coldActive.frostDays.toFixed(0)} frost days/yr` : "No data"}
+                  </span>
+                  <span style={{ fontSize: 11, color: MUTED }}>tasmin below 0 °C · {coldActive.year} horizon{coldActive.year !== displayYear ? ` (nearest to ${displayYear})` : ""}</span>
+                </div>
+                <p style={{ margin: "0 0 10px", fontSize: 12.5, lineHeight: 1.58, color: "rgba(255,255,255,0.78)" }}>
+                  Modeled ETCCDI cold indices for the surrounding ~25 km cell: {coldActive.iceDays != null ? `${coldActive.iceDays.toFixed(0)} ice days (max below 0 °C), ` : ""}{coldActive.minTasminC != null ? `coldest night around ${coldActive.minTasminC.toFixed(0)} °C, ` : ""}{coldActive.coldSpellDays != null ? `${coldActive.coldSpellDays.toFixed(0)} days in cold spells` : ""}.
+                </p>
+                <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 8 }}>
+                  {coldSeason.horizons.map((h) => (
+                    <div key={h.window} style={{ flex: "1 1 120px", border: `1px solid ${BORDER}`, borderRadius: 8, padding: "8px 10px" }}>
+                      <div style={{ fontSize: 10, color: MUTED, textTransform: "uppercase", letterSpacing: "0.05em" }}>{h.year} · frost</div>
+                      <div style={{ fontSize: 16, fontWeight: 800, color: BLUE, lineHeight: 1.3 }}>{h.frostDays != null ? `${h.frostDays.toFixed(0)} days` : "No data"}</div>
+                      {h.minTasminC != null && <div style={{ fontSize: 9.5, color: MUTED, marginTop: 2 }}>TNn {h.minTasminC.toFixed(0)} °C</div>}
+                    </div>
+                  ))}
+                </div>
+                <ReceiptDetails label="source" text={`${coldSeason.attribution} ${coldSeason.method} License: CC0 1.0 (public domain).`} />
+                <ul style={{ margin: "8px 0 0", paddingLeft: 18, fontSize: 10.5, lineHeight: 1.5, color: MUTED }}>
+                  {coldSeason.caveats.map((caveat) => <li key={caveat}>{caveat}</li>)}
+                </ul>
+              </>
+            ) : (
+              <p style={{ margin: 0, fontSize: 12.5, lineHeight: 1.58, color: MUTED }}>
+                Cold-season indices are not shown for this point (outside the modeled grid), so no value is shown rather than guessing one.
+              </p>
+            )}
+          </div>
+        )}
+
+        {/* Thermal load (degree-days) — grounded NASA NEX-GDDP-CMIP6 base-18 °C degree-days */}
+        {trajectory && (
+          <div style={{ ...card, padding: 18, marginBottom: 14, borderLeft: `3px solid ${PURPLE}` }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, flexWrap: "wrap", marginBottom: 12 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <h2 style={{ fontSize: 12, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.07em", color: MUTED }}>Thermal load · NASA NEX-GDDP-CMIP6 (degree-days)</h2>
+              </div>
+              {degreeDays && <span style={{ fontSize: 10, color: MUTED }}>base {degreeDays.degreeDayBaseC} °C · ~25 km</span>}
+            </div>
+            {degreeDays && ddActive ? (
+              <>
+                <div style={{ display: "flex", gap: 16, flexWrap: "wrap", marginBottom: 6 }}>
+                  <div>
+                    <span style={{ fontSize: 22, fontWeight: 800, color: AMBER }}>{ddActive.coolingDegreeDays != null ? ddActive.coolingDegreeDays.toFixed(0) : "—"}</span>
+                    <span style={{ fontSize: 11, color: MUTED }}> cooling °C·days/yr</span>
+                  </div>
+                  <div>
+                    <span style={{ fontSize: 22, fontWeight: 800, color: BLUE }}>{ddActive.heatingDegreeDays != null ? ddActive.heatingDegreeDays.toFixed(0) : "—"}</span>
+                    <span style={{ fontSize: 11, color: MUTED }}> heating °C·days/yr</span>
+                  </div>
+                </div>
+                <p style={{ margin: "0 0 10px", fontSize: 12.5, lineHeight: 1.58, color: "rgba(255,255,255,0.78)" }}>
+                  Modeled base-{degreeDays.degreeDayBaseC} °C cooling and heating degree-days for the surrounding ~25 km cell at the {ddActive.year} horizon{ddActive.year !== displayYear ? ` (nearest to ${displayYear})` : ""} — a screen for thermal energy demand, not a building-level estimate.
+                </p>
+                <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 8 }}>
+                  {degreeDays.horizons.map((h) => (
+                    <div key={h.window} style={{ flex: "1 1 120px", border: `1px solid ${BORDER}`, borderRadius: 8, padding: "8px 10px" }}>
+                      <div style={{ fontSize: 10, color: MUTED, textTransform: "uppercase", letterSpacing: "0.05em" }}>{h.year} · cool / heat</div>
+                      <div style={{ fontSize: 14, fontWeight: 800, color: AMBER, lineHeight: 1.3 }}>{h.coolingDegreeDays != null ? `${h.coolingDegreeDays.toFixed(0)}` : "—"}<span style={{ color: MUTED, fontWeight: 600 }}> / {h.heatingDegreeDays != null ? h.heatingDegreeDays.toFixed(0) : "—"}</span></div>
+                    </div>
+                  ))}
+                </div>
+                <ReceiptDetails label="source" text={`${degreeDays.attribution} ${degreeDays.method} License: CC0 1.0 (public domain).`} />
+                <ul style={{ margin: "8px 0 0", paddingLeft: 18, fontSize: 10.5, lineHeight: 1.5, color: MUTED }}>
+                  {degreeDays.caveats.map((caveat) => <li key={caveat}>{caveat}</li>)}
+                </ul>
+              </>
+            ) : (
+              <p style={{ margin: 0, fontSize: 12.5, lineHeight: 1.58, color: MUTED }}>
+                Degree-days are not shown for this point (outside the modeled grid), so no value is shown rather than guessing one.
+              </p>
+            )}
+          </div>
+        )}
+
+
         <div style={{ ...card, padding: 18, marginBottom: 14, borderLeft: `3px solid ${PURPLE}` }}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, flexWrap: "wrap", marginBottom: 12 }}>
             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>

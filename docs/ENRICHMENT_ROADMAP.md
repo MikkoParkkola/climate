@@ -45,6 +45,16 @@ heavy reductions on Spark, not the Mac.
 
 ### E1 — NASA NEX-GDDP-CMIP6 (closes 3 gaps) — HIGHEST LEVERAGE
 
+> **STATUS (2026-06-29): LANDED.** `server/nex-gddp.ts` + `scripts/build_nex_gddp.py` reduce a
+> single representative downscaled model (ACCESS-CM2, ~25 km, CC0) to humid-heat wet-bulb
+> exceedance days (Stull 2011), ETCCDI cold indices (frost/ice/TNn + a fixed-threshold cold-spell
+> screen), and base-18 °C cooling/heating degree-days, all four SSPs, packed into one
+> `data/nex-gddp.{json,u16.gz}` artifact. Wired into the climate endpoint, source registry
+> (DOI 10.7917/OFSG3345), data-quality ledger (humid_heat / cold_season_context / infrastructure
+> flipped), methodology, result-page UI, and `smoke:nex-gddp` in `ci`. Build budget note: the
+> transatlantic single-stream S3 link caps ~5 MB/s, so windows are 5-year (a screen, not a 20-30 yr
+> climate normal) — documented in the served caveat. Re-run `npm run build:nex-gddp` to widen.
+
 One dataset grounds **humid_heat (daily), cold_season (daily), and infrastructure degree-days**.
 
 - **Source:** NASA NCCS Earth Exchange. DOI `10.7917/OFSG3345`. `s3://nex-gddp-cmip6` (AWS Open Data).

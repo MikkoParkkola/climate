@@ -2,6 +2,7 @@ import { lookupFreshwater, freshwaterArtifactSummary } from "./freshwater";
 import { lookupCropYield, cropYieldArtifactSummary } from "./crops";
 import { lookupRiverFlood, floodRiverArtifactSummary } from "./floods";
 import { lookupFireWeather, fireWeatherArtifactSummary } from "./fire-weather";
+import { lookupHumidHeat, lookupColdSeason, lookupDegreeDays, nexGddpArtifactSummary } from "./nex-gddp";
 
 /**
  * Honest per-enrichment coverage status for the climate-trajectory response.
@@ -38,7 +39,14 @@ export interface CoverageStatus {
   nearestScenario: NearestScenario | null;
 }
 
-export type EnrichmentKind = "freshwater" | "cropYield" | "floodRiver" | "fireWeather";
+export type EnrichmentKind =
+  | "freshwater"
+  | "cropYield"
+  | "floodRiver"
+  | "fireWeather"
+  | "humidHeat"
+  | "coldSeason"
+  | "degreeDays";
 
 const SCENARIO_ORDER = ["ssp126", "ssp245", "ssp370", "ssp585"] as const;
 
@@ -53,6 +61,14 @@ interface KindConfig {
   label: string;
   summary: () => { scenarioMap: Record<string, string | null> };
   lookup: (lat: number, lng: number, scenario: string) => unknown;
+}
+
+// NEX-GDDP publishes all four SSPs directly, so its scenarioMap is the identity over whatever
+// scenarios the artifact reports — no adjacent-scenario fallback is ever needed.
+function nexScenarioMapSummary(): { scenarioMap: Record<string, string | null> } {
+  const scenarioMap: Record<string, string | null> = {};
+  for (const sc of nexGddpArtifactSummary().scenarios) scenarioMap[sc] = sc;
+  return { scenarioMap };
 }
 
 const KIND_CONFIG: Record<EnrichmentKind, KindConfig> = {
@@ -75,6 +91,21 @@ const KIND_CONFIG: Record<EnrichmentKind, KindConfig> = {
     label: "Quilcaille 2023 CMIP6 Fire Weather Index",
     summary: fireWeatherArtifactSummary,
     lookup: lookupFireWeather,
+  },
+  humidHeat: {
+    label: "NASA NEX-GDDP-CMIP6 humid-heat (wet-bulb)",
+    summary: nexScenarioMapSummary,
+    lookup: lookupHumidHeat,
+  },
+  coldSeason: {
+    label: "NASA NEX-GDDP-CMIP6 cold-season indices",
+    summary: nexScenarioMapSummary,
+    lookup: lookupColdSeason,
+  },
+  degreeDays: {
+    label: "NASA NEX-GDDP-CMIP6 degree-days",
+    summary: nexScenarioMapSummary,
+    lookup: lookupDegreeDays,
   },
 };
 

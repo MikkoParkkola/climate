@@ -48,17 +48,21 @@ export default function Methodology() {
                 published thresholds. See the table below.
               </li>
               <li>
-                <strong>Humid heat screen</strong>: CMIP6 near-surface relative humidity
-                baseline plus scenario delta, combined with monthly mean temperature through
-                the Stull 2011 wet-bulb approximation. It reports a maximum monthly mean
-                wet-bulb context only, not WBGT or daily humid-heat exceedance days.
+                <strong>Humid heat</strong>: NASA NEX-GDDP-CMIP6 daily downscaled
+                projections (single model ACCESS-CM2, ~25 km). We count days per year whose
+                daily-mean wet-bulb temperature — via the published Stull (2011) approximation
+                — exceeds 28, 31 and 35 °C, for 2030, 2050 and 2080, all four SSPs. It is a
+                regional humidity-heat screen, not measured WBGT (which also depends on sun and
+                wind), and uses a single model rather than a multi-model ensemble.
               </li>
               <li>
-                <strong>Cold-season context</strong>: selected-year monthly mean
-                temperature from the grounded trajectory. We count months whose monthly
-                mean is at or below 0°C. This is not a daily freeze-day count, daily
-                cold-stress metric, freeze-thaw model, heating-demand model, road/crop
-                damage model, pest model, or health-risk estimate.
+                <strong>Cold-season context</strong>: NASA NEX-GDDP-CMIP6 daily WMO ETCCDI cold
+                indices for the surrounding ~25 km cell — frost days (tasmin below 0 °C), ice
+                days (tasmax below 0 °C), the coldest night of the period (TNn), plus a
+                fixed-threshold (0 °C, 6-day) cold-spell screen — for 2030, 2050 and 2080, all
+                four SSPs, alongside the existing monthly-mean freeze-month context. It uses a
+                single model, and the cold-spell screen is not the percentile-based WMO Cold
+                Spell Duration Index.
               </li>
               <li>
                 <strong>Freshwater availability (water stress)</strong>: WRI Aqueduct 4.0
@@ -92,6 +96,14 @@ export default function Methodology() {
                 SSP3-7.0 and SSP5-8.5 are covered directly; SSP2-4.5 is not in the protocol
                 and shows nothing. It is a model-ensemble crop signal, not a field-level
                 forecast, and cells where a crop is barely grown show nothing.
+              </li>
+              <li>
+                <strong>Thermal load (degree-days)</strong>: NASA NEX-GDDP-CMIP6 daily mean
+                temperature reduced to base-18 °C cooling and heating degree-days per year for
+                the surrounding ~25 km cell at 2030, 2050 and 2080, all four SSPs. It is a
+                screen for thermal energy demand; real building energy use depends on local
+                construction, behaviour and equipment. It pairs with river-flood exposure to
+                form the infrastructure signal, and uses a single model.
               </li>
               <li>
                 <strong>Climate twin</strong>: the nearest present-day city in the indexed
@@ -185,7 +197,10 @@ export default function Methodology() {
               humidity. fupit shows the hottest monthly mean wet-bulb value and the month
               it occurs in. Because this is monthly mean data, it cannot count hot-hour or
               hot-day exceedances; because it has no wind, sun angle, radiation, or exposure
-              inputs, it is not WBGT or occupational-safety guidance.
+              inputs, it is not WBGT or occupational-safety guidance. The primary humid-heat
+              signal on the result page now comes from a separate, daily-resolution source —
+              NASA NEX-GDDP-CMIP6 — which counts daily-mean wet-bulb exceedance days (above
+              28, 31 and 35 °C) per year and is described in the enrichment list above.
             </p>
 
             <h2>Cold-season context</h2>

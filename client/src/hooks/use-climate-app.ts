@@ -10,7 +10,7 @@ import type {
   ScenarioId, CoastCoord, LocationOption, ProjectionPoint, AnalogCandidate, AnalogCatalog,
   CoastalProximityArtifact, CoastalRelevance, ClimateAnalogMatch, ScenarioContrastRow,
   RoadmapItem, ShareStory, LearningPromptAction, LearningPrompt, FreshwaterStress, FireWeather, FloodExposure, CropYield,
-  EnrichmentCoverage, AmocAssessment,
+  EnrichmentCoverage, AmocAssessment, HumidHeat, ColdSeason, DegreeDays,
 } from "@/lib/climate-types";
 import {
   lerp, interpScalar, interpOptionalScalar, riskScore, interpArr, nearestPoint, categoryFor,
@@ -56,6 +56,9 @@ export function useClimateApp() {
   // AMOC/Gulf Stream risk panel. Both optional in the contract.
   const [coverage, setCoverage] = useState<EnrichmentCoverage | null>(null);
   const [amoc, setAmoc] = useState<AmocAssessment | null>(null);
+  const [humidHeat, setHumidHeat] = useState<HumidHeat | null>(null);
+  const [coldSeason, setColdSeason] = useState<ColdSeason | null>(null);
+  const [degreeDays, setDegreeDays] = useState<DegreeDays | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [loadingStep, setLoadingStep] = useState(0);
   const [error, setError] = useState<string | null>(null);
@@ -231,7 +234,7 @@ export function useClimateApp() {
     setShowSuggestions(false);
   };
 
-  const fetchTrajectory = async (targetLocation: LocationOption, scenarioOverride: ScenarioId): Promise<{ points: ProjectionPoint[]; freshwater: FreshwaterStress | null; fireWeather: FireWeather | null; floodRiver: FloodExposure | null; cropYield: CropYield | null; coverage: EnrichmentCoverage | null; amoc: AmocAssessment | null }> => {
+  const fetchTrajectory = async (targetLocation: LocationOption, scenarioOverride: ScenarioId): Promise<{ points: ProjectionPoint[]; freshwater: FreshwaterStress | null; fireWeather: FireWeather | null; floodRiver: FloodExposure | null; cropYield: CropYield | null; coverage: EnrichmentCoverage | null; amoc: AmocAssessment | null; humidHeat: HumidHeat | null; coldSeason: ColdSeason | null; degreeDays: DegreeDays | null }> => {
     const response = await fetch("/api/climate-trajectory", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -255,6 +258,9 @@ export function useClimateApp() {
         // contract; fall back to data.data.* so either placement degrades fine.
         coverage: (data.coverage ?? data.data.coverage ?? null) as EnrichmentCoverage | null,
         amoc: (data.amoc ?? data.data.amoc ?? null) as AmocAssessment | null,
+        humidHeat: (data.data.humidHeat as HumidHeat | null) ?? null,
+        coldSeason: (data.data.coldSeason as ColdSeason | null) ?? null,
+        degreeDays: (data.data.degreeDays as DegreeDays | null) ?? null,
       };
     }
     throw new Error("Invalid response from climate model.");
@@ -272,6 +278,9 @@ export function useClimateApp() {
     setCropYield(null);
     setCoverage(null);
     setAmoc(null);
+    setHumidHeat(null);
+    setColdSeason(null);
+    setDegreeDays(null);
     setScenarioContrast(null);
     setScenarioContrastError(null);
     try {
@@ -283,6 +292,9 @@ export function useClimateApp() {
       setCropYield(result.cropYield);
       setCoverage(result.coverage);
       setAmoc(result.amoc);
+      setHumidHeat(result.humidHeat);
+      setColdSeason(result.coldSeason);
+      setDegreeDays(result.degreeDays);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Network error. Please check your connection.");
     } finally {
@@ -331,6 +343,9 @@ export function useClimateApp() {
     setCropYield(null);
     setCoverage(null);
     setAmoc(null);
+    setHumidHeat(null);
+    setColdSeason(null);
+    setDegreeDays(null);
     setError(null);
     setShareCopied(false);
     setRawJsonCopied(false);
@@ -649,7 +664,7 @@ export function useClimateApp() {
 
   return {
   locationText, setLocationText, selectedLocation, setSelectedLocation,
-  suggestions, showSuggestions, setShowSuggestions, year, scenario, trajectory, freshwater, fireWeather, floodRiver, cropYield, coverage, amoc,
+  suggestions, showSuggestions, setShowSuggestions, year, scenario, trajectory, freshwater, fireWeather, floodRiver, cropYield, coverage, amoc, humidHeat, coldSeason, degreeDays,
   birthYear, setBirthYear, prefs, setPrefs, scoredTrajectory, standardSnapshot,
   isLoading, loadingStep, error, exporting, playing, shareCopied, shareStoryCopied,
   shareImageBusy, shareImageSaved, rawJsonCopied, reportSaved, analogCatalog, analogError,
