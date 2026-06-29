@@ -20,3 +20,7 @@ ingest/export/manifest.json
 # history focused on production code, grounded data, and documentation.
 artifacts/
 attached_assets/
+
+# WRI Aqueduct download/extract staging for build:freshwater (261MB zip + GDB).
+# The committed artifact is data/freshwater-stress.aqueduct40.*; raw source is not tracked.
+.aqueduct-build/

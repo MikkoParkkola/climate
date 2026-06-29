@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 import { createHash } from "node:crypto";
 import { existsSync, readFileSync, statSync } from "node:fs";
+import { gunzipSync } from "node:zlib";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -34,6 +35,8 @@ for (const relativePath of [
   "data/trajectory-audit-summary.json",
   "data/observed-baseline-audit.json",
   "data/observed-climatology-validation.nasa-power.json",
+  "data/freshwater-stress.aqueduct40.json",
+  "data/freshwater-stress.aqueduct40.u16.gz",
   "docs/VALIDATION_REPORT.md",
   "client/public/climate-analog-catalog.current.json",
   "client/public/coastal-proximity.natural-earth-110m.json",
@@ -51,6 +54,7 @@ assert(sourceIds.has("ipcc-ar6-amoc"), "AMOC/Gulf Stream context source row miss
 assert(sourceIds.has("natural-earth-coastline-110m-v5"), "Natural Earth coastline source row missing");
 assert(sourceIds.has("natural-earth-populated-places-110m-v5"), "Natural Earth population-place source row missing");
 assert(sourceIds.has("natural-earth-country-population-weighted-v1"), "Natural Earth country aggregate source row missing");
+assert(sourceIds.has("wri-aqueduct-40-water-stress-v1"), "WRI Aqueduct freshwater source row missing");
 assert(sourceIds.has("nasa-power-meteorology-monthly-v10"), "NASA POWER observed-climatology validation source row missing");
 const requireRegisteredSources = (ids, context) => {
   assert(Array.isArray(ids) && ids.length > 0, `${context} source ids missing`);
@@ -131,6 +135,27 @@ assert(
   getSourceRow(coastline.sourceId)?.displayPolicy === "show-with-coastal-proximity-caveat",
   "Natural Earth coastline display policy mismatch",
 );
+
+const freshwater = readJson("data/freshwater-stress.aqueduct40.json");
+assert(freshwater.sourceId === "wri-aqueduct-40-water-stress-v1", "freshwater artifact source id mismatch");
+assert(freshwater.indicator === "water_stress", "freshwater artifact indicator mismatch");
+assert(freshwater.license === "attribution", "freshwater artifact license must be attribution");
+assert(typeof freshwater.attribution === "string" && freshwater.attribution.includes("Aqueduct"), "freshwater attribution missing");
+assert(JSON.stringify(freshwater.years) === JSON.stringify([2030, 2050, 2080]), "freshwater horizons mismatch");
+assert(freshwater.scenarioMap?.ssp126 === "opt" && freshwater.scenarioMap?.ssp370 === "bau" && freshwater.scenarioMap?.ssp585 === "pes", "freshwater scenario map mismatch");
+assert(freshwater.scenarioMap?.ssp245 === null, "freshwater must leave ssp245 unmapped");
+assert(Array.isArray(freshwater.basins) && freshwater.basins.length === freshwater.basinCount && freshwater.basinCount > 10000, "freshwater basin table incomplete");
+assert(freshwater.caveats?.some((c) => c.toLowerCase().includes("prioritization")), "freshwater WRI prioritization caveat missing");
+const fwRaster = freshwater.raster;
+assert(fwRaster?.file === "freshwater-stress.aqueduct40.u16.gz" && fwRaster?.encoding === "gzip+uint16le", "freshwater raster manifest mismatch");
+const fwBytes = gunzipSync(readFileSync(path.join(repoRoot, "data", fwRaster.file)));
+assert(fwBytes.length === fwRaster.nlat * fwRaster.nlon * 2, "freshwater raster size mismatch vs manifest grid");
+requireRegisteredSources([freshwater.sourceId], "freshwater artifact");
+assert(
+  getSourceRow(freshwater.sourceId)?.displayPolicy === "show-with-subbasin-prioritization-caveat",
+  "freshwater display policy mismatch",
+);
+assert(getSourceRow(freshwater.sourceId)?.license === "attribution", "freshwater registry license must be attribution");
 
 const rankingArtifacts = [
   readJson("data/rankings.curated-cities.json"),

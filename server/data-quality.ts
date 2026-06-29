@@ -3,6 +3,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { MODEL_CACHE_VERSION, SOURCE_REGISTRY_VERSION } from "./model-cache-version";
 import { loadSourceRegistry } from "./source-registry";
+import { freshwaterArtifactSummary } from "./freshwater";
 
 type RankingArtifact = {
   methodVersion: string;
@@ -111,10 +112,10 @@ const ENRICHMENT_READINESS = [
   {
     key: "freshwater",
     label: "Freshwater availability",
-    status: "withheld",
-    publicBehavior: "Not shown as a quantified metric.",
-    groundedBasis: "No registered freshwater risk artifact in this build.",
-    missingForFullUse: "Needs legally compatible basin/aquifer/runoff/storage/demand indicator with source-registry approval.",
+    status: "partial",
+    publicBehavior: "Shown as WRI Aqueduct 4.0 sub-basin water-stress category for 2030/2050/2080 on the result page and in the climate-trajectory API, with WRI attribution and the prioritization-screen caveat.",
+    groundedBasis: "WRI Aqueduct 4.0 future-annual water stress (withdrawal / available supply) for the containing HydroBASINS sub-basin, mapped opt->ssp126, bau->ssp370, pes->ssp585; ssp245 returns no value.",
+    missingForFullUse: "Sub-basin level only, not local supply/storage/piping/demand; water stress only (no drought, flood, water quality, sanitation access, or seasonal variability); no exact ssp245 scenario; 2080 is the latest Aqueduct horizon.",
   },
   {
     key: "cold_season_context",
@@ -279,6 +280,8 @@ export function loadDataQuality(): Record<string, unknown> {
       artifactInfo("data/observed-baseline-audit.json"),
       artifactInfo("data/observed-climatology-validation.nasa-power.json"),
       artifactInfo("client/public/coastal-proximity.natural-earth-110m.json"),
+      artifactInfo("data/freshwater-stress.aqueduct40.json"),
+      artifactInfo("data/freshwater-stress.aqueduct40.u16.gz"),
     ],
     sourceRegistry: {
       version: registry.version,
@@ -366,6 +369,7 @@ export function loadDataQuality(): Record<string, unknown> {
       caveats: coastalProximity.caveats,
     },
     enrichmentReadiness: ENRICHMENT_READINESS,
+    freshwaterStress: freshwaterArtifactSummary(),
     trajectoryAudit: {
       artifactGeneratedAt: audit.generatedAt,
       version: audit.version,
@@ -436,7 +440,8 @@ export function loadDataQuality(): Record<string, unknown> {
       "Sea-level context now uses a Natural Earth 1:110m nearest-coast screen for coarse relevance copy, but still has no elevation, tides, storm surge, subsidence, defenses, rivers, drainage, or parcel-exposure model.",
       "Trend review flags are intentionally visible for scientific review and are not automatically hidden by green CI.",
       "NASA POWER observed-climatology validation compares the packaged baseline to an independent observation/reanalysis product; it is not a forecast correction or proof of future projection skill.",
-      "Freshwater, biodiversity, agriculture, infrastructure, and quantified AMOC local-impact layers remain withheld until source-registry approval and implementation.",
+      "Freshwater availability is now shown as a WRI Aqueduct 4.0 sub-basin water-stress category (a basin-level prioritization screen with WRI's own caveat), not a local supply, storage, demand, drought, flood, or water-quality guarantee.",
+      "Biodiversity, agriculture, infrastructure, and quantified AMOC local-impact layers remain withheld until source-registry approval and implementation.",
     ],
   };
 

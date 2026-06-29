@@ -9,7 +9,7 @@ import {
 import type {
   ScenarioId, CoastCoord, LocationOption, ProjectionPoint, AnalogCandidate, AnalogCatalog,
   CoastalProximityArtifact, CoastalRelevance, ClimateAnalogMatch, ScenarioContrastRow,
-  RoadmapItem, ShareStory, LearningPromptAction, LearningPrompt,
+  RoadmapItem, ShareStory, LearningPromptAction, LearningPrompt, FreshwaterStress,
 } from "@/lib/climate-types";
 import {
   lerp, interpScalar, interpOptionalScalar, riskScore, interpArr, nearestPoint, categoryFor,
@@ -46,6 +46,7 @@ export function useClimateApp() {
   // "Your conditions" — comfort prefs, also client-side. Re-scoring is local + instant.
   const [prefs, setPrefs] = usePrefs();
   const [trajectory, setTrajectory] = useState<ProjectionPoint[] | null>(null);
+  const [freshwater, setFreshwater] = useState<FreshwaterStress | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [loadingStep, setLoadingStep] = useState(0);
   const [error, setError] = useState<string | null>(null);
@@ -190,7 +191,7 @@ export function useClimateApp() {
     setShowSuggestions(false);
   };
 
-  const fetchTrajectory = async (targetLocation: LocationOption, scenarioOverride: ScenarioId): Promise<ProjectionPoint[]> => {
+  const fetchTrajectory = async (targetLocation: LocationOption, scenarioOverride: ScenarioId): Promise<{ points: ProjectionPoint[]; freshwater: FreshwaterStress | null }> => {
     const response = await fetch("/api/climate-trajectory", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -203,7 +204,8 @@ export function useClimateApp() {
     }
     const data = await response.json();
     if (data.success && data.data?.points?.length) {
-      return [...data.data.points].sort((a: ProjectionPoint, b: ProjectionPoint) => a.year - b.year);
+      const points = [...data.data.points].sort((a: ProjectionPoint, b: ProjectionPoint) => a.year - b.year);
+      return { points, freshwater: (data.data.freshwater as FreshwaterStress | null) ?? null };
     }
     throw new Error("Invalid response from climate model.");
   };
@@ -214,10 +216,13 @@ export function useClimateApp() {
     setError(null);
     setIsLoading(true);
     setTrajectory(null);
+    setFreshwater(null);
     setScenarioContrast(null);
     setScenarioContrastError(null);
     try {
-      setTrajectory(await fetchTrajectory(targetLocation, scenarioOverride));
+      const result = await fetchTrajectory(targetLocation, scenarioOverride);
+      setTrajectory(result.points);
+      setFreshwater(result.freshwater);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Network error. Please check your connection.");
     } finally {
@@ -232,7 +237,7 @@ export function useClimateApp() {
     try {
       const next: Partial<Record<ScenarioId, ProjectionPoint[]>> = { [scenario]: trajectory };
       for (const row of SCENARIOS) {
-        if (!next[row.id]) next[row.id] = await fetchTrajectory(selectedLocation, row.id);
+        if (!next[row.id]) next[row.id] = (await fetchTrajectory(selectedLocation, row.id)).points;
       }
       setScenarioContrast(next);
     } catch (err) {
@@ -260,6 +265,7 @@ export function useClimateApp() {
   const newSearch = () => {
     setPlaying(false);
     setTrajectory(null);
+    setFreshwater(null);
     setError(null);
     setShareCopied(false);
     setRawJsonCopied(false);
@@ -578,7 +584,7 @@ export function useClimateApp() {
 
   return {
   locationText, setLocationText, selectedLocation, setSelectedLocation,
-  suggestions, showSuggestions, setShowSuggestions, year, scenario, trajectory,
+  suggestions, showSuggestions, setShowSuggestions, year, scenario, trajectory, freshwater,
   birthYear, setBirthYear, prefs, setPrefs, scoredTrajectory, standardSnapshot,
   isLoading, loadingStep, error, exporting, playing, shareCopied, shareStoryCopied,
   shareImageBusy, shareImageSaved, rawJsonCopied, reportSaved, analogCatalog, analogError,

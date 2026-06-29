@@ -173,6 +173,32 @@ export interface CoastalRelevance {
   distanceKm?: number;
 }
 
+export interface FreshwaterHorizon {
+  year: number;
+  category: number | null;
+  label: string | null;
+  score: number | null;
+  rawRatio: number | null;
+}
+
+export interface FreshwaterStress {
+  sourceId: string;
+  version: string;
+  indicator: string;
+  indicatorLabel: string;
+  attribution: string;
+  license: string;
+  stableUrl: string;
+  scenario: string;
+  aqueductScenario: string;
+  aqueductScenarioLabel: string;
+  pfafId: number | null;
+  fallbackRings: number;
+  horizons: FreshwaterHorizon[];
+  method: string;
+  caveats: string[];
+}
+
 export interface ClimateAnalogMatch {
   candidate: AnalogCandidate;
   distance: number;

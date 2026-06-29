@@ -82,6 +82,19 @@ type DataQuality = {
     method: string;
     caveats: string[];
   };
+  freshwaterStress: {
+    sourceId: string;
+    version: string;
+    provider: string;
+    indicatorLabel: string;
+    license: string;
+    attribution: string;
+    basinCount: number;
+    years: number[];
+    resolutionDegrees: number;
+    method: string;
+    caveats: string[];
+  };
   enrichmentReadiness: Array<{
     key: string;
     label: string;
@@ -256,6 +269,29 @@ export default function DataQualityPage() {
                 <p className="text-xs text-slate-400">{data.coastalProximity.method}</p>
                 <ul className="list-disc space-y-1 pl-5 text-sm text-slate-400">
                   {data.coastalProximity.caveats.map((caveat) => <li key={caveat}>{caveat}</li>)}
+                </ul>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardContent className="space-y-4 pt-6">
+                <div className="flex items-center gap-2">
+                  <ShieldCheck className="h-5 w-5 text-[hsl(24,88%,66%)]" aria-hidden />
+                  <h2 className="text-xl font-semibold">Freshwater availability screen</h2>
+                </div>
+                <p className="text-sm text-slate-400">
+                  {data.freshwaterStress.provider} provides {data.freshwaterStress.indicatorLabel} for{" "}
+                  {data.freshwaterStress.basinCount.toLocaleString()} HydroBASINS sub-basins, served via{" "}
+                  {data.freshwaterStress.sourceId} at {data.freshwaterStress.resolutionDegrees}° lookup resolution.
+                  It is a sub-basin prioritization screen, not a local supply, drought, flood, or water-quality model.
+                </p>
+                <div className="grid gap-3 sm:grid-cols-3">
+                  {data.freshwaterStress.years.map((year) => <Stat key={year} label={`Horizon ${year}`} value="water stress" />)}
+                </div>
+                <p className="text-xs text-slate-400">{data.freshwaterStress.method}</p>
+                <p className="text-xs text-slate-400">License: {data.freshwaterStress.license}. {data.freshwaterStress.attribution}</p>
+                <ul className="list-disc space-y-1 pl-5 text-sm text-slate-400">
+                  {data.freshwaterStress.caveats.map((caveat) => <li key={caveat}>{caveat}</li>)}
                 </ul>
               </CardContent>
             </Card>

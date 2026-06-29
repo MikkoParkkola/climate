@@ -277,8 +277,18 @@ try {
     "data-quality API keeps daily cold-stress gap explicit",
   );
   assert(
-    dataQuality.enrichmentReadiness?.some((item) => item.key === "freshwater" && item.status === "withheld"),
-    "data-quality API exposes withheld freshwater readiness",
+    dataQuality.enrichmentReadiness?.some(
+      (item) =>
+        item.key === "freshwater" &&
+        item.status === "partial" &&
+        String(item.groundedBasis).includes("Aqueduct 4.0"),
+    ),
+    "data-quality API exposes partial freshwater readiness grounded in Aqueduct 4.0",
+  );
+  assert(
+    dataQuality.freshwaterStress?.sourceId === "wri-aqueduct-40-water-stress-v1" &&
+      dataQuality.freshwaterStress?.license === "attribution",
+    "data-quality API exposes the WRI Aqueduct freshwater artifact summary",
   );
   assert(
     dataQuality.sourceRegistry?.rows?.some(
