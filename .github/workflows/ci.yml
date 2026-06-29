@@ -9,7 +9,10 @@ on:
 jobs:
   verify:
     name: Typecheck, build, and grounded model smoke
-    runs-on: ubuntu-latest
+    # MIK-5920 no-spend policy: run on the free managed avrea fleet, not GitHub-hosted
+    # ubuntu-latest (which hits the GitHub Actions budget block). Matches the rest of
+    # the MikkoParkkola portfolio. Fallback if avrea is unavailable: [self-hosted, linux, arm64, spark].
+    runs-on: avrea-ubuntu-latest
     timeout-minutes: 10
 
     steps:
