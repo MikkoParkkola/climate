@@ -4,6 +4,7 @@ Allow: /comparison
 Allow: /rankings
 Allow: /methodology
 Allow: /data-quality
+Allow: /place/
 Disallow: /api/
 
 Sitemap: https://fupit.com/sitemap.xml

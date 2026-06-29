@@ -573,6 +573,62 @@ export function linkLocationFromParams(): { location: LocationOption; year?: num
   };
 }
 
+// Resolve the current /place/<slug> route to a location for the deep-link effect.
+// Prefers the server-injected JSON island (#fupit-place) — present on the first
+// load of a shared URL, so no round-trip — then falls back to parsing a
+// coordinate slug. Returns null for a catalog slug reached by client-side
+// navigation (no island); the hook then resolves it via /api/place/<slug>.
+export function linkLocationFromPlaceRoute(): { location: LocationOption; year?: number; scenario: ScenarioId; autoRun: boolean } | null {
+  const path = window.location.pathname;
+  if (!path.startsWith("/place/")) return null;
+
+  const island = readPlaceIsland();
+  if (island) return island;
+
+  const slug = decodeURIComponent(path.slice("/place/".length));
+  const coords = parseCoordinateSlugClient(slug);
+  if (!coords) return null;
+  const name = `${coords.lat.toFixed(2)}, ${coords.lng.toFixed(2)}`;
+  return {
+    location: { name, lat: coords.lat, lng: coords.lng, country: "", city: name },
+    year: undefined,
+    scenario: DEFAULT_SCENARIO,
+    autoRun: true,
+  };
+}
+
+function readPlaceIsland(): { location: LocationOption; year?: number; scenario: ScenarioId; autoRun: boolean } | null {
+  try {
+    const el = document.getElementById("fupit-place");
+    if (!el?.textContent) return null;
+    const data = JSON.parse(el.textContent) as {
+      name?: string; country?: string; lat?: number; lng?: number; year?: number; scenario?: string; autoRun?: boolean;
+    };
+    const lat = Number(data.lat);
+    const lng = Number(data.lng);
+    if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
+    const name = (data.name && data.name.trim()) || `${lat.toFixed(2)}, ${lng.toFixed(2)}`;
+    return {
+      location: { name, lat, lng, country: data.country || "", city: name.split(",")[0] || name },
+      year: Number.isInteger(data.year) && (data.year as number) >= BASELINE_YEAR && (data.year as number) <= MAX_YEAR ? data.year : undefined,
+      scenario: parseScenario(data.scenario ?? null),
+      autoRun: data.autoRun !== false,
+    };
+  } catch {
+    return null;
+  }
+}
+
+// Coordinate slug "<lat>,<lng>" (also "_" separator), mirroring server/location-catalog.ts.
+export function parseCoordinateSlugClient(slug: string): { lat: number; lng: number } | null {
+  const m = slug.trim().match(/^(-?\d{1,3}(?:\.\d+)?)[,_](-?\d{1,3}(?:\.\d+)?)$/);
+  if (!m) return null;
+  const lat = Number(m[1]);
+  const lng = Number(m[2]);
+  if (!Number.isFinite(lat) || !Number.isFinite(lng) || lat < -90 || lat > 90 || lng < -180 || lng > 180) return null;
+  return { lat, lng };
+}
+
 export function crossYear(points: ProjectionPoint[], threshold: number, dir: "above" | "below", get: (p: ProjectionPoint) => number): number | null {
   for (let y = BASELINE_YEAR; y <= MAX_YEAR; y++) {
     const v = interpScalar(points, y, get);

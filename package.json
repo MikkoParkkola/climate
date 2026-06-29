@@ -5,9 +5,10 @@
   "license": "MIT",
   "scripts": {
     "dev": "NODE_ENV=development tsx server/index.ts",
-    "build": "node scripts/validate-artifacts.mjs && vite build && esbuild server/index.ts --platform=node --packages=external --bundle --format=esm --outdir=dist && node scripts/copy-og-assets.mjs && node scripts/write-build-info.mjs",
+    "build": "node scripts/validate-artifacts.mjs && tsx scripts/build-sitemap.ts && vite build && esbuild server/index.ts --platform=node --packages=external --bundle --format=esm --outdir=dist && node scripts/copy-og-assets.mjs && node scripts/write-build-info.mjs",
     "start": "NODE_ENV=production node dist/index.js",
     "check": "tsc",
+    "build:sitemap": "tsx scripts/build-sitemap.ts",
     "build:rankings": "node scripts/build-natural-earth-populated-places.mjs && node scripts/build-ranking-artifacts.mjs",
     "build:coastline": "node scripts/build-natural-earth-coastline-proximity.mjs",
     "build:freshwater": "python3 scripts/build_aqueduct_freshwater.py",
@@ -24,6 +25,7 @@
     "smoke:storyline": "node scripts/smoke-storyline.mjs",
     "smoke:share-card": "node scripts/smoke-share-card.mjs",
     "smoke:og": "tsx scripts/smoke-og-card.ts",
+    "smoke:location-seo": "tsx scripts/smoke-location-seo.ts",
     "smoke:client-safety": "tsx scripts/smoke-client-bundle-safety.ts",
     "smoke:browser-mount": "node scripts/smoke-browser-mount.mjs",
     "smoke:educational-report": "node scripts/smoke-educational-report.mjs",
@@ -50,7 +52,7 @@
     "verify:live": "node scripts/verify-live-release.mjs",
     "db:purge-model-cache": "node scripts/purge-climate-model-cache.mjs",
     "db:purge-model-cache:dry-run": "node scripts/purge-climate-model-cache.mjs --dry-run",
-    "ci": "npm run check && npm run build && npm run audit:public && npm run smoke:db-free-release && npm run smoke:cache && npm run smoke:runtime-cache && npm run smoke:rankings && npm run smoke:twin && npm run smoke:comparison-layout && npm run smoke:projection-route && npm run smoke:raw-json && npm run smoke:storyline && npm run smoke:share-card && npm run smoke:og && npm run smoke:client-safety && npm run smoke:browser-mount && npm run smoke:educational-report && npm run smoke:guided-explainer && npm run smoke:scenario-contrast && npm run smoke:grid-reader && npm run smoke:node-model && npm run smoke:node-performance && npm run smoke:observed-baseline && npm run smoke:data-quality && npm run smoke:freshwater && npm run smoke:fire-weather && npm run smoke:floods && npm run smoke:crops && npm run smoke:cache-purge-script && npm run smoke:validation-report && npm run smoke:model && npm run audit:trajectories",
+    "ci": "npm run check && npm run build && npm run audit:public && npm run smoke:db-free-release && npm run smoke:cache && npm run smoke:runtime-cache && npm run smoke:rankings && npm run smoke:twin && npm run smoke:comparison-layout && npm run smoke:projection-route && npm run smoke:raw-json && npm run smoke:storyline && npm run smoke:share-card && npm run smoke:og && npm run smoke:location-seo && npm run smoke:client-safety && npm run smoke:browser-mount && npm run smoke:educational-report && npm run smoke:guided-explainer && npm run smoke:scenario-contrast && npm run smoke:grid-reader && npm run smoke:node-model && npm run smoke:node-performance && npm run smoke:observed-baseline && npm run smoke:data-quality && npm run smoke:freshwater && npm run smoke:fire-weather && npm run smoke:floods && npm run smoke:crops && npm run smoke:cache-purge-script && npm run smoke:validation-report && npm run smoke:model && npm run audit:trajectories",
     "db:push": "drizzle-kit push"
   },
   "dependencies": {
