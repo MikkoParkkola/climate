@@ -18,6 +18,12 @@ ingest step covers the curated city catalog (data/ranking_cities.json, the
 same 45 cities backing rankings/comparisons) as a scoped, honest slice.
 Arbitrary-location coverage is a follow-up, not silently implied here.
 
+A city that fails to fetch (after retries) is a hard failure (exit 1) by
+default -- a silently-partial artifact would be a fabricated-completeness lie
+about which cities are actually covered. Set ALLOW_PARTIAL=1 to accept a
+partial artifact anyway (e.g. a known-flaky upstream city); skipped cities
+are recorded in the artifact's "skipped_cities" field either way.
+
 Run from repo root:  python3 scripts/build_historical_observed.py
 Writes: data/historical-observed.openmeteo.json
 """
@@ -74,13 +80,16 @@ def main():
     with open(os.path.join(REPO, "data", "ranking_cities.json")) as f:
         cities = json.load(f)
 
+    allow_partial = os.environ.get("ALLOW_PARTIAL") == "1"
     entries = []
+    skipped = []
     for c in cities:
         name, lat, lng = c["name"], c["lat"], c["lng"]
         try:
             daily = fetch_daily(lat, lng, START_YEAR, END_YEAR)
         except Exception as exc:  # noqa: BLE001
             print(f"SKIP {name}: {exc}", file=sys.stderr)
+            skipped.append(name)
             continue
         years, temps, precip = annualize(daily)
         entries.append({
@@ -102,11 +111,22 @@ def main():
         "coverage": "curated city catalog (data/ranking_cities.json) only — not arbitrary worldwide lat/lng",
         "cities": entries,
     }
+    if skipped:
+        artifact["skipped_cities"] = skipped
     out = os.path.join(REPO, "data", "historical-observed.openmeteo.json")
     with open(out, "w") as f:
         json.dump(artifact, f, indent=2)
         f.write("\n")
     print(f"\nwrote {os.path.relpath(out, REPO)} ({len(entries)}/{len(cities)} cities)")
+
+    if skipped and not allow_partial:
+        print(
+            f"\nFAILED: {len(skipped)}/{len(cities)} curated cities could not be fetched: "
+            f"{', '.join(skipped)}. Re-run to retry, or set ALLOW_PARTIAL=1 to accept a "
+            "partial artifact (e.g. known-flaky upstream cities).",
+            file=sys.stderr,
+        )
+        sys.exit(1)
 
 
 if __name__ == "__main__":
