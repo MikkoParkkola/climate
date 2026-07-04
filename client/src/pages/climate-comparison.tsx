@@ -6,20 +6,16 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { MapPin, X, Plus, BarChart3, Globe, ArrowLeft, Crown, TrendingUp, Lightbulb, Thermometer, Droplet, Zap } from "lucide-react";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { SCENARIOS, scenarioOptionLabel } from "@/lib/climate-constants";
+import { SCENARIOS, scenarioOptionLabel, BG, CARD, BORDER, ACCENT, MUTED, RED, GREEN, AMBER, ORANGE } from "@/lib/climate-constants";
 import { Term } from "@/components/climate-term";
 import type { GlossaryKey } from "@/lib/glossary";
 
 // ── Theme ──────────────────────────────────────────────────────────────────
-const BG = "hsl(222,47%,8%)";
-const CARD = "rgba(255,255,255,0.04)";
-const BORDER = "rgba(255,255,255,0.08)";
-const ACCENT = "hsl(192,91%,46%)";
-const MUTED = "hsl(215,20%,65%)";
-const RED = "#ef4444";
-const GREEN = "#22c55e";
-const AMBER = "#f59e0b";
-const ORANGE = "#f97316";
+// AC.VISUAL.3 (MIK-6779): BG/CARD/BORDER/ACCENT/MUTED/RED/GREEN/AMBER/ORANGE
+// used to be redeclared here with their own hardcoded values (including the
+// banned blue hsl(192,91%,46%) as this page's ACCENT) instead of importing
+// the shared Ember Instrument tokens every other page already uses. Now
+// imported above so this page can't drift from the rest of the app again.
 const card: React.CSSProperties = {
   backgroundColor: CARD,
   border: `1px solid ${BORDER}`,
@@ -27,6 +23,10 @@ const card: React.CSSProperties = {
   backdropFilter: "blur(12px)",
 };
 
+// This 10-color qualitative palette distinguishes N different *compared
+// locations* on the multi-line charts below -- a data series, not chrome.
+// DESIGN.md's banned-hue rule explicitly carves this out ("vivid blues
+// survive only inside data series"); left untouched on purpose.
 const PALETTE = [
   "#3b82f6", "#ef4444", "#10b981", "#f59e0b", "#8b5cf6",
   "#ec4899", "#06b6d4", "#f97316", "#84cc16", "#a855f7",
@@ -622,7 +622,7 @@ export default function ClimateComparison({ onBack }: ClimateComparisonProps) {
                 </Button>
                 <div>
                   <CardTitle as="h1" className="flex items-center gap-2">
-                    <BarChart3 className="w-6 h-6 text-blue-400" />
+                    <BarChart3 className="w-6 h-6" style={{ color: ACCENT }} />
                     Climate Location Comparison
                   </CardTitle>
                   <p className="text-sm text-gray-400 mt-1">
@@ -739,7 +739,7 @@ export default function ClimateComparison({ onBack }: ClimateComparisonProps) {
                           </div>
                         </div>
                       </div>
-                      <Button size="sm" variant="ghost" onClick={() => removeLocation(index)} className="text-red-400 hover:text-red-300">
+                      <Button size="sm" variant="ghost" onClick={() => removeLocation(index)} style={{ color: RED }}>
                         <X className="w-4 h-4" />
                       </Button>
                     </div>
@@ -898,7 +898,7 @@ export default function ClimateComparison({ onBack }: ClimateComparisonProps) {
               </div>
               <TrajectoryChart trajectories={trajScores} colors={colors} year={year} />
               <div style={{ marginTop: 8, padding: "8px 12px", background: `${ACCENT}08`, border: `1px solid ${ACCENT}20`, borderRadius: 8, fontSize: 10, color: MUTED }}>
-                <Lightbulb style={{ width: 14, height: 14, display: "inline", verticalAlign: "-2px", marginRight: 4 }} /> The vertical cyan line tracks the year slider. Lines connect {BASELINE_YEAR}, {CURRENT_FORECAST_YEAR}, and 5-year model runs through {MAX_YEAR}.
+                <Lightbulb style={{ width: 14, height: 14, display: "inline", verticalAlign: "-2px", marginRight: 4 }} /> The vertical ember line tracks the year slider. Lines connect {BASELINE_YEAR}, {CURRENT_FORECAST_YEAR}, and 5-year model runs through {MAX_YEAR}.
               </div>
             </div>
 

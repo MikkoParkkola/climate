@@ -259,19 +259,29 @@ export function buildVerdict(points: ProjectionPoint[], opts: VerdictOptions = {
   const reasons = applicable.slice(0, 3);
 
   // The committed sentence.
+  // AC.VISUAL.6 (MIK-6779): 3 sentence-shape variants per case so the verdict
+  // doesn't read as the same scripted template once a user checks 2+
+  // locations (anti-ai-tell Tier-1 concern). The variant is picked
+  // deterministically from this location's own numbers, so the same place +
+  // scenario always renders the same sentence -- it just isn't the SAME
+  // sentence as every other place. Still one committed sentence, still takes
+  // a side; only the shape changes. The two "already" branches all keep the
+  // literal "Already" opener (AC.VERDICT.9 depends on that prefix).
+  const variant = Math.abs(Math.round(endScore + scoreBase * 3 + (crossoverYear ?? 0) + (dangerYear ?? 0))) % 3;
+  const pick = (options: readonly [string, string, string]) => options[variant];
   const trajPhrase = dangerAlready
-    ? "Already in the danger zone."
+    ? pick(["Already in the danger zone.", "Already past the danger line.", "Already sitting in the danger zone."])
     : crossoverAlready
-      ? "Already outside the comfortable band."
+      ? pick(["Already outside the comfortable band.", "Already past the comfortable band.", "Already outside the livable range."])
       : endsSevere
-        ? "Ends in the danger zone by 2100."
+        ? pick(["Ends in the danger zone by 2100.", "By 2100, this ends in the danger zone.", "Lands in the danger zone by 2100."])
         : endsStressed
-          ? "Ends outside the comfortable band by 2100."
+          ? pick(["Ends outside the comfortable band by 2100.", "By 2100, this is outside the comfortable band.", "Falls outside the comfortable band by 2100."])
           : trajectory === "harder"
-            ? "Gets meaningfully harder."
+            ? pick(["Gets meaningfully harder.", "This gets meaningfully harder.", "Meaningfully harder from here."])
             : trajectory === "easier"
-              ? "Actually gets a little easier."
-              : "Holds roughly steady.";
+              ? pick(["Actually gets a little easier.", "This actually eases a little.", "A little easier, if anything."])
+              : pick(["Holds roughly steady.", "Roughly steady from here.", "This stays roughly steady."]);
   const driverPhrase = dominant
     ? ` ${dominant.label} is what drives it${relief ? `, not the ${relief.label.toLowerCase()}` : ""}.`
     : "";
