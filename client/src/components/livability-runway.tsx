@@ -250,7 +250,10 @@ function ReasonRow({ reason }: { reason: ReasonCode }) {
       <span style={{ width: 132, flexShrink: 0, fontSize: 12.5, color: "white", fontWeight: 600 }}>
         <Term k={reason.termKey as GlossaryKey}>{reason.label}</Term>
       </span>
-      <span style={{ position: "relative", flex: "0 0 88px", height: 7, background: "rgba(255,255,255,0.07)", borderRadius: 4, overflow: "hidden" }}>
+      <span
+        title={`0-10 scale: ${reason.scaleNote}`}
+        style={{ position: "relative", flex: "0 0 88px", height: 7, background: "rgba(255,255,255,0.07)", borderRadius: 4, overflow: "hidden" }}
+      >
         <span style={{ position: "absolute", inset: 0, width: pct, background: `linear-gradient(90deg, ${AMBER}, ${ACCENT})`, borderRadius: 4 }} />
       </span>
       <span style={{ width: 14, flexShrink: 0, color: arrowColor, fontSize: 11 }}>{arrow}</span>

@@ -134,7 +134,10 @@ export default function ClimateResultSectionsTop({ vm }: { vm: ClimateAppVM }) {
             By <strong style={{ color: "white" }}>{displayYear}</strong>, {placeName}'s raw CMIP6 ensemble projection is{" "}
             <strong style={{ color: RED }}>+{d!.tempChange.toFixed(1)}°C warmer</strong> than its baseline; the IPCC-assessed calibrated anomaly is{" "}
             <strong style={{ color: AMBER }}>{d!.ipccDelta >= 0 ? "+" : ""}{d!.ipccDelta.toFixed(1)}°C</strong>. Heat-stress days{" "}
-            <strong style={{ color: ORANGE }}>{heatDelta >= 0 ? "rise" : "fall"} from {d!.baseHeatDays} to {d!.heatDays}/yr</strong>, annual rainfall shifts{" "}
+            <strong style={{ color: ORANGE }}>
+              {heatDelta === 0 ? `hold steady at ${d!.heatDays}/yr` : `${heatDelta > 0 ? "rise" : "fall"} from ${d!.baseHeatDays} to ${d!.heatDays}/yr`}
+            </strong>
+            , annual rainfall shifts{" "}
             <strong style={{ color: BLUE }}>{d!.precipChange >= 0 ? "+" : ""}{d!.precipChange.toFixed(1)}%</strong>, and overall habitability sits at{" "}
             <strong style={{ color: sc }}>{d!.score}/100 ({d!.category})</strong>.
             {nextTip
