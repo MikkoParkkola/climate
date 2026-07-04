@@ -24,7 +24,7 @@ export function ReceiptDetails({ label = "source", text }: { label?: string; tex
           userSelect: "none",
         }}
       >
-        {label}
+        {label} <span className="disclosure-arrow">▾</span>
       </summary>
       <div
         role="note"
@@ -72,7 +72,7 @@ export function ChartValuesDetails({
           userSelect: "none",
         }}
       >
-        values
+        values <span className="disclosure-arrow">▾</span>
       </summary>
       <div
         role="note"

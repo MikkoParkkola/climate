@@ -40,6 +40,7 @@ export function SharedLensBanner({ standardScore, personalScore }: { standardSco
       </div>
       <button
         onClick={() => setPrefs({ ...DEFAULT_PREFS })}
+        className="press"
         style={{
           display: "inline-flex", alignItems: "center", gap: 6, padding: "6px 12px", borderRadius: 8,
           border: `1px solid ${BORDER}`, background: "rgba(255,255,255,0.05)", color: ACCENT,

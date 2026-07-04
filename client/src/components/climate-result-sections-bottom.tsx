@@ -217,7 +217,7 @@ export default function ClimateResultSectionsBottom({ vm }: { vm: ClimateAppVM }
           <summary style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", listStyle: "none" }}>
             <span style={{ fontSize: 18, display: "inline-flex" }}><Atom style={{ width: 18, height: 18 }} /></span>
             <h3 style={{ fontFamily: FONT_DISPLAY, fontSize: 16, fontWeight: 600, margin: 0 }}>Atmospheric Physics</h3>
-            <span style={{ marginLeft: "auto", fontSize: 10, color: MUTED, textTransform: "uppercase", letterSpacing: "0.06em" }}>expand ▾</span>
+            <span style={{ marginLeft: "auto", fontSize: 10, color: MUTED, textTransform: "uppercase", letterSpacing: "0.06em" }}>expand <span className="disclosure-arrow">▾</span></span>
           </summary>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(220px,1fr))", gap: "2px 18px", marginTop: 12 }}>
             {[
@@ -247,18 +247,18 @@ export default function ClimateResultSectionsBottom({ vm }: { vm: ClimateAppVM }
             <a href="/methodology" style={{ display: "inline-flex", alignItems: "center", gap: 4, fontSize: 10, color: ACCENT, textDecoration: "none" }}>
               Methodology <ExternalLink size={11} />
             </a>
-            <button onClick={copyRawForecastJson} style={{ display: "inline-flex", alignItems: "center", gap: 4, padding: "4px 8px", borderRadius: 6, border: `1px solid ${rawJsonCopied ? GREEN : BORDER}`, background: rawJsonCopied ? `${GREEN}18` : "rgba(255,255,255,0.025)", color: rawJsonCopied ? GREEN : "white", fontSize: 10, cursor: "pointer" }}>
-              {rawJsonCopied ? <Check size={11} /> : <ShieldCheck size={11} />} {rawJsonCopied ? "Copied JSON" : "Copy raw JSON"}
+            <button onClick={copyRawForecastJson} className="press" style={{ display: "inline-flex", alignItems: "center", gap: 4, padding: "4px 8px", borderRadius: 6, border: `1px solid ${rawJsonCopied ? GREEN : BORDER}`, background: rawJsonCopied ? `${GREEN}18` : "rgba(255,255,255,0.025)", color: rawJsonCopied ? GREEN : "white", fontSize: 10, cursor: "pointer" }}>
+              {rawJsonCopied ? <Check size={11} style={{ animation: "iconFadeIn 150ms ease" }} /> : <ShieldCheck size={11} style={{ animation: "iconFadeIn 150ms ease" }} />} {rawJsonCopied ? "Copied JSON" : "Copy raw JSON"}
             </button>
-            <button onClick={downloadRawForecastJson} style={{ display: "inline-flex", alignItems: "center", gap: 4, padding: "4px 8px", borderRadius: 6, border: `1px solid ${BORDER}`, background: "rgba(255,255,255,0.025)", color: "white", fontSize: 10, cursor: "pointer" }}>
+            <button onClick={downloadRawForecastJson} className="press" style={{ display: "inline-flex", alignItems: "center", gap: 4, padding: "4px 8px", borderRadius: 6, border: `1px solid ${BORDER}`, background: "rgba(255,255,255,0.025)", color: "white", fontSize: 10, cursor: "pointer" }}>
               <Download size={11} /> Download JSON
             </button>
-            <button onClick={downloadEducationalReport} style={{ display: "inline-flex", alignItems: "center", gap: 4, padding: "4px 8px", borderRadius: 6, border: `1px solid ${reportSaved ? GREEN : BORDER}`, background: reportSaved ? `${GREEN}18` : "rgba(255,255,255,0.025)", color: reportSaved ? GREEN : "white", fontSize: 10, cursor: "pointer" }}>
-              {reportSaved ? <Check size={11} /> : <Download size={11} />} {reportSaved ? "Saved report" : "Download report"}
+            <button onClick={downloadEducationalReport} className="press" style={{ display: "inline-flex", alignItems: "center", gap: 4, padding: "4px 8px", borderRadius: 6, border: `1px solid ${reportSaved ? GREEN : BORDER}`, background: reportSaved ? `${GREEN}18` : "rgba(255,255,255,0.025)", color: reportSaved ? GREEN : "white", fontSize: 10, cursor: "pointer" }}>
+              {reportSaved ? <Check size={11} style={{ animation: "iconFadeIn 150ms ease" }} /> : <Download size={11} style={{ animation: "iconFadeIn 150ms ease" }} />} {reportSaved ? "Saved report" : "Download report"}
             </button>
           </div>
           <details>
-            <summary style={{ cursor: "pointer", listStyle: "none", fontSize: 10, color: MUTED, textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 12 }}>Full receipt — every range, baseline & source ▾</summary>
+            <summary style={{ cursor: "pointer", listStyle: "none", fontSize: 10, color: MUTED, textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 12 }}>Full receipt — every range, baseline & source <span className="disclosure-arrow">▾</span></summary>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(145px,1fr))", gap: 10, marginBottom: 12 }}>
             {[
               {
@@ -346,7 +346,7 @@ export default function ClimateResultSectionsBottom({ vm }: { vm: ClimateAppVM }
           <summary style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 14, cursor: "pointer", listStyle: "none" }}>
             <span style={{ fontSize: 18, display: "inline-flex" }}><Timer style={{ width: 18, height: 18 }} /></span>
             <h2 style={{ fontFamily: FONT_DISPLAY, fontSize: 16, fontWeight: 600, margin: 0 }}>Tipping Point Timeline</h2>
-            <span style={{ marginLeft: "auto", fontSize: 10, color: MUTED, textTransform: "uppercase", letterSpacing: "0.06em" }}>expand ▾</span>
+            <span style={{ marginLeft: "auto", fontSize: 10, color: MUTED, textTransform: "uppercase", letterSpacing: "0.06em" }}>expand <span className="disclosure-arrow">▾</span></span>
           </summary>
           <div style={{ height: 4, background: BORDER, borderRadius: 2, marginBottom: 16, position: "relative" }}>
             <div style={{ height: "100%", borderRadius: 2, background: `linear-gradient(to right, ${GREEN}, ${AMBER}, ${RED})`, width: `${tPct}%`, transition: "width 0.25s ease" }} />
@@ -358,7 +358,7 @@ export default function ClimateResultSectionsBottom({ vm }: { vm: ClimateAppVM }
               const passed = reached && year >= tp.year!;
               const isNext = reached && !passed && tipping.filter((x) => x.year != null && year < x.year!)[0]?.year === tp.year;
               return (
-                <div key={tp.label} style={{ display: "flex", alignItems: "center", gap: 10, padding: "9px 12px", borderRadius: 8, background: passed ? "rgba(239,68,68,0.07)" : isNext ? "rgba(245,158,11,0.06)" : "rgba(255,255,255,0.02)", border: `1px solid ${passed ? "rgba(239,68,68,0.22)" : isNext ? "rgba(245,158,11,0.22)" : BORDER}`, transition: "all 0.25s ease" }}>
+                <div key={tp.label} style={{ display: "flex", alignItems: "center", gap: 10, padding: "9px 12px", borderRadius: 8, background: passed ? "rgba(239,68,68,0.07)" : isNext ? "rgba(245,158,11,0.06)" : "rgba(255,255,255,0.02)", border: `1px solid ${passed ? "rgba(239,68,68,0.22)" : isNext ? "rgba(245,158,11,0.22)" : BORDER}`, transition: "background-color 0.25s ease, border-color 0.25s ease" }}>
                   <span style={{ fontSize: 16 }}>{tp.icon}</span>
                   <div style={{ flex: 1 }}>
                     <div style={{ fontSize: 12, fontWeight: 600, color: passed ? RED : isNext ? AMBER : MUTED }}>{tp.label}</div>

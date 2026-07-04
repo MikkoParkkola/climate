@@ -16,7 +16,12 @@ export const PURPLE = "hsl(280,30%,66%)";
 export const CYAN = "hsl(200,48%,58%)";
 export const FONT_DISPLAY = "'Fraunces', Georgia, serif";
 export const FONT_MONO = "'Space Mono', ui-monospace, monospace";
-export const card: CSSProperties = { backgroundColor: CARD, border: `1px solid ${BORDER}`, borderRadius: 4 };
+// AC.TASTE.4 (MIK-6780): single shared entrance animation for every panel that
+// uses `card` -- covers all conditionally-mounted forecast panels at once
+// instead of touching each callsite. Plays once per real DOM mount (React
+// doesn't replay CSS `animation` across re-renders of an already-mounted
+// node), so it fires when a panel first appears, not on every data refresh.
+export const card: CSSProperties = { backgroundColor: CARD, border: `1px solid ${BORDER}`, borderRadius: 4, animation: "panelMount 200ms ease" };
 
 export const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 export const BASELINE_YEAR = 2025;

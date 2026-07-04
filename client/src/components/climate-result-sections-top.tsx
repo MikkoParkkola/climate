@@ -200,7 +200,7 @@ export default function ClimateResultSectionsTop({ vm }: { vm: ClimateAppVM }) {
               {roadmapItems.map((item) => {
                 const active = item.year === displayYear || (displayYear > item.year && displayYear < item.year + 10);
                 return (
-                  <div key={item.year} style={{ display: "flex", gap: 10, alignItems: "stretch", flexWrap: "wrap", padding: "9px 10px", borderRadius: 8, border: `1px solid ${active ? `${PURPLE}55` : BORDER}`, background: active ? `${PURPLE}10` : "rgba(255,255,255,0.032)" }}>
+                  <div key={item.year} style={{ display: "flex", gap: 10, alignItems: "stretch", flexWrap: "wrap", padding: "9px 10px", borderRadius: 8, border: `1px solid ${active ? `${PURPLE}55` : BORDER}`, background: active ? `${PURPLE}10` : "rgba(255,255,255,0.032)", transition: "border-color 0.2s ease, background-color 0.2s ease" }}>
                     <div style={{ flex: "0 0 56px" }}>
                       <div style={{ fontSize: 16, fontWeight: 900, color: active ? PURPLE : "white" }}>{item.year}</div>
                       <div style={{ fontSize: 9, color: MUTED }}>{item.category}</div>
@@ -242,6 +242,7 @@ export default function ClimateResultSectionsTop({ vm }: { vm: ClimateAppVM }) {
               onClick={loadScenarioContrast}
               disabled={scenarioContrastLoading || isLoading}
               aria-describedby="scenario-contrast-receipt"
+              className="press"
               style={{ display: "inline-flex", alignItems: "center", gap: 7, padding: "8px 12px", borderRadius: 7, border: `1px solid ${BLUE}55`, background: scenarioContrastRows.length > 0 ? `${BLUE}12` : `${BLUE}22`, color: "white", fontSize: 12, fontWeight: 800, cursor: scenarioContrastLoading || isLoading ? "wait" : "pointer", opacity: scenarioContrastLoading || isLoading ? 0.72 : 1 }}
             >
               {scenarioContrastLoading ? <Loader2 style={{ width: 13, height: 13, animation: "spin 1s linear infinite" }} /> : <GitCompare style={{ width: 13, height: 13 }} />}
@@ -931,6 +932,7 @@ export default function ClimateResultSectionsTop({ vm }: { vm: ClimateAppVM }) {
                 </div>
                 <button
                   onClick={openClimateTwinCity}
+                  className="press"
                   style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "8px 12px", borderRadius: 7, border: `1px solid ${PURPLE}55`, background: `${PURPLE}16`, color: "white", fontSize: 12, fontWeight: 700, cursor: "pointer" }}
                 >
                   <ExternalLink style={{ width: 13, height: 13 }} />
@@ -975,16 +977,16 @@ export default function ClimateResultSectionsTop({ vm }: { vm: ClimateAppVM }) {
                 </p>
               </div>
               <div style={{ display: "flex", gap: 8, flexWrap: "wrap", justifyContent: "flex-end" }}>
-                <button onClick={shareForecast} style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "8px 12px", borderRadius: 7, border: `1px solid ${ACCENT}55`, background: `${ACCENT}18`, color: "white", fontSize: 12, fontWeight: 800, cursor: "pointer" }}>
+                <button onClick={shareForecast} className="press" style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "8px 12px", borderRadius: 7, border: `1px solid ${ACCENT}55`, background: `${ACCENT}18`, color: "white", fontSize: 12, fontWeight: 800, cursor: "pointer" }}>
                   <Share2 style={{ width: 13, height: 13 }} />
                   Share story
                 </button>
-                <button onClick={copyShareStory} style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "8px 12px", borderRadius: 7, border: `1px solid ${shareStoryCopied ? GREEN : BORDER}`, background: shareStoryCopied ? `${GREEN}18` : "rgba(255,255,255,0.035)", color: shareStoryCopied ? GREEN : "white", fontSize: 12, fontWeight: 800, cursor: "pointer" }}>
-                  {shareStoryCopied ? <Check style={{ width: 13, height: 13 }} /> : <Share2 style={{ width: 13, height: 13 }} />}
+                <button onClick={copyShareStory} className="press" style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "8px 12px", borderRadius: 7, border: `1px solid ${shareStoryCopied ? GREEN : BORDER}`, background: shareStoryCopied ? `${GREEN}18` : "rgba(255,255,255,0.035)", color: shareStoryCopied ? GREEN : "white", fontSize: 12, fontWeight: 800, cursor: "pointer" }}>
+                  {shareStoryCopied ? <Check style={{ width: 13, height: 13, animation: "iconFadeIn 150ms ease" }} /> : <Share2 style={{ width: 13, height: 13, animation: "iconFadeIn 150ms ease" }} />}
                   {shareStoryCopied ? "Copied story" : "Copy story"}
                 </button>
-                <button onClick={downloadShareImage} disabled={shareImageBusy} style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "8px 12px", borderRadius: 7, border: `1px solid ${shareImageSaved ? GREEN : BORDER}`, background: shareImageSaved ? `${GREEN}18` : "rgba(255,255,255,0.035)", color: shareImageSaved ? GREEN : "white", fontSize: 12, fontWeight: 800, cursor: shareImageBusy ? "wait" : "pointer", opacity: shareImageBusy ? 0.72 : 1 }}>
-                  {shareImageBusy ? <Loader2 style={{ width: 13, height: 13, animation: "spin 1s linear infinite" }} /> : shareImageSaved ? <Check style={{ width: 13, height: 13 }} /> : <Download style={{ width: 13, height: 13 }} />}
+                <button onClick={downloadShareImage} disabled={shareImageBusy} className="press" style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "8px 12px", borderRadius: 7, border: `1px solid ${shareImageSaved ? GREEN : BORDER}`, background: shareImageSaved ? `${GREEN}18` : "rgba(255,255,255,0.035)", color: shareImageSaved ? GREEN : "white", fontSize: 12, fontWeight: 800, cursor: shareImageBusy ? "wait" : "pointer", opacity: shareImageBusy ? 0.72 : 1 }}>
+                  {shareImageBusy ? <Loader2 style={{ width: 13, height: 13, animation: "spin 1s linear infinite" }} /> : shareImageSaved ? <Check style={{ width: 13, height: 13, animation: "iconFadeIn 150ms ease" }} /> : <Download style={{ width: 13, height: 13, animation: "iconFadeIn 150ms ease" }} />}
                   {shareImageBusy ? "Rendering image" : shareImageSaved ? "Saved image" : "Download image"}
                 </button>
               </div>
@@ -1030,6 +1032,7 @@ export default function ClimateResultSectionsTop({ vm }: { vm: ClimateAppVM }) {
                       <ReceiptDetails label="receipt" text={prompt.receipt} />
                       <button
                         disabled={disabled}
+                        className="press"
                         onClick={() => {
                           if (prompt.action === "pathways") { void loadScenarioContrast(); return; }
                           if (prompt.action === "twin") { openClimateTwinCity(); return; }

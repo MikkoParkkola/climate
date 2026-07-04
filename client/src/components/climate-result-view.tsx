@@ -82,19 +82,19 @@ export default function ClimateResultView({ vm }: { vm: ClimateAppVM }) {
               <ReceiptDetails label="default" text={`${DEFAULT_SCENARIO_EXPLANATION} Version: ${DEFAULT_SCENARIO_POLICY_VERSION}.`} />
             )}
             <ReceiptDetails label="current policies" text={CURRENT_POLICIES_BAND} />
-            <button onClick={() => setConditionsOpen(true)} title="Tune the score to your ideal conditions" style={{ display: "flex", alignItems: "center", gap: 5, padding: "5px 12px", borderRadius: 6, border: `1px solid ${BORDER}`, background: CARD, color: "white", fontSize: 12, cursor: "pointer" }}>
+            <button onClick={() => setConditionsOpen(true)} title="Tune the score to your ideal conditions" className="press" style={{ display: "flex", alignItems: "center", gap: 5, padding: "5px 12px", borderRadius: 6, border: `1px solid ${BORDER}`, background: CARD, color: "white", fontSize: 12, cursor: "pointer" }}>
               <SlidersHorizontal style={{ width: 13, height: 13 }} /> Conditions
             </button>
-            <button onClick={newSearch} style={{ display: "flex", alignItems: "center", gap: 5, padding: "5px 12px", borderRadius: 6, border: `1px solid ${BORDER}`, background: CARD, color: MUTED, fontSize: 12, cursor: "pointer" }}>
+            <button onClick={newSearch} className="press" style={{ display: "flex", alignItems: "center", gap: 5, padding: "5px 12px", borderRadius: 6, border: `1px solid ${BORDER}`, background: CARD, color: MUTED, fontSize: 12, cursor: "pointer" }}>
               <ArrowLeft style={{ width: 13, height: 13 }} /> New Search
             </button>
-            <button onClick={() => (window.location.href = "/comparison")} style={{ display: "flex", alignItems: "center", gap: 5, padding: "5px 12px", borderRadius: 6, border: `1px solid ${BORDER}`, background: CARD, color: "white", fontSize: 12, cursor: "pointer" }}>
+            <button onClick={() => (window.location.href = "/comparison")} className="press" style={{ display: "flex", alignItems: "center", gap: 5, padding: "5px 12px", borderRadius: 6, border: `1px solid ${BORDER}`, background: CARD, color: "white", fontSize: 12, cursor: "pointer" }}>
               <GitCompare style={{ width: 13, height: 13 }} /> Compare
             </button>
-            <button onClick={shareForecast} style={{ display: "flex", alignItems: "center", gap: 5, padding: "5px 12px", borderRadius: 6, border: `1px solid ${shareCopied ? GREEN : BORDER}`, background: shareCopied ? `${GREEN}18` : CARD, color: shareCopied ? GREEN : "white", fontSize: 12, cursor: "pointer" }}>
-              {shareCopied ? <Check style={{ width: 13, height: 13 }} /> : <Share2 style={{ width: 13, height: 13 }} />} {shareCopied ? "Copied" : "Share"}
+            <button onClick={shareForecast} className="press" style={{ display: "flex", alignItems: "center", gap: 5, padding: "5px 12px", borderRadius: 6, border: `1px solid ${shareCopied ? GREEN : BORDER}`, background: shareCopied ? `${GREEN}18` : CARD, color: shareCopied ? GREEN : "white", fontSize: 12, cursor: "pointer" }}>
+              {shareCopied ? <Check style={{ width: 13, height: 13, animation: "iconFadeIn 150ms ease" }} /> : <Share2 style={{ width: 13, height: 13, animation: "iconFadeIn 150ms ease" }} />} {shareCopied ? "Copied" : "Share"}
             </button>
-            <button onClick={exportPDF} disabled={exporting} style={{ display: "flex", alignItems: "center", gap: 5, padding: "5px 12px", borderRadius: 6, border: `1px solid ${BORDER}`, background: CARD, color: "white", fontSize: 12, cursor: exporting ? "wait" : "pointer" }}>
+            <button onClick={exportPDF} disabled={exporting} className="press" style={{ display: "flex", alignItems: "center", gap: 5, padding: "5px 12px", borderRadius: 6, border: `1px solid ${BORDER}`, background: CARD, color: "white", fontSize: 12, cursor: exporting ? "wait" : "pointer" }}>
               {exporting ? <Loader2 style={{ width: 13, height: 13, animation: "spin 1s linear infinite" }} /> : <Download style={{ width: 13, height: 13 }} />} Export PDF
             </button>
           </div>
@@ -105,13 +105,13 @@ export default function ClimateResultView({ vm }: { vm: ClimateAppVM }) {
       <div style={{ position: "sticky", top: 48, zIndex: 45, background: "hsl(222,16%,8.5%)", borderBottom: `1px solid ${BORDER}` }}>
         <div style={{ maxWidth: 1200, margin: "0 auto", padding: "10px 20px 18px" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-            <button onClick={togglePlay} title={playing ? "Pause" : `Play ${CURRENT_FORECAST_YEAR} to ${MAX_YEAR}`} aria-label={playing ? "Pause timeline" : "Play timeline"}
-              style={{ display: "flex", alignItems: "center", justifyContent: "center", width: 34, height: 34, borderRadius: "50%", flexShrink: 0, cursor: "pointer", color: playing ? ACCENT : "white", border: `1px solid ${playing ? ACCENT : "rgba(255,255,255,0.18)"}`, background: playing ? `${ACCENT}22` : CARD, transition: "all 0.2s ease" }}>
+            <button onClick={togglePlay} title={playing ? "Pause" : `Play ${CURRENT_FORECAST_YEAR} to ${MAX_YEAR}`} aria-label={playing ? "Pause timeline" : "Play timeline"} className="press"
+              style={{ display: "flex", alignItems: "center", justifyContent: "center", width: 34, height: 34, borderRadius: "50%", flexShrink: 0, cursor: "pointer", color: playing ? ACCENT : "white", border: `1px solid ${playing ? ACCENT : "rgba(255,255,255,0.18)"}`, background: playing ? `${ACCENT}22` : CARD, transition: "border-color 0.2s ease, background-color 0.2s ease, color 0.2s ease" }}>
               {playing ? <Pause style={{ width: 15, height: 15 }} /> : <Play style={{ width: 15, height: 15, marginLeft: 1 }} />}
             </button>
             <div style={{ display: "flex", gap: 4 }}>
               {QUICK_YEAR_BUTTONS.map((y) => (
-                <button key={y} onClick={() => setYearManual(y)}
+                <button key={y} onClick={() => setYearManual(y)} className="press"
                   style={{ padding: "3px 8px", borderRadius: 5, border: `1px solid ${displayYear === y ? ACCENT : "rgba(255,255,255,0.12)"}`, background: displayYear === y ? `${ACCENT}18` : "transparent", color: displayYear === y ? ACCENT : MUTED, fontSize: 11, fontWeight: displayYear === y ? 700 : 400, cursor: "pointer" }}>
                   {y}
                 </button>

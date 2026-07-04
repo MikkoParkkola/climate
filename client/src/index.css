@@ -423,3 +423,53 @@ input:focus, textarea:focus {
 .spin {
   animation: spin 1s linear infinite;
 }
+
+/* AC.TASTE (MIK-6780): shared micro-interaction primitives -- a "static
+   screenshot" tell was that nothing visibly responded to being pressed,
+   mounted, or toggled. These four rules replace ~20 scattered inline-style
+   duplicates with one class/keyframe each. */
+
+/* AC.TASTE.1: tactile press feedback on real action buttons. */
+.press {
+  transition: transform 0.1s ease;
+}
+
+.press:active {
+  transform: scale(0.97);
+}
+
+/* AC.TASTE.3/AC.TASTE.4: icon swap fade-in + panel entrance. */
+@keyframes iconFadeIn {
+  0% { opacity: 0; }
+  100% { opacity: 1; }
+}
+
+@keyframes panelMount {
+  0% { opacity: 0; transform: translateY(4px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+
+/* AC.TASTE.6: static "▾" glyphs on <details> now rotate with open state. */
+.disclosure-arrow {
+  display: inline-block;
+  transition: transform 0.2s ease;
+}
+
+details[open] > summary .disclosure-arrow {
+  transform: rotate(180deg);
+}
+
+/* AC.TASTE.7: gauge/severity fill bars grow in from zero on mount. */
+@keyframes fill-grow {
+  0% { transform: scaleX(0); }
+  100% { transform: scaleX(1); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

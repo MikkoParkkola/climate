@@ -69,7 +69,7 @@ export function YourConditionsDrawer({ open, onClose, breakdown, modelScore, cat
             <div style={{ fontFamily: FONT_DISPLAY, fontSize: 18, fontWeight: 600 }}>Your conditions</div>
             <div style={{ fontSize: 11.5, color: MUTED, marginTop: 2 }}>Tune the score to what <em>you</em> can live with.</div>
           </div>
-          <button onClick={onClose} aria-label="Close" style={{ all: "unset", cursor: "pointer", color: MUTED, padding: 4 }}>
+          <button onClick={onClose} aria-label="Close" className="press" style={{ all: "unset", cursor: "pointer", color: MUTED, padding: 4 }}>
             <X style={{ width: 18, height: 18 }} />
           </button>
         </div>
@@ -113,6 +113,7 @@ export function YourConditionsDrawer({ open, onClose, breakdown, modelScore, cat
           <button
             onClick={() => setPrefs({ ...DEFAULT_PREFS })}
             disabled={isDefault}
+            className="press"
             style={{
               display: "inline-flex", alignItems: "center", gap: 6, padding: "7px 12px", borderRadius: 8,
               border: `1px solid ${BORDER}`, background: "rgba(255,255,255,0.04)",

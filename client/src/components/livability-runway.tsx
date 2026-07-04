@@ -125,6 +125,7 @@ export function LivabilityRunway({
             style={{
               position: "absolute", inset: 0, borderRadius: 7, background: gauge,
               boxShadow: `0 0 18px ${ACCENT}33, inset 0 0 0 1px rgba(255,255,255,0.06)`,
+              transformOrigin: "left", animation: "fill-grow 0.3s ease",
             }}
           />
           {/* scenario band: spread of crossover years across the emission paths */}
@@ -205,7 +206,7 @@ export function LivabilityRunway({
             </div>
           )
         ) : onLoadScenarios ? (
-          <button type="button" onClick={onLoadScenarios} disabled={scenariosLoading}
+          <button type="button" onClick={onLoadScenarios} disabled={scenariosLoading} className="press"
             style={{ marginTop: 10, padding: "7px 12px", borderRadius: 8, border: `1px solid ${BORDER}`, background: "rgba(255,255,255,0.04)", color: scenariosLoading ? MUTED : ACCENT, fontSize: 12, cursor: scenariosLoading ? "wait" : "pointer" }}>
             {scenariosLoading ? "Loading all four paths…" : "Compare all four emission paths →"}
           </button>
@@ -281,7 +282,7 @@ function ReasonRow({ reason }: { reason: ReasonCode }) {
         title={`0-10 scale: ${reason.scaleNote}`}
         style={{ position: "relative", flex: "0 0 88px", height: 7, background: "rgba(255,255,255,0.07)", borderRadius: 4, overflow: "hidden" }}
       >
-        <span style={{ position: "absolute", inset: 0, width: pct, background: `linear-gradient(90deg, ${AMBER}, ${ACCENT})`, borderRadius: 4 }} />
+        <span style={{ position: "absolute", inset: 0, width: pct, background: `linear-gradient(90deg, ${AMBER}, ${ACCENT})`, borderRadius: 4, transformOrigin: "left", animation: "fill-grow 0.3s ease" }} />
       </span>
       <span style={{ width: 14, flexShrink: 0, color: arrowColor, fontSize: 11 }}>{arrow}</span>
       <span style={{ fontSize: 12, color: MUTED, lineHeight: 1.35 }}>{reason.text}</span>
