@@ -13,16 +13,19 @@ import { Term } from "@/components/climate-term";
 import { useBirthYear } from "@/lib/use-birth-year";
 
 export default function ClimateLanding({
-  locationText, setLocationText, setSelectedLocation, suggestions, showSuggestions,
-  setShowSuggestions, selectLocation, scenario, changeScenario, isLoading,
+  locationText, setLocationText, selectedLocation, setSelectedLocation, suggestions, showSuggestions,
+  setShowSuggestions, searchLoading, searchNoMatch, selectLocation, scenario, changeScenario, isLoading,
   selectedScenario, generate, loadingStep, error,
 }: {
   locationText: string;
   setLocationText: (v: string) => void;
+  selectedLocation: LocationOption | null;
   setSelectedLocation: (v: LocationOption | null) => void;
   suggestions: LocationOption[];
   showSuggestions: boolean;
   setShowSuggestions: (v: boolean) => void;
+  searchLoading: boolean;
+  searchNoMatch: boolean;
   selectLocation: (opt: LocationOption) => void;
   scenario: ScenarioId;
   changeScenario: (next: ScenarioId) => void;
@@ -102,22 +105,43 @@ export default function ClimateLanding({
               <input
                 value={locationText}
                 onChange={(e) => { setLocationText(e.target.value); setSelectedLocation(null); }}
-                onFocus={() => { if (suggestions.length) setShowSuggestions(true); }}
+                onFocus={() => { if (suggestions.length || searchLoading || searchNoMatch) setShowSuggestions(true); }}
+                onKeyDown={(e) => {
+                  // AC.SEARCH.3: Enter submits directly when there's exactly one
+                  // unambiguous match, instead of requiring a mouse click.
+                  if (e.key === "Enter" && suggestions.length === 1) {
+                    e.preventDefault();
+                    const only = suggestions[0];
+                    selectLocation(only);
+                    generate(only);
+                  }
+                }}
                 placeholder="Search a city or place — e.g. Amsterdam"
                 style={{ width: "100%", padding: "14px 14px 14px 44px", borderRadius: 10, border: `1px solid ${BORDER}`, background: "rgba(255,255,255,0.05)", color: "white", fontSize: 15, outline: "none", boxSizing: "border-box" }}
               />
             </div>
-            {showSuggestions && suggestions.length > 0 && (
+            {showSuggestions && (suggestions.length > 0 || searchLoading || searchNoMatch) && (
               <div style={{ position: "absolute", top: "calc(100% + 6px)", left: 0, right: 0, background: "hsl(222,15%,13%)", border: `1px solid ${BORDER}`, borderRadius: 6, overflow: "hidden", zIndex: 20 }}>
-                {suggestions.slice(0, 6).map((s, i) => (
-                  <div key={i} onClick={() => selectLocation(s)}
-                    style={{ padding: "11px 14px", display: "flex", alignItems: "center", gap: 10, cursor: "pointer", borderBottom: i < Math.min(suggestions.length, 6) - 1 ? `1px solid ${BORDER}` : "none" }}
-                    onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(255,255,255,0.05)")}
-                    onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}>
-                    <MapPin style={{ width: 15, height: 15, color: ACCENT, flexShrink: 0 }} />
-                    <span style={{ fontSize: 14 }}>{s.name}</span>
+                {searchLoading ? (
+                  <div style={{ padding: "11px 14px", display: "flex", alignItems: "center", gap: 10, color: MUTED, fontSize: 13 }}>
+                    <Loader2 style={{ width: 14, height: 14, animation: "spin 1s linear infinite" }} />
+                    Searching…
                   </div>
-                ))}
+                ) : suggestions.length > 0 ? (
+                  suggestions.slice(0, 6).map((s, i) => (
+                    <div key={i} onClick={() => selectLocation(s)}
+                      style={{ padding: "11px 14px", display: "flex", alignItems: "center", gap: 10, cursor: "pointer", borderBottom: i < Math.min(suggestions.length, 6) - 1 ? `1px solid ${BORDER}` : "none" }}
+                      onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(255,255,255,0.05)")}
+                      onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}>
+                      <MapPin style={{ width: 15, height: 15, color: ACCENT, flexShrink: 0 }} />
+                      <span style={{ fontSize: 14 }}>{s.name}</span>
+                    </div>
+                  ))
+                ) : searchNoMatch ? (
+                  <div style={{ padding: "11px 14px", color: MUTED, fontSize: 13 }}>
+                    No matches found — try a different spelling or a nearby city.
+                  </div>
+                ) : null}
               </div>
             )}
           </div>
@@ -175,18 +199,23 @@ export default function ClimateLanding({
 
           <button
             onClick={() => generate()}
-            disabled={isLoading}
+            disabled={isLoading || !selectedLocation}
             style={{
               marginTop: 16, width: "100%", padding: "14px", borderRadius: 10, border: "none", fontSize: 15, fontWeight: 700,
-              cursor: isLoading ? "wait" : "pointer",
+              cursor: isLoading ? "wait" : !selectedLocation ? "not-allowed" : "pointer",
               background: "linear-gradient(135deg, hsl(24,88%,56%) 0%, hsl(12,80%,50%) 100%)",
               color: "white",
-              opacity: isLoading ? 0.72 : 1,
+              opacity: isLoading ? 0.72 : !selectedLocation ? 0.45 : 1,
               display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
             }}>
             {isLoading ? <Loader2 style={{ width: 16, height: 16, animation: "spin 1s linear infinite" }} /> : null}
             {isLoading ? "Generating forecast" : "See climate forecast →"}
           </button>
+          {!isLoading && !selectedLocation && (
+            <div style={{ marginTop: 8, fontSize: 12, color: MUTED, textAlign: "left" }}>
+              Pick a location from the list to continue.
+            </div>
+          )}
 
           {isLoading && (
             <div style={{ marginTop: 18, fontSize: 13, color: MUTED }}>

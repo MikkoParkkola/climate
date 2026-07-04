@@ -40,6 +40,12 @@ export function useClimateApp() {
   const [selectedLocation, setSelectedLocation] = useState<LocationOption | null>(null);
   const [suggestions, setSuggestions] = useState<LocationOption[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
+  // AC.SEARCH.4/5: distinct in-flight vs. zero-result states for the search
+  // dropdown, so a nonsense query gets an explicit answer and typing never
+  // looks frozen while the geocoding lookup is in flight.
+  const [searchLoading, setSearchLoading] = useState(false);
+  const [searchNoMatch, setSearchNoMatch] = useState(false);
+  const skipNextSearchRef = useRef(false);
   const [year, setYear] = useState(CURRENT_FORECAST_YEAR);
   const [scenario, setScenario] = useState<ScenarioId>(DEFAULT_SCENARIO);
   // Optional birth year — shared client-side store (localStorage), never sent to the server.
@@ -179,15 +185,39 @@ export function useClimateApp() {
   }, []);
 
   useEffect(() => {
-    if (locationText.length < 2) { setSuggestions([]); setShowSuggestions(false); return; }
+    if (skipNextSearchRef.current) {
+      // locationText was just set programmatically by selectLocation(), not
+      // typed by the user — don't reopen the dropdown with a spinner.
+      skipNextSearchRef.current = false;
+      return;
+    }
+    if (locationText.length < 2) {
+      setSuggestions([]);
+      setShowSuggestions(false);
+      setSearchLoading(false);
+      setSearchNoMatch(false);
+      return;
+    }
+    // Open the dropdown immediately so the loading state is visible while
+    // the debounced request is in flight (AC.SEARCH.4), rather than only
+    // appearing once results arrive.
+    setShowSuggestions(true);
+    setSearchLoading(true);
+    setSearchNoMatch(false);
     const timeoutId = setTimeout(async () => {
       try {
         const response = await fetch(`/api/locations/search?q=${encodeURIComponent(locationText)}`);
         const data = await response.json();
-        setSuggestions(Array.isArray(data) ? data : []);
+        const results = Array.isArray(data) ? data : [];
+        setSuggestions(results);
         setShowSuggestions(true);
+        setSearchNoMatch(results.length === 0);
       } catch (err) {
         console.warn("Location search failed:", err);
+        setSuggestions([]);
+        setSearchNoMatch(true);
+      } finally {
+        setSearchLoading(false);
       }
     }, 300);
     return () => clearTimeout(timeoutId);
@@ -229,9 +259,12 @@ export function useClimateApp() {
   const setYearManual = (y: number) => { setPlaying(false); setYear(y); };
 
   const selectLocation = (opt: LocationOption) => {
+    skipNextSearchRef.current = true;
     setSelectedLocation(opt);
     setLocationText(opt.name);
     setShowSuggestions(false);
+    setSearchLoading(false);
+    setSearchNoMatch(false);
   };
 
   const fetchTrajectory = async (targetLocation: LocationOption, scenarioOverride: ScenarioId): Promise<{ points: ProjectionPoint[]; freshwater: FreshwaterStress | null; fireWeather: FireWeather | null; floodRiver: FloodExposure | null; cropYield: CropYield | null; coverage: EnrichmentCoverage | null; amoc: AmocAssessment | null; humidHeat: HumidHeat | null; coldSeason: ColdSeason | null; degreeDays: DegreeDays | null }> => {
@@ -664,7 +697,7 @@ export function useClimateApp() {
 
   return {
   locationText, setLocationText, selectedLocation, setSelectedLocation,
-  suggestions, showSuggestions, setShowSuggestions, year, scenario, trajectory, freshwater, fireWeather, floodRiver, cropYield, coverage, amoc, humidHeat, coldSeason, degreeDays,
+  suggestions, showSuggestions, setShowSuggestions, searchLoading, searchNoMatch, year, scenario, trajectory, freshwater, fireWeather, floodRiver, cropYield, coverage, amoc, humidHeat, coldSeason, degreeDays,
   birthYear, setBirthYear, prefs, setPrefs, scoredTrajectory, standardSnapshot,
   isLoading, loadingStep, error, exporting, playing, shareCopied, shareStoryCopied,
   shareImageBusy, shareImageSaved, rawJsonCopied, reportSaved, analogCatalog, analogError,
