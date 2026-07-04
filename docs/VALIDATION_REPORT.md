@@ -80,6 +80,10 @@ This is not yet a historical future-projection hindcast report. The current arti
 
 Until a time-varying projection-vs-observation hindcast matrix exists, Phase 5 validation remains partial. The app can show this report as build evidence, but it must not claim historical forecast skill from it.
 
+### Observed-history data foundation (MIK-6777, partial)
+
+`scripts/build_historical_observed.py` packages real 1980-2024 annual-mean temperature and total precipitation per city from Open-Meteo's ERA5 archive API (independent reanalysis, no key required) for the app's curated city catalog (`data/ranking_cities.json`), writing `data/historical-observed.openmeteo.json`. This is the raw observed-history dataset a time-varying hindcast matrix would be built from — it is NOT the matrix itself. Closing the blocker above still requires backcasting the model for each observed year and computing per-year residuals; this step only packages the observation side. Scope is the curated city catalog, not arbitrary worldwide coordinates — see the script's docstring for why a global ~25km-resolution archive pull is not feasible via a free per-point API. Chart-rendering of this data (surfacing it in the UI trajectory chart) is a follow-up, not included in this pass.
+
 ## Trend Review Summary
 
 Trend review flags are unresolved scientific-review evidence. They are intentionally visible and are not automatically hidden by green CI.
