@@ -381,6 +381,30 @@ export function _selfCheck(): void {
   if (!vh.headline.includes("Humid heat"))
     throw new Error(`expected headline to name Humid heat: ${vh.headline}`);
 
+  // AC.VERDICT.1: severity-floor filtering. Every computed hazard here is
+  // negligible (heat/drought/flood near-zero, sea inapplicable, no cold
+  // signal, no humid-heat data) -- none should clear REASON_SEVERITY_FLOOR,
+  // so the verdict must show FEWER than 3 reasons and no dominant driver
+  // rather than padding the slot with a near-zero hazard by rank alone.
+  const mildCity = [mk(2025, 92, 0, 0, 0), mk(2060, 90, 1, 1, 1), mk(2100, 88, 2, 2, 1)];
+  const vm = buildVerdict(mildCity);
+  if (!vm) throw new Error("mild-city verdict was null");
+  console.log("\nmild reasons:", vm.reasons.length, "dominant:", vm.dominant?.key ?? "none");
+  if (vm.reasons.length !== 0) throw new Error(`expected 0 reasons below the floor, got ${vm.reasons.length}`);
+  if (vm.dominant !== null) throw new Error(`expected no dominant driver, got ${vm.dominant?.key}`);
+
+  // AC.VERDICT.8/9: a location already below the livable floor at the
+  // forecast's own start year must read as "already" -- not as a future
+  // promise -- and must not also claim to "stay comfortable until <year>"
+  // (that would contradict "already outside the band").
+  const alreadyCity = [mk(2025, 50, 60, 40, 20), mk(2060, 40, 90, 55, 24), mk(2100, 28, 130, 70, 28)];
+  const va = buildVerdict(alreadyCity);
+  if (!va) throw new Error("already-city verdict was null");
+  console.log("already headline:", va.headline);
+  if (!/^Already/.test(va.headline)) throw new Error(`expected an "Already ..." headline: ${va.headline}`);
+  if (va.headline.includes("Stays comfortable") || va.headline.includes("Stays in the livable band"))
+    throw new Error(`headline contradicts "already": ${va.headline}`);
+
   console.log("\n✅ _selfCheck passed");
 }
 
