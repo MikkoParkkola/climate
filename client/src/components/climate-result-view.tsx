@@ -82,20 +82,20 @@ export default function ClimateResultView({ vm }: { vm: ClimateAppVM }) {
               <ReceiptDetails label="default" text={`${DEFAULT_SCENARIO_EXPLANATION} Version: ${DEFAULT_SCENARIO_POLICY_VERSION}.`} />
             )}
             <ReceiptDetails label="current policies" text={CURRENT_POLICIES_BAND} />
-            <button onClick={() => setConditionsOpen(true)} title="Tune the score to your ideal conditions" style={{ display: "flex", alignItems: "center", gap: 5, padding: "5px 12px", borderRadius: 6, border: `1px solid ${BORDER}`, background: CARD, color: "white", fontSize: 12, cursor: "pointer" }}>
-              <SlidersHorizontal style={{ width: 13, height: 13 }} /> Conditions
+            <button onClick={() => setConditionsOpen(true)} title="Tune the score to your ideal conditions" style={{ display: "flex", alignItems: "center", gap: 5, padding: "5px 12px", borderRadius: 6, border: `1px solid ${BORDER}`, background: CARD, color: "white", fontSize: 12, cursor: "pointer", whiteSpace: "nowrap", flexShrink: 0 }}>
+              <SlidersHorizontal style={{ width: 13, height: 13, flexShrink: 0 }} /> Conditions
             </button>
-            <button onClick={newSearch} style={{ display: "flex", alignItems: "center", gap: 5, padding: "5px 12px", borderRadius: 6, border: `1px solid ${BORDER}`, background: CARD, color: MUTED, fontSize: 12, cursor: "pointer" }}>
-              <ArrowLeft style={{ width: 13, height: 13 }} /> New Search
+            <button onClick={newSearch} style={{ display: "flex", alignItems: "center", gap: 5, padding: "5px 12px", borderRadius: 6, border: `1px solid ${BORDER}`, background: CARD, color: MUTED, fontSize: 12, cursor: "pointer", whiteSpace: "nowrap", flexShrink: 0 }}>
+              <ArrowLeft style={{ width: 13, height: 13, flexShrink: 0 }} /> New Search
             </button>
-            <button onClick={() => (window.location.href = "/comparison")} style={{ display: "flex", alignItems: "center", gap: 5, padding: "5px 12px", borderRadius: 6, border: `1px solid ${BORDER}`, background: CARD, color: "white", fontSize: 12, cursor: "pointer" }}>
-              <GitCompare style={{ width: 13, height: 13 }} /> Compare
+            <button onClick={() => (window.location.href = "/comparison")} style={{ display: "flex", alignItems: "center", gap: 5, padding: "5px 12px", borderRadius: 6, border: `1px solid ${BORDER}`, background: CARD, color: "white", fontSize: 12, cursor: "pointer", whiteSpace: "nowrap", flexShrink: 0 }}>
+              <GitCompare style={{ width: 13, height: 13, flexShrink: 0 }} /> Compare
             </button>
-            <button onClick={shareForecast} style={{ display: "flex", alignItems: "center", gap: 5, padding: "5px 12px", borderRadius: 6, border: `1px solid ${shareCopied ? GREEN : BORDER}`, background: shareCopied ? `${GREEN}18` : CARD, color: shareCopied ? GREEN : "white", fontSize: 12, cursor: "pointer" }}>
-              {shareCopied ? <Check style={{ width: 13, height: 13 }} /> : <Share2 style={{ width: 13, height: 13 }} />} {shareCopied ? "Copied" : "Share"}
+            <button onClick={shareForecast} style={{ display: "flex", alignItems: "center", gap: 5, padding: "5px 12px", borderRadius: 6, border: `1px solid ${shareCopied ? GREEN : BORDER}`, background: shareCopied ? `${GREEN}18` : CARD, color: shareCopied ? GREEN : "white", fontSize: 12, cursor: "pointer", whiteSpace: "nowrap", flexShrink: 0 }}>
+              {shareCopied ? <Check style={{ width: 13, height: 13, flexShrink: 0 }} /> : <Share2 style={{ width: 13, height: 13, flexShrink: 0 }} />} {shareCopied ? "Copied" : "Share"}
             </button>
-            <button onClick={exportPDF} disabled={exporting} style={{ display: "flex", alignItems: "center", gap: 5, padding: "5px 12px", borderRadius: 6, border: `1px solid ${BORDER}`, background: CARD, color: "white", fontSize: 12, cursor: exporting ? "wait" : "pointer" }}>
-              {exporting ? <Loader2 style={{ width: 13, height: 13, animation: "spin 1s linear infinite" }} /> : <Download style={{ width: 13, height: 13 }} />} Export PDF
+            <button onClick={exportPDF} disabled={exporting} style={{ display: "flex", alignItems: "center", gap: 5, padding: "5px 12px", borderRadius: 6, border: `1px solid ${BORDER}`, background: CARD, color: "white", fontSize: 12, cursor: exporting ? "wait" : "pointer", whiteSpace: "nowrap", flexShrink: 0 }}>
+              {exporting ? <Loader2 style={{ width: 13, height: 13, animation: "spin 1s linear infinite", flexShrink: 0 }} /> : <Download style={{ width: 13, height: 13, flexShrink: 0 }} />} Export PDF
             </button>
           </div>
         </div>
