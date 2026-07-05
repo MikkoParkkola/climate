@@ -37,7 +37,7 @@ function freshwaterCategoryColor(category: number | null): string {
 export default function ClimateResultSectionsTop({ vm }: { vm: ClimateAppVM }) {
   const {
   locationText, setLocationText, selectedLocation, setSelectedLocation,
-  suggestions, showSuggestions, setShowSuggestions, year, scenario, trajectory, freshwater, fireWeather, floodRiver, cropYield, coverage, amoc, humidHeat, coldSeason, degreeDays,
+  suggestions, showSuggestions, setShowSuggestions, year, scenario, trajectory, freshwater, fireWeather, floodRiver, cropYield, coverage, amoc, humidHeat, coldSeason, degreeDays, historicalObserved,
   isLoading, loadingStep, error, exporting, playing, shareCopied, shareStoryCopied,
   shareImageBusy, shareImageSaved, rawJsonCopied, reportSaved, analogCatalog, analogError,
   coastalArtifact, coastalArtifactError, scenarioContrast, scenarioContrastLoading,
@@ -55,6 +55,17 @@ export default function ClimateResultSectionsTop({ vm }: { vm: ClimateAppVM }) {
   const heatDelta = d!.heatDays - d!.baseHeatDays;
   const nextTip = tipping.find((t) => t.year != null && (t.year as number) > displayYear);
   const crossedTips = tipping.filter((t) => t.year != null && (t.year as number) <= displayYear).length;
+  // Historical observed (1980-2024 real annual data, curated-catalog cities
+  // only) -- drop any year whose temperature reading is null (a year the
+  // background ingest hasn't successfully fetched yet) rather than passing
+  // a non-numeric value into the chart. Requires >=2 remaining points to be
+  // worth plotting as a trend at all.
+  const obsTempIdx = historicalObserved
+    ? historicalObserved.years.map((_, i) => i).filter((i) => typeof historicalObserved.tempC[i] === "number")
+    : [];
+  const obsYears = obsTempIdx.map((i) => historicalObserved!.years[i]);
+  const obsTemps = obsTempIdx.map((i) => historicalObserved!.tempC[i] as number);
+  const showHistoricalObserved = obsYears.length >= 2;
   // Resolve each enrichment's coverage from the top-level coverage map (exact
   // keys: freshwater / fireWeather / floodRiver / cropYield), falling back to a
   // status carried on the enrichment object. Optional-chaining throughout.
@@ -1185,6 +1196,25 @@ export default function ClimateResultSectionsTop({ vm }: { vm: ClimateAppVM }) {
               thresholdLabel="50% elevated risk"
               scenarioLabel={shownScenario.label}
             />
+            {showHistoricalObserved && (
+              <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
+                <TrendChart
+                  years={obsYears}
+                  values={obsTemps}
+                  year={obsYears[obsYears.length - 1]}
+                  label="Observed Temp (1980-2024)"
+                  unit="°C"
+                  color={GREEN}
+                  decimals={1}
+                  domainStart={obsYears[0]}
+                  domainEnd={obsYears[obsYears.length - 1]}
+                  scenarioLabel="Open-Meteo ERA5 observed"
+                />
+                <div style={{ fontSize: 9, color: MUTED, padding: "0 1px" }}>
+                  Real observed data, not a model projection. Coverage so far: {historicalObserved!.coverageNote} of the 1980-2024 span. This panel fills in as more years are fetched.
+                </div>
+              </div>
+            )}
           </div>
           <div style={{ marginTop: 12, padding: "6px 10px", background: `${ACCENT}07`, border: `1px solid ${ACCENT}18`, borderRadius: 8, fontSize: 10, color: MUTED }}>
             <Lightbulb style={{ width: 14, height: 14, display: "inline", verticalAlign: "-2px", marginRight: 4 }} /> Drag the year slider to move the marker across all seven charts simultaneously and see how each metric evolves. Hover plotted years for values, or open values for keyboard/touch access. Translucent bands show grounded low-high ranges where the API exposes comparable uncertainty fields; labeled dashed horizontal lines mark documented risk/context thresholds.

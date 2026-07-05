@@ -122,10 +122,17 @@ export interface TrendZone { from: number; to: number; color: string }
 export function TrendChart({
   years, values, year, label, unit, color, decimals = 0, thresholdY, zones, fillOpacity = 0.1,
   lowValues, highValues, uncertaintyLabel, scenarioLabel, thresholdLabel,
+  domainStart = BASELINE_YEAR, domainEnd = MAX_YEAR, axisYears: axisYearsProp,
 }: {
   years: number[]; values: number[]; year: number; label: string; unit: string; color: string;
   decimals?: number; thresholdY?: number; zones?: TrendZone[]; fillOpacity?: number;
   lowValues?: number[]; highValues?: number[]; uncertaintyLabel?: string; scenarioLabel?: string; thresholdLabel?: string;
+  // Chart x-axis domain. Defaults to the app's future-projection window
+  // (BASELINE_YEAR..MAX_YEAR) so all existing call sites are unaffected;
+  // pass both to plot a different span (e.g. a 1980-2024 historical-observed
+  // series). `axisYears` overrides the auto-computed tick labels when the
+  // projection-specific defaults (CURRENT_FORECAST_YEAR/2050/2075) don't apply.
+  domainStart?: number; domainEnd?: number; axisYears?: number[];
 }) {
   const VW = 100, VH = 56, px = 1, py = 5, bH = 9;
   const cW = VW - px * 2, cH = VH - py - bH;
@@ -133,7 +140,7 @@ export function TrendChart({
     lowValues.every(Number.isFinite) && highValues.every(Number.isFinite);
   const rangeLow = hasRange ? lowValues!.map((v, i) => Math.min(v, highValues![i])) : [];
   const rangeHigh = hasRange ? lowValues!.map((v, i) => Math.max(v, highValues![i])) : [];
-  const annualYears = Array.from({ length: MAX_YEAR - BASELINE_YEAR + 1 }, (_, i) => BASELINE_YEAR + i);
+  const annualYears = Array.from({ length: domainEnd - domainStart + 1 }, (_, i) => domainStart + i);
   const annualValues = annualYears.map((yr) => interpArr(years, values, yr));
   const annualLow = hasRange ? annualYears.map((yr) => interpArr(years, rangeLow, yr)) : [];
   const annualHigh = hasRange ? annualYears.map((yr) => interpArr(years, rangeHigh, yr)) : [];
@@ -144,7 +151,7 @@ export function TrendChart({
   // moves; varying metrics (temperature, sea level) are unaffected. The exact value
   // is always shown in the callout, so a flat line low in the frame stays readable.
   const rng = Math.max(mx - mn, ((Math.abs(mn) + Math.abs(mx)) / 2) * 0.04) || 1;
-  const xOf = (yr: number) => px + ((yr - BASELINE_YEAR) / (MAX_YEAR - BASELINE_YEAR)) * cW;
+  const xOf = (yr: number) => px + ((yr - domainStart) / (domainEnd - domainStart || 1)) * cW;
   const yOf = (v: number) => py + cH - ((v - mn) / rng) * cH;
   const fmt = (v: number) => (decimals > 0 ? v.toFixed(decimals) : Math.round(v).toString());
   const withUnit = (v: number) => `${fmt(v)}${unit}`;
@@ -171,8 +178,8 @@ export function TrendChart({
   const thresholdInRange = thresholdY !== undefined && thresholdY >= mn && thresholdY <= mx;
   const thresholdTextY = thresholdInRange ? Math.max(py + 4, Math.min(py + cH - 1, yOf(thresholdY!) - 1)) : 0;
   const sourceYears = new Set(years);
-  const axisYears = Array.from(new Set([BASELINE_YEAR, CURRENT_FORECAST_YEAR, 2050, 2075, MAX_YEAR]))
-    .filter((yr) => yr >= BASELINE_YEAR && yr <= MAX_YEAR);
+  const axisYears = (axisYearsProp ?? Array.from(new Set([domainStart, CURRENT_FORECAST_YEAR, 2050, 2075, domainEnd])))
+    .filter((yr) => yr >= domainStart && yr <= domainEnd);
   const pointLabel = (i: number) => {
     const yr = annualYears[i];
     const value = withUnit(annualValues[i]);
@@ -191,7 +198,7 @@ export function TrendChart({
       <svg
         viewBox={`0 0 ${VW} ${VH}`}
         role="img"
-        aria-label={`${label} trend from ${BASELINE_YEAR} to ${MAX_YEAR}${scenarioLabel ? `, ${scenarioLabel}` : ""}. Displayed yearly points are linearly interpolated between grounded API checkpoints.${thresholdLabel ? ` Threshold marker: ${thresholdLabel}.` : ""}`}
+        aria-label={`${label} trend from ${domainStart} to ${domainEnd}${scenarioLabel ? `, ${scenarioLabel}` : ""}. Displayed yearly points are linearly interpolated between grounded API checkpoints.${thresholdLabel ? ` Threshold marker: ${thresholdLabel}.` : ""}`}
         style={{ width: "100%", height: 80, display: "block" }}
       >
         <title>{`${label} trend. Hover plotted yearly points for values; open the values disclosure below for keyboard and touch access.`}</title>

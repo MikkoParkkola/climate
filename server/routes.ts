@@ -11,6 +11,7 @@ import { getRanking, rankingQuerySchema } from "./precomputed-rankings";
 import { loadSourceRegistry } from "./source-registry";
 import { loadDataQuality } from "./data-quality";
 import { lookupFreshwater } from "./freshwater";
+import { lookupHistoricalObserved } from "./historical-observed";
 import { lookupFireWeather } from "./fire-weather";
 import { lookupRiverFlood } from "./floods";
 import { lookupCropYield } from "./crops";
@@ -1299,6 +1300,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
     setForecastCacheHeaders(res);
     res.json(ranking);
+  });
+
+  function clientIpOf(req: any): string {
+    return (req.ip || req.socket?.remoteAddress || "unresolved").replace("::ffff:", "");
+  }
+
+  const historicalObservedQuerySchema = z.object({
+    name: z.string().trim().min(1).max(200),
+    country: z.string().trim().max(200).optional().default(""),
+  });
+
+  app.get("/api/historical-observed", (req, res) => {
+    if (!checkRateLimit(clientIpOf(req))) {
+      setNoCacheHeaders(res);
+      return res.status(429).json({ message: "Too many requests. Please try again later." });
+    }
+    const parsed = historicalObservedQuerySchema.safeParse(req.query);
+    if (!parsed.success) {
+      setNoCacheHeaders(res);
+      return res.status(400).json({ message: "Invalid request parameters", errors: parsed.error.issues });
+    }
+    const result = lookupHistoricalObserved(parsed.data.name, parsed.data.country);
+    if (!result) {
+      setNoCacheHeaders(res);
+      return res.status(404).json({ message: "No historical observed data for this location (curated-catalog cities only)." });
+    }
+    res.set({ "Cache-Control": "public, max-age=60", "Vary": "Accept-Encoding" });
+    res.json({ success: true, data: result });
   });
 
   // Semantic content for each known public route.

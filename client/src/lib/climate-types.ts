@@ -487,3 +487,18 @@ export interface TrendZone {
   to: number;
   color: string;
 }
+
+// Historical observed (Open-Meteo ERA5 archive, 1980-2024) annual series for the
+// curated ~45-city catalog only (data/ranking_cities.json). The ingest script
+// (scripts/build_historical_observed.py) fills this in incrementally in the
+// background, so `years`/`tempC`/`precipMm` may be a partial subset of the full
+// span at any given time -- `coverageNote` says how much is in so far.
+export interface HistoricalObserved {
+  name: string;
+  country: string;
+  years: number[];
+  tempC: (number | null)[];
+  precipMm: (number | null)[];
+  period: string;
+  coverageNote: string;
+}

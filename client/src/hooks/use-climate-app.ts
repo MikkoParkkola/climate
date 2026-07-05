@@ -10,7 +10,7 @@ import type {
   ScenarioId, CoastCoord, LocationOption, ProjectionPoint, AnalogCandidate, AnalogCatalog,
   CoastalProximityArtifact, CoastalRelevance, ClimateAnalogMatch, ScenarioContrastRow,
   RoadmapItem, ShareStory, LearningPromptAction, LearningPrompt, FreshwaterStress, FireWeather, FloodExposure, CropYield,
-  EnrichmentCoverage, AmocAssessment, HumidHeat, ColdSeason, DegreeDays,
+  EnrichmentCoverage, AmocAssessment, HumidHeat, ColdSeason, DegreeDays, HistoricalObserved,
 } from "@/lib/climate-types";
 import {
   lerp, interpScalar, interpOptionalScalar, riskScore, interpArr, nearestPoint, categoryFor,
@@ -59,6 +59,9 @@ export function useClimateApp() {
   const [humidHeat, setHumidHeat] = useState<HumidHeat | null>(null);
   const [coldSeason, setColdSeason] = useState<ColdSeason | null>(null);
   const [degreeDays, setDegreeDays] = useState<DegreeDays | null>(null);
+  // Bonus historical-observed (1980-2024) panel -- curated-catalog cities only.
+  // null is the normal "no match / not this city" state, never an error.
+  const [historicalObserved, setHistoricalObserved] = useState<HistoricalObserved | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [loadingStep, setLoadingStep] = useState(0);
   const [error, setError] = useState<string | null>(null);
@@ -266,6 +269,22 @@ export function useClimateApp() {
     throw new Error("Invalid response from climate model.");
   };
 
+  // Fire-and-forget bonus panel: 1980-2024 real observed annual data, curated
+  // ~45-city catalog only (data/ranking_cities.json). A 404 just means this
+  // location isn't in that catalog -- normal, not an error, so it resolves to
+  // null rather than throwing/setting the page-level error state.
+  const fetchHistoricalObserved = async (targetLocation: LocationOption): Promise<HistoricalObserved | null> => {
+    try {
+      const params = new URLSearchParams({ name: targetLocation.name, country: targetLocation.country ?? "" });
+      const response = await fetch(`/api/historical-observed?${params.toString()}`);
+      if (!response.ok) return null;
+      const data = await response.json();
+      return (data.success && data.data) ? (data.data as HistoricalObserved) : null;
+    } catch {
+      return null;
+    }
+  };
+
   const generate = async (locationOverride?: LocationOption, scenarioOverride: ScenarioId = scenario) => {
     const targetLocation = locationOverride ?? selectedLocation;
     if (!targetLocation) { setError("Please select a location from the suggestions."); return; }
@@ -281,6 +300,7 @@ export function useClimateApp() {
     setHumidHeat(null);
     setColdSeason(null);
     setDegreeDays(null);
+    setHistoricalObserved(null);
     setScenarioContrast(null);
     setScenarioContrastError(null);
     try {
@@ -295,6 +315,9 @@ export function useClimateApp() {
       setHumidHeat(result.humidHeat);
       setColdSeason(result.coldSeason);
       setDegreeDays(result.degreeDays);
+      // Bonus panel: independent of trajectory success/failure semantics, so it
+      // is fetched alongside rather than gated on the trajectory result.
+      void fetchHistoricalObserved(targetLocation).then(setHistoricalObserved);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Network error. Please check your connection.");
     } finally {
@@ -346,6 +369,7 @@ export function useClimateApp() {
     setHumidHeat(null);
     setColdSeason(null);
     setDegreeDays(null);
+    setHistoricalObserved(null);
     setError(null);
     setShareCopied(false);
     setRawJsonCopied(false);
@@ -664,7 +688,7 @@ export function useClimateApp() {
 
   return {
   locationText, setLocationText, selectedLocation, setSelectedLocation,
-  suggestions, showSuggestions, setShowSuggestions, year, scenario, trajectory, freshwater, fireWeather, floodRiver, cropYield, coverage, amoc, humidHeat, coldSeason, degreeDays,
+  suggestions, showSuggestions, setShowSuggestions, year, scenario, trajectory, freshwater, fireWeather, floodRiver, cropYield, coverage, amoc, humidHeat, coldSeason, degreeDays, historicalObserved,
   birthYear, setBirthYear, prefs, setPrefs, scoredTrajectory, standardSnapshot,
   isLoading, loadingStep, error, exporting, playing, shareCopied, shareStoryCopied,
   shareImageBusy, shareImageSaved, rawJsonCopied, reportSaved, analogCatalog, analogError,
