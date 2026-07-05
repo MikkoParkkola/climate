@@ -81,6 +81,10 @@ export function useClimateApp() {
   const [scenarioContrastLoading, setScenarioContrastLoading] = useState(false);
   const [scenarioContrastError, setScenarioContrastError] = useState<string | null>(null);
   const resultsRef = useRef<HTMLDivElement>(null);
+  // Guards the fire-and-forget historical-observed fetch below: bumped on every
+  // generate()/newSearch() call so a slow response for a since-abandoned
+  // location can never overwrite the state for whatever is selected now.
+  const historicalRequestIdRef = useRef(0);
   const deepLinkRunRef = useRef(false);
 
   useEffect(() => {
@@ -316,8 +320,13 @@ export function useClimateApp() {
       setColdSeason(result.coldSeason);
       setDegreeDays(result.degreeDays);
       // Bonus panel: independent of trajectory success/failure semantics, so it
-      // is fetched alongside rather than gated on the trajectory result.
-      void fetchHistoricalObserved(targetLocation).then(setHistoricalObserved);
+      // is fetched alongside rather than gated on the trajectory result. Guarded
+      // against the classic fire-and-forget race (rapid re-search before the
+      // previous location's response lands) via historicalRequestIdRef.
+      const historicalRequestId = ++historicalRequestIdRef.current;
+      void fetchHistoricalObserved(targetLocation).then((data) => {
+        if (historicalRequestIdRef.current === historicalRequestId) setHistoricalObserved(data);
+      });
     } catch (err) {
       setError(err instanceof Error ? err.message : "Network error. Please check your connection.");
     } finally {
@@ -369,6 +378,7 @@ export function useClimateApp() {
     setHumidHeat(null);
     setColdSeason(null);
     setDegreeDays(null);
+    historicalRequestIdRef.current++; // invalidate any in-flight historical fetch too
     setHistoricalObserved(null);
     setError(null);
     setShareCopied(false);
