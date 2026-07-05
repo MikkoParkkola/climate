@@ -1,0 +1,47 @@
+# Secrets — never commit (fupit reads keys/DB creds from the environment)
+.env
+.env.*
+!.env.example
+
+node_modules
+dist
+__pycache__/
+*.pyc
+.DS_Store
+server/public
+vite.config.ts.*
+*.tar.gz
+# Ingest pipeline grids (raw NetCDF staging; serving uses the compact export)
+ingest/out/
+ingest/sealevel_raw/
+ingest/cache/
+ingest/export/grid.i16.gz
+ingest/export/manifest.json
+
+# Local agent skill bundles; project memory notes remain tracked under .agents/memory/
+.agents/skills/
+
+# Local scratch/design artifacts from Replit or agent sessions. Keep public repo
+# history focused on production code, grounded data, and documentation.
+artifacts/
+attached_assets/
+
+# WRI Aqueduct download/extract staging for build:freshwater (261MB zip + GDB).
+# The committed artifact is data/freshwater-stress.aqueduct40.*; raw source is not tracked.
+.aqueduct-build/
+
+# Quilcaille 2023 fire-weather download/extract staging for build_fire_weather.py (~2GB zips).
+# The committed artifact is data/fire-weather.quilcaille2023.*; raw source is not tracked.
+.fire-build/
+
+# WRI Aqueduct Floods download staging for build_aqueduct_floods.py (~1.4GB GeoTIFFs).
+# The committed artifact is data/flood-river.aqueduct.*; raw source is not tracked.
+.flood-build/
+
+# NAHosMIP u03-hos NetCDF download staging for build_nahosmip_amoc.py (~5GB NetCDF).
+# The committed artifact is data/amoc-collapse.*; raw source is not tracked.
+.nahosmip-build/
+
+# ISIMIP GGCMI crop-yield download staging for build_isimip_crops.py (~0.9GB NetCDF).
+# The committed artifact is data/crop-yield.isimip-ggcmi.*; raw source is not tracked.
+.crop-build/

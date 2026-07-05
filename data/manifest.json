@@ -1,0 +1,2680 @@
+{
+  "format": "option-c grid v1",
+  "encoding": "int16 LE, C-order, per-array scale; byte-shuffle then gzip",
+  "methodVersion": "grounded-grid-i16-v3-hazard-habitability:0dc3f9d188e4d757",
+  "cacheVersion": "grounded-grid-i16-v3-hazard-habitability:0dc3f9d188e4d757",
+  "sourceRegistryVersion": "source-registry-v1",
+  "defaultScenario": "ssp245",
+  "defaultScenarioPolicyVersion": "current-policy-reference-2025",
+  "defaultScenarioPolicyBasis": "2025 UNEP current-policy and Climate Action Tracker policies/action estimates put end-century warming roughly between 2.6 C and just below 3 C; the app maps the reference case to the closest fully grounded SSP pathway and treats it as a reference, not a prediction or hidden scenario average.",
+  "defaultScenarioPolicySourceIds": [
+    "unep-egr-2025-current-policies",
+    "cat-2025-warming-projections"
+  ],
+  "supportedFullForecastScenarios": [
+    "ssp126",
+    "ssp245",
+    "ssp370",
+    "ssp585"
+  ],
+  "artifactHashes": {
+    "grid.i16.gz": "sha256:0dc3f9d188e4d7570b710ecd904bb59167fb1547994f4d80a05a7de579046452"
+  },
+  "shuffle": true,
+  "grid": {
+    "nlat": 180,
+    "nlon": 360,
+    "lat0": -89.5,
+    "lon0": -179.5,
+    "dlat": 1.0,
+    "dlon": 1.0
+  },
+  "fill": -32768,
+  "binary": "grid.i16.gz",
+  "decoded_bytes": 91368000,
+  "layers": [
+    {
+      "layer": "temperature",
+      "scenario": "ssp119",
+      "var": "mean",
+      "unit": "absolute",
+      "decades": [
+        2030,
+        2040,
+        2050,
+        2060,
+        2070,
+        2080,
+        2090,
+        2100
+      ],
+      "scale": 0.01,
+      "fill": -32768,
+      "shape": [
+        8,
+        180,
+        360
+      ],
+      "offset": 0,
+      "bytes": 1036800,
+      "source": "delta vs 1995-2014; ensemble mean/std"
+    },
+    {
+      "layer": "temperature",
+      "scenario": "ssp119",
+      "var": "std",
+      "unit": "absolute",
+      "decades": [
+        2030,
+        2040,
+        2050,
+        2060,
+        2070,
+        2080,
+        2090,
+        2100
+      ],
+      "scale": 0.01,
+      "fill": -32768,
+      "shape": [
+        8,
+        180,
+        360
+      ],
+      "offset": 1036800,
+      "bytes": 1036800,
+      "source": "delta vs 1995-2014; ensemble mean/std"
+    },
+    {
+      "layer": "temperature",
+      "scenario": "ssp126",
+      "var": "mean",
+      "unit": "absolute",
+      "decades": [
+        2030,
+        2040,
+        2050,
+        2060,
+        2070,
+        2080,
+        2090,
+        2100
+      ],
+      "scale": 0.01,
+      "fill": -32768,
+      "shape": [
+        8,
+        180,
+        360
+      ],
+      "offset": 2073600,
+      "bytes": 1036800,
+      "source": "delta vs 1995-2014; ensemble mean/std"
+    },
+    {
+      "layer": "temperature",
+      "scenario": "ssp126",
+      "var": "std",
+      "unit": "absolute",
+      "decades": [
+        2030,
+        2040,
+        2050,
+        2060,
+        2070,
+        2080,
+        2090,
+        2100
+      ],
+      "scale": 0.01,
+      "fill": -32768,
+      "shape": [
+        8,
+        180,
+        360
+      ],
+      "offset": 3110400,
+      "bytes": 1036800,
+      "source": "delta vs 1995-2014; ensemble mean/std"
+    },
+    {
+      "layer": "temperature",
+      "scenario": "ssp245",
+      "var": "mean",
+      "unit": "absolute",
+      "decades": [
+        2030,
+        2040,
+        2050,
+        2060,
+        2070,
+        2080,
+        2090,
+        2100
+      ],
+      "scale": 0.01,
+      "fill": -32768,
+      "shape": [
+        8,
+        180,
+        360
+      ],
+      "offset": 4147200,
+      "bytes": 1036800,
+      "source": "delta vs 1995-2014; ensemble mean/std"
+    },
+    {
+      "layer": "temperature",
+      "scenario": "ssp245",
+      "var": "std",
+      "unit": "absolute",
+      "decades": [
+        2030,
+        2040,
+        2050,
+        2060,
+        2070,
+        2080,
+        2090,
+        2100
+      ],
+      "scale": 0.01,
+      "fill": -32768,
+      "shape": [
+        8,
+        180,
+        360
+      ],
+      "offset": 5184000,
+      "bytes": 1036800,
+      "source": "delta vs 1995-2014; ensemble mean/std"
+    },
+    {
+      "layer": "temperature",
+      "scenario": "ssp370",
+      "var": "mean",
+      "unit": "absolute",
+      "decades": [
+        2030,
+        2040,
+        2050,
+        2060,
+        2070,
+        2080,
+        2090,
+        2100
+      ],
+      "scale": 0.01,
+      "fill": -32768,
+      "shape": [
+        8,
+        180,
+        360
+      ],
+      "offset": 6220800,
+      "bytes": 1036800,
+      "source": "delta vs 1995-2014; ensemble mean/std"
+    },
+    {
+      "layer": "temperature",
+      "scenario": "ssp370",
+      "var": "std",
+      "unit": "absolute",
+      "decades": [
+        2030,
+        2040,
+        2050,
+        2060,
+        2070,
+        2080,
+        2090,
+        2100
+      ],
+      "scale": 0.01,
+      "fill": -32768,
+      "shape": [
+        8,
+        180,
+        360
+      ],
+      "offset": 7257600,
+      "bytes": 1036800,
+      "source": "delta vs 1995-2014; ensemble mean/std"
+    },
+    {
+      "layer": "temperature",
+      "scenario": "ssp585",
+      "var": "mean",
+      "unit": "absolute",
+      "decades": [
+        2030,
+        2040,
+        2050,
+        2060,
+        2070,
+        2080,
+        2090,
+        2100
+      ],
+      "scale": 0.01,
+      "fill": -32768,
+      "shape": [
+        8,
+        180,
+        360
+      ],
+      "offset": 8294400,
+      "bytes": 1036800,
+      "source": "delta vs 1995-2014; ensemble mean/std"
+    },
+    {
+      "layer": "temperature",
+      "scenario": "ssp585",
+      "var": "std",
+      "unit": "absolute",
+      "decades": [
+        2030,
+        2040,
+        2050,
+        2060,
+        2070,
+        2080,
+        2090,
+        2100
+      ],
+      "scale": 0.01,
+      "fill": -32768,
+      "shape": [
+        8,
+        180,
+        360
+      ],
+      "offset": 9331200,
+      "bytes": 1036800,
+      "source": "delta vs 1995-2014; ensemble mean/std"
+    },
+    {
+      "layer": "baseline-extreme",
+      "scenario": "cdd",
+      "var": "clim",
+      "unit": "consecutive_dry_days",
+      "single": [
+        0
+      ],
+      "scale": 0.3380340270996094,
+      "fill": -32768,
+      "shape": [
+        1,
+        180,
+        360
+      ],
+      "offset": 10368000,
+      "bytes": 129600,
+      "source": "CMIP6 ETCCDI historical ensemble mean (MODEL baseline)"
+    },
+    {
+      "layer": "baseline-extreme",
+      "scenario": "r20mm",
+      "var": "clim",
+      "unit": "very_heavy_precipitation_days",
+      "single": [
+        0
+      ],
+      "scale": 0.0031501410007476805,
+      "fill": -32768,
+      "shape": [
+        1,
+        180,
+        360
+      ],
+      "offset": 10497600,
+      "bytes": 129600,
+      "source": "CMIP6 ETCCDI historical ensemble mean (MODEL baseline)"
+    },
+    {
+      "layer": "baseline-extreme",
+      "scenario": "rx5day",
+      "var": "clim",
+      "unit": "maximum_5_day_precipitation",
+      "single": [
+        0
+      ],
+      "scale": 0.011465055465698242,
+      "fill": -32768,
+      "shape": [
+        1,
+        180,
+        360
+      ],
+      "offset": 10627200,
+      "bytes": 129600,
+      "source": "CMIP6 ETCCDI historical ensemble mean (MODEL baseline)"
+    },
+    {
+      "layer": "baseline-extreme",
+      "scenario": "tr",
+      "var": "clim",
+      "unit": "tropical_nights",
+      "single": [
+        0
+      ],
+      "scale": 0.011412760734558106,
+      "fill": -32768,
+      "shape": [
+        1,
+        180,
+        360
+      ],
+      "offset": 10756800,
+      "bytes": 129600,
+      "source": "CMIP6 ETCCDI historical ensemble mean (MODEL baseline)"
+    },
+    {
+      "layer": "baseline-extreme",
+      "scenario": "txx",
+      "var": "clim",
+      "unit": "maximum_value_of_daily_maximum_temperature",
+      "single": [
+        0
+      ],
+      "scale": 0.0016322122812271118,
+      "fill": -32768,
+      "shape": [
+        1,
+        180,
+        360
+      ],
+      "offset": 10886400,
+      "bytes": 129600,
+      "source": "CMIP6 ETCCDI historical ensemble mean (MODEL baseline)"
+    },
+    {
+      "layer": "baseline",
+      "scenario": "humidity",
+      "var": "clim",
+      "unit": "percent",
+      "months": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12
+      ],
+      "scale": 0.003079226493835449,
+      "fill": -32768,
+      "shape": [
+        12,
+        180,
+        360
+      ],
+      "offset": 11016000,
+      "bytes": 1555200,
+      "source": "CMIP6 historical ensemble monthly climatology (MODEL baseline)"
+    },
+    {
+      "layer": "baseline",
+      "scenario": "precipitation",
+      "var": "clim",
+      "unit": "mm/month",
+      "months": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12
+      ],
+      "scale": 0.028353960037231445,
+      "fill": -32768,
+      "shape": [
+        12,
+        180,
+        360
+      ],
+      "offset": 12571200,
+      "bytes": 1555200,
+      "source": "CMIP6 historical ensemble monthly climatology (MODEL baseline)"
+    },
+    {
+      "layer": "baseline",
+      "scenario": "temperature",
+      "var": "clim",
+      "unit": "degC",
+      "months": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12
+      ],
+      "scale": 0.002008143901824951,
+      "fill": -32768,
+      "shape": [
+        12,
+        180,
+        360
+      ],
+      "offset": 14126400,
+      "bytes": 1555200,
+      "source": "CMIP6 historical ensemble monthly climatology (MODEL baseline)"
+    },
+    {
+      "layer": "extreme-cdd",
+      "scenario": "ssp126",
+      "var": "mean",
+      "unit": "index-units (change vs baseline)",
+      "decades": [
+        2030,
+        2040,
+        2050,
+        2060,
+        2070,
+        2080,
+        2090,
+        2100
+      ],
+      "scale": 0.01,
+      "fill": -32768,
+      "shape": [
+        8,
+        180,
+        360
+      ],
+      "offset": 15681600,
+      "bytes": 1036800,
+      "source": "CDS sis-extreme-indices-cmip6 (ETCCDI, base-independent, annual)"
+    },
+    {
+      "layer": "extreme-cdd",
+      "scenario": "ssp126",
+      "var": "std",
+      "unit": "index-units (change vs baseline)",
+      "decades": [
+        2030,
+        2040,
+        2050,
+        2060,
+        2070,
+        2080,
+        2090,
+        2100
+      ],
+      "scale": 0.01,
+      "fill": -32768,
+      "shape": [
+        8,
+        180,
+        360
+      ],
+      "offset": 16718400,
+      "bytes": 1036800,
+      "source": "CDS sis-extreme-indices-cmip6 (ETCCDI, base-independent, annual)"
+    },
+    {
+      "layer": "extreme-cdd",
+      "scenario": "ssp245",
+      "var": "mean",
+      "unit": "index-units (change vs baseline)",
+      "decades": [
+        2030,
+        2040,
+        2050,
+        2060,
+        2070,
+        2080,
+        2090,
+        2100
+      ],
+      "scale": 0.01,
+      "fill": -32768,
+      "shape": [
+        8,
+        180,
+        360
+      ],
+      "offset": 17755200,
+      "bytes": 1036800,
+      "source": "CDS sis-extreme-indices-cmip6 (ETCCDI, base-independent, annual)"
+    },
+    {
+      "layer": "extreme-cdd",
+      "scenario": "ssp245",
+      "var": "std",
+      "unit": "index-units (change vs baseline)",
+      "decades": [
+        2030,
+        2040,
+        2050,
+        2060,
+        2070,
+        2080,
+        2090,
+        2100
+      ],
+      "scale": 0.01,
+      "fill": -32768,
+      "shape": [
+        8,
+        180,
+        360
+      ],
+      "offset": 18792000,
+      "bytes": 1036800,
+      "source": "CDS sis-extreme-indices-cmip6 (ETCCDI, base-independent, annual)"
+    },
+    {
+      "layer": "extreme-cdd",
+      "scenario": "ssp370",
+      "var": "mean",
+      "unit": "index-units (change vs baseline)",
+      "decades": [
+        2030,
+        2040,
+        2050,
+        2060,
+        2070,
+        2080,
+        2090,
+        2100
+      ],
+      "scale": 0.01,
+      "fill": -32768,
+      "shape": [
+        8,
+        180,
+        360
+      ],
+      "offset": 19828800,
+      "bytes": 1036800,
+      "source": "CDS sis-extreme-indices-cmip6 (ETCCDI, base-independent, annual)"
+    },
+    {
+      "layer": "extreme-cdd",
+      "scenario": "ssp370",
+      "var": "std",
+      "unit": "index-units (change vs baseline)",
+      "decades": [
+        2030,
+        2040,
+        2050,
+        2060,
+        2070,
+        2080,
+        2090,
+        2100
+      ],
+      "scale": 0.01,
+      "fill": -32768,
+      "shape": [
+        8,
+        180,
+        360
+      ],
+      "offset": 20865600,
+      "bytes": 1036800,
+      "source": "CDS sis-extreme-indices-cmip6 (ETCCDI, base-independent, annual)"
+    },
+    {
+      "layer": "extreme-cdd",
+      "scenario": "ssp585",
+      "var": "mean",
+      "unit": "index-units (change vs baseline)",
+      "decades": [
+        2030,
+        2040,
+        2050,
+        2060,
+        2070,
+        2080,
+        2090,
+        2100
+      ],
+      "scale": 0.01,
+      "fill": -32768,
+      "shape": [
+        8,
+        180,
+        360
+      ],
+      "offset": 21902400,
+      "bytes": 1036800,
+      "source": "CDS sis-extreme-indices-cmip6 (ETCCDI, base-independent, annual)"
+    },
+    {
+      "layer": "extreme-cdd",
+      "scenario": "ssp585",
+      "var": "std",
+      "unit": "index-units (change vs baseline)",
+      "decades": [
+        2030,
+        2040,
+        2050,
+        2060,
+        2070,
+        2080,
+        2090,
+        2100
+      ],
+      "scale": 0.01,
+      "fill": -32768,
+      "shape": [
+        8,
+        180,
+        360
+      ],
+      "offset": 22939200,
+      "bytes": 1036800,
+      "source": "CDS sis-extreme-indices-cmip6 (ETCCDI, base-independent, annual)"
+    },
+    {
+      "layer": "extreme-r20mm",
+      "scenario": "ssp126",
+      "var": "mean",
+      "unit": "index-units (change vs baseline)",
+      "decades": [
+        2030,
+        2040,
+        2050,
+        2060,
+        2070,
+        2080,
+        2090,
+        2100
+      ],
+      "scale": 0.01,
+      "fill": -32768,
+      "shape": [
+        8,
+        180,
+        360
+      ],
+      "offset": 23976000,
+      "bytes": 1036800,
+      "source": "CDS sis-extreme-indices-cmip6 (ETCCDI, base-independent, annual)"
+    },
+    {
+      "layer": "extreme-r20mm",
+      "scenario": "ssp126",
+      "var": "std",
+      "unit": "index-units (change vs baseline)",
+      "decades": [
+        2030,
+        2040,
+        2050,
+        2060,
+        2070,
+        2080,
+        2090,
+        2100
+      ],
+      "scale": 0.01,
+      "fill": -32768,
+      "shape": [
+        8,
+        180,
+        360
+      ],
+      "offset": 25012800,
+      "bytes": 1036800,
+      "source": "CDS sis-extreme-indices-cmip6 (ETCCDI, base-independent, annual)"
+    },
+    {
+      "layer": "extreme-r20mm",
+      "scenario": "ssp245",
+      "var": "mean",
+      "unit": "index-units (change vs baseline)",
+      "decades": [
+        2030,
+        2040,
+        2050,
+        2060,
+        2070,
+        2080,
+        2090,
+        2100
+      ],
+      "scale": 0.01,
+      "fill": -32768,
+      "shape": [
+        8,
+        180,
+        360
+      ],
+      "offset": 26049600,
+      "bytes": 1036800,
+      "source": "CDS sis-extreme-indices-cmip6 (ETCCDI, base-independent, annual)"
+    },
+    {
+      "layer": "extreme-r20mm",
+      "scenario": "ssp245",
+      "var": "std",
+      "unit": "index-units (change vs baseline)",
+      "decades": [
+        2030,
+        2040,
+        2050,
+        2060,
+        2070,
+        2080,
+        2090,
+        2100
+      ],
+      "scale": 0.01,
+      "fill": -32768,
+      "shape": [
+        8,
+        180,
+        360
+      ],
+      "offset": 27086400,
+      "bytes": 1036800,
+      "source": "CDS sis-extreme-indices-cmip6 (ETCCDI, base-independent, annual)"
+    },
+    {
+      "layer": "extreme-r20mm",
+      "scenario": "ssp370",
+      "var": "mean",
+      "unit": "index-units (change vs baseline)",
+      "decades": [
+        2030,
+        2040,
+        2050,
+        2060,
+        2070,
+        2080,
+        2090,
+        2100
+      ],
+      "scale": 0.01,
+      "fill": -32768,
+      "shape": [
+        8,
+        180,
+        360
+      ],
+      "offset": 28123200,
+      "bytes": 1036800,
+      "source": "CDS sis-extreme-indices-cmip6 (ETCCDI, base-independent, annual)"
+    },
+    {
+      "layer": "extreme-r20mm",
+      "scenario": "ssp370",
+      "var": "std",
+      "unit": "index-units (change vs baseline)",
+      "decades": [
+        2030,
+        2040,
+        2050,
+        2060,
+        2070,
+        2080,
+        2090,
+        2100
+      ],
+      "scale": 0.01,
+      "fill": -32768,
+      "shape": [
+        8,
+        180,
+        360
+      ],
+      "offset": 29160000,
+      "bytes": 1036800,
+      "source": "CDS sis-extreme-indices-cmip6 (ETCCDI, base-independent, annual)"
+    },
+    {
+      "layer": "extreme-r20mm",
+      "scenario": "ssp585",
+      "var": "mean",
+      "unit": "index-units (change vs baseline)",
+      "decades": [
+        2030,
+        2040,
+        2050,
+        2060,
+        2070,
+        2080,
+        2090,
+        2100
+      ],
+      "scale": 0.01,
+      "fill": -32768,
+      "shape": [
+        8,
+        180,
+        360
+      ],
+      "offset": 30196800,
+      "bytes": 1036800,
+      "source": "CDS sis-extreme-indices-cmip6 (ETCCDI, base-independent, annual)"
+    },
+    {
+      "layer": "extreme-r20mm",
+      "scenario": "ssp585",
+      "var": "std",
+      "unit": "index-units (change vs baseline)",
+      "decades": [
+        2030,
+        2040,
+        2050,
+        2060,
+        2070,
+        2080,
+        2090,
+        2100
+      ],
+      "scale": 0.01,
+      "fill": -32768,
+      "shape": [
+        8,
+        180,
+        360
+      ],
+      "offset": 31233600,
+      "bytes": 1036800,
+      "source": "CDS sis-extreme-indices-cmip6 (ETCCDI, base-independent, annual)"
+    },
+    {
+      "layer": "extreme-rx5day",
+      "scenario": "ssp126",
+      "var": "mean",
+      "unit": "index-units (change vs baseline)",
+      "decades": [
+        2030,
+        2040,
+        2050,
+        2060,
+        2070,
+        2080,
+        2090,
+        2100
+      ],
+      "scale": 0.01,
+      "fill": -32768,
+      "shape": [
+        8,
+        180,
+        360
+      ],
+      "offset": 32270400,
+      "bytes": 1036800,
+      "source": "CDS sis-extreme-indices-cmip6 (ETCCDI, base-independent, annual)"
+    },
+    {
+      "layer": "extreme-rx5day",
+      "scenario": "ssp126",
+      "var": "std",
+      "unit": "index-units (change vs baseline)",
+      "decades": [
+        2030,
+        2040,
+        2050,
+        2060,
+        2070,
+        2080,
+        2090,
+        2100
+      ],
+      "scale": 0.01,
+      "fill": -32768,
+      "shape": [
+        8,
+        180,
+        360
+      ],
+      "offset": 33307200,
+      "bytes": 1036800,
+      "source": "CDS sis-extreme-indices-cmip6 (ETCCDI, base-independent, annual)"
+    },
+    {
+      "layer": "extreme-rx5day",
+      "scenario": "ssp245",
+      "var": "mean",
+      "unit": "index-units (change vs baseline)",
+      "decades": [
+        2030,
+        2040,
+        2050,
+        2060,
+        2070,
+        2080,
+        2090,
+        2100
+      ],
+      "scale": 0.01,
+      "fill": -32768,
+      "shape": [
+        8,
+        180,
+        360
+      ],
+      "offset": 34344000,
+      "bytes": 1036800,
+      "source": "CDS sis-extreme-indices-cmip6 (ETCCDI, base-independent, annual)"
+    },
+    {
+      "layer": "extreme-rx5day",
+      "scenario": "ssp245",
+      "var": "std",
+      "unit": "index-units (change vs baseline)",
+      "decades": [
+        2030,
+        2040,
+        2050,
+        2060,
+        2070,
+        2080,
+        2090,
+        2100
+      ],
+      "scale": 0.01,
+      "fill": -32768,
+      "shape": [
+        8,
+        180,
+        360
+      ],
+      "offset": 35380800,
+      "bytes": 1036800,
+      "source": "CDS sis-extreme-indices-cmip6 (ETCCDI, base-independent, annual)"
+    },
+    {
+      "layer": "extreme-rx5day",
+      "scenario": "ssp370",
+      "var": "mean",
+      "unit": "index-units (change vs baseline)",
+      "decades": [
+        2030,
+        2040,
+        2050,
+        2060,
+        2070,
+        2080,
+        2090,
+        2100
+      ],
+      "scale": 0.01,
+      "fill": -32768,
+      "shape": [
+        8,
+        180,
+        360
+      ],
+      "offset": 36417600,
+      "bytes": 1036800,
+      "source": "CDS sis-extreme-indices-cmip6 (ETCCDI, base-independent, annual)"
+    },
+    {
+      "layer": "extreme-rx5day",
+      "scenario": "ssp370",
+      "var": "std",
+      "unit": "index-units (change vs baseline)",
+      "decades": [
+        2030,
+        2040,
+        2050,
+        2060,
+        2070,
+        2080,
+        2090,
+        2100
+      ],
+      "scale": 0.01,
+      "fill": -32768,
+      "shape": [
+        8,
+        180,
+        360
+      ],
+      "offset": 37454400,
+      "bytes": 1036800,
+      "source": "CDS sis-extreme-indices-cmip6 (ETCCDI, base-independent, annual)"
+    },
+    {
+      "layer": "extreme-rx5day",
+      "scenario": "ssp585",
+      "var": "mean",
+      "unit": "index-units (change vs baseline)",
+      "decades": [
+        2030,
+        2040,
+        2050,
+        2060,
+        2070,
+        2080,
+        2090,
+        2100
+      ],
+      "scale": 0.01,
+      "fill": -32768,
+      "shape": [
+        8,
+        180,
+        360
+      ],
+      "offset": 38491200,
+      "bytes": 1036800,
+      "source": "CDS sis-extreme-indices-cmip6 (ETCCDI, base-independent, annual)"
+    },
+    {
+      "layer": "extreme-rx5day",
+      "scenario": "ssp585",
+      "var": "std",
+      "unit": "index-units (change vs baseline)",
+      "decades": [
+        2030,
+        2040,
+        2050,
+        2060,
+        2070,
+        2080,
+        2090,
+        2100
+      ],
+      "scale": 0.01,
+      "fill": -32768,
+      "shape": [
+        8,
+        180,
+        360
+      ],
+      "offset": 39528000,
+      "bytes": 1036800,
+      "source": "CDS sis-extreme-indices-cmip6 (ETCCDI, base-independent, annual)"
+    },
+    {
+      "layer": "extreme-tr",
+      "scenario": "ssp126",
+      "var": "mean",
+      "unit": "index-units (change vs baseline)",
+      "decades": [
+        2030,
+        2040,
+        2050,
+        2060,
+        2070,
+        2080,
+        2090,
+        2100
+      ],
+      "scale": 0.01,
+      "fill": -32768,
+      "shape": [
+        8,
+        180,
+        360
+      ],
+      "offset": 40564800,
+      "bytes": 1036800,
+      "source": "CDS sis-extreme-indices-cmip6 (ETCCDI, base-independent, annual)"
+    },
+    {
+      "layer": "extreme-tr",
+      "scenario": "ssp126",
+      "var": "std",
+      "unit": "index-units (change vs baseline)",
+      "decades": [
+        2030,
+        2040,
+        2050,
+        2060,
+        2070,
+        2080,
+        2090,
+        2100
+      ],
+      "scale": 0.01,
+      "fill": -32768,
+      "shape": [
+        8,
+        180,
+        360
+      ],
+      "offset": 41601600,
+      "bytes": 1036800,
+      "source": "CDS sis-extreme-indices-cmip6 (ETCCDI, base-independent, annual)"
+    },
+    {
+      "layer": "extreme-tr",
+      "scenario": "ssp245",
+      "var": "mean",
+      "unit": "index-units (change vs baseline)",
+      "decades": [
+        2030,
+        2040,
+        2050,
+        2060,
+        2070,
+        2080,
+        2090,
+        2100
+      ],
+      "scale": 0.01,
+      "fill": -32768,
+      "shape": [
+        8,
+        180,
+        360
+      ],
+      "offset": 42638400,
+      "bytes": 1036800,
+      "source": "CDS sis-extreme-indices-cmip6 (ETCCDI, base-independent, annual)"
+    },
+    {
+      "layer": "extreme-tr",
+      "scenario": "ssp245",
+      "var": "std",
+      "unit": "index-units (change vs baseline)",
+      "decades": [
+        2030,
+        2040,
+        2050,
+        2060,
+        2070,
+        2080,
+        2090,
+        2100
+      ],
+      "scale": 0.01,
+      "fill": -32768,
+      "shape": [
+        8,
+        180,
+        360
+      ],
+      "offset": 43675200,
+      "bytes": 1036800,
+      "source": "CDS sis-extreme-indices-cmip6 (ETCCDI, base-independent, annual)"
+    },
+    {
+      "layer": "extreme-tr",
+      "scenario": "ssp370",
+      "var": "mean",
+      "unit": "index-units (change vs baseline)",
+      "decades": [
+        2030,
+        2040,
+        2050,
+        2060,
+        2070,
+        2080,
+        2090,
+        2100
+      ],
+      "scale": 0.01,
+      "fill": -32768,
+      "shape": [
+        8,
+        180,
+        360
+      ],
+      "offset": 44712000,
+      "bytes": 1036800,
+      "source": "CDS sis-extreme-indices-cmip6 (ETCCDI, base-independent, annual)"
+    },
+    {
+      "layer": "extreme-tr",
+      "scenario": "ssp370",
+      "var": "std",
+      "unit": "index-units (change vs baseline)",
+      "decades": [
+        2030,
+        2040,
+        2050,
+        2060,
+        2070,
+        2080,
+        2090,
+        2100
+      ],
+      "scale": 0.01,
+      "fill": -32768,
+      "shape": [
+        8,
+        180,
+        360
+      ],
+      "offset": 45748800,
+      "bytes": 1036800,
+      "source": "CDS sis-extreme-indices-cmip6 (ETCCDI, base-independent, annual)"
+    },
+    {
+      "layer": "extreme-tr",
+      "scenario": "ssp585",
+      "var": "mean",
+      "unit": "index-units (change vs baseline)",
+      "decades": [
+        2030,
+        2040,
+        2050,
+        2060,
+        2070,
+        2080,
+        2090,
+        2100
+      ],
+      "scale": 0.01,
+      "fill": -32768,
+      "shape": [
+        8,
+        180,
+        360
+      ],
+      "offset": 46785600,
+      "bytes": 1036800,
+      "source": "CDS sis-extreme-indices-cmip6 (ETCCDI, base-independent, annual)"
+    },
+    {
+      "layer": "extreme-tr",
+      "scenario": "ssp585",
+      "var": "std",
+      "unit": "index-units (change vs baseline)",
+      "decades": [
+        2030,
+        2040,
+        2050,
+        2060,
+        2070,
+        2080,
+        2090,
+        2100
+      ],
+      "scale": 0.01,
+      "fill": -32768,
+      "shape": [
+        8,
+        180,
+        360
+      ],
+      "offset": 47822400,
+      "bytes": 1036800,
+      "source": "CDS sis-extreme-indices-cmip6 (ETCCDI, base-independent, annual)"
+    },
+    {
+      "layer": "extreme-txx",
+      "scenario": "ssp126",
+      "var": "mean",
+      "unit": "index-units (change vs baseline)",
+      "decades": [
+        2030,
+        2040,
+        2050,
+        2060,
+        2070,
+        2080,
+        2090,
+        2100
+      ],
+      "scale": 0.01,
+      "fill": -32768,
+      "shape": [
+        8,
+        180,
+        360
+      ],
+      "offset": 48859200,
+      "bytes": 1036800,
+      "source": "CDS sis-extreme-indices-cmip6 (ETCCDI, base-independent, annual)"
+    },
+    {
+      "layer": "extreme-txx",
+      "scenario": "ssp126",
+      "var": "std",
+      "unit": "index-units (change vs baseline)",
+      "decades": [
+        2030,
+        2040,
+        2050,
+        2060,
+        2070,
+        2080,
+        2090,
+        2100
+      ],
+      "scale": 0.01,
+      "fill": -32768,
+      "shape": [
+        8,
+        180,
+        360
+      ],
+      "offset": 49896000,
+      "bytes": 1036800,
+      "source": "CDS sis-extreme-indices-cmip6 (ETCCDI, base-independent, annual)"
+    },
+    {
+      "layer": "extreme-txx",
+      "scenario": "ssp245",
+      "var": "mean",
+      "unit": "index-units (change vs baseline)",
+      "decades": [
+        2030,
+        2040,
+        2050,
+        2060,
+        2070,
+        2080,
+        2090,
+        2100
+      ],
+      "scale": 0.01,
+      "fill": -32768,
+      "shape": [
+        8,
+        180,
+        360
+      ],
+      "offset": 50932800,
+      "bytes": 1036800,
+      "source": "CDS sis-extreme-indices-cmip6 (ETCCDI, base-independent, annual)"
+    },
+    {
+      "layer": "extreme-txx",
+      "scenario": "ssp245",
+      "var": "std",
+      "unit": "index-units (change vs baseline)",
+      "decades": [
+        2030,
+        2040,
+        2050,
+        2060,
+        2070,
+        2080,
+        2090,
+        2100
+      ],
+      "scale": 0.01,
+      "fill": -32768,
+      "shape": [
+        8,
+        180,
+        360
+      ],
+      "offset": 51969600,
+      "bytes": 1036800,
+      "source": "CDS sis-extreme-indices-cmip6 (ETCCDI, base-independent, annual)"
+    },
+    {
+      "layer": "extreme-txx",
+      "scenario": "ssp370",
+      "var": "mean",
+      "unit": "index-units (change vs baseline)",
+      "decades": [
+        2030,
+        2040,
+        2050,
+        2060,
+        2070,
+        2080,
+        2090,
+        2100
+      ],
+      "scale": 0.01,
+      "fill": -32768,
+      "shape": [
+        8,
+        180,
+        360
+      ],
+      "offset": 53006400,
+      "bytes": 1036800,
+      "source": "CDS sis-extreme-indices-cmip6 (ETCCDI, base-independent, annual)"
+    },
+    {
+      "layer": "extreme-txx",
+      "scenario": "ssp370",
+      "var": "std",
+      "unit": "index-units (change vs baseline)",
+      "decades": [
+        2030,
+        2040,
+        2050,
+        2060,
+        2070,
+        2080,
+        2090,
+        2100
+      ],
+      "scale": 0.01,
+      "fill": -32768,
+      "shape": [
+        8,
+        180,
+        360
+      ],
+      "offset": 54043200,
+      "bytes": 1036800,
+      "source": "CDS sis-extreme-indices-cmip6 (ETCCDI, base-independent, annual)"
+    },
+    {
+      "layer": "extreme-txx",
+      "scenario": "ssp585",
+      "var": "mean",
+      "unit": "index-units (change vs baseline)",
+      "decades": [
+        2030,
+        2040,
+        2050,
+        2060,
+        2070,
+        2080,
+        2090,
+        2100
+      ],
+      "scale": 0.01,
+      "fill": -32768,
+      "shape": [
+        8,
+        180,
+        360
+      ],
+      "offset": 55080000,
+      "bytes": 1036800,
+      "source": "CDS sis-extreme-indices-cmip6 (ETCCDI, base-independent, annual)"
+    },
+    {
+      "layer": "extreme-txx",
+      "scenario": "ssp585",
+      "var": "std",
+      "unit": "index-units (change vs baseline)",
+      "decades": [
+        2030,
+        2040,
+        2050,
+        2060,
+        2070,
+        2080,
+        2090,
+        2100
+      ],
+      "scale": 0.01,
+      "fill": -32768,
+      "shape": [
+        8,
+        180,
+        360
+      ],
+      "offset": 56116800,
+      "bytes": 1036800,
+      "source": "CDS sis-extreme-indices-cmip6 (ETCCDI, base-independent, annual)"
+    },
+    {
+      "layer": "precipitation",
+      "scenario": "ssp119",
+      "var": "mean",
+      "unit": "percent",
+      "decades": [
+        2030,
+        2040,
+        2050,
+        2060,
+        2070,
+        2080,
+        2090,
+        2100
+      ],
+      "scale": 0.01,
+      "fill": -32768,
+      "shape": [
+        8,
+        180,
+        360
+      ],
+      "offset": 57153600,
+      "bytes": 1036800,
+      "source": "delta vs 1995-2014; ensemble mean/std"
+    },
+    {
+      "layer": "precipitation",
+      "scenario": "ssp119",
+      "var": "std",
+      "unit": "percent",
+      "decades": [
+        2030,
+        2040,
+        2050,
+        2060,
+        2070,
+        2080,
+        2090,
+        2100
+      ],
+      "scale": 0.01,
+      "fill": -32768,
+      "shape": [
+        8,
+        180,
+        360
+      ],
+      "offset": 58190400,
+      "bytes": 1036800,
+      "source": "delta vs 1995-2014; ensemble mean/std"
+    },
+    {
+      "layer": "precipitation",
+      "scenario": "ssp126",
+      "var": "mean",
+      "unit": "percent",
+      "decades": [
+        2030,
+        2040,
+        2050,
+        2060,
+        2070,
+        2080,
+        2090,
+        2100
+      ],
+      "scale": 0.01,
+      "fill": -32768,
+      "shape": [
+        8,
+        180,
+        360
+      ],
+      "offset": 59227200,
+      "bytes": 1036800,
+      "source": "delta vs 1995-2014; ensemble mean/std"
+    },
+    {
+      "layer": "precipitation",
+      "scenario": "ssp126",
+      "var": "std",
+      "unit": "percent",
+      "decades": [
+        2030,
+        2040,
+        2050,
+        2060,
+        2070,
+        2080,
+        2090,
+        2100
+      ],
+      "scale": 0.01,
+      "fill": -32768,
+      "shape": [
+        8,
+        180,
+        360
+      ],
+      "offset": 60264000,
+      "bytes": 1036800,
+      "source": "delta vs 1995-2014; ensemble mean/std"
+    },
+    {
+      "layer": "precipitation",
+      "scenario": "ssp245",
+      "var": "mean",
+      "unit": "percent",
+      "decades": [
+        2030,
+        2040,
+        2050,
+        2060,
+        2070,
+        2080,
+        2090,
+        2100
+      ],
+      "scale": 0.01,
+      "fill": -32768,
+      "shape": [
+        8,
+        180,
+        360
+      ],
+      "offset": 61300800,
+      "bytes": 1036800,
+      "source": "delta vs 1995-2014; ensemble mean/std"
+    },
+    {
+      "layer": "precipitation",
+      "scenario": "ssp245",
+      "var": "std",
+      "unit": "percent",
+      "decades": [
+        2030,
+        2040,
+        2050,
+        2060,
+        2070,
+        2080,
+        2090,
+        2100
+      ],
+      "scale": 0.01,
+      "fill": -32768,
+      "shape": [
+        8,
+        180,
+        360
+      ],
+      "offset": 62337600,
+      "bytes": 1036800,
+      "source": "delta vs 1995-2014; ensemble mean/std"
+    },
+    {
+      "layer": "precipitation",
+      "scenario": "ssp370",
+      "var": "mean",
+      "unit": "percent",
+      "decades": [
+        2030,
+        2040,
+        2050,
+        2060,
+        2070,
+        2080,
+        2090,
+        2100
+      ],
+      "scale": 0.01,
+      "fill": -32768,
+      "shape": [
+        8,
+        180,
+        360
+      ],
+      "offset": 63374400,
+      "bytes": 1036800,
+      "source": "delta vs 1995-2014; ensemble mean/std"
+    },
+    {
+      "layer": "precipitation",
+      "scenario": "ssp370",
+      "var": "std",
+      "unit": "percent",
+      "decades": [
+        2030,
+        2040,
+        2050,
+        2060,
+        2070,
+        2080,
+        2090,
+        2100
+      ],
+      "scale": 0.01,
+      "fill": -32768,
+      "shape": [
+        8,
+        180,
+        360
+      ],
+      "offset": 64411200,
+      "bytes": 1036800,
+      "source": "delta vs 1995-2014; ensemble mean/std"
+    },
+    {
+      "layer": "precipitation",
+      "scenario": "ssp585",
+      "var": "mean",
+      "unit": "percent",
+      "decades": [
+        2030,
+        2040,
+        2050,
+        2060,
+        2070,
+        2080,
+        2090,
+        2100
+      ],
+      "scale": 0.01,
+      "fill": -32768,
+      "shape": [
+        8,
+        180,
+        360
+      ],
+      "offset": 65448000,
+      "bytes": 1036800,
+      "source": "delta vs 1995-2014; ensemble mean/std"
+    },
+    {
+      "layer": "precipitation",
+      "scenario": "ssp585",
+      "var": "std",
+      "unit": "percent",
+      "decades": [
+        2030,
+        2040,
+        2050,
+        2060,
+        2070,
+        2080,
+        2090,
+        2100
+      ],
+      "scale": 0.01,
+      "fill": -32768,
+      "shape": [
+        8,
+        180,
+        360
+      ],
+      "offset": 66484800,
+      "bytes": 1036800,
+      "source": "delta vs 1995-2014; ensemble mean/std"
+    },
+    {
+      "layer": "humidity",
+      "scenario": "ssp126",
+      "var": "mean",
+      "unit": "absolute",
+      "decades": [
+        2030,
+        2040,
+        2050,
+        2060,
+        2070,
+        2080,
+        2090,
+        2100
+      ],
+      "scale": 0.01,
+      "fill": -32768,
+      "shape": [
+        8,
+        180,
+        360
+      ],
+      "offset": 67521600,
+      "bytes": 1036800,
+      "source": "delta vs 1995-2014; ensemble mean/std"
+    },
+    {
+      "layer": "humidity",
+      "scenario": "ssp126",
+      "var": "std",
+      "unit": "absolute",
+      "decades": [
+        2030,
+        2040,
+        2050,
+        2060,
+        2070,
+        2080,
+        2090,
+        2100
+      ],
+      "scale": 0.01,
+      "fill": -32768,
+      "shape": [
+        8,
+        180,
+        360
+      ],
+      "offset": 68558400,
+      "bytes": 1036800,
+      "source": "delta vs 1995-2014; ensemble mean/std"
+    },
+    {
+      "layer": "humidity",
+      "scenario": "ssp245",
+      "var": "mean",
+      "unit": "absolute",
+      "decades": [
+        2030,
+        2040,
+        2050,
+        2060,
+        2070,
+        2080,
+        2090,
+        2100
+      ],
+      "scale": 0.01,
+      "fill": -32768,
+      "shape": [
+        8,
+        180,
+        360
+      ],
+      "offset": 69595200,
+      "bytes": 1036800,
+      "source": "delta vs 1995-2014; ensemble mean/std"
+    },
+    {
+      "layer": "humidity",
+      "scenario": "ssp245",
+      "var": "std",
+      "unit": "absolute",
+      "decades": [
+        2030,
+        2040,
+        2050,
+        2060,
+        2070,
+        2080,
+        2090,
+        2100
+      ],
+      "scale": 0.01,
+      "fill": -32768,
+      "shape": [
+        8,
+        180,
+        360
+      ],
+      "offset": 70632000,
+      "bytes": 1036800,
+      "source": "delta vs 1995-2014; ensemble mean/std"
+    },
+    {
+      "layer": "humidity",
+      "scenario": "ssp370",
+      "var": "mean",
+      "unit": "absolute",
+      "decades": [
+        2030,
+        2040,
+        2050,
+        2060,
+        2070,
+        2080,
+        2090,
+        2100
+      ],
+      "scale": 0.01,
+      "fill": -32768,
+      "shape": [
+        8,
+        180,
+        360
+      ],
+      "offset": 71668800,
+      "bytes": 1036800,
+      "source": "delta vs 1995-2014; ensemble mean/std"
+    },
+    {
+      "layer": "humidity",
+      "scenario": "ssp370",
+      "var": "std",
+      "unit": "absolute",
+      "decades": [
+        2030,
+        2040,
+        2050,
+        2060,
+        2070,
+        2080,
+        2090,
+        2100
+      ],
+      "scale": 0.01,
+      "fill": -32768,
+      "shape": [
+        8,
+        180,
+        360
+      ],
+      "offset": 72705600,
+      "bytes": 1036800,
+      "source": "delta vs 1995-2014; ensemble mean/std"
+    },
+    {
+      "layer": "humidity",
+      "scenario": "ssp585",
+      "var": "mean",
+      "unit": "absolute",
+      "decades": [
+        2030,
+        2040,
+        2050,
+        2060,
+        2070,
+        2080,
+        2090,
+        2100
+      ],
+      "scale": 0.01,
+      "fill": -32768,
+      "shape": [
+        8,
+        180,
+        360
+      ],
+      "offset": 73742400,
+      "bytes": 1036800,
+      "source": "delta vs 1995-2014; ensemble mean/std"
+    },
+    {
+      "layer": "humidity",
+      "scenario": "ssp585",
+      "var": "std",
+      "unit": "absolute",
+      "decades": [
+        2030,
+        2040,
+        2050,
+        2060,
+        2070,
+        2080,
+        2090,
+        2100
+      ],
+      "scale": 0.01,
+      "fill": -32768,
+      "shape": [
+        8,
+        180,
+        360
+      ],
+      "offset": 74779200,
+      "bytes": 1036800,
+      "source": "delta vs 1995-2014; ensemble mean/std"
+    },
+    {
+      "layer": "sealevel",
+      "scenario": "ssp119",
+      "var": "median",
+      "unit": "m",
+      "decades": [
+        2030,
+        2040,
+        2050,
+        2060,
+        2070,
+        2080,
+        2090,
+        2100
+      ],
+      "scale": 0.001,
+      "fill": -32768,
+      "shape": [
+        8,
+        180,
+        360
+      ],
+      "offset": 75816000,
+      "bytes": 1036800,
+      "source": "IPCC AR6 Sea Level Projections (Garner et al. 2021, Zenodo 5914710); FACTS; regional total RSL incl. background land motion"
+    },
+    {
+      "layer": "sealevel",
+      "scenario": "ssp119",
+      "var": "low",
+      "unit": "m",
+      "decades": [
+        2030,
+        2040,
+        2050,
+        2060,
+        2070,
+        2080,
+        2090,
+        2100
+      ],
+      "scale": 0.001,
+      "fill": -32768,
+      "shape": [
+        8,
+        180,
+        360
+      ],
+      "offset": 76852800,
+      "bytes": 1036800,
+      "source": "IPCC AR6 Sea Level Projections (Garner et al. 2021, Zenodo 5914710); FACTS; regional total RSL incl. background land motion"
+    },
+    {
+      "layer": "sealevel",
+      "scenario": "ssp119",
+      "var": "high",
+      "unit": "m",
+      "decades": [
+        2030,
+        2040,
+        2050,
+        2060,
+        2070,
+        2080,
+        2090,
+        2100
+      ],
+      "scale": 0.001,
+      "fill": -32768,
+      "shape": [
+        8,
+        180,
+        360
+      ],
+      "offset": 77889600,
+      "bytes": 1036800,
+      "source": "IPCC AR6 Sea Level Projections (Garner et al. 2021, Zenodo 5914710); FACTS; regional total RSL incl. background land motion"
+    },
+    {
+      "layer": "sealevel",
+      "scenario": "ssp126",
+      "var": "median",
+      "unit": "m",
+      "decades": [
+        2030,
+        2040,
+        2050,
+        2060,
+        2070,
+        2080,
+        2090,
+        2100
+      ],
+      "scale": 0.001,
+      "fill": -32768,
+      "shape": [
+        8,
+        180,
+        360
+      ],
+      "offset": 78926400,
+      "bytes": 1036800,
+      "source": "IPCC AR6 Sea Level Projections (Garner et al. 2021, Zenodo 5914710); FACTS; regional total RSL incl. background land motion"
+    },
+    {
+      "layer": "sealevel",
+      "scenario": "ssp126",
+      "var": "low",
+      "unit": "m",
+      "decades": [
+        2030,
+        2040,
+        2050,
+        2060,
+        2070,
+        2080,
+        2090,
+        2100
+      ],
+      "scale": 0.001,
+      "fill": -32768,
+      "shape": [
+        8,
+        180,
+        360
+      ],
+      "offset": 79963200,
+      "bytes": 1036800,
+      "source": "IPCC AR6 Sea Level Projections (Garner et al. 2021, Zenodo 5914710); FACTS; regional total RSL incl. background land motion"
+    },
+    {
+      "layer": "sealevel",
+      "scenario": "ssp126",
+      "var": "high",
+      "unit": "m",
+      "decades": [
+        2030,
+        2040,
+        2050,
+        2060,
+        2070,
+        2080,
+        2090,
+        2100
+      ],
+      "scale": 0.001,
+      "fill": -32768,
+      "shape": [
+        8,
+        180,
+        360
+      ],
+      "offset": 81000000,
+      "bytes": 1036800,
+      "source": "IPCC AR6 Sea Level Projections (Garner et al. 2021, Zenodo 5914710); FACTS; regional total RSL incl. background land motion"
+    },
+    {
+      "layer": "sealevel",
+      "scenario": "ssp245",
+      "var": "median",
+      "unit": "m",
+      "decades": [
+        2030,
+        2040,
+        2050,
+        2060,
+        2070,
+        2080,
+        2090,
+        2100
+      ],
+      "scale": 0.001,
+      "fill": -32768,
+      "shape": [
+        8,
+        180,
+        360
+      ],
+      "offset": 82036800,
+      "bytes": 1036800,
+      "source": "IPCC AR6 Sea Level Projections (Garner et al. 2021, Zenodo 5914710); FACTS; regional total RSL incl. background land motion"
+    },
+    {
+      "layer": "sealevel",
+      "scenario": "ssp245",
+      "var": "low",
+      "unit": "m",
+      "decades": [
+        2030,
+        2040,
+        2050,
+        2060,
+        2070,
+        2080,
+        2090,
+        2100
+      ],
+      "scale": 0.001,
+      "fill": -32768,
+      "shape": [
+        8,
+        180,
+        360
+      ],
+      "offset": 83073600,
+      "bytes": 1036800,
+      "source": "IPCC AR6 Sea Level Projections (Garner et al. 2021, Zenodo 5914710); FACTS; regional total RSL incl. background land motion"
+    },
+    {
+      "layer": "sealevel",
+      "scenario": "ssp245",
+      "var": "high",
+      "unit": "m",
+      "decades": [
+        2030,
+        2040,
+        2050,
+        2060,
+        2070,
+        2080,
+        2090,
+        2100
+      ],
+      "scale": 0.001,
+      "fill": -32768,
+      "shape": [
+        8,
+        180,
+        360
+      ],
+      "offset": 84110400,
+      "bytes": 1036800,
+      "source": "IPCC AR6 Sea Level Projections (Garner et al. 2021, Zenodo 5914710); FACTS; regional total RSL incl. background land motion"
+    },
+    {
+      "layer": "sealevel",
+      "scenario": "ssp370",
+      "var": "median",
+      "unit": "m",
+      "decades": [
+        2030,
+        2040,
+        2050,
+        2060,
+        2070,
+        2080,
+        2090,
+        2100
+      ],
+      "scale": 0.001,
+      "fill": -32768,
+      "shape": [
+        8,
+        180,
+        360
+      ],
+      "offset": 85147200,
+      "bytes": 1036800,
+      "source": "IPCC AR6 Sea Level Projections (Garner et al. 2021, Zenodo 5914710); FACTS; regional total RSL incl. background land motion"
+    },
+    {
+      "layer": "sealevel",
+      "scenario": "ssp370",
+      "var": "low",
+      "unit": "m",
+      "decades": [
+        2030,
+        2040,
+        2050,
+        2060,
+        2070,
+        2080,
+        2090,
+        2100
+      ],
+      "scale": 0.001,
+      "fill": -32768,
+      "shape": [
+        8,
+        180,
+        360
+      ],
+      "offset": 86184000,
+      "bytes": 1036800,
+      "source": "IPCC AR6 Sea Level Projections (Garner et al. 2021, Zenodo 5914710); FACTS; regional total RSL incl. background land motion"
+    },
+    {
+      "layer": "sealevel",
+      "scenario": "ssp370",
+      "var": "high",
+      "unit": "m",
+      "decades": [
+        2030,
+        2040,
+        2050,
+        2060,
+        2070,
+        2080,
+        2090,
+        2100
+      ],
+      "scale": 0.001,
+      "fill": -32768,
+      "shape": [
+        8,
+        180,
+        360
+      ],
+      "offset": 87220800,
+      "bytes": 1036800,
+      "source": "IPCC AR6 Sea Level Projections (Garner et al. 2021, Zenodo 5914710); FACTS; regional total RSL incl. background land motion"
+    },
+    {
+      "layer": "sealevel",
+      "scenario": "ssp585",
+      "var": "median",
+      "unit": "m",
+      "decades": [
+        2030,
+        2040,
+        2050,
+        2060,
+        2070,
+        2080,
+        2090,
+        2100
+      ],
+      "scale": 0.001,
+      "fill": -32768,
+      "shape": [
+        8,
+        180,
+        360
+      ],
+      "offset": 88257600,
+      "bytes": 1036800,
+      "source": "IPCC AR6 Sea Level Projections (Garner et al. 2021, Zenodo 5914710); FACTS; regional total RSL incl. background land motion"
+    },
+    {
+      "layer": "sealevel",
+      "scenario": "ssp585",
+      "var": "low",
+      "unit": "m",
+      "decades": [
+        2030,
+        2040,
+        2050,
+        2060,
+        2070,
+        2080,
+        2090,
+        2100
+      ],
+      "scale": 0.001,
+      "fill": -32768,
+      "shape": [
+        8,
+        180,
+        360
+      ],
+      "offset": 89294400,
+      "bytes": 1036800,
+      "source": "IPCC AR6 Sea Level Projections (Garner et al. 2021, Zenodo 5914710); FACTS; regional total RSL incl. background land motion"
+    },
+    {
+      "layer": "sealevel",
+      "scenario": "ssp585",
+      "var": "high",
+      "unit": "m",
+      "decades": [
+        2030,
+        2040,
+        2050,
+        2060,
+        2070,
+        2080,
+        2090,
+        2100
+      ],
+      "scale": 0.001,
+      "fill": -32768,
+      "shape": [
+        8,
+        180,
+        360
+      ],
+      "offset": 90331200,
+      "bytes": 1036800,
+      "source": "IPCC AR6 Sea Level Projections (Garner et al. 2021, Zenodo 5914710); FACTS; regional total RSL incl. background land motion"
+    }
+  ],
+  "calibration": {
+    "_meta": {
+      "variable": "near_surface_air_temperature",
+      "method": "k = AR6 SPM.1 assessed best-estimate / raw ensemble global mean; assessed interpolated across anchor decades 2030/2050/2090; baseline 1995-2014 (AR6 -0.85C offset from 1850-1900).",
+      "scope": "temperature only; precip/humidity served as raw consensus+spread",
+      "source": "IPCC AR6 WGI SPM Table SPM.1; Hausfather et al. 2022 Nature"
+    },
+    "factors": {
+      "ssp1_1_9": {
+        "2030": {
+          "raw_global": 0.759,
+          "assessed_global": 0.65,
+          "k": 0.8564,
+          "adjustment": -0.109,
+          "adjustment_pct": -14.4
+        },
+        "2040": {
+          "raw_global": 0.934,
+          "assessed_global": 0.7,
+          "k": 0.7495,
+          "adjustment": -0.234,
+          "adjustment_pct": -25.1
+        },
+        "2050": {
+          "raw_global": 0.941,
+          "assessed_global": 0.75,
+          "k": 0.797,
+          "adjustment": -0.191,
+          "adjustment_pct": -20.3
+        },
+        "2060": {
+          "raw_global": 0.92,
+          "assessed_global": 0.7,
+          "k": 0.7609,
+          "adjustment": -0.22,
+          "adjustment_pct": -23.9
+        },
+        "2070": {
+          "raw_global": 0.85,
+          "assessed_global": 0.65,
+          "k": 0.7647,
+          "adjustment": -0.2,
+          "adjustment_pct": -23.5
+        },
+        "2080": {
+          "raw_global": 0.854,
+          "assessed_global": 0.6,
+          "k": 0.7026,
+          "adjustment": -0.254,
+          "adjustment_pct": -29.7
+        },
+        "2090": {
+          "raw_global": 0.761,
+          "assessed_global": 0.55,
+          "k": 0.7227,
+          "adjustment": -0.211,
+          "adjustment_pct": -27.7
+        },
+        "2100": {
+          "raw_global": 0.679,
+          "assessed_global": 0.55,
+          "k": 0.81,
+          "adjustment": -0.129,
+          "adjustment_pct": -19.0
+        }
+      },
+      "ssp1_2_6": {
+        "2030": {
+          "raw_global": 0.762,
+          "assessed_global": 0.65,
+          "k": 0.853,
+          "adjustment": -0.112,
+          "adjustment_pct": -14.7
+        },
+        "2040": {
+          "raw_global": 0.988,
+          "assessed_global": 0.75,
+          "k": 0.7591,
+          "adjustment": -0.238,
+          "adjustment_pct": -24.1
+        },
+        "2050": {
+          "raw_global": 1.193,
+          "assessed_global": 0.85,
+          "k": 0.7125,
+          "adjustment": -0.343,
+          "adjustment_pct": -28.8
+        },
+        "2060": {
+          "raw_global": 1.283,
+          "assessed_global": 0.875,
+          "k": 0.682,
+          "adjustment": -0.408,
+          "adjustment_pct": -31.8
+        },
+        "2070": {
+          "raw_global": 1.377,
+          "assessed_global": 0.9,
+          "k": 0.6536,
+          "adjustment": -0.477,
+          "adjustment_pct": -34.6
+        },
+        "2080": {
+          "raw_global": 1.388,
+          "assessed_global": 0.925,
+          "k": 0.6664,
+          "adjustment": -0.463,
+          "adjustment_pct": -33.4
+        },
+        "2090": {
+          "raw_global": 1.38,
+          "assessed_global": 0.95,
+          "k": 0.6884,
+          "adjustment": -0.43,
+          "adjustment_pct": -31.2
+        },
+        "2100": {
+          "raw_global": 1.371,
+          "assessed_global": 0.95,
+          "k": 0.6929,
+          "adjustment": -0.421,
+          "adjustment_pct": -30.7
+        }
+      },
+      "ssp2_4_5": {
+        "2030": {
+          "raw_global": 0.736,
+          "assessed_global": 0.65,
+          "k": 0.8832,
+          "adjustment": -0.086,
+          "adjustment_pct": -11.7
+        },
+        "2040": {
+          "raw_global": 1.049,
+          "assessed_global": 0.9,
+          "k": 0.858,
+          "adjustment": -0.149,
+          "adjustment_pct": -14.2
+        },
+        "2050": {
+          "raw_global": 1.385,
+          "assessed_global": 1.15,
+          "k": 0.8303,
+          "adjustment": -0.235,
+          "adjustment_pct": -17.0
+        },
+        "2060": {
+          "raw_global": 1.671,
+          "assessed_global": 1.325,
+          "k": 0.7929,
+          "adjustment": -0.346,
+          "adjustment_pct": -20.7
+        },
+        "2070": {
+          "raw_global": 1.908,
+          "assessed_global": 1.5,
+          "k": 0.7862,
+          "adjustment": -0.408,
+          "adjustment_pct": -21.4
+        },
+        "2080": {
+          "raw_global": 2.128,
+          "assessed_global": 1.675,
+          "k": 0.7871,
+          "adjustment": -0.453,
+          "adjustment_pct": -21.3
+        },
+        "2090": {
+          "raw_global": 2.325,
+          "assessed_global": 1.85,
+          "k": 0.7957,
+          "adjustment": -0.475,
+          "adjustment_pct": -20.4
+        },
+        "2100": {
+          "raw_global": 2.424,
+          "assessed_global": 1.85,
+          "k": 0.7632,
+          "adjustment": -0.574,
+          "adjustment_pct": -23.7
+        }
+      },
+      "ssp3_7_0": {
+        "2030": {
+          "raw_global": 0.752,
+          "assessed_global": 0.65,
+          "k": 0.8644,
+          "adjustment": -0.102,
+          "adjustment_pct": -13.6
+        },
+        "2040": {
+          "raw_global": 1.131,
+          "assessed_global": 0.95,
+          "k": 0.84,
+          "adjustment": -0.181,
+          "adjustment_pct": -16.0
+        },
+        "2050": {
+          "raw_global": 1.531,
+          "assessed_global": 1.25,
+          "k": 0.8165,
+          "adjustment": -0.281,
+          "adjustment_pct": -18.4
+        },
+        "2060": {
+          "raw_global": 1.934,
+          "assessed_global": 1.625,
+          "k": 0.8402,
+          "adjustment": -0.309,
+          "adjustment_pct": -16.0
+        },
+        "2070": {
+          "raw_global": 2.357,
+          "assessed_global": 2.0,
+          "k": 0.8485,
+          "adjustment": -0.357,
+          "adjustment_pct": -15.1
+        },
+        "2080": {
+          "raw_global": 2.817,
+          "assessed_global": 2.375,
+          "k": 0.8431,
+          "adjustment": -0.442,
+          "adjustment_pct": -15.7
+        },
+        "2090": {
+          "raw_global": 3.407,
+          "assessed_global": 2.75,
+          "k": 0.8072,
+          "adjustment": -0.657,
+          "adjustment_pct": -19.3
+        },
+        "2100": {
+          "raw_global": 3.703,
+          "assessed_global": 2.75,
+          "k": 0.7426,
+          "adjustment": -0.953,
+          "adjustment_pct": -25.7
+        }
+      },
+      "ssp5_8_5": {
+        "2030": {
+          "raw_global": 0.831,
+          "assessed_global": 0.75,
+          "k": 0.9025,
+          "adjustment": -0.081,
+          "adjustment_pct": -9.7
+        },
+        "2040": {
+          "raw_global": 1.248,
+          "assessed_global": 1.15,
+          "k": 0.9215,
+          "adjustment": -0.098,
+          "adjustment_pct": -7.9
+        },
+        "2050": {
+          "raw_global": 1.758,
+          "assessed_global": 1.55,
+          "k": 0.8817,
+          "adjustment": -0.208,
+          "adjustment_pct": -11.8
+        },
+        "2060": {
+          "raw_global": 2.323,
+          "assessed_global": 2.05,
+          "k": 0.8825,
+          "adjustment": -0.273,
+          "adjustment_pct": -11.8
+        },
+        "2070": {
+          "raw_global": 2.922,
+          "assessed_global": 2.55,
+          "k": 0.8727,
+          "adjustment": -0.372,
+          "adjustment_pct": -12.7
+        },
+        "2080": {
+          "raw_global": 3.557,
+          "assessed_global": 3.05,
+          "k": 0.8575,
+          "adjustment": -0.507,
+          "adjustment_pct": -14.3
+        },
+        "2090": {
+          "raw_global": 4.243,
+          "assessed_global": 3.55,
+          "k": 0.8367,
+          "adjustment": -0.693,
+          "adjustment_pct": -16.3
+        },
+        "2100": {
+          "raw_global": 4.772,
+          "assessed_global": 3.55,
+          "k": 0.7439,
+          "adjustment": -1.222,
+          "adjustment_pct": -25.6
+        }
+      }
+    }
+  }
+}

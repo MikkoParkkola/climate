@@ -1,0 +1,261 @@
+{
+  "version": "nasa-power-observed-climatology-validation-v1",
+  "generatedAt": "2026-06-28T16:52:44.318Z",
+  "status": "passed-with-caveats",
+  "sourceIds": [
+    "worldclim-v2-1",
+    "nasa-power-meteorology-monthly-v10"
+  ],
+  "comparisonType": "observed-climatology-baseline-comparison",
+  "period": {
+    "start": 1981,
+    "end": 2000
+  },
+  "cityCount": 13,
+  "method": [
+    "Sample the packaged WorldClim v2.1 observed monthly baseline at each fixture coordinate.",
+    "Fetch NASA POWER monthly point data for T2M and PRECTOTCORR over the overlapping 1981-2000 period.",
+    "Compute annual mean temperature as a day-weighted mean of monthly T2M and annual precipitation as the sum of monthly PRECTOTCORR mm/day times days in month, then average annual values over the period.",
+    "Compare the two independent observed climatology products as a baseline sanity check only; this is not a future projection hindcast."
+  ],
+  "units": {
+    "temperature": "C",
+    "precipitation": "mm/day converted to annual mm by month-length weighting"
+  },
+  "parameterMetadata": {
+    "T2M": {
+      "type": "METEOROLOGY",
+      "temporal": "MONTHLY",
+      "source": "SOURCE",
+      "community": "AG",
+      "calculated": false,
+      "inputs": null,
+      "units": "C",
+      "name": "Temperature at 2 Meters",
+      "definition": "The average air (dry bulb) temperature at 2 meters above the surface of the earth."
+    },
+    "PRECTOTCORR": {
+      "type": "METEOROLOGY",
+      "temporal": "MONTHLY",
+      "source": "SOURCE",
+      "community": "AG",
+      "calculated": false,
+      "inputs": null,
+      "units": "mm/day",
+      "name": "Precipitation Corrected",
+      "definition": "The average MERRA-2 bias corrected total precipitation at the surface of the earth."
+    }
+  },
+  "thresholds": {
+    "temperatureReview": "absolute difference > 2 C",
+    "precipitationReview": "relative difference > 30% when NASA POWER annual precipitation >= 100 mm; absolute difference > 50 mm when NASA POWER annual precipitation < 100 mm",
+    "drySiteNote": "relative precipitation percentages are unstable for very dry sites and are reported as caveats rather than automatic failures when absolute difference stays <= 50 mm"
+  },
+  "summary": {
+    "maxAbsTemperatureDifferenceC": 1.38,
+    "meanAbsTemperatureDifferenceC": 0.61,
+    "maxAbsPrecipitationDifferenceMm": 269.9,
+    "meanAbsPrecipitationDifferenceMm": 83.72,
+    "maxAbsPrecipitationRelativeDifferencePercent": 49.1,
+    "reviewFlagCount": 1
+  },
+  "caveats": [
+    "NASA POWER/MERRA-2 and WorldClim are independent gridded products with different source data, spatial resolution, bias correction, and averaging periods.",
+    "This validates that the packaged observed baseline is broadly consistent with an external observation/reanalysis product for fixture cities.",
+    "This does not validate future CMIP6 scenario trends, local station microclimates, parcel-scale exposure, or historical forecast skill.",
+    "Precipitation differences can be large in dry or coastal-grid locations and should be interpreted as data-product uncertainty, not a correction factor."
+  ],
+  "reviewFlags": [
+    {
+      "name": "Cairo",
+      "country": "Egypt",
+      "flag": "dry-site-relative-precipitation-difference-high"
+    }
+  ],
+  "results": [
+    {
+      "name": "Helsinki",
+      "country": "Finland",
+      "lat": 60.1699,
+      "lng": 24.9384,
+      "worldClimAnnualMeanTemperatureC": 5.19,
+      "nasaPowerAnnualMeanTemperatureC": 5.27,
+      "temperatureDifferenceC": -0.07,
+      "worldClimAnnualPrecipitationMm": 638.99,
+      "nasaPowerAnnualPrecipitationMm": 757.24,
+      "precipitationDifferenceMm": -118.26,
+      "precipitationRelativeDifferencePercent": 15.6,
+      "flags": []
+    },
+    {
+      "name": "London",
+      "country": "United Kingdom",
+      "lat": 51.5074,
+      "lng": -0.1278,
+      "worldClimAnnualMeanTemperatureC": 10.56,
+      "nasaPowerAnnualMeanTemperatureC": 9.79,
+      "temperatureDifferenceC": 0.78,
+      "worldClimAnnualPrecipitationMm": 640.21,
+      "nasaPowerAnnualPrecipitationMm": 701.46,
+      "precipitationDifferenceMm": -61.24,
+      "precipitationRelativeDifferencePercent": 8.7,
+      "flags": []
+    },
+    {
+      "name": "Amsterdam",
+      "country": "Netherlands",
+      "lat": 52.3676,
+      "lng": 4.9041,
+      "worldClimAnnualMeanTemperatureC": 9.75,
+      "nasaPowerAnnualMeanTemperatureC": 9.72,
+      "temperatureDifferenceC": 0.03,
+      "worldClimAnnualPrecipitationMm": 840.72,
+      "nasaPowerAnnualPrecipitationMm": 827.14,
+      "precipitationDifferenceMm": 13.58,
+      "precipitationRelativeDifferencePercent": 1.6,
+      "flags": []
+    },
+    {
+      "name": "Paris",
+      "country": "France",
+      "lat": 48.8566,
+      "lng": 2.3522,
+      "worldClimAnnualMeanTemperatureC": 11.48,
+      "nasaPowerAnnualMeanTemperatureC": 10.33,
+      "temperatureDifferenceC": 1.15,
+      "worldClimAnnualPrecipitationMm": 637.06,
+      "nasaPowerAnnualPrecipitationMm": 689.5,
+      "precipitationDifferenceMm": -52.44,
+      "precipitationRelativeDifferencePercent": 7.6,
+      "flags": []
+    },
+    {
+      "name": "Prague",
+      "country": "Czechia",
+      "lat": 50.0755,
+      "lng": 14.4378,
+      "worldClimAnnualMeanTemperatureC": 9.35,
+      "nasaPowerAnnualMeanTemperatureC": 7.97,
+      "temperatureDifferenceC": 1.38,
+      "worldClimAnnualPrecipitationMm": 495.86,
+      "nasaPowerAnnualPrecipitationMm": 630.18,
+      "precipitationDifferenceMm": -134.33,
+      "precipitationRelativeDifferencePercent": 21.3,
+      "flags": []
+    },
+    {
+      "name": "Kyiv",
+      "country": "Ukraine",
+      "lat": 50.4501,
+      "lng": 30.5234,
+      "worldClimAnnualMeanTemperatureC": 8.09,
+      "nasaPowerAnnualMeanTemperatureC": 7.26,
+      "temperatureDifferenceC": 0.82,
+      "worldClimAnnualPrecipitationMm": 602.92,
+      "nasaPowerAnnualPrecipitationMm": 602.32,
+      "precipitationDifferenceMm": 0.61,
+      "precipitationRelativeDifferencePercent": 0.1,
+      "flags": []
+    },
+    {
+      "name": "Bangkok",
+      "country": "Thailand",
+      "lat": 13.7563,
+      "lng": 100.5018,
+      "worldClimAnnualMeanTemperatureC": 28.39,
+      "nasaPowerAnnualMeanTemperatureC": 27.71,
+      "temperatureDifferenceC": 0.68,
+      "worldClimAnnualPrecipitationMm": 1292.75,
+      "nasaPowerAnnualPrecipitationMm": 1274.48,
+      "precipitationDifferenceMm": 18.27,
+      "precipitationRelativeDifferencePercent": 1.4,
+      "flags": []
+    },
+    {
+      "name": "New York",
+      "country": "United States",
+      "lat": 40.7128,
+      "lng": -74.006,
+      "worldClimAnnualMeanTemperatureC": 12.14,
+      "nasaPowerAnnualMeanTemperatureC": 11.56,
+      "temperatureDifferenceC": 0.57,
+      "worldClimAnnualPrecipitationMm": 1198.85,
+      "nasaPowerAnnualPrecipitationMm": 1178.54,
+      "precipitationDifferenceMm": 20.32,
+      "precipitationRelativeDifferencePercent": 1.7,
+      "flags": []
+    },
+    {
+      "name": "San Francisco",
+      "country": "United States",
+      "lat": 37.7749,
+      "lng": -122.4194,
+      "worldClimAnnualMeanTemperatureC": 14.2,
+      "nasaPowerAnnualMeanTemperatureC": 13.5,
+      "temperatureDifferenceC": 0.69,
+      "worldClimAnnualPrecipitationMm": 796.74,
+      "nasaPowerAnnualPrecipitationMm": 666.88,
+      "precipitationDifferenceMm": 129.86,
+      "precipitationRelativeDifferencePercent": 19.5,
+      "flags": []
+    },
+    {
+      "name": "Singapore",
+      "country": "Singapore",
+      "lat": 1.3521,
+      "lng": 103.8198,
+      "worldClimAnnualMeanTemperatureC": 26.82,
+      "nasaPowerAnnualMeanTemperatureC": 26.76,
+      "temperatureDifferenceC": 0.06,
+      "worldClimAnnualPrecipitationMm": 2328.57,
+      "nasaPowerAnnualPrecipitationMm": 2058.67,
+      "precipitationDifferenceMm": 269.9,
+      "precipitationRelativeDifferencePercent": 13.1,
+      "flags": []
+    },
+    {
+      "name": "Mumbai",
+      "country": "India",
+      "lat": 19.076,
+      "lng": 72.8777,
+      "worldClimAnnualMeanTemperatureC": 27.26,
+      "nasaPowerAnnualMeanTemperatureC": 26.42,
+      "temperatureDifferenceC": 0.85,
+      "worldClimAnnualPrecipitationMm": 2194.72,
+      "nasaPowerAnnualPrecipitationMm": 2025.36,
+      "precipitationDifferenceMm": 169.37,
+      "precipitationRelativeDifferencePercent": 8.4,
+      "flags": []
+    },
+    {
+      "name": "Cairo",
+      "country": "Egypt",
+      "lat": 30.0444,
+      "lng": 31.2357,
+      "worldClimAnnualMeanTemperatureC": 21.63,
+      "nasaPowerAnnualMeanTemperatureC": 21.18,
+      "temperatureDifferenceC": 0.45,
+      "worldClimAnnualPrecipitationMm": 25.3,
+      "nasaPowerAnnualPrecipitationMm": 49.74,
+      "precipitationDifferenceMm": -24.44,
+      "precipitationRelativeDifferencePercent": 49.1,
+      "flags": [
+        "dry-site-relative-precipitation-difference-high"
+      ]
+    },
+    {
+      "name": "Manaus",
+      "country": "Brazil",
+      "lat": -3.119,
+      "lng": -60.0217,
+      "worldClimAnnualMeanTemperatureC": 26.85,
+      "nasaPowerAnnualMeanTemperatureC": 26.43,
+      "temperatureDifferenceC": 0.42,
+      "worldClimAnnualPrecipitationMm": 2270.39,
+      "nasaPowerAnnualPrecipitationMm": 2346.14,
+      "precipitationDifferenceMm": -75.74,
+      "precipitationRelativeDifferencePercent": 3.2,
+      "flags": []
+    }
+  ]
+}

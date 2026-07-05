@@ -1,0 +1,176 @@
+{
+  "version": "hindcast-validation-v1",
+  "methodVersion": "grounded-v3",
+  "comparisonType": "model present-day vs independent ERA5 reanalysis observations",
+  "model": {
+    "year": 2025,
+    "scenario": "ssp245",
+    "variable": "annual_mean_temperature_c"
+  },
+  "observed": {
+    "source": "Open-Meteo ERA5 archive (daily temperature_2m_mean)",
+    "period": "2015-2024",
+    "window_center_year": 2019.5
+  },
+  "method": "- Model: grounded_model.project(lat, lng, 2025, ssp245).annual_mean.\n  - Observed: Open-Meteo ERA5 daily mean temperature averaged over 2015-2024\n    (a recent ~decadal normal; window center ~2019.5).\n  - Residual = model(2025) - observed(2015-2024).\n  - The model year (2025) is ~5 years AFTER the observation-window center, so a\n    correctly-anchored model should read slightly WARMER than the window\n    (~+0.1-0.2 C from trend). A NEGATIVE residual therefore indicates a cold\n    lean beyond what the time offset explains.\n  - ERA5 is ~25 km reanalysis; for a point city it can differ from a station /\n    high-res product by ~0.5 C (representativeness). Treat the per-city number\n    as indicative; the aggregate bias is the load-bearing signal.\n\nRun from repo root:  python3 scripts/hindcast_validation.py\nWrites: data/hindcast-validation.openmeteo.json",
+  "summary": {
+    "n_cities": 18,
+    "mean_bias_c": 0.343,
+    "mean_absolute_error_c": 0.614,
+    "rmse_c": 0.701,
+    "max_cold_residual_c": -0.76,
+    "max_warm_residual_c": 1.18
+  },
+  "results": [
+    {
+      "city": "Helsinki",
+      "lat": 60.17,
+      "lng": 24.94,
+      "model_annual_mean_c": 6.33,
+      "observed_annual_mean_c": 6.7,
+      "residual_c": -0.37
+    },
+    {
+      "city": "Reykjavik",
+      "lat": 64.15,
+      "lng": -21.94,
+      "model_annual_mean_c": 4.48,
+      "observed_annual_mean_c": 4.67,
+      "residual_c": -0.19
+    },
+    {
+      "city": "London",
+      "lat": 51.51,
+      "lng": -0.13,
+      "model_annual_mean_c": 11.12,
+      "observed_annual_mean_c": 11.32,
+      "residual_c": -0.2
+    },
+    {
+      "city": "Berlin",
+      "lat": 52.52,
+      "lng": 13.4,
+      "model_annual_mean_c": 10.25,
+      "observed_annual_mean_c": 10.89,
+      "residual_c": -0.64
+    },
+    {
+      "city": "Madrid",
+      "lat": 40.42,
+      "lng": -3.7,
+      "model_annual_mean_c": 15.34,
+      "observed_annual_mean_c": 15.45,
+      "residual_c": -0.11
+    },
+    {
+      "city": "Moscow",
+      "lat": 55.76,
+      "lng": 37.62,
+      "model_annual_mean_c": 6.55,
+      "observed_annual_mean_c": 6.35,
+      "residual_c": 0.2
+    },
+    {
+      "city": "Chicago",
+      "lat": 41.88,
+      "lng": -87.63,
+      "model_annual_mean_c": 11.17,
+      "observed_annual_mean_c": 10.4,
+      "residual_c": 0.77
+    },
+    {
+      "city": "New York",
+      "lat": 40.71,
+      "lng": -74.01,
+      "model_annual_mean_c": 13.34,
+      "observed_annual_mean_c": 12.52,
+      "residual_c": 0.82
+    },
+    {
+      "city": "Tokyo",
+      "lat": 35.68,
+      "lng": 139.69,
+      "model_annual_mean_c": 16.47,
+      "observed_annual_mean_c": 15.62,
+      "residual_c": 0.85
+    },
+    {
+      "city": "Cairo",
+      "lat": 30.04,
+      "lng": 31.24,
+      "model_annual_mean_c": 22.43,
+      "observed_annual_mean_c": 23.19,
+      "residual_c": -0.76
+    },
+    {
+      "city": "Delhi",
+      "lat": 28.61,
+      "lng": 77.21,
+      "model_annual_mean_c": 25.58,
+      "observed_annual_mean_c": 24.53,
+      "residual_c": 1.05
+    },
+    {
+      "city": "Mumbai",
+      "lat": 19.08,
+      "lng": 72.88,
+      "model_annual_mean_c": 27.88,
+      "observed_annual_mean_c": 26.7,
+      "residual_c": 1.18
+    },
+    {
+      "city": "Lagos",
+      "lat": 6.52,
+      "lng": 3.38,
+      "model_annual_mean_c": 27.81,
+      "observed_annual_mean_c": 27.0,
+      "residual_c": 0.81
+    },
+    {
+      "city": "Nairobi",
+      "lat": -1.29,
+      "lng": 36.82,
+      "model_annual_mean_c": 19.98,
+      "observed_annual_mean_c": 18.95,
+      "residual_c": 1.03
+    },
+    {
+      "city": "Singapore",
+      "lat": 1.35,
+      "lng": 103.82,
+      "model_annual_mean_c": 27.44,
+      "observed_annual_mean_c": 26.71,
+      "residual_c": 0.73
+    },
+    {
+      "city": "Sao Paulo",
+      "lat": -23.55,
+      "lng": -46.63,
+      "model_annual_mean_c": 19.35,
+      "observed_annual_mean_c": 19.52,
+      "residual_c": -0.17
+    },
+    {
+      "city": "Sydney",
+      "lat": -33.87,
+      "lng": 151.21,
+      "model_annual_mean_c": 18.41,
+      "observed_annual_mean_c": 17.57,
+      "residual_c": 0.84
+    },
+    {
+      "city": "Buenos Aires",
+      "lat": -34.6,
+      "lng": -58.38,
+      "model_annual_mean_c": 17.91,
+      "observed_annual_mean_c": 17.57,
+      "residual_c": 0.34
+    }
+  ],
+  "caveats": [
+    "ERA5 ~25km reanalysis differs from station/high-res products at a point by ~0.5C (representativeness).",
+    "Model year 2025 is ~5yr after the observation-window center; a correct model reads slightly warmer than the window.",
+    "Aggregate bias/RMSE are the load-bearing signal; per-city residuals are indicative.",
+    "This validates present-day temperature only; precipitation and extremes need separate hindcasts."
+  ]
+}

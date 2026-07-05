@@ -1,0 +1,441 @@
+@import "./fonts.css";
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --background: hsl(222, 16%, 8%);
+  --foreground: hsl(220, 16%, 93%);
+  --muted: hsl(220, 10%, 16%);
+  --muted-foreground: hsl(220, 9%, 63%);
+  --popover: hsl(222, 15%, 12%);
+  --popover-foreground: hsl(220, 16%, 93%);
+  --card: hsl(222, 15%, 12%);
+  --card-foreground: hsl(220, 16%, 93%);
+  --border: hsl(220, 13%, 22%);
+  --input: hsl(220, 10%, 16%);
+  --primary: hsl(24, 88%, 56%);
+  --primary-foreground: hsl(222, 16%, 9%);
+  --secondary: hsl(220, 10%, 16%);
+  --secondary-foreground: hsl(220, 16%, 93%);
+  --accent: hsl(220, 11%, 18%);
+  --accent-foreground: hsl(220, 16%, 93%);
+  --destructive: hsl(4, 70%, 52%);
+  --destructive-foreground: hsl(220, 16%, 96%);
+  --ring: hsl(24, 88%, 56%);
+  --radius: 0.25rem;
+  --chart-1: hsl(24, 88%, 56%);
+  --chart-2: hsl(150, 38%, 48%);
+  --chart-3: hsl(8, 72%, 56%);
+  --chart-4: hsl(38, 70%, 55%);
+  --chart-5: hsl(200, 45%, 56%);
+
+  --climate-blue: hsl(200, 45%, 56%);
+  --climate-green: hsl(150, 38%, 48%);
+  --climate-red: hsl(6, 72%, 55%);
+  --climate-orange: hsl(28, 82%, 55%);
+
+  /* opaque warm panels — no glassmorphism */
+  --glass-bg: hsl(222, 15%, 13%);
+  --glass-border: hsl(220, 13%, 22%);
+  --glass-hover: hsl(220, 11%, 15%);
+
+  --font-display: 'Fraunces', Georgia, 'Times New Roman', serif;
+  --font-body: 'Public Sans', system-ui, sans-serif;
+  --font-mono: 'Space Mono', ui-monospace, 'SFMono-Regular', monospace;
+}
+
+.dark {
+  --background: hsl(222, 16%, 8%);
+  --foreground: hsl(220, 16%, 93%);
+  --muted: hsl(220, 10%, 16%);
+  --muted-foreground: hsl(220, 9%, 63%);
+  --popover: hsl(222, 15%, 12%);
+  --popover-foreground: hsl(220, 16%, 93%);
+  --card: hsl(222, 15%, 12%);
+  --card-foreground: hsl(220, 16%, 93%);
+  --border: hsl(220, 13%, 22%);
+  --input: hsl(220, 10%, 16%);
+  --primary: hsl(24, 88%, 56%);
+  --primary-foreground: hsl(222, 16%, 9%);
+  --secondary: hsl(220, 10%, 16%);
+  --secondary-foreground: hsl(220, 16%, 93%);
+  --accent: hsl(220, 11%, 18%);
+  --accent-foreground: hsl(220, 16%, 93%);
+  --destructive: hsl(4, 70%, 52%);
+  --destructive-foreground: hsl(220, 16%, 96%);
+  --ring: hsl(24, 88%, 56%);
+  --chart-1: hsl(24, 88%, 56%);
+  --chart-2: hsl(150, 38%, 48%);
+  --chart-3: hsl(8, 72%, 56%);
+  --chart-4: hsl(38, 70%, 55%);
+  --chart-5: hsl(200, 45%, 56%);
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  html {
+    color-scheme: dark;
+  }
+
+  body {
+    @apply antialiased;
+    font-family: var(--font-body);
+    background-color: hsl(222, 16%, 8%);
+    color: hsl(220, 16%, 93%);
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    font-family: var(--font-display);
+    font-weight: 580;
+    line-height: 1.08;
+    letter-spacing: -0.01em;
+  }
+
+  /* data product: numerals read like an instrument, not body copy */
+  .num, [data-num], time, .tabular {
+    font-family: var(--font-mono);
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.02em;
+  }
+
+  /* native collapsible sections — our own marker, no default triangle */
+  summary { list-style: none; user-select: none; }
+  summary::-webkit-details-marker { display: none; }
+  details[open] > summary [data-disclosure]::after { content: "collapse ▴"; }
+}
+
+.fupit-landing {
+  position: relative;
+  overflow: hidden;
+  background: hsl(222, 16%, 8%);
+  color: hsl(220, 16%, 94%);
+  min-height: 100vh;
+  font-family: var(--font-body);
+  display: flex;
+  flex-direction: column;
+}
+
+.fupit-landing::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(90deg, rgba(8, 11, 18, 0.92) 0%, rgba(8, 11, 18, 0.78) 38%, rgba(8, 11, 18, 0.36) 72%, rgba(8, 11, 18, 0.54) 100%),
+    linear-gradient(180deg, rgba(8, 11, 18, 0.12) 0%, rgba(8, 11, 18, 0.16) 56%, rgba(8, 11, 18, 0.76) 100%),
+    url("/landing-climate-field.webp");
+  background-size: cover;
+  background-position: center;
+  transform: scale(1.01);
+}
+
+.fupit-landing::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.035) 1px, transparent 1px);
+  background-size: 72px 72px;
+  -webkit-mask-image: linear-gradient(90deg, transparent 0%, black 18%, black 78%, transparent 100%);
+  mask-image: linear-gradient(90deg, transparent 0%, black 18%, black 78%, transparent 100%);
+  pointer-events: none;
+  opacity: 0.42;
+}
+
+.fupit-landing > * {
+  position: relative;
+  z-index: 1;
+}
+
+.fupit-landing-main {
+  flex: 1;
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: clamp(44px, 8vh, 96px) 20px;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+}
+
+.fupit-landing-content {
+  max-width: 600px;
+  width: 100%;
+  text-align: left;
+}
+
+.fupit-landing-title {
+  font-size: clamp(2.55rem, 6vw, 4.8rem);
+  font-weight: 850;
+  line-height: 0.95;
+  margin-bottom: 16px;
+  letter-spacing: 0;
+}
+
+.fupit-landing-copy {
+  max-width: 560px;
+}
+
+@media (max-width: 760px) {
+  .fupit-landing::before {
+    background-position: 62% center;
+    background-image:
+      linear-gradient(90deg, rgba(8, 11, 18, 0.88) 0%, rgba(8, 11, 18, 0.72) 56%, rgba(8, 11, 18, 0.55) 100%),
+      linear-gradient(180deg, rgba(8, 11, 18, 0.2) 0%, rgba(8, 11, 18, 0.34) 58%, rgba(8, 11, 18, 0.82) 100%),
+      url("/landing-climate-field.webp");
+  }
+
+  .fupit-landing-main {
+    justify-content: center;
+    padding: 40px 20px 56px;
+  }
+
+  .fupit-landing-content {
+    text-align: center;
+  }
+
+  .fupit-landing-copy {
+    max-width: none;
+  }
+}
+
+@layer components {
+  .glass-card {
+    background: var(--glass-bg);
+    border: 1px solid var(--glass-border);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+  }
+
+  .glass-card:hover {
+    background: var(--glass-hover);
+  }
+
+  .stat-card {
+    @apply rounded-xl p-4 border transition-all duration-200;
+    background: var(--glass-bg);
+    border-color: var(--glass-border);
+  }
+
+  .stat-card:hover {
+    background: var(--glass-hover);
+    transform: translateY(-1px);
+  }
+
+  .section-card {
+    @apply rounded-2xl border overflow-hidden;
+    background: hsl(222, 47%, 12%);
+    border-color: hsl(217, 33%, 22%);
+  }
+
+  .section-header {
+    @apply px-6 py-4 border-b flex items-center gap-3;
+    border-color: hsl(217, 33%, 22%);
+    background: hsl(222, 47%, 10%);
+  }
+
+  .climate-blue {
+    color: var(--climate-blue);
+  }
+
+  .bg-climate-blue {
+    background-color: var(--climate-blue);
+  }
+
+  .climate-green {
+    color: var(--climate-green);
+  }
+
+  .bg-climate-green {
+    background-color: var(--climate-green);
+  }
+
+  .climate-red {
+    color: var(--climate-red);
+  }
+
+  .bg-climate-red {
+    background-color: var(--climate-red);
+  }
+
+  .climate-orange {
+    color: var(--climate-orange);
+  }
+
+  .bg-climate-orange {
+    background-color: var(--climate-orange);
+  }
+
+  .habitability-excellent { @apply text-emerald-400 bg-emerald-950 border-emerald-800; }
+  .habitability-good { @apply text-blue-400 bg-blue-950 border-blue-800; }
+  .habitability-fair { @apply text-yellow-400 bg-yellow-950 border-yellow-800; }
+  .habitability-poor { @apply text-orange-400 bg-orange-950 border-orange-800; }
+  .habitability-severe { @apply text-red-400 bg-red-950 border-red-800; }
+}
+
+@layer utilities {
+  .animate-pulse-slow {
+    animation: pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  }
+
+  .animate-fade-in {
+    animation: fadeIn 0.4s ease-out both;
+  }
+
+  .animate-slide-up {
+    animation: slideUp 0.4s ease-out both;
+  }
+
+  .text-gradient {
+    background: linear-gradient(135deg, hsl(192, 91%, 56%) 0%, hsl(217, 91%, 65%) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .hero-gradient {
+    background: linear-gradient(
+      135deg,
+      hsl(222, 47%, 8%) 0%,
+      hsl(215, 60%, 10%) 40%,
+      hsl(192, 60%, 8%) 100%
+    );
+  }
+
+  .glow-cyan {
+    box-shadow: 0 0 20px hsla(192, 91%, 46%, 0.15), 0 0 60px hsla(192, 91%, 46%, 0.05);
+  }
+
+  .glow-cyan-sm {
+    box-shadow: 0 0 10px hsla(192, 91%, 46%, 0.2);
+  }
+}
+
+@keyframes fadeIn {
+  0% { opacity: 0; transform: translateY(6px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes slideUp {
+  0% { transform: translateY(12px); opacity: 0; }
+  100% { transform: translateY(0); opacity: 1; }
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+.skeleton {
+  background: linear-gradient(
+    90deg,
+    hsl(217, 33%, 17%) 25%,
+    hsl(217, 33%, 22%) 50%,
+    hsl(217, 33%, 17%) 75%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+  border-radius: 0.5rem;
+}
+
+/* Leaflet map styling */
+.leaflet-container {
+  font-family: 'Inter', system-ui, sans-serif;
+  background: hsl(222, 47%, 10%) !important;
+}
+
+.leaflet-popup-content-wrapper {
+  border-radius: 0.5rem;
+  font-size: 0.875rem;
+  background: hsl(222, 47%, 13%);
+  color: hsl(210, 40%, 98%);
+  border: 1px solid hsl(217, 33%, 22%);
+}
+
+.leaflet-popup-tip {
+  background: hsl(222, 47%, 13%);
+}
+
+/* Chart canvas */
+canvas {
+  max-width: 100% !important;
+  height: auto !important;
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: hsl(222, 47%, 10%);
+}
+
+::-webkit-scrollbar-thumb {
+  background: hsl(217, 33%, 28%);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: hsl(192, 91%, 35%);
+}
+
+/* Table styling overrides */
+.climate-table {
+  @apply w-full text-xs border-collapse;
+}
+
+.climate-table th {
+  @apply px-2 py-2 text-left font-medium;
+  background: hsl(222, 47%, 10%);
+  border-color: hsl(217, 33%, 22%);
+  color: hsl(215, 20%, 65%);
+  border: 1px solid hsl(217, 33%, 22%);
+}
+
+.climate-table td {
+  @apply px-2 py-1;
+  border: 1px solid hsl(217, 33%, 20%);
+}
+
+.climate-table tr:hover td {
+  background: hsl(217, 33%, 17%);
+}
+
+/* Progress bar */
+.progress-bar {
+  @apply h-2 rounded-full overflow-hidden;
+  background: hsl(217, 33%, 20%);
+}
+
+.progress-bar-fill {
+  @apply h-full rounded-full transition-all duration-700;
+}
+
+/* Input focus ring */
+input:focus, textarea:focus {
+  outline: none;
+  box-shadow: 0 0 0 2px hsla(192, 91%, 46%, 0.4);
+}
+
+/* Status message bar */
+.status-bar {
+  @apply flex items-center gap-2 px-4 py-2 rounded-lg text-sm;
+  background: hsla(192, 91%, 46%, 0.1);
+  border: 1px solid hsla(192, 91%, 46%, 0.2);
+  color: hsl(192, 91%, 70%);
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.spin {
+  animation: spin 1s linear infinite;
+}

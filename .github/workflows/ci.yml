@@ -1,0 +1,46 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+jobs:
+  verify:
+    name: Typecheck, build, and grounded model smoke
+    # MIK-5920 no-spend policy: run on the free managed avrea fleet, not GitHub-hosted
+    # ubuntu-latest (which hits the GitHub Actions budget block). Matches the rest of
+    # the MikkoParkkola portfolio. Fallback if avrea is unavailable: [self-hosted, linux, arm64, spark].
+    runs-on: avrea-ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install Python serve-time dependency
+        run: python -m pip install --upgrade pip numpy
+
+      - name: Install Node dependencies
+        run: npm ci
+
+      - name: Verify TypeScript
+        run: npm run check
+
+      - name: Build production bundle
+        run: npm run build
+
+      - name: Smoke grounded climate model contract
+        run: npm run smoke:model
