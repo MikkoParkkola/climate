@@ -44,174 +44,6 @@ export default function ClimateResultSectionsBottom({ vm }: { vm: ClimateAppVM }
 
   return (
     <>
-        {/* Temperature */}
-        <div style={{ ...card, padding: 18, marginBottom: 14 }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
-            <h2 style={{ fontSize: 15, fontWeight: 700 }}>Temperature Projection</h2>
-            <div style={{ display: "flex", gap: 14, fontSize: 10 }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
-                <svg width="20" height="3"><line x1="0" y1="1.5" x2="20" y2="1.5" stroke="rgba(255,255,255,0.3)" strokeWidth="1.5" strokeDasharray="4 3" /></svg>
-                <span style={{ color: MUTED }}>{BASELINE_YEAR} baseline</span>
-              </div>
-              <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
-                <div style={{ width: 20, height: 2, background: RED, borderRadius: 1 }} />
-                <span style={{ color: MUTED }}>{displayYear}</span>
-              </div>
-            </div>
-          </div>
-          <div style={{ display: "grid", gridTemplateColumns: "160px 1fr 158px", gap: 14, alignItems: "start" }}>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6 }}>
-              {[
-                { label: "Annual Mean", value: `${d!.avgTemp.toFixed(1)}°C` },
-                { label: "Change", value: `+${d!.tempChange.toFixed(1)}°`, color: RED },
-                { label: `Min (${MONTHS[d!.minIdx]})`, value: `${d!.monthlyTemps[d!.minIdx].toFixed(1)}°C` },
-                { label: `Max (${MONTHS[d!.maxIdx]})`, value: `${d!.monthlyTemps[d!.maxIdx].toFixed(1)}°C` },
-              ].map(({ label, value, color }) => (
-                <div key={label} style={{ background: "rgba(255,255,255,0.03)", borderRadius: 7, padding: "8px 9px" }}>
-                  <div style={{ fontSize: 9, textTransform: "uppercase", color: MUTED }}>{label}</div>
-                  <div style={{ fontSize: 14, fontWeight: 700, color: color ?? "white", marginTop: 2 }}>{value}</div>
-                </div>
-              ))}
-            </div>
-            <MonthlyTempChart temps={d!.monthlyTemps} baseline={trajectory![0].temperature.monthly} />
-            <div>
-              <div style={{ fontSize: 10, color: MUTED, marginBottom: 6 }}>Monthly (°C)</div>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "2px 8px" }}>
-                {MONTHS.map((m, i) => (
-                  <div key={m} style={{ display: "flex", justifyContent: "space-between", fontSize: 10, padding: "2px 0", borderBottom: "1px solid rgba(255,255,255,0.04)" }}>
-                    <span style={{ color: MUTED }}>{m}</span>
-                    <span style={{ fontFamily: "monospace" }}>{d!.monthlyTemps[i].toFixed(1)}°</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Precipitation */}
-        <div style={{ ...card, padding: 18, marginBottom: 14 }}>
-          <h2 style={{ fontSize: 15, fontWeight: 700, marginBottom: 12 }}>Precipitation Pattern</h2>
-          <div style={{ display: "grid", gridTemplateColumns: "160px 1fr 158px", gap: 14, alignItems: "start" }}>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6 }}>
-              {[
-                { label: "Annual Total", value: `${d!.annualPrecip}mm` },
-                { label: "Change", value: `${d!.precipChange >= 0 ? "+" : ""}${d!.precipChange.toFixed(1)}%`, color: BLUE },
-                { label: "Wettest", value: `${MONTHS[d!.wetIdx]} ${d!.monthlyPrecip[d!.wetIdx]}mm` },
-                { label: "Driest", value: `${MONTHS[d!.dryIdx]} ${d!.monthlyPrecip[d!.dryIdx]}mm` },
-              ].map(({ label, value, color }) => (
-                <div key={label} style={{ background: "rgba(255,255,255,0.03)", borderRadius: 7, padding: "8px 9px" }}>
-                  <div style={{ fontSize: 9, textTransform: "uppercase", color: MUTED }}>{label}</div>
-                  <div style={{ fontSize: 12, fontWeight: 700, color: color ?? "white", marginTop: 2 }}>{value}</div>
-                </div>
-              ))}
-            </div>
-            <PrecipBars vals={d!.monthlyPrecip} />
-            <div>
-              <div style={{ fontSize: 10, color: MUTED, marginBottom: 6 }}>Monthly (mm)</div>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "2px 8px" }}>
-                {MONTHS.map((m, i) => (
-                  <div key={m} style={{ display: "flex", justifyContent: "space-between", fontSize: 10, padding: "2px 0", borderBottom: "1px solid rgba(255,255,255,0.04)" }}>
-                    <span style={{ color: MUTED }}>{m}</span>
-                    <span style={{ fontFamily: "monospace" }}>{d!.monthlyPrecip[i]}mm</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Risk & Extremes */}
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(170px,1fr))", gap: 10, marginBottom: 14 }}>
-          {[
-            {
-              label: "Heat Stress",
-              termKey: "heat_stress_day" as GlossaryKey,
-              tipValue: d!.heatDays,
-              value: d!.heatDays,
-              unit: "days/yr",
-              delta: `+${Math.max(0, d!.heatDays - d!.baseHeatDays)}d`,
-              detail: `${roundedValue(d!.heatNightsRaw, " tropical nights/yr")} raw`,
-              color: RED,
-              receipt: `Heat stress uses the grounded ETCCDI tropical-nights layer for ${shownScenario.label}: nights per year with daily minimum temperature above ${d!.tropicalNightThreshold ?? 20}°C, linearly interpolated to the selected year. Ensemble spread: ${roundedValue(d!.heatNightsSpread, " days", 1)}. This is a climate screening indicator, not medical or occupational-safety advice.`,
-            },
-            {
-              label: "Humid heat screen",
-              termKey: "wet_bulb" as GlossaryKey,
-              tipValue: d!.humidHeatWetBulb ?? null,
-              value: d!.humidHeatWetBulb == null ? "n/a" : `${d!.humidHeatWetBulb.toFixed(1)}°C`,
-              unit: "monthly mean wet-bulb",
-              sub: d!.humidHeatMonth ?? "max month",
-              detail: `${roundedValue(d!.humidHeatRh, "% RH", 1)} · ${signedNumber(d!.humidHeatRhDelta ?? 0, 1)} pp RH`,
-              color: d!.humidHeatWetBulb != null && d!.humidHeatWetBulb >= 24 ? RED : ORANGE,
-              receipt: `Humid heat screen uses monthly mean air temperature and CMIP6 near-surface relative humidity for ${shownScenario.label}, then applies the registered Stull 2011 empirical wet-bulb approximation. It reports max monthly mean wet-bulb, not WBGT, not daily humid-heat days, and not medical or occupational-safety advice. RH ensemble spread: ${roundedValue(d!.humidHeatRhSpread, " percentage points", 1)}; RH formula-domain clipped months: ${d!.humidHeatClippedMonths ?? 0}; temperature-domain warning months: ${d!.humidHeatTempDomainWarningMonths ?? 0}.`,
-            },
-            {
-              label: "Cold-season context",
-              termKey: "cold_season" as GlossaryKey,
-              tipValue: d!.coldMonthCount,
-              value: d!.coldMonthCount,
-              unit: "monthly mean freeze months",
-              sub: `${MONTHS[d!.minIdx]} ${d!.monthlyTemps[d!.minIdx].toFixed(1)}°C`,
-              detail: `${d!.baselineColdMonthCount} baseline months`,
-              color: d!.coldMonthCount >= 3 ? BLUE : d!.coldMonthCount > 0 ? CYAN : GREEN,
-              receipt: `Cold-season context uses monthly mean temperature from the grounded trajectory for ${shownScenario.label}. It counts months at or below ${FREEZING_MONTHLY_MEAN_C}°C, not daily freeze days, freeze-thaw events, heating demand, road conditions, crop damage, pests, or health risk.`,
-            },
-            {
-              label: "Drought Risk",
-              termKey: "drought_risk" as GlossaryKey,
-              tipValue: d!.drought,
-              value: `${d!.drought}%`,
-              sub: d!.drought < 25 ? "Low" : d!.drought < 40 ? "Elevated" : "High",
-              detail: `${roundedValue(d!.drySpellDays, " dry-spell days")} raw`,
-              bar: d!.drought / 100,
-              color: AMBER,
-              receipt: `Drought risk uses ETCCDI consecutive dry days for ${shownScenario.label}: the longest spell with under 1 mm of rain. The displayed score maps 0 days to 0 and ${roundedValue(d!.droughtMaxCdd, " days")} to 100. Selected raw value: ${roundedValue(d!.drySpellDays, " days", 1)}; ensemble spread: ${roundedValue(d!.drySpellSpread, " days", 1)}. It does not model reservoirs, groundwater, water rights, or demand.`,
-            },
-            {
-              label: "Flood Risk",
-              termKey: "flood_risk" as GlossaryKey,
-              tipValue: d!.flood,
-              value: `${d!.flood}%`,
-              sub: d!.flood < 30 ? "Low" : d!.flood < 60 ? "Elevated" : "High",
-              detail: `${roundedValue(d!.maxFiveDayRain, " mm Rx5day")} raw`,
-              bar: d!.flood / 100,
-              color: BLUE,
-              receipt: `Flood risk uses ETCCDI Rx5day for ${shownScenario.label}: maximum 5-day precipitation, a heavy-rain proxy used in IPCC AR6-style assessment. The displayed score maps 0 mm to 0 and ${roundedValue(d!.floodMaxRx5, " mm")} to 100. Selected raw value: ${roundedValue(d!.maxFiveDayRain, " mm", 1)}; ensemble spread: ${roundedValue(d!.maxFiveDayRainSpread, " mm", 1)}. It is not a parcel flood map or insurance loss estimate.`,
-            },
-            {
-              label: "Sea-level context",
-              termKey: "sea_level_rise" as GlossaryKey,
-              tipValue: d!.seaLevel,
-              value: `${d!.seaLevel}cm`,
-              sub: coastalRelevance?.isLocallyRelevant ? "Coastal screen" : "Regional AR6",
-              detail: d!.seaLow != null && d!.seaHigh != null ? `${Math.round(d!.seaLow)}-${Math.round(d!.seaHigh)} cm range` : "range not exposed",
-              color: CYAN,
-              receipt: `Sea-level context uses the registered NASA/IPCC AR6 regional sea-level layer for ${shownScenario.label}. Selected range: ${d!.seaLow != null && d!.seaHigh != null ? `${Math.round(d!.seaLow)} to ${Math.round(d!.seaHigh)} cm` : "not exposed"}. ${coastalRelevance?.receipt ?? "Coastal relevance is not evaluated, so this is regional context only."}`,
-            },
-          ].map(({ label, termKey, tipValue, value, unit, delta, sub, detail, bar, color, receipt }) => (
-            <div key={label} style={{ ...card, padding: 14, borderTop: `2px solid ${color}` }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
-                <div style={{ fontSize: 10, color: MUTED }}>{termKey ? <MetricTip k={termKey} value={tipValue}>{label}</MetricTip> : label}</div>
-                <ReceiptDetails label="source" text={receipt} />
-              </div>
-              <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", marginTop: 6 }}>
-                <div>
-                  <span style={{ fontSize: 26, fontWeight: 700, color }}>{value}</span>
-                  {unit && <span style={{ fontSize: 10, color: MUTED, display: "block", marginTop: -2 }}>{unit}</span>}
-                  {detail && <span style={{ fontSize: 9, color: MUTED, display: "block", marginTop: 4 }}>{detail}</span>}
-                </div>
-                {delta && <span style={{ fontSize: 10, padding: "2px 5px", background: `${RED}20`, color: RED, borderRadius: 4 }}>{delta}</span>}
-                {sub && <span style={{ fontSize: 10, fontWeight: 600, color }}>{sub}</span>}
-              </div>
-              {bar !== undefined && (
-                <div style={{ marginTop: 8, height: 3, background: "rgba(255,255,255,0.08)", borderRadius: 2 }}>
-                  <div style={{ height: "100%", borderRadius: 2, background: color, width: `${Math.min(bar * 100, 100)}%`, transition: "width 0.25s ease" }} />
-                </div>
-              )}
-            </div>
-          ))}
-        </div>
-
         {/* Atmospheric Physics */}
         <details style={{ ...card, padding: 18, marginBottom: 14 }}>
           <summary style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", listStyle: "none" }}>
@@ -340,6 +172,52 @@ export default function ClimateResultSectionsBottom({ vm }: { vm: ClimateAppVM }
           </div>
           </details>
         </div>
+
+        <div style={{ height: 1, background: BORDER, margin: "28px 0 18px" }} />
+        {shareStory && (
+          <div style={{ ...card, padding: 18, marginBottom: 14, borderLeft: `3px solid ${ACCENT}` }}>
+            <div style={{ display: "flex", justifyContent: "space-between", gap: 12, alignItems: "flex-start", flexWrap: "wrap", marginBottom: 12 }}>
+              <div style={{ minWidth: 0, flex: "1 1 420px" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", marginBottom: 8 }}>
+                  <Share2 style={{ width: 15, height: 15, color: ACCENT }} />
+                  <h2 style={{ fontSize: 12, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.07em", color: MUTED }}>Shareable climate story</h2>
+                  <ReceiptDetails label="receipt" text={shareStory.caveat} />
+                </div>
+                <p style={{ margin: 0, fontSize: 16, fontWeight: 800, lineHeight: 1.45, color: "white" }}>{shareStory.headline}</p>
+                <p style={{ margin: "8px 0 0", fontSize: 12.5, lineHeight: 1.6, color: "rgba(255,255,255,0.76)" }}>
+                  {shareStory.metricLine}
+                </p>
+              </div>
+              <div style={{ display: "flex", gap: 8, flexWrap: "wrap", justifyContent: "flex-end" }}>
+                <button onClick={shareForecast} style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "8px 12px", borderRadius: 7, border: `1px solid ${ACCENT}55`, background: `${ACCENT}18`, color: "white", fontSize: 12, fontWeight: 800, cursor: "pointer" }}>
+                  <Share2 style={{ width: 13, height: 13 }} />
+                  Share story
+                </button>
+                <button onClick={copyShareStory} style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "8px 12px", borderRadius: 7, border: `1px solid ${shareStoryCopied ? GREEN : BORDER}`, background: shareStoryCopied ? `${GREEN}18` : "rgba(255,255,255,0.035)", color: shareStoryCopied ? GREEN : "white", fontSize: 12, fontWeight: 800, cursor: "pointer" }}>
+                  {shareStoryCopied ? <Check style={{ width: 13, height: 13 }} /> : <Share2 style={{ width: 13, height: 13 }} />}
+                  {shareStoryCopied ? "Copied story" : "Copy story"}
+                </button>
+                <button onClick={downloadShareImage} disabled={shareImageBusy} style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "8px 12px", borderRadius: 7, border: `1px solid ${shareImageSaved ? GREEN : BORDER}`, background: shareImageSaved ? `${GREEN}18` : "rgba(255,255,255,0.035)", color: shareImageSaved ? GREEN : "white", fontSize: 12, fontWeight: 800, cursor: shareImageBusy ? "wait" : "pointer", opacity: shareImageBusy ? 0.72 : 1 }}>
+                  {shareImageBusy ? <Loader2 style={{ width: 13, height: 13, animation: "spin 1s linear infinite" }} /> : shareImageSaved ? <Check style={{ width: 13, height: 13 }} /> : <Download style={{ width: 13, height: 13 }} />}
+                  {shareImageBusy ? "Rendering image" : shareImageSaved ? "Saved image" : "Download image"}
+                </button>
+              </div>
+            </div>
+
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 9 }}>
+              {[
+                { label: "Trend driver", text: shareStory.driverLine, color: AMBER },
+                { label: "Climate twin", text: shareStory.analogLine, color: PURPLE },
+              ].map((item) => (
+                <div key={item.label} style={{ background: "rgba(255,255,255,0.035)", border: `1px solid ${BORDER}`, borderRadius: 8, padding: 10 }}>
+                  <div style={{ fontSize: 10, color: item.color, textTransform: "uppercase", letterSpacing: "0.06em", fontWeight: 800, marginBottom: 5 }}>{item.label}</div>
+                  <div style={{ fontSize: 12.5, lineHeight: 1.55, color: "rgba(255,255,255,0.82)" }}>{item.text}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
     </>
   );
 }
