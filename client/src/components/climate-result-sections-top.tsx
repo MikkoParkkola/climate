@@ -1,6 +1,7 @@
 import { GitCompare, Loader2, Download, Search, MapPin, ArrowLeft, Play, Pause, ShieldCheck, ExternalLink, Share2, Check, Wind, ClipboardList, TrendingUp, Lightbulb, Waves, AlertTriangle } from "lucide-react";
 import GuidedClimateExplainer from "@/components/guided-climate-explainer";
 import { LocalChanges } from "@/components/local-changes";
+import { MitigationCard } from "@/components/mitigation-card";
 import ScenarioSmallMultiples, { type ScenarioSmallMultipleMetric } from "@/components/scenario-small-multiples";
 import {
   BG, CARD, BORDER, ACCENT, MUTED, RED, BLUE, ORANGE, GREEN, AMBER, PURPLE, CYAN,
@@ -164,6 +165,8 @@ export default function ClimateResultSectionsTop({ vm }: { vm: ClimateAppVM }) {
             seaLevelApplicable: d!.seaLevelApplicable,
           }}
         />
+
+        <MitigationCard tempChange={d!.tempChange} year={displayYear} />
 
         {scoreStory && (
           <div style={{ marginBottom: 14 }}>
