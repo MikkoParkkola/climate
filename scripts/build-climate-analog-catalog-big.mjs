@@ -110,6 +110,17 @@ async function worker() {
 await Promise.all(Array.from({ length: concurrency }, worker));
 candidates.sort((a, b) => a.name.localeCompare(b.name));
 
+// Refuse to overwrite the committed catalog with a degraded result: if the
+// Natural Earth fetch or the model runs failed for a large fraction of cities,
+// writing the survivors would silently shrink/corrupt the shipped artifact.
+const MIN_CATALOG = 1000;
+if (candidates.length < MIN_CATALOG || candidates.length < cities.length * 0.85) {
+  throw new Error(
+    `refusing to write a degraded catalog: only ${candidates.length}/${cities.length} candidates succeeded ` +
+    `(${failed} failed). Need >= ${MIN_CATALOG} and >= 85% success. The existing catalog is left untouched.`,
+  );
+}
+
 const payload = {
   version: "grounded-current-analogs-v1",
   catalogYear,
