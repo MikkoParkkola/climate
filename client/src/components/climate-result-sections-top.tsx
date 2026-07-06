@@ -1,5 +1,9 @@
 import { GitCompare, Loader2, Download, Search, MapPin, ArrowLeft, Play, Pause, ShieldCheck, ExternalLink, Share2, Check, Wind, ClipboardList, TrendingUp, Lightbulb, Waves, AlertTriangle } from "lucide-react";
 import GuidedClimateExplainer from "@/components/guided-climate-explainer";
+import { LocalChanges } from "@/components/local-changes";
+import { MitigationCard } from "@/components/mitigation-card";
+import { TwinArc } from "@/components/twin-arc";
+import { LivabilityBar } from "@/components/livability-bar";
 import ScenarioSmallMultiples, { type ScenarioSmallMultipleMetric } from "@/components/scenario-small-multiples";
 import {
   BG, CARD, BORDER, ACCENT, MUTED, RED, BLUE, ORANGE, GREEN, AMBER, PURPLE, CYAN,
@@ -147,6 +151,35 @@ export default function ClimateResultSectionsTop({ vm }: { vm: ClimateAppVM }) {
               : <> No modeled tipping points are crossed at this horizon.</>}
           </p>
         </div>
+
+        <LivabilityBar score={d!.score} baselineScore={scoreStory?.baselineScore} year={displayYear} />
+
+        {climateAnalog && selectedLocation && (
+          <TwinArc
+            from={{ lat: selectedLocation.lat, lng: selectedLocation.lng, name: placeName }}
+            to={{ lat: climateAnalog.candidate.lat, lng: climateAnalog.candidate.lng, name: climateAnalog.candidate.name }}
+            matchLabel={climateAnalog.matchLabel}
+            noAnalog={climateAnalog.noAnalog}
+          />
+        )}
+
+        <LocalChanges
+          year={displayYear}
+          d={{
+            year: displayYear,
+            tempChange: d!.tempChange,
+            heatDays: d!.heatDays,
+            baseHeatDays: d!.baseHeatDays,
+            coldMonthCount: d!.coldMonthCount,
+            baselineColdMonthCount: d!.baselineColdMonthCount,
+            drought: d!.drought,
+            flood: d!.flood,
+            seaLevelRiseCm: d!.seaLevel,
+            seaLevelApplicable: d!.seaLevelApplicable,
+          }}
+        />
+
+        <MitigationCard tempChange={d!.tempChange} year={displayYear} />
 
         {scoreStory && (
           <div style={{ marginBottom: 14 }}>

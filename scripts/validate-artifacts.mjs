@@ -311,13 +311,13 @@ const analogSourceIds = [
   "cmip6-scenariomip",
   "ipcc-ar6-temperature",
   "cmip6-etccdi",
-  "curated-ranking-cities-v1",
+  "natural-earth-populated-places-110m-v5",
 ];
 assert(analog.version === "grounded-current-analogs-v1", "analog catalog version mismatch");
 assert(analog.catalogYear === new Date().getFullYear(), "analog catalog is not generated for the current year");
 assert(analog.scenario === "ssp245", "analog catalog scenario mismatch");
 assert(Array.isArray(analog.candidates) && analog.candidates.length === analog.candidateCount, "analog catalog candidate count mismatch");
-assert(analog.candidateCount === 45, "analog catalog curated candidate count mismatch");
+assert(analog.candidateCount >= 1000, "analog catalog too small — expected the enriched Natural Earth catalog (>= 1000 cities)");
 requireRegisteredSources(analogSourceIds, "climate analog catalog");
 for (const candidate of analog.candidates) {
   assert(candidate.year === analog.catalogYear, "analog candidate year mismatch");

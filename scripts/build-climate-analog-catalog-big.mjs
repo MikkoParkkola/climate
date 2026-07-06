@@ -1,0 +1,134 @@
+// Enriched climate-analog catalog builder. Replaces the 45-city curated seed
+// with a large, globally-distributed set from Natural Earth's fine (10m)
+// populated-places tier, so the climate twin has a dense reference space:
+// precise nearest analogs, and a "no modern equivalent" flag that can actually
+// fire for genuinely novel projected climates.
+//
+// Values are rounded (monthly temp 1dp, monthly precip integer) to keep the
+// client-fetched JSON small despite ~40x more cities.
+//
+// Env: CLIMATE_ANALOG_MIN_POP (default 200000), CLIMATE_ANALOG_CONCURRENCY (8),
+//      CLIMATE_ANALOG_CATALOG_YEAR (current year).
+import { spawn } from "child_process";
+import { writeFile, readFile, mkdir } from "fs/promises";
+import { existsSync } from "fs";
+import path from "path";
+import { fileURLToPath } from "url";
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const root = path.resolve(__dirname, "..");
+const pythonBin = process.env.PYTHON_BIN || "python3";
+const catalogYear = Number(process.env.CLIMATE_ANALOG_CATALOG_YEAR || new Date().getFullYear());
+const minPop = Number(process.env.CLIMATE_ANALOG_MIN_POP || 200000);
+const concurrency = Number(process.env.CLIMATE_ANALOG_CONCURRENCY || 8);
+const scenario = "ssp245";
+const NE_COMMIT = "v5.1.2";
+const NE_URL = `https://raw.githubusercontent.com/nvkelso/natural-earth-vector/${NE_COMMIT}/geojson/ne_10m_populated_places_simple.geojson`;
+
+const r1 = (n) => Math.round(n * 10) / 10;
+
+async function loadCities() {
+  const cache = path.join(root, "data", "ne_10m_populated_places.cache.json");
+  let geo;
+  if (existsSync(cache)) {
+    geo = JSON.parse(await readFile(cache, "utf8"));
+  } else {
+    const res = await fetch(NE_URL, { headers: { "user-agent": "fupit-catalog-builder" } });
+    if (!res.ok) throw new Error(`Natural Earth fetch failed: HTTP ${res.status}`);
+    geo = await res.json();
+    await mkdir(path.dirname(cache), { recursive: true });
+    await writeFile(cache, JSON.stringify(geo));
+  }
+  const seen = new Set();
+  const cities = [];
+  for (const f of geo.features) {
+    const p = f.properties;
+    const pop = Number(p.pop_max) || 0;
+    if (pop < minPop) continue;
+    const [lng, lat] = f.geometry.coordinates;
+    const name = p.nameascii || p.name;
+    if (!name || !Number.isFinite(lat) || !Number.isFinite(lng)) continue;
+    // dedupe near-duplicates (same name within ~0.2°)
+    const key = `${name}|${Math.round(lat * 5)}|${Math.round(lng * 5)}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    cities.push({ name, country: p.adm0name || "", lat: r1(lat), lng: r1(lng) });
+  }
+  return cities;
+}
+
+function runModel(city) {
+  return new Promise((resolve) => {
+    const child = spawn(pythonBin, ["grounded_model.py", String(city.lat), String(city.lng), String(catalogYear), scenario], { cwd: root });
+    let out = "", err = "";
+    child.stdout.on("data", (c) => (out += c));
+    child.stderr.on("data", (c) => (err += c));
+    child.on("error", () => resolve(null));
+    child.on("close", (code) => {
+      if (code !== 0) { resolve(null); return; }
+      try { resolve(JSON.parse(out)); } catch { resolve(null); }
+    });
+  });
+}
+
+function compact(city, pr) {
+  return {
+    name: city.name,
+    country: city.country,
+    lat: city.lat,
+    lng: city.lng,
+    year: catalogYear,
+    scenario,
+    temperature: { annual_mean: r1(pr.temperature.annual_mean), monthly: pr.temperature.monthly.map(r1) },
+    precipitation: { annual_total: Math.round(pr.precipitation.annual_total), monthly: pr.precipitation.monthly.map((v) => Math.round(v)) },
+    extremes: {
+      heat_stress_days: Math.round(pr.extremes.heat_stress_days),
+      drought_risk: r1(pr.extremes.drought_risk),
+      flood_risk: r1(pr.extremes.flood_risk),
+    },
+    metadata: { baseline_source: pr.metadata?.baseline_source },
+  };
+}
+
+const cities = await loadCities();
+console.log(`sourced ${cities.length} cities (pop_max >= ${minPop}); running model at concurrency ${concurrency}...`);
+
+const candidates = [];
+let done = 0, failed = 0, idx = 0;
+async function worker() {
+  while (idx < cities.length) {
+    const city = cities[idx++];
+    const pr = await runModel(city);
+    if (pr && pr.temperature?.monthly?.length === 12 && pr.precipitation?.monthly?.length === 12) {
+      candidates.push(compact(city, pr));
+    } else {
+      failed++;
+    }
+    if (++done % 200 === 0) console.log(`  ${done}/${cities.length} (${failed} failed)`);
+  }
+}
+await Promise.all(Array.from({ length: concurrency }, worker));
+candidates.sort((a, b) => a.name.localeCompare(b.name));
+
+// Refuse to overwrite the committed catalog with a degraded result: if the
+// Natural Earth fetch or the model runs failed for a large fraction of cities,
+// writing the survivors would silently shrink/corrupt the shipped artifact.
+const MIN_CATALOG = 1000;
+if (candidates.length < MIN_CATALOG || candidates.length < cities.length * 0.85) {
+  throw new Error(
+    `refusing to write a degraded catalog: only ${candidates.length}/${cities.length} candidates succeeded ` +
+    `(${failed} failed). Need >= ${MIN_CATALOG} and >= 85% success. The existing catalog is left untouched.`,
+  );
+}
+
+const payload = {
+  version: "grounded-current-analogs-v1",
+  catalogYear,
+  scenario,
+  candidateCount: candidates.length,
+  method: `Present-day analog candidates generated by grounded_model.py at ${catalogYear} for Natural Earth 10m populated places (pop_max >= ${minPop}). The client computes sigma-dissimilarity (Mahony 2017) over standardized monthly temperature and log monthly precipitation, with an effective-dof + Satterthwaite calibration; > 4 sigma reports no modern equivalent.`,
+  source: "Natural Earth 10m populated places (nvkelso natural-earth-vector) + WorldClim v2.1 observed baseline where available + raw CMIP6 ScenarioMIP temperature/precipitation, IPCC AR6 calibrated temperature reported alongside by grounded_model.py",
+  candidates,
+};
+await writeFile(path.join(root, "client/public/climate-analog-catalog.current.json"), `${JSON.stringify(payload)}\n`);
+console.log(`wrote ${candidates.length} analog candidates for ${catalogYear} (${failed} failed)`);
