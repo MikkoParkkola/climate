@@ -10,7 +10,7 @@ import type {
   ScenarioId, CoastCoord, LocationOption, ProjectionPoint, AnalogCandidate, AnalogCatalog,
   CoastalProximityArtifact, CoastalRelevance, ClimateAnalogMatch, ScenarioContrastRow,
   RoadmapItem, ShareStory, LearningPromptAction, LearningPrompt, FreshwaterStress, FireWeather, FloodExposure, CropYield,
-  EnrichmentCoverage, AmocAssessment, HumidHeat, ColdSeason, DegreeDays, HistoricalObserved,
+  EnrichmentCoverage, AmocAssessment, HumidHeat, ColdSeason, DegreeDays,
 } from "@/lib/climate-types";
 import {
   lerp, interpScalar, interpOptionalScalar, riskScore, interpArr, nearestPoint, categoryFor,
@@ -40,6 +40,12 @@ export function useClimateApp() {
   const [selectedLocation, setSelectedLocation] = useState<LocationOption | null>(null);
   const [suggestions, setSuggestions] = useState<LocationOption[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
+  // AC.SEARCH.4/5: distinct in-flight vs. zero-result states for the search
+  // dropdown, so a nonsense query gets an explicit answer and typing never
+  // looks frozen while the geocoding lookup is in flight.
+  const [searchLoading, setSearchLoading] = useState(false);
+  const [searchNoMatch, setSearchNoMatch] = useState(false);
+  const skipNextSearchRef = useRef(false);
   const [year, setYear] = useState(CURRENT_FORECAST_YEAR);
   const [scenario, setScenario] = useState<ScenarioId>(DEFAULT_SCENARIO);
   // Optional birth year — shared client-side store (localStorage), never sent to the server.
@@ -59,9 +65,6 @@ export function useClimateApp() {
   const [humidHeat, setHumidHeat] = useState<HumidHeat | null>(null);
   const [coldSeason, setColdSeason] = useState<ColdSeason | null>(null);
   const [degreeDays, setDegreeDays] = useState<DegreeDays | null>(null);
-  // Bonus historical-observed (1980-2024) panel -- curated-catalog cities only.
-  // null is the normal "no match / not this city" state, never an error.
-  const [historicalObserved, setHistoricalObserved] = useState<HistoricalObserved | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [loadingStep, setLoadingStep] = useState(0);
   const [error, setError] = useState<string | null>(null);
@@ -81,10 +84,6 @@ export function useClimateApp() {
   const [scenarioContrastLoading, setScenarioContrastLoading] = useState(false);
   const [scenarioContrastError, setScenarioContrastError] = useState<string | null>(null);
   const resultsRef = useRef<HTMLDivElement>(null);
-  // Guards the fire-and-forget historical-observed fetch below: bumped on every
-  // generate()/newSearch() call so a slow response for a since-abandoned
-  // location can never overwrite the state for whatever is selected now.
-  const historicalRequestIdRef = useRef(0);
   const deepLinkRunRef = useRef(false);
 
   useEffect(() => {
@@ -186,15 +185,39 @@ export function useClimateApp() {
   }, []);
 
   useEffect(() => {
-    if (locationText.length < 2) { setSuggestions([]); setShowSuggestions(false); return; }
+    if (skipNextSearchRef.current) {
+      // locationText was just set programmatically by selectLocation(), not
+      // typed by the user — don't reopen the dropdown with a spinner.
+      skipNextSearchRef.current = false;
+      return;
+    }
+    if (locationText.length < 2) {
+      setSuggestions([]);
+      setShowSuggestions(false);
+      setSearchLoading(false);
+      setSearchNoMatch(false);
+      return;
+    }
+    // Open the dropdown immediately so the loading state is visible while
+    // the debounced request is in flight (AC.SEARCH.4), rather than only
+    // appearing once results arrive.
+    setShowSuggestions(true);
+    setSearchLoading(true);
+    setSearchNoMatch(false);
     const timeoutId = setTimeout(async () => {
       try {
         const response = await fetch(`/api/locations/search?q=${encodeURIComponent(locationText)}`);
         const data = await response.json();
-        setSuggestions(Array.isArray(data) ? data : []);
+        const results = Array.isArray(data) ? data : [];
+        setSuggestions(results);
         setShowSuggestions(true);
+        setSearchNoMatch(results.length === 0);
       } catch (err) {
         console.warn("Location search failed:", err);
+        setSuggestions([]);
+        setSearchNoMatch(true);
+      } finally {
+        setSearchLoading(false);
       }
     }, 300);
     return () => clearTimeout(timeoutId);
@@ -236,9 +259,12 @@ export function useClimateApp() {
   const setYearManual = (y: number) => { setPlaying(false); setYear(y); };
 
   const selectLocation = (opt: LocationOption) => {
+    skipNextSearchRef.current = true;
     setSelectedLocation(opt);
     setLocationText(opt.name);
     setShowSuggestions(false);
+    setSearchLoading(false);
+    setSearchNoMatch(false);
   };
 
   const fetchTrajectory = async (targetLocation: LocationOption, scenarioOverride: ScenarioId): Promise<{ points: ProjectionPoint[]; freshwater: FreshwaterStress | null; fireWeather: FireWeather | null; floodRiver: FloodExposure | null; cropYield: CropYield | null; coverage: EnrichmentCoverage | null; amoc: AmocAssessment | null; humidHeat: HumidHeat | null; coldSeason: ColdSeason | null; degreeDays: DegreeDays | null }> => {
@@ -273,22 +299,6 @@ export function useClimateApp() {
     throw new Error("Invalid response from climate model.");
   };
 
-  // Fire-and-forget bonus panel: 1980-2024 real observed annual data, curated
-  // ~45-city catalog only (data/ranking_cities.json). A 404 just means this
-  // location isn't in that catalog -- normal, not an error, so it resolves to
-  // null rather than throwing/setting the page-level error state.
-  const fetchHistoricalObserved = async (targetLocation: LocationOption): Promise<HistoricalObserved | null> => {
-    try {
-      const params = new URLSearchParams({ name: targetLocation.name, country: targetLocation.country ?? "" });
-      const response = await fetch(`/api/historical-observed?${params.toString()}`);
-      if (!response.ok) return null;
-      const data = await response.json();
-      return (data.success && data.data) ? (data.data as HistoricalObserved) : null;
-    } catch {
-      return null;
-    }
-  };
-
   const generate = async (locationOverride?: LocationOption, scenarioOverride: ScenarioId = scenario) => {
     const targetLocation = locationOverride ?? selectedLocation;
     if (!targetLocation) { setError("Please select a location from the suggestions."); return; }
@@ -304,7 +314,6 @@ export function useClimateApp() {
     setHumidHeat(null);
     setColdSeason(null);
     setDegreeDays(null);
-    setHistoricalObserved(null);
     setScenarioContrast(null);
     setScenarioContrastError(null);
     try {
@@ -319,14 +328,6 @@ export function useClimateApp() {
       setHumidHeat(result.humidHeat);
       setColdSeason(result.coldSeason);
       setDegreeDays(result.degreeDays);
-      // Bonus panel: independent of trajectory success/failure semantics, so it
-      // is fetched alongside rather than gated on the trajectory result. Guarded
-      // against the classic fire-and-forget race (rapid re-search before the
-      // previous location's response lands) via historicalRequestIdRef.
-      const historicalRequestId = ++historicalRequestIdRef.current;
-      void fetchHistoricalObserved(targetLocation).then((data) => {
-        if (historicalRequestIdRef.current === historicalRequestId) setHistoricalObserved(data);
-      });
     } catch (err) {
       setError(err instanceof Error ? err.message : "Network error. Please check your connection.");
     } finally {
@@ -378,8 +379,6 @@ export function useClimateApp() {
     setHumidHeat(null);
     setColdSeason(null);
     setDegreeDays(null);
-    historicalRequestIdRef.current++; // invalidate any in-flight historical fetch too
-    setHistoricalObserved(null);
     setError(null);
     setShareCopied(false);
     setRawJsonCopied(false);
@@ -698,7 +697,7 @@ export function useClimateApp() {
 
   return {
   locationText, setLocationText, selectedLocation, setSelectedLocation,
-  suggestions, showSuggestions, setShowSuggestions, year, scenario, trajectory, freshwater, fireWeather, floodRiver, cropYield, coverage, amoc, humidHeat, coldSeason, degreeDays, historicalObserved,
+  suggestions, showSuggestions, setShowSuggestions, searchLoading, searchNoMatch, year, scenario, trajectory, freshwater, fireWeather, floodRiver, cropYield, coverage, amoc, humidHeat, coldSeason, degreeDays,
   birthYear, setBirthYear, prefs, setPrefs, scoredTrajectory, standardSnapshot,
   isLoading, loadingStep, error, exporting, playing, shareCopied, shareStoryCopied,
   shareImageBusy, shareImageSaved, rawJsonCopied, reportSaved, analogCatalog, analogError,

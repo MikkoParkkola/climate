@@ -153,6 +153,18 @@ export function LivabilityRunway({
               )}
             </div>
           )}
+          {/* AC.VISUAL.4 (MIK-6779): the danger tick above was color-only (RED,
+              no adjacent text) -- invisible to color-blind readers. Give it the
+              same text-label treatment the crossover tick already has. Only
+              render this label when it wouldn't sit on top of the crossover
+              one (crossover always precedes danger on the timeline; if they
+              round to the same 5-year bucket, skip the danger label rather
+              than overlap two centered strings). */}
+          {verdict.dangerYear && round5(verdict.dangerYear) !== (verdict.crossoverYear ? round5(verdict.crossoverYear) : null) && (
+            <div style={{ position: "absolute", left: pos(verdict.dangerYear), transform: "translateX(-50%)", textAlign: "center", color: RED, whiteSpace: "nowrap" }}>
+              danger ~{round5(verdict.dangerYear)}
+            </div>
+          )}
         </div>
 
         {/* legend */}
@@ -167,11 +179,26 @@ export function LivabilityRunway({
 
         {scenarios ? (
           hasBand ? (
-            <div style={{ marginTop: 9, fontSize: 12.5, color: MUTED, lineHeight: 1.4 }}>
-              Across all four <Term k="emissions_scenario">emission paths</Term>, it leaves the comfortable band somewhere between{" "}
-              <strong style={{ color: "#fff" }}>{round5(bandLow!)}</strong> and{" "}
-              <strong style={{ color: "#fff" }}>{round5(bandHigh!)}</strong> — the lower the emissions, the later.
-            </div>
+            // AC.VISUAL.5 (MIK-6779): this copy used to be one fixed phrase
+            // regardless of how far out the crossing sits. Emission paths
+            // barely diverge in the near term (the physics hasn't had time to
+            // separate them yet) but diverge a lot by end-of-century -- so a
+            // near-term band is a fairly solid read, while a 40-year-out band
+            // is real but genuinely wide open. Say so, instead of implying the
+            // same confidence both times.
+            bandLow! - CURRENT_FORECAST_YEAR <= 15 ? (
+              <div style={{ marginTop: 9, fontSize: 12.5, color: MUTED, lineHeight: 1.4 }}>
+                Across all four <Term k="emissions_scenario">emission paths</Term>, it leaves the comfortable band soon — between{" "}
+                <strong style={{ color: "#fff" }}>{round5(bandLow!)}</strong> and{" "}
+                <strong style={{ color: "#fff" }}>{round5(bandHigh!)}</strong>. This close in, the paths haven't had time to diverge, so this window is fairly solid.
+              </div>
+            ) : (
+              <div style={{ marginTop: 9, fontSize: 12.5, color: MUTED, lineHeight: 1.4 }}>
+                Across all four <Term k="emissions_scenario">emission paths</Term>, it leaves the comfortable band somewhere between{" "}
+                <strong style={{ color: "#fff" }}>{round5(bandLow!)}</strong> and{" "}
+                <strong style={{ color: "#fff" }}>{round5(bandHigh!)}</strong> — the lower the emissions, the later. This far out, the paths have had decades to diverge, so treat the width of that range, not either single year, as the honest answer.
+              </div>
+            )
           ) : (
             <div style={{ marginTop: 9, fontSize: 12.5, color: MUTED, lineHeight: 1.4 }}>
               The four <Term k="emissions_scenario">emission paths</Term> don't separate much here — the path the world takes barely moves the date for this place.
@@ -250,7 +277,10 @@ function ReasonRow({ reason }: { reason: ReasonCode }) {
       <span style={{ width: 132, flexShrink: 0, fontSize: 12.5, color: "white", fontWeight: 600 }}>
         <Term k={reason.termKey as GlossaryKey}>{reason.label}</Term>
       </span>
-      <span style={{ position: "relative", flex: "0 0 88px", height: 7, background: "rgba(255,255,255,0.07)", borderRadius: 4, overflow: "hidden" }}>
+      <span
+        title={`0-10 scale: ${reason.scaleNote}`}
+        style={{ position: "relative", flex: "0 0 88px", height: 7, background: "rgba(255,255,255,0.07)", borderRadius: 4, overflow: "hidden" }}
+      >
         <span style={{ position: "absolute", inset: 0, width: pct, background: `linear-gradient(90deg, ${AMBER}, ${ACCENT})`, borderRadius: 4 }} />
       </span>
       <span style={{ width: 14, flexShrink: 0, color: arrowColor, fontSize: 11 }}>{arrow}</span>

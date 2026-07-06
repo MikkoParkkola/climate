@@ -216,7 +216,7 @@
   }
 
   .stat-card {
-    @apply rounded-lg p-4 border transition-all duration-200;
+    @apply rounded-xl p-4 border transition-all duration-200;
     background: var(--glass-bg);
     border-color: var(--glass-border);
   }
@@ -271,7 +271,6 @@
   }
 
   .habitability-excellent { @apply text-emerald-400 bg-emerald-950 border-emerald-800; }
-  .habitability-good { @apply text-blue-400 bg-blue-950 border-blue-800; }
   .habitability-fair { @apply text-yellow-400 bg-yellow-950 border-yellow-800; }
   .habitability-poor { @apply text-orange-400 bg-orange-950 border-orange-800; }
   .habitability-severe { @apply text-red-400 bg-red-950 border-red-800; }
@@ -290,29 +289,13 @@
     animation: slideUp 0.4s ease-out both;
   }
 
-  .text-gradient {
-    background: linear-gradient(135deg, hsl(192, 91%, 56%) 0%, hsl(217, 91%, 65%) 100%);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
-  }
-
-  .hero-gradient {
-    background: linear-gradient(
-      135deg,
-      hsl(222, 47%, 8%) 0%,
-      hsl(215, 60%, 10%) 40%,
-      hsl(192, 60%, 8%) 100%
-    );
-  }
-
-  .glow-cyan {
-    box-shadow: 0 0 20px hsla(192, 91%, 46%, 0.15), 0 0 60px hsla(192, 91%, 46%, 0.05);
-  }
-
-  .glow-cyan-sm {
-    box-shadow: 0 0 10px hsla(192, 91%, 46%, 0.2);
-  }
+  /* AC.VISUAL.1 (MIK-6779): .text-gradient, .hero-gradient, .glow-cyan and
+     .glow-cyan-sm were all leftover pre-"Ember Instrument" CSS -- unreferenced
+     anywhere in client/src -- carrying exactly the banned blue gradient
+     DESIGN.md says is gone ("the old blue CTA gradient (hsl(192...215)) is
+     gone"). Confirmed dead via `rg` before deleting rather than re-tinting
+     them to ember, since keeping unused rules around only invites the banned
+     hue to resurface the next time someone reaches for a class by name. */
 }
 
 @keyframes fadeIn {
@@ -344,7 +327,7 @@
 
 /* Leaflet map styling */
 .leaflet-container {
-  font-family: var(--font-body);
+  font-family: 'Inter', system-ui, sans-serif;
   background: hsl(222, 47%, 10%) !important;
 }
 
@@ -382,7 +365,10 @@ canvas {
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: hsl(192, 91%, 35%);
+  /* AC.VISUAL.1 (MIK-6779): was hsl(192,91%,35%) banned blue; this rule is
+     live (bare pseudo-element selector, not gated by a class), so re-tinted
+     to ACCENT ember rather than deleted. */
+  background: hsl(24, 88%, 40%);
 }
 
 /* Table styling overrides */
@@ -420,17 +406,15 @@ canvas {
 /* Input focus ring */
 input:focus, textarea:focus {
   outline: none;
-  box-shadow: 0 0 0 2px hsla(192, 91%, 46%, 0.4);
+  /* AC.VISUAL.1 (MIK-6779): was hsla(192,91%,46%,0.4) banned blue on a global
+     active-state selector -- DESIGN.md: "CTAs, active states and the glow are
+     ACCENT ember -- never blue." Re-tinted to ACCENT ember. */
+  box-shadow: 0 0 0 2px hsla(24, 88%, 56%, 0.4);
 }
 
-/* Status message bar */
-.status-bar {
-  @apply flex items-center gap-2 px-4 py-2 rounded-lg text-sm;
-  background: hsla(192, 91%, 46%, 0.1);
-  border: 1px solid hsla(192, 91%, 46%, 0.2);
-  color: hsl(192, 91%, 70%);
-}
-
+/* AC.VISUAL.1 (MIK-6779): .status-bar carried the same banned hsl(192,...)
+   blue as the dead gradient/glow rules above and, like them, is unreferenced
+   anywhere in client/src -- removed rather than re-tinted. */
 @keyframes spin {
   0% { transform: rotate(0deg); }
   100% { transform: rotate(360deg); }
