@@ -2,6 +2,7 @@ import { GitCompare, Loader2, Download, Search, MapPin, ArrowLeft, Play, Pause, 
 import GuidedClimateExplainer from "@/components/guided-climate-explainer";
 import { LocalChanges } from "@/components/local-changes";
 import { MitigationCard } from "@/components/mitigation-card";
+import { TwinArc } from "@/components/twin-arc";
 import ScenarioSmallMultiples, { type ScenarioSmallMultipleMetric } from "@/components/scenario-small-multiples";
 import {
   BG, CARD, BORDER, ACCENT, MUTED, RED, BLUE, ORANGE, GREEN, AMBER, PURPLE, CYAN,
@@ -149,6 +150,15 @@ export default function ClimateResultSectionsTop({ vm }: { vm: ClimateAppVM }) {
               : <> No modeled tipping points are crossed at this horizon.</>}
           </p>
         </div>
+
+        {climateAnalog && selectedLocation && (
+          <TwinArc
+            from={{ lat: selectedLocation.lat, lng: selectedLocation.lng, name: placeName }}
+            to={{ lat: climateAnalog.candidate.lat, lng: climateAnalog.candidate.lng, name: climateAnalog.candidate.name }}
+            matchLabel={climateAnalog.matchLabel}
+            noAnalog={climateAnalog.noAnalog}
+          />
+        )}
 
         <LocalChanges
           year={displayYear}
