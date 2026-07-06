@@ -34,6 +34,9 @@ export interface GuidedClimateExplainerTwin {
   country: string;
   distance: number;
   comparedCount: number;
+  matchLabel: "strong" | "moderate" | "weak" | "none";
+  sigma: number;
+  noAnalog: boolean;
   annualTempDelta: number;
   annualPrecipDelta: number;
   heatDaysDelta: number;
@@ -199,7 +202,9 @@ export default function GuidedClimateExplainer({
           </p>
           <p style={{ margin: "7px 0 0", color: MUTED, fontSize: 11.5, lineHeight: 1.55 }}>
             {climateTwin
-              ? `Bounded climate twin: ${placeName}'s ${year} climate is closest to ${climateTwin.name}, ${climateTwin.country} today in a ${climateTwin.comparedCount}-candidate catalog. Distance is ${climateTwin.distance.toFixed(2)} standardized units; gaps are ${signed(climateTwin.annualTempDelta, 1)}C, ${signed(climateTwin.annualPrecipDelta, 0)} mm rainfall, and ${signed(climateTwin.heatDaysDelta, 0)} heat-stress days.`
+              ? (climateTwin.noAnalog
+                  ? `Climate twin: no present-day city in this ${climateTwin.comparedCount}-city catalog closely matches ${placeName}'s ${year} climate, so fupit reports no twin rather than forcing a misleading match.`
+                  : `Climate twin: ${placeName}'s ${year} climate is a ${climateTwin.matchLabel} match for ${climateTwin.name}, ${climateTwin.country} today, out of a ${climateTwin.comparedCount}-city catalog. Gaps: ${signed(climateTwin.annualTempDelta, 1)}C temperature, ${signed(climateTwin.annualPrecipDelta, 0)} mm rainfall, ${signed(climateTwin.heatDaysDelta, 0)} heat-stress days.`)
               : "Climate twin is bounded to the loaded catalog and may be unavailable while data is loading; it is not a global analog search."}
           </p>
         </Section>

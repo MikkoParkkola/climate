@@ -206,6 +206,10 @@ export function useClimateApp() {
     // Open the dropdown immediately so the loading state is visible while
     // the debounced request is in flight (AC.SEARCH.4), rather than only
     // appearing once results arrive.
+    // Guard against out-of-order responses: if locationText changes (or the
+    // component unmounts) while a request is in flight, ignore its late result
+    // so stale suggestions can't overwrite newer ones.
+    let cancelled = false;
     setShowSuggestions(true);
     setSearchLoading(true);
     setSearchNoMatch(false);
@@ -213,19 +217,21 @@ export function useClimateApp() {
       try {
         const response = await fetch(`/api/locations/search?q=${encodeURIComponent(locationText)}`);
         const data = await response.json();
+        if (cancelled) return;
         const results = Array.isArray(data) ? data : [];
         setSuggestions(results);
         setShowSuggestions(true);
         setSearchNoMatch(results.length === 0);
       } catch (err) {
+        if (cancelled) return;
         console.warn("Location search failed:", err);
         setSuggestions([]);
         setSearchNoMatch(true);
       } finally {
-        setSearchLoading(false);
+        if (!cancelled) setSearchLoading(false);
       }
     }, 300);
-    return () => clearTimeout(timeoutId);
+    return () => { cancelled = true; clearTimeout(timeoutId); };
   }, [locationText]);
 
   useEffect(() => {
