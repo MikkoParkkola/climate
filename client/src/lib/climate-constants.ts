@@ -15,6 +15,7 @@ export const AMBER = "hsl(38,72%,56%)";
 export const PURPLE = "hsl(280,30%,66%)";
 export const CYAN = "hsl(200,48%,58%)";
 export const FONT_DISPLAY = "'Fraunces', Georgia, serif";
+export const FONT_BODY = "'Public Sans', system-ui, sans-serif";
 export const FONT_MONO = "'Space Mono', ui-monospace, monospace";
 export const card: CSSProperties = { backgroundColor: CARD, border: `1px solid ${BORDER}`, borderRadius: 4 };
 
