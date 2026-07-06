@@ -46,7 +46,12 @@ export function useClimateApp() {
   const [searchLoading, setSearchLoading] = useState(false);
   const [searchNoMatch, setSearchNoMatch] = useState(false);
   const skipNextSearchRef = useRef(false);
-  const [year, setYear] = useState(CURRENT_FORECAST_YEAR);
+  // Default the view to 2100 — the horizon the tagline, the share card, and the
+  // /place/ deep-links all promise ("<city> in 2100 may feel like ..."). Landing
+  // on today's climate showed no change and left people not realising the year
+  // is adjustable; 2100 makes the first result land on the payoff, and the
+  // now→2100 gauge teaches that earlier years are one drag away.
+  const [year, setYear] = useState(MAX_YEAR);
   const [scenario, setScenario] = useState<ScenarioId>(DEFAULT_SCENARIO);
   // Optional birth year — shared client-side store (localStorage), never sent to the server.
   const [birthYear, setBirthYear] = useBirthYear();
@@ -140,9 +145,9 @@ export function useClimateApp() {
       setSelectedLocation(linked.location);
       setLocationText(linked.location.name);
       setShowSuggestions(false);
-      // Per-location pages headline the year-2100 projection; honour an explicit
-      // year when present, else default to MAX_YEAR for the "in 2100" hook.
-      setYear(linked.year ?? (window.location.pathname.startsWith("/place/") ? MAX_YEAR : CURRENT_FORECAST_YEAR));
+      // Every fresh view defaults to the 2100 horizon (matches the share card
+      // and tagline); an explicit ?year= in the link still wins.
+      setYear(linked.year ?? MAX_YEAR);
       setScenario(linked.scenario);
       deepLinkRunRef.current = linked.autoRun;
     };
