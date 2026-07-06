@@ -614,7 +614,9 @@ export function useClimateApp() {
       .map((signal) => `- ${signal.label} (${signal.value}): ${signal.text} Receipt: ${signal.receipt}`)
       .join("\n");
     const twinLine = climateAnalog
-      ? `${climateAnalog.candidate.name}, ${climateAnalog.candidate.country}; distance ${climateAnalog.distance.toFixed(2)} standardized climate units across ${climateAnalog.comparedCount} bounded-catalog cities. Temperature gap ${signedNumber(climateAnalog.annualTempDelta, 1)} C, rainfall gap ${signedNumber(climateAnalog.annualPrecipDelta, 0)} mm, heat-stress gap ${signedNumber(climateAnalog.heatDaysDelta, 0)} days/year.`
+      ? (climateAnalog.noAnalog
+          ? `No present-day city matches this location's projected climate (novel climate, ${Number.isFinite(climateAnalog.sigma) ? `${climateAnalog.sigma.toFixed(1)}σ` : ">4σ"} dissimilarity across ${climateAnalog.comparedCount} bounded-catalog cities). fupit reports no twin rather than forcing a misleading nearest match.`
+          : `${climateAnalog.candidate.name}, ${climateAnalog.candidate.country} (${climateAnalog.matchLabel} match, ${climateAnalog.sigma.toFixed(1)}σ); distance ${climateAnalog.distance.toFixed(2)} standardized climate units across ${climateAnalog.comparedCount} bounded-catalog cities. Temperature gap ${signedNumber(climateAnalog.annualTempDelta, 1)} C, rainfall gap ${signedNumber(climateAnalog.annualPrecipDelta, 0)} mm, heat-stress gap ${signedNumber(climateAnalog.heatDaysDelta, 0)} days/year.`)
       : "No climate twin is included in this export because the bounded analog catalog did not return a match.";
     const scenarioLine = scenarioContrastTakeaway
       ? scenarioContrastTakeaway.text
