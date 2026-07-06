@@ -1,4 +1,5 @@
 import { CARD, BORDER, MUTED, ACCENT, BLUE, FONT_MONO } from "@/lib/climate-constants";
+import { WORLD_OUTLINE_PATH } from "@/lib/world-outline";
 
 const W = 660;
 const H = 300;
@@ -43,6 +44,7 @@ export function TwinArc({
         Climate twin
       </div>
       <svg viewBox={`0 0 ${W} ${H}`} role="img" aria-label={noAnalog ? `${from.name} has no present-day climate analog` : `${from.name}'s future climate resembles ${to?.name} today`} style={{ width: "100%", height: "auto", display: "block" }}>
+        <path d={WORLD_OUTLINE_PATH} fill="hsl(220, 13%, 15%)" stroke="hsl(220, 12%, 26%)" strokeWidth={0.4} />
         {[-120, -60, 0, 60, 120].map((lng) => {
           const x = proj(0, lng).x;
           return <line key={`v${lng}`} x1={x} y1={0} x2={x} y2={H} stroke={grat} strokeWidth={lng === 0 ? 1 : 0.5} />;
