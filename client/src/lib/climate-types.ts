@@ -425,6 +425,12 @@ export interface ClimateAnalogMatch {
   candidate: AnalogCandidate;
   distance: number;
   comparedCount: number;
+  // Sigma-dissimilarity (Mahony 2017): how novel this location's climate is vs
+  // the best present-day match. > 4 means no modern equivalent (noAnalog=true).
+  sigma: number;
+  sigmaDof: number;
+  matchLabel: "strong" | "moderate" | "weak" | "none";
+  noAnalog: boolean;
   annualTempDelta: number;
   annualPrecipDelta: number;
   heatDaysDelta: number;

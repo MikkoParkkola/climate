@@ -15,6 +15,7 @@ import {
   RED,
   SCENARIOS,
 } from "./climate-constants";
+import { analogLabel, chiCalibration, sigmaDissimilarity } from "./sigma-dissimilarity";
 import type {
   AnalogCandidate,
   AnalogCatalog,
@@ -277,21 +278,39 @@ export function findClimateAnalog(
   const scored = candidateRows
     .filter((row) => !(excludeSelf && sameCatalogPlace(row.candidate, location)))
     .map((row) => {
-      const squared = row.vector.reduce((sum, v, i) => {
+      const sumSq = row.vector.reduce((sum, v, i) => {
         const z = (target[i] - v) / stds[i];
         return sum + z * z;
       }, 0);
-      return { candidate: row.candidate, distance: Math.sqrt(squared / dims) };
+      return { candidate: row.candidate, sumSq, distance: Math.sqrt(sumSq / dims) };
     })
     .sort((a, b) => a.distance - b.distance);
 
   const best = scored[0];
   if (!best) return null;
+
+  // Sigma-dissimilarity novelty (Mahony 2017): read the standardized deviation
+  // as a Mahalanobis distance and convert to sigma under the chi distribution.
+  // The 24 monthly dimensions are strongly correlated, so we (a) use the
+  // catalog's EFFECTIVE degrees of freedom and (b) apply the Satterthwaite
+  // SCALE correction — D^2 has mean trace(C) ≈ dims regardless of correlation,
+  // so it must be divided by `scale` before the chi transform, else ordinary
+  // in-distribution climates are wrongly flagged novel. Above 4 sigma there is
+  // no modern equivalent.
+  const zRows = candidateRows.map((row) => row.vector.map((v, i) => (v - means[i]) / stds[i]));
+  const { dof, scale } = chiCalibration(zRows, dims);
+  const sigma = sigmaDissimilarity(Math.sqrt(best.sumSq / scale), dof);
+  const matchLabel = analogLabel(sigma);
+
   const c = best.candidate;
   return {
     candidate: c,
     distance: best.distance,
     comparedCount: scored.length,
+    sigma,
+    sigmaDof: dof,
+    matchLabel,
+    noAnalog: matchLabel === "none",
     annualTempDelta: snapshot.avgTemp - c.temperature.annual_mean,
     annualPrecipDelta: snapshot.annualPrecip - c.precipitation.annual_total,
     heatDaysDelta: snapshot.heatDays - c.extremes.heat_stress_days,
