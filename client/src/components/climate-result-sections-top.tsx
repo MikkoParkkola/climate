@@ -1,4 +1,4 @@
-import { GitCompare, Loader2, Download, Search, MapPin, ArrowLeft, Play, Pause, ShieldCheck, ExternalLink, Share2, Check, Wind, ClipboardList, TrendingUp, Lightbulb, Waves, AlertTriangle } from "lucide-react";
+import { GitCompare, Loader2, Download, Search, MapPin, ArrowLeft, Play, Pause, ShieldCheck, ExternalLink, Share2, Check, Wind, ClipboardList, TrendingUp, Lightbulb, Waves, AlertTriangle, Timer } from "lucide-react";
 import GuidedClimateExplainer from "@/components/guided-climate-explainer";
 import { LocalChanges } from "@/components/local-changes";
 import { MitigationCard } from "@/components/mitigation-card";
@@ -162,6 +162,189 @@ export default function ClimateResultSectionsTop({ vm }: { vm: ClimateAppVM }) {
             noAnalog={climateAnalog.noAnalog}
           />
         )}
+
+        <div style={{ ...card, padding: 18, marginBottom: 14, borderLeft: `3px solid ${PURPLE}` }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, flexWrap: "wrap", marginBottom: 12 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <MapPin style={{ width: 15, height: 15, color: PURPLE }} />
+              <h2 style={{ fontSize: 12, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.07em", color: MUTED }}>Climate Twin · current-day analog</h2>
+            </div>
+            {analogCatalog && (
+              <span style={{ fontSize: 10, color: MUTED }}>
+                {analogCatalog.candidateCount} indexed cities · {analogCatalog.catalogYear} catalog
+              </span>
+            )}
+          </div>
+
+          {climateAnalog ? (
+            <div>
+              <div style={{ display: "flex", justifyContent: "space-between", gap: 14, alignItems: "flex-start", flexWrap: "wrap" }}>
+                <div style={{ flex: "1 1 360px" }}>
+                  <p style={{ fontSize: 14.5, lineHeight: 1.7, color: "rgba(255,255,255,0.9)", margin: 0 }}>
+                    In <strong style={{ color: "white" }}>{displayYear}</strong>, {placeName}'s climate most resembles{" "}
+                    <strong style={{ color: PURPLE }}>{climateAnalog.candidate.name}, {climateAnalog.candidate.country}</strong>{" "}
+                    in the current-day catalog. This is a nearest match across monthly temperature and precipitation, not a claim that every local impact is identical.
+                  </p>
+                  <p style={{ fontSize: 11, color: MUTED, marginTop: 8, lineHeight: 1.55 }}>
+                    Distance {climateAnalog.distance.toFixed(2)} standardized climate units; lower is closer. Compared {climateAnalog.comparedCount} cities from the grounded analog catalog.
+                  </p>
+                </div>
+                <button
+                  onClick={openClimateTwinCity}
+                  style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "8px 12px", borderRadius: 7, border: `1px solid ${PURPLE}55`, background: `${PURPLE}16`, color: "white", fontSize: 12, fontWeight: 700, cursor: "pointer" }}
+                >
+                  <ExternalLink style={{ width: 13, height: 13 }} />
+                  Open twin city
+                </button>
+              </div>
+
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(118px, 1fr))", gap: 8, marginTop: 14 }}>
+                {[
+                  { label: "Avg temp gap", value: `${signedNumber(climateAnalog.annualTempDelta, 1)}°C`, color: RED },
+                  { label: "Rainfall gap", value: `${signedNumber(climateAnalog.annualPrecipDelta, 0)} mm`, color: BLUE },
+                  { label: "Heat nights gap", value: `${signedNumber(climateAnalog.heatDaysDelta, 0)} d/yr`, color: ORANGE },
+                  { label: "Drought gap", value: `${signedNumber(climateAnalog.droughtDelta, 0)} pts`, color: AMBER },
+                  { label: "Flood gap", value: `${signedNumber(climateAnalog.floodDelta, 0)} pts`, color: CYAN },
+                ].map((item) => (
+                  <div key={item.label} style={{ background: "rgba(255,255,255,0.035)", border: `1px solid ${BORDER}`, borderRadius: 8, padding: 10, minWidth: 0 }}>
+                    <div style={{ fontSize: 9, color: MUTED, textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 4 }}>{item.label}</div>
+                    <div style={{ fontSize: 15, fontWeight: 800, color: item.color, whiteSpace: "nowrap" }}>{item.value}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : (
+            <p style={{ margin: 0, color: analogError ? "#fca5a5" : MUTED, fontSize: 13 }}>
+              {analogError ?? "Loading grounded current-day analog catalog..."}
+            </p>
+          )}
+        </div>
+
+        {/* Metric Trajectories */}
+        <div style={{ ...card, padding: 18, marginBottom: 14 }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <span style={{ fontSize: 16, display: "inline-flex" }}><TrendingUp style={{ width: 16, height: 16 }} /></span>
+              <h2 style={{ fontSize: 15, fontWeight: 700 }}>Metric Trajectories</h2>
+              <span style={{ fontSize: 10, color: MUTED, marginLeft: 4 }}>{BASELINE_YEAR} baseline to {MAX_YEAR}</span>
+            </div>
+            <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 10, color: MUTED }}>
+              <div style={{ width: 14, height: 1.5, borderTop: `1.5px dashed ${ACCENT}`, opacity: 0.7 }} />
+              <span>= selected year marker (synced with slider above)</span>
+            </div>
+          </div>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(145px,1fr))", gap: 12 }}>
+            <TrendChart
+              years={traj!.years}
+              values={traj!.temp}
+              lowValues={traj!.tempLow}
+              highValues={traj!.tempHigh}
+              year={year}
+              label="Temperature"
+              unit="°C"
+              color={RED}
+              decimals={1}
+              thresholdY={18}
+              scenarioLabel={shownScenario.label}
+              uncertaintyLabel="Shaded band uses temperature.uncertainty.annual_mean_low/high from the grounded API for this location, year range, and scenario."
+            />
+            <TrendChart
+              years={traj!.years}
+              values={traj!.precip}
+              lowValues={traj!.precipLow}
+              highValues={traj!.precipHigh}
+              year={year}
+              label="Precipitation"
+              unit="mm"
+              color={BLUE}
+              decimals={0}
+              scenarioLabel={shownScenario.label}
+              uncertaintyLabel="Shaded band uses precipitation.uncertainty.annual_total_low/high from the grounded API. Local precipitation trends can have larger model disagreement and direction changes."
+            />
+            <TrendChart years={traj!.years} values={traj!.heat} year={year} label="Heat Days" unit="d" color={ORANGE} decimals={0} thresholdY={15} scenarioLabel={shownScenario.label} />
+            <TrendChart years={traj!.years} values={traj!.score} year={year} label="Habitability" unit="" color={sc} decimals={0}
+              scenarioLabel={shownScenario.label}
+              zones={[
+                { from: 85, to: 100, color: GREEN }, { from: 70, to: 85, color: "#4ade80" },
+                { from: 60, to: 70, color: AMBER }, { from: 40, to: 60, color: ORANGE }, { from: 0, to: 40, color: RED },
+              ]} />
+            <TrendChart
+              years={traj!.years}
+              values={traj!.sea}
+              lowValues={traj!.seaLow}
+              highValues={traj!.seaHigh}
+              year={year}
+              label="Sea-level context"
+              unit="cm"
+              color={CYAN}
+              decimals={0}
+              thresholdY={50}
+              thresholdLabel={coastalRelevance?.thresholdLabel ?? "50 cm regional context"}
+              scenarioLabel={shownScenario.label}
+              uncertaintyLabel={`Shaded band uses AR6 regional sea-level low/high context returned by the API. ${coastalRelevance?.receipt ?? "Coastal relevance is not evaluated, so this is not a parcel-level coastal exposure assessment."}`}
+            />
+            <TrendChart
+              years={traj!.years}
+              values={traj!.drought}
+              year={year}
+              label="Drought Risk"
+              unit="%"
+              color={AMBER}
+              decimals={0}
+              thresholdY={50}
+              thresholdLabel="50% elevated risk"
+              scenarioLabel={shownScenario.label}
+            />
+            <TrendChart
+              years={traj!.years}
+              values={traj!.flood}
+              year={year}
+              label="Flood Risk"
+              unit="%"
+              color={BLUE}
+              decimals={0}
+              thresholdY={50}
+              thresholdLabel="50% elevated risk"
+              scenarioLabel={shownScenario.label}
+            />
+          </div>
+          <div style={{ marginTop: 12, padding: "6px 10px", background: `${ACCENT}07`, border: `1px solid ${ACCENT}18`, borderRadius: 8, fontSize: 10, color: MUTED }}>
+            <Lightbulb style={{ width: 14, height: 14, display: "inline", verticalAlign: "-2px", marginRight: 4 }} /> Drag the year slider to move the marker across all seven charts simultaneously and see how each metric evolves. Hover plotted years for values, or open values for keyboard/touch access. Translucent bands show grounded low-high ranges where the API exposes comparable uncertainty fields; labeled dashed horizontal lines mark documented risk/context thresholds.
+          </div>
+        </div>
+
+        {/* Tipping Points */}
+        <div style={{ ...card, padding: 18, marginBottom: 14 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 14, cursor: "pointer", listStyle: "none" }}>
+            <span style={{ fontSize: 18, display: "inline-flex" }}><Timer style={{ width: 18, height: 18 }} /></span>
+            <h2 style={{ fontFamily: FONT_DISPLAY, fontSize: 16, fontWeight: 600, margin: 0 }}>Tipping Point Timeline</h2>
+          </div>
+          <div style={{ height: 4, background: BORDER, borderRadius: 2, marginBottom: 16, position: "relative" }}>
+            <div style={{ height: "100%", borderRadius: 2, background: `linear-gradient(to right, ${GREEN}, ${AMBER}, ${RED})`, width: `${tPct}%`, transition: "width 0.25s ease" }} />
+            <div style={{ position: "absolute", top: "50%", left: `${tPct}%`, transform: "translate(-50%,-50%)", width: 10, height: 10, borderRadius: "50%", background: ACCENT, border: "2px solid white", transition: "left 0.25s ease" }} />
+          </div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 7 }}>
+            {tipping.map((tp) => {
+              const reached = tp.year != null;
+              const passed = reached && year >= tp.year!;
+              const isNext = reached && !passed && tipping.filter((x) => x.year != null && year < x.year!)[0]?.year === tp.year;
+              return (
+                <div key={tp.label} style={{ display: "flex", alignItems: "center", gap: 10, padding: "9px 12px", borderRadius: 8, background: passed ? "rgba(239,68,68,0.07)" : isNext ? "rgba(245,158,11,0.06)" : "rgba(255,255,255,0.02)", border: `1px solid ${passed ? "rgba(239,68,68,0.22)" : isNext ? "rgba(245,158,11,0.22)" : BORDER}`, transition: "all 0.25s ease" }}>
+                  <span style={{ fontSize: 16 }}>{tp.icon}</span>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: 12, fontWeight: 600, color: passed ? RED : isNext ? AMBER : MUTED }}>{tp.label}</div>
+                    <div style={{ fontSize: 9, color: MUTED, marginTop: 1 }}>{reached ? `${tp.year} · ${tp.year! - BASELINE_YEAR} years from baseline` : "Not reached by 2100"}</div>
+                  </div>
+                  <div style={{ fontSize: 15, fontWeight: 700, color: passed ? RED : MUTED }}>{reached ? tp.year : "—"}</div>
+                  {passed && <span style={{ fontSize: 9, padding: "2px 6px", background: "rgba(239,68,68,0.18)", color: RED, borderRadius: 4, fontWeight: 700 }}>CROSSED</span>}
+                  {isNext && <span style={{ fontSize: 9, padding: "2px 6px", background: "rgba(245,158,11,0.18)", color: AMBER, borderRadius: 4, fontWeight: 700 }}>NEXT</span>}
+                  {!passed && !isNext && reached && <span style={{ fontSize: 9, padding: "2px 6px", background: BORDER, color: MUTED, borderRadius: 4 }}>FUTURE</span>}
+                  {!reached && <span style={{ fontSize: 9, padding: "2px 6px", background: `${GREEN}18`, color: GREEN, borderRadius: 4, fontWeight: 700 }}>STABLE</span>}
+                </div>
+              );
+            })}
+          </div>
+        </div>
 
         <LocalChanges
           year={displayYear}
@@ -421,6 +604,66 @@ export default function ClimateResultSectionsTop({ vm }: { vm: ClimateAppVM }) {
             </div>
           </div>
         )}
+
+        {/* Habitability Assessment */}
+        <div style={{ ...card, padding: 18, marginBottom: 14 }}>
+          <h2 style={{ fontSize: 15, fontWeight: 700, marginBottom: 14 }}><MetricTip k="habitability_score" value={d!.score}>Habitability Assessment</MetricTip></h2>
+          <div style={{ display: "flex", gap: 28, alignItems: "flex-start", flexWrap: "wrap" }}>
+            <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 6, minWidth: 110 }}>
+              <div style={{ position: "relative", width: 100, height: 100 }}>
+                <svg viewBox="0 0 36 36" style={{ width: "100%", height: "100%", transform: "rotate(-90deg)" }}>
+                  <path d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="rgba(255,255,255,0.08)" strokeWidth="3" />
+                  <path d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke={sc} strokeWidth="3" strokeDasharray={`${d!.score}, 100`} strokeLinecap="round" style={{ transition: "stroke-dasharray 0.25s ease" }} />
+                </svg>
+                <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
+                  <span style={{ fontSize: 26, fontWeight: 800, color: sc }}>{d!.score}</span>
+                  <span style={{ fontSize: 10, color: MUTED }}>/100</span>
+                </div>
+              </div>
+              <span style={{ fontSize: 13, fontWeight: 700, color: sc }}>{d!.category}</span>
+              <ScoreSparkline years={traj!.years} data={traj!.score} color={sc} year={year} />
+              <div style={{ fontSize: 8, color: MUTED }}>{BASELINE_YEAR} baseline to {MAX_YEAR} trajectory</div>
+            </div>
+            {d!.breakdown.length > 0 && (
+              <div style={{ flex: 1, minWidth: 280 }}>
+                {/* Diverging axis legend: penalties grow left, contributions grow right */}
+                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
+                  <div style={{ width: 175, flexShrink: 0 }} />
+                  <div style={{ flex: 1, position: "relative", height: 11 }}>
+                    <span style={{ position: "absolute", left: 0, fontSize: 9, color: MUTED }}>− penalty</span>
+                    <span style={{ position: "absolute", left: "50%", transform: "translateX(-50%)", fontSize: 9, color: MUTED }}>0</span>
+                    <span style={{ position: "absolute", right: 0, fontSize: 9, color: MUTED }}>+ contribution</span>
+                  </div>
+                  <div style={{ width: 40, flexShrink: 0 }} />
+                </div>
+                {d!.breakdown.map((item) => {
+                  const half = Math.min((Math.abs(item.val) / maxBreakdown) * 50, 50);
+                  return (
+                    <div key={item.key} style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 7 }}>
+                      <div style={{ fontSize: 11, width: 175, color: MUTED, flexShrink: 0 }}>{item.label}</div>
+                      <div style={{ flex: 1, position: "relative", height: 10, background: "rgba(255,255,255,0.04)", borderRadius: 3 }}>
+                        <div style={{ position: "absolute", left: "50%", top: -2, bottom: -2, width: 1, background: "rgba(255,255,255,0.22)" }} />
+                        <div style={{ position: "absolute", top: 0, bottom: 0, width: `${half}%`, left: item.neg ? undefined : "50%", right: item.neg ? "50%" : undefined, background: item.neg ? RED : GREEN, borderRadius: item.neg ? "3px 0 0 3px" : "0 3px 3px 0", transition: "width 0.25s ease, left 0.25s ease, right 0.25s ease" }} />
+                      </div>
+                      <div style={{ fontSize: 11, fontFamily: "monospace", color: item.neg ? RED : GREEN, width: 40, textAlign: "right" }}>
+                        {item.neg ? "−" : "+"}{Math.abs(item.val).toFixed(1)}
+                      </div>
+                    </div>
+                  );
+                })}
+                <div style={{ display: "flex", justifyContent: "flex-end", paddingTop: 8, borderTop: "1px solid rgba(255,255,255,0.08)", fontSize: 13, fontWeight: 700, color: sc }}>
+                  Total: {d!.score}
+                </div>
+              </div>
+            )}
+          </div>
+          <div style={{ marginTop: 14, paddingTop: 12, borderTop: "1px solid rgba(255,255,255,0.06)", display: "flex", gap: 6, flexWrap: "wrap" }}>
+            {[{ r: "0–39", l: "Severe", c: RED }, { r: "40–59", l: "Poor", c: ORANGE }, { r: "60–69", l: "Fair", c: AMBER }, { r: "70–84", l: "Good", c: GREEN }, { r: "85–100", l: "Excellent", c: "#4ade80" }].map((b) => {
+              const active = b.l === d!.category;
+              return <div key={b.r} style={{ padding: "3px 10px", borderRadius: 10, fontSize: 10, background: active ? `${b.c}18` : "rgba(255,255,255,0.04)", color: active ? b.c : MUTED, fontWeight: active ? 700 : 400, border: active ? `1px solid ${b.c}35` : "none" }}>{b.l} ({b.r})</div>;
+            })}
+          </div>
+        </div>
 
         {/* Sea-level rise — promoted to a prominent widget for coastal points.
             Previously this only appeared as a buried "context" line, which made
@@ -938,64 +1181,6 @@ export default function ClimateResultSectionsTop({ vm }: { vm: ClimateAppVM }) {
           </div>
         )}
 
-
-        <div style={{ ...card, padding: 18, marginBottom: 14, borderLeft: `3px solid ${PURPLE}` }}>
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, flexWrap: "wrap", marginBottom: 12 }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-              <MapPin style={{ width: 15, height: 15, color: PURPLE }} />
-              <h2 style={{ fontSize: 12, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.07em", color: MUTED }}>Climate Twin · current-day analog</h2>
-            </div>
-            {analogCatalog && (
-              <span style={{ fontSize: 10, color: MUTED }}>
-                {analogCatalog.candidateCount} indexed cities · {analogCatalog.catalogYear} catalog
-              </span>
-            )}
-          </div>
-
-          {climateAnalog ? (
-            <div>
-              <div style={{ display: "flex", justifyContent: "space-between", gap: 14, alignItems: "flex-start", flexWrap: "wrap" }}>
-                <div style={{ flex: "1 1 360px" }}>
-                  <p style={{ fontSize: 14.5, lineHeight: 1.7, color: "rgba(255,255,255,0.9)", margin: 0 }}>
-                    In <strong style={{ color: "white" }}>{displayYear}</strong>, {placeName}'s climate most resembles{" "}
-                    <strong style={{ color: PURPLE }}>{climateAnalog.candidate.name}, {climateAnalog.candidate.country}</strong>{" "}
-                    in the current-day catalog. This is a nearest match across monthly temperature and precipitation, not a claim that every local impact is identical.
-                  </p>
-                  <p style={{ fontSize: 11, color: MUTED, marginTop: 8, lineHeight: 1.55 }}>
-                    Distance {climateAnalog.distance.toFixed(2)} standardized climate units; lower is closer. Compared {climateAnalog.comparedCount} cities from the grounded analog catalog.
-                  </p>
-                </div>
-                <button
-                  onClick={openClimateTwinCity}
-                  style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "8px 12px", borderRadius: 7, border: `1px solid ${PURPLE}55`, background: `${PURPLE}16`, color: "white", fontSize: 12, fontWeight: 700, cursor: "pointer" }}
-                >
-                  <ExternalLink style={{ width: 13, height: 13 }} />
-                  Open twin city
-                </button>
-              </div>
-
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(118px, 1fr))", gap: 8, marginTop: 14 }}>
-                {[
-                  { label: "Avg temp gap", value: `${signedNumber(climateAnalog.annualTempDelta, 1)}°C`, color: RED },
-                  { label: "Rainfall gap", value: `${signedNumber(climateAnalog.annualPrecipDelta, 0)} mm`, color: BLUE },
-                  { label: "Heat nights gap", value: `${signedNumber(climateAnalog.heatDaysDelta, 0)} d/yr`, color: ORANGE },
-                  { label: "Drought gap", value: `${signedNumber(climateAnalog.droughtDelta, 0)} pts`, color: AMBER },
-                  { label: "Flood gap", value: `${signedNumber(climateAnalog.floodDelta, 0)} pts`, color: CYAN },
-                ].map((item) => (
-                  <div key={item.label} style={{ background: "rgba(255,255,255,0.035)", border: `1px solid ${BORDER}`, borderRadius: 8, padding: 10, minWidth: 0 }}>
-                    <div style={{ fontSize: 9, color: MUTED, textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 4 }}>{item.label}</div>
-                    <div style={{ fontSize: 15, fontWeight: 800, color: item.color, whiteSpace: "nowrap" }}>{item.value}</div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          ) : (
-            <p style={{ margin: 0, color: analogError ? "#fca5a5" : MUTED, fontSize: 13 }}>
-              {analogError ?? "Loading grounded current-day analog catalog..."}
-            </p>
-          )}
-        </div>
-
         {shareStory && (
           <div style={{ ...card, padding: 18, marginBottom: 14, borderLeft: `3px solid ${ACCENT}` }}>
             <div style={{ display: "flex", justifyContent: "space-between", gap: 12, alignItems: "flex-start", flexWrap: "wrap", marginBottom: 12 }}>
@@ -1134,99 +1319,6 @@ export default function ClimateResultSectionsTop({ vm }: { vm: ClimateAppVM }) {
                 <path d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke={sc} strokeWidth="4" strokeDasharray={`${d!.score}, 100`} strokeLinecap="round" style={{ transition: "stroke-dasharray 0.3s ease" }} />
               </svg>
             </div>
-          </div>
-        </div>
-
-        {/* Metric Trajectories */}
-        <div style={{ ...card, padding: 18, marginBottom: 14 }}>
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-              <span style={{ fontSize: 16, display: "inline-flex" }}><TrendingUp style={{ width: 16, height: 16 }} /></span>
-              <h2 style={{ fontSize: 15, fontWeight: 700 }}>Metric Trajectories</h2>
-              <span style={{ fontSize: 10, color: MUTED, marginLeft: 4 }}>{BASELINE_YEAR} baseline to {MAX_YEAR}</span>
-            </div>
-            <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 10, color: MUTED }}>
-              <div style={{ width: 14, height: 1.5, borderTop: `1.5px dashed ${ACCENT}`, opacity: 0.7 }} />
-              <span>= selected year marker (synced with slider above)</span>
-            </div>
-          </div>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(145px,1fr))", gap: 12 }}>
-            <TrendChart
-              years={traj!.years}
-              values={traj!.temp}
-              lowValues={traj!.tempLow}
-              highValues={traj!.tempHigh}
-              year={year}
-              label="Temperature"
-              unit="°C"
-              color={RED}
-              decimals={1}
-              thresholdY={18}
-              scenarioLabel={shownScenario.label}
-              uncertaintyLabel="Shaded band uses temperature.uncertainty.annual_mean_low/high from the grounded API for this location, year range, and scenario."
-            />
-            <TrendChart
-              years={traj!.years}
-              values={traj!.precip}
-              lowValues={traj!.precipLow}
-              highValues={traj!.precipHigh}
-              year={year}
-              label="Precipitation"
-              unit="mm"
-              color={BLUE}
-              decimals={0}
-              scenarioLabel={shownScenario.label}
-              uncertaintyLabel="Shaded band uses precipitation.uncertainty.annual_total_low/high from the grounded API. Local precipitation trends can have larger model disagreement and direction changes."
-            />
-            <TrendChart years={traj!.years} values={traj!.heat} year={year} label="Heat Days" unit="d" color={ORANGE} decimals={0} thresholdY={15} scenarioLabel={shownScenario.label} />
-            <TrendChart years={traj!.years} values={traj!.score} year={year} label="Habitability" unit="" color={sc} decimals={0}
-              scenarioLabel={shownScenario.label}
-              zones={[
-                { from: 85, to: 100, color: GREEN }, { from: 70, to: 85, color: "#4ade80" },
-                { from: 60, to: 70, color: AMBER }, { from: 40, to: 60, color: ORANGE }, { from: 0, to: 40, color: RED },
-              ]} />
-            <TrendChart
-              years={traj!.years}
-              values={traj!.sea}
-              lowValues={traj!.seaLow}
-              highValues={traj!.seaHigh}
-              year={year}
-              label="Sea-level context"
-              unit="cm"
-              color={CYAN}
-              decimals={0}
-              thresholdY={50}
-              thresholdLabel={coastalRelevance?.thresholdLabel ?? "50 cm regional context"}
-              scenarioLabel={shownScenario.label}
-              uncertaintyLabel={`Shaded band uses AR6 regional sea-level low/high context returned by the API. ${coastalRelevance?.receipt ?? "Coastal relevance is not evaluated, so this is not a parcel-level coastal exposure assessment."}`}
-            />
-            <TrendChart
-              years={traj!.years}
-              values={traj!.drought}
-              year={year}
-              label="Drought Risk"
-              unit="%"
-              color={AMBER}
-              decimals={0}
-              thresholdY={50}
-              thresholdLabel="50% elevated risk"
-              scenarioLabel={shownScenario.label}
-            />
-            <TrendChart
-              years={traj!.years}
-              values={traj!.flood}
-              year={year}
-              label="Flood Risk"
-              unit="%"
-              color={BLUE}
-              decimals={0}
-              thresholdY={50}
-              thresholdLabel="50% elevated risk"
-              scenarioLabel={shownScenario.label}
-            />
-          </div>
-          <div style={{ marginTop: 12, padding: "6px 10px", background: `${ACCENT}07`, border: `1px solid ${ACCENT}18`, borderRadius: 8, fontSize: 10, color: MUTED }}>
-            <Lightbulb style={{ width: 14, height: 14, display: "inline", verticalAlign: "-2px", marginRight: 4 }} /> Drag the year slider to move the marker across all seven charts simultaneously and see how each metric evolves. Hover plotted years for values, or open values for keyboard/touch access. Translucent bands show grounded low-high ranges where the API exposes comparable uncertainty fields; labeled dashed horizontal lines mark documented risk/context thresholds.
           </div>
         </div>
 
