@@ -207,8 +207,7 @@
   .glass-card {
     background: var(--glass-bg);
     border: 1px solid var(--glass-border);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
+    /* opaque panels per DESIGN.md §14 — glassmorphism blur intentionally removed */
   }
 
   .glass-card:hover {
@@ -216,7 +215,7 @@
   }
 
   .stat-card {
-    @apply rounded-xl p-4 border transition-all duration-200;
+    @apply rounded-lg p-4 border transition-all duration-200;
     background: var(--glass-bg);
     border-color: var(--glass-border);
   }
@@ -327,7 +326,7 @@
 
 /* Leaflet map styling */
 .leaflet-container {
-  font-family: 'Inter', system-ui, sans-serif;
+  font-family: var(--font-body);
   background: hsl(222, 47%, 10%) !important;
 }
 
