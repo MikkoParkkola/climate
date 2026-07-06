@@ -31,7 +31,7 @@ interface ScenarioSmallMultiplesProps {
 
 const BORDER = "rgba(255,255,255,0.08)";
 const MUTED = "hsl(215,20%,65%)";
-const ACCENT = "hsl(192,91%,46%)";
+const ACCENT = "hsl(24,88%,56%)"; // ember — DESIGN.md §1: ember owns the accent, never blue
 const RED = "#ef4444";
 
 const panelStyle: CSSProperties = {

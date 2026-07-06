@@ -10,10 +10,13 @@ export default function ClimateApp() {
       <ClimateLanding
         locationText={vm.locationText}
         setLocationText={vm.setLocationText}
+        selectedLocation={vm.selectedLocation}
         setSelectedLocation={vm.setSelectedLocation}
         suggestions={vm.suggestions}
         showSuggestions={vm.showSuggestions}
         setShowSuggestions={vm.setShowSuggestions}
+        searchLoading={vm.searchLoading}
+        searchNoMatch={vm.searchNoMatch}
         selectLocation={vm.selectLocation}
         scenario={vm.scenario}
         changeScenario={vm.changeScenario}
