@@ -45,3 +45,4 @@ attached_assets/
 # ISIMIP GGCMI crop-yield download staging for build_isimip_crops.py (~0.9GB NetCDF).
 # The committed artifact is data/crop-yield.isimip-ggcmi.*; raw source is not tracked.
 .crop-build/
+data/ne_10m_populated_places.cache.json
