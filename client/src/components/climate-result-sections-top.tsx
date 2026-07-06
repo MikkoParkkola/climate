@@ -3,6 +3,7 @@ import GuidedClimateExplainer from "@/components/guided-climate-explainer";
 import { LocalChanges } from "@/components/local-changes";
 import { MitigationCard } from "@/components/mitigation-card";
 import { TwinArc } from "@/components/twin-arc";
+import { LivabilityBar } from "@/components/livability-bar";
 import ScenarioSmallMultiples, { type ScenarioSmallMultipleMetric } from "@/components/scenario-small-multiples";
 import {
   BG, CARD, BORDER, ACCENT, MUTED, RED, BLUE, ORANGE, GREEN, AMBER, PURPLE, CYAN,
@@ -150,6 +151,8 @@ export default function ClimateResultSectionsTop({ vm }: { vm: ClimateAppVM }) {
               : <> No modeled tipping points are crossed at this horizon.</>}
           </p>
         </div>
+
+        <LivabilityBar score={d!.score} baselineScore={scoreStory?.baselineScore} year={displayYear} />
 
         {climateAnalog && selectedLocation && (
           <TwinArc
