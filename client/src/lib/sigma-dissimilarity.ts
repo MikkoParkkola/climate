@@ -129,16 +129,30 @@ export function sigmaDissimilarity(D: number, dof: number): number {
   return Number.isFinite(sigma) ? Math.max(0, sigma) : Infinity;
 }
 
-// Effective degrees of freedom of a set of standardized vectors (the
-// "participation ratio", trace(C)^2 / ||C||_F^2 of their covariance C).
-// The raw monthly climate dimensions are highly correlated (adjacent months
-// move together), so treating each as an independent dof would badly overstate
-// the chi degrees of freedom and under-flag novelty. This collapses them to the
-// number of effectively-independent climate gradients. `rows` are already
-// standardized (mean 0, unit variance per column) — the caller does that.
-export function effectiveDof(rows: number[][], dims: number): number {
+export interface ChiCalibration {
+  // Effective degrees of freedom (participation ratio of the covariance).
+  dof: number;
+  // Satterthwaite scale factor. D^2 must be divided by this before the
+  // chi-square / sigma transform (see below).
+  scale: number;
+}
+
+// Moment-matched chi-square calibration for a quadratic form D^2 = sum z_i^2 in
+// correlated standardized variables (Satterthwaite 1946).
+//
+// The trap: E[D^2] = trace(C) ≈ `dims` NO MATTER how correlated the dims are,
+// but a chi-square(dof) reference has mean `dof`. So D^2 is NOT chi-square(dof)
+// directly — feeding the raw D^2 into chiSquareCdf(D^2, dof) puts every ordinary
+// point far out in the tail and flags one-in-five normal climates as "no
+// analog". D^2 is instead approximately `scale * chi-square(dof)` where
+//   dof   = trace(C)^2 / ||C||_F^2   (effective independent dimensions)
+//   scale = ||C||_F^2 / trace(C)     (so E[scale * chi2(dof)] = trace(C) = E[D^2])
+// Callers MUST convert D^2 -> D^2 / scale before sigmaDissimilarity.
+//
+// `rows` are already standardized (mean 0, unit variance per column) by the caller.
+export function chiCalibration(rows: number[][], dims: number): ChiCalibration {
   const n = rows.length;
-  if (n === 0 || dims === 0) return Math.max(1, dims);
+  if (n === 0 || dims === 0) return { dof: Math.max(1, dims), scale: 1 };
   let trace = 0;
   let fro = 0;
   for (let i = 0; i < dims; i++) {
@@ -154,9 +168,10 @@ export function effectiveDof(rows: number[][], dims: number): number {
       }
     }
   }
-  if (fro <= 0) return Math.max(1, dims);
-  const keff = (trace * trace) / fro;
-  return Math.max(1, Math.min(dims, keff));
+  if (trace <= 0 || fro <= 0) return { dof: Math.max(1, dims), scale: 1 };
+  const dof = Math.max(1, Math.min(dims, (trace * trace) / fro));
+  const scale = fro / trace;
+  return { dof, scale };
 }
 
 // Bucket a sigma value into a human label. > SIGMA_NO_ANALOG (or non-finite)
@@ -217,17 +232,45 @@ export function _selfCheck() {
     throw new Error("a clearly-inside distance must NOT be 'none'");
   }
 
-  // effectiveDof: independent columns → dof≈dims; a duplicated column halves the
-  // independent count of that pair.
+  // chiCalibration: independent standardized columns → dof≈dims, scale≈1.
   const indep = [
     [1, 1, 1], [-1, 1, -1], [1, -1, -1], [-1, -1, 1],
     [1, -1, 1], [-1, 1, 1], [1, 1, -1], [-1, -1, -1],
   ];
-  approx(effectiveDof(indep, 3), 3, 0.4, "effectiveDof independent≈3");
+  const ci = chiCalibration(indep, 3);
+  approx(ci.dof, 3, 0.4, "chiCalibration independent dof≈3");
+  approx(ci.scale, 1, 0.4, "chiCalibration independent scale≈1");
   const dup = indep.map((r) => [r[0], r[0], r[2]]); // col0==col1 (perfectly correlated)
-  if (!(effectiveDof(dup, 3) < 2.6)) {
-    throw new Error(`duplicated column should drop dof below 2.6, got ${effectiveDof(dup, 3)}`);
+  const cd = chiCalibration(dup, 3);
+  if (!(cd.dof < 2.6)) throw new Error(`duplicated column should drop dof below 2.6, got ${cd.dof}`);
+  if (!(cd.scale > 1.1)) throw new Error(`correlated columns should raise scale above 1, got ${cd.scale}`);
+
+  // REGRESSION (the miscalibration codex-reasoner caught): D^2 has mean trace(C)
+  // ≈ dims regardless of correlation, so a TYPICAL in-distribution point must be
+  // divided by `scale` before the chi transform or it is wrongly flagged novel.
+  // Build a strongly-correlated (AR(1)-like) standardized catalog, then test a
+  // point at ~mean+1sd of the in-distribution D^2 (= 2*dims for correlated data).
+  const dims = 12;
+  const raw: number[][] = [];
+  for (let s = 0; s < 400; s++) {
+    const row: number[] = [];
+    let prev = Math.sin(s * 1.3);
+    for (let i = 0; i < dims; i++) {
+      prev = 0.9 * prev + 0.436 * Math.sin(s * 0.7 + i * 2.1); // ρ≈0.9
+      row.push(prev);
+    }
+    raw.push(row);
   }
+  const mean = Array.from({ length: dims }, (_, i) => raw.reduce((a, r) => a + r[i], 0) / raw.length);
+  const sd = mean.map((m, i) => Math.sqrt(raw.reduce((a, r) => a + (r[i] - m) ** 2, 0) / raw.length) || 1);
+  const z = raw.map((r) => r.map((v, i) => (v - mean[i]) / sd[i]));
+  const cal = chiCalibration(z, dims);
+  const typicalD2 = 2 * dims; // mean + ~1sd of the in-distribution D^2 — clearly NOT novel
+  const sScaled = sigmaDissimilarity(Math.sqrt(typicalD2 / cal.scale), cal.dof);
+  const sUnscaled = sigmaDissimilarity(Math.sqrt(typicalD2), cal.dof);
+  console.log(`  calibration: dof=${cal.dof.toFixed(2)} scale=${cal.scale.toFixed(2)} sigmaScaled=${sScaled.toFixed(2)} sigmaUnscaled=${Number.isFinite(sUnscaled) ? sUnscaled.toFixed(2) : "inf"}`);
+  if (!(sScaled <= 4)) throw new Error(`in-distribution point flagged novel AFTER scaling: sigma=${sScaled}`);
+  if (!(sUnscaled > 4)) throw new Error(`regression: unscaled sigma should wrongly flag this in-distribution point, got ${sUnscaled}`);
 
   console.log("✅ sigma-dissimilarity _selfCheck passed");
 }

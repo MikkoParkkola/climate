@@ -15,7 +15,7 @@ import {
   RED,
   SCENARIOS,
 } from "./climate-constants";
-import { analogLabel, effectiveDof, sigmaDissimilarity } from "./sigma-dissimilarity";
+import { analogLabel, chiCalibration, sigmaDissimilarity } from "./sigma-dissimilarity";
 import type {
   AnalogCandidate,
   AnalogCatalog,
@@ -291,12 +291,15 @@ export function findClimateAnalog(
 
   // Sigma-dissimilarity novelty (Mahony 2017): read the standardized deviation
   // as a Mahalanobis distance and convert to sigma under the chi distribution.
-  // The 24 monthly dimensions are strongly correlated, so use the catalog's
-  // EFFECTIVE degrees of freedom, not the raw dimension count — otherwise
-  // novelty is badly under-flagged. Above 4 sigma there is no modern equivalent.
+  // The 24 monthly dimensions are strongly correlated, so we (a) use the
+  // catalog's EFFECTIVE degrees of freedom and (b) apply the Satterthwaite
+  // SCALE correction — D^2 has mean trace(C) ≈ dims regardless of correlation,
+  // so it must be divided by `scale` before the chi transform, else ordinary
+  // in-distribution climates are wrongly flagged novel. Above 4 sigma there is
+  // no modern equivalent.
   const zRows = candidateRows.map((row) => row.vector.map((v, i) => (v - means[i]) / stds[i]));
-  const dof = effectiveDof(zRows, dims);
-  const sigma = sigmaDissimilarity(Math.sqrt(best.sumSq), dof);
+  const { dof, scale } = chiCalibration(zRows, dims);
+  const sigma = sigmaDissimilarity(Math.sqrt(best.sumSq / scale), dof);
   const matchLabel = analogLabel(sigma);
 
   const c = best.candidate;
