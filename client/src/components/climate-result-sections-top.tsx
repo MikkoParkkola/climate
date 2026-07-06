@@ -23,6 +23,7 @@ import type { ClimateAppVM } from "@/hooks/use-climate-app";
 import type { FreshwaterStress, FireWeather, FloodExposure, CropYield } from "@/lib/climate-types";
 import { EnrichmentEmptyState, SubstitutionNote } from "@/components/enrichment-coverage";
 import { Term, MetricTip } from "@/components/climate-term";
+import type { GlossaryKey } from "@/lib/glossary";
 
 // Aqueduct water-stress category (-1 arid .. 4 extremely high) -> theme colour.
 function freshwaterCategoryColor(category: number | null): string {
@@ -153,6 +154,66 @@ export default function ClimateResultSectionsTop({ vm }: { vm: ClimateAppVM }) {
         </div>
 
         <LivabilityBar score={d!.score} baselineScore={scoreStory?.baselineScore} year={displayYear} />
+
+        {/* Habitability Assessment */}
+        <div style={{ ...card, padding: 18, marginBottom: 14 }}>
+          <h2 style={{ fontSize: 15, fontWeight: 700, marginBottom: 14 }}><MetricTip k="habitability_score" value={d!.score}>Habitability Assessment</MetricTip></h2>
+          <div style={{ display: "flex", gap: 28, alignItems: "flex-start", flexWrap: "wrap" }}>
+            <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 6, minWidth: 110 }}>
+              <div style={{ position: "relative", width: 100, height: 100 }}>
+                <svg viewBox="0 0 36 36" style={{ width: "100%", height: "100%", transform: "rotate(-90deg)" }}>
+                  <path d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="rgba(255,255,255,0.08)" strokeWidth="3" />
+                  <path d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke={sc} strokeWidth="3" strokeDasharray={`${d!.score}, 100`} strokeLinecap="round" style={{ transition: "stroke-dasharray 0.25s ease" }} />
+                </svg>
+                <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
+                  <span style={{ fontSize: 26, fontWeight: 800, color: sc }}>{d!.score}</span>
+                  <span style={{ fontSize: 10, color: MUTED }}>/100</span>
+                </div>
+              </div>
+              <span style={{ fontSize: 13, fontWeight: 700, color: sc }}>{d!.category}</span>
+              <ScoreSparkline years={traj!.years} data={traj!.score} color={sc} year={year} />
+              <div style={{ fontSize: 8, color: MUTED }}>{BASELINE_YEAR} baseline to {MAX_YEAR} trajectory</div>
+            </div>
+            {d!.breakdown.length > 0 && (
+              <div style={{ flex: 1, minWidth: 280 }}>
+                {/* Diverging axis legend: penalties grow left, contributions grow right */}
+                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
+                  <div style={{ width: 175, flexShrink: 0 }} />
+                  <div style={{ flex: 1, position: "relative", height: 11 }}>
+                    <span style={{ position: "absolute", left: 0, fontSize: 9, color: MUTED }}>− penalty</span>
+                    <span style={{ position: "absolute", left: "50%", transform: "translateX(-50%)", fontSize: 9, color: MUTED }}>0</span>
+                    <span style={{ position: "absolute", right: 0, fontSize: 9, color: MUTED }}>+ contribution</span>
+                  </div>
+                  <div style={{ width: 40, flexShrink: 0 }} />
+                </div>
+                {d!.breakdown.map((item) => {
+                  const half = Math.min((Math.abs(item.val) / maxBreakdown) * 50, 50);
+                  return (
+                    <div key={item.key} style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 7 }}>
+                      <div style={{ fontSize: 11, width: 175, color: MUTED, flexShrink: 0 }}>{item.label}</div>
+                      <div style={{ flex: 1, position: "relative", height: 10, background: "rgba(255,255,255,0.04)", borderRadius: 3 }}>
+                        <div style={{ position: "absolute", left: "50%", top: -2, bottom: -2, width: 1, background: "rgba(255,255,255,0.22)" }} />
+                        <div style={{ position: "absolute", top: 0, bottom: 0, width: `${half}%`, left: item.neg ? undefined : "50%", right: item.neg ? "50%" : undefined, background: item.neg ? RED : GREEN, borderRadius: item.neg ? "3px 0 0 3px" : "0 3px 3px 0", transition: "width 0.25s ease, left 0.25s ease, right 0.25s ease" }} />
+                      </div>
+                      <div style={{ fontSize: 11, fontFamily: "monospace", color: item.neg ? RED : GREEN, width: 40, textAlign: "right" }}>
+                        {item.neg ? "−" : "+"}{Math.abs(item.val).toFixed(1)}
+                      </div>
+                    </div>
+                  );
+                })}
+                <div style={{ display: "flex", justifyContent: "flex-end", paddingTop: 8, borderTop: "1px solid rgba(255,255,255,0.08)", fontSize: 13, fontWeight: 700, color: sc }}>
+                  Total: {d!.score}
+                </div>
+              </div>
+            )}
+          </div>
+          <div style={{ marginTop: 14, paddingTop: 12, borderTop: "1px solid rgba(255,255,255,0.06)", display: "flex", gap: 6, flexWrap: "wrap" }}>
+            {[{ r: "0–39", l: "Severe", c: RED }, { r: "40–59", l: "Poor", c: ORANGE }, { r: "60–69", l: "Fair", c: AMBER }, { r: "70–84", l: "Good", c: GREEN }, { r: "85–100", l: "Excellent", c: "#4ade80" }].map((b) => {
+              const active = b.l === d!.category;
+              return <div key={b.r} style={{ padding: "3px 10px", borderRadius: 10, fontSize: 10, background: active ? `${b.c}18` : "rgba(255,255,255,0.04)", color: active ? b.c : MUTED, fontWeight: active ? 700 : 400, border: active ? `1px solid ${b.c}35` : "none" }}>{b.l} ({b.r})</div>;
+            })}
+          </div>
+        </div>
 
         {climateAnalog && selectedLocation && (
           <TwinArc
@@ -344,6 +405,174 @@ export default function ClimateResultSectionsTop({ vm }: { vm: ClimateAppVM }) {
               );
             })}
           </div>
+        </div>
+
+        {/* Temperature */}
+        <div style={{ ...card, padding: 18, marginBottom: 14 }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+            <h2 style={{ fontSize: 15, fontWeight: 700 }}>Temperature Projection</h2>
+            <div style={{ display: "flex", gap: 14, fontSize: 10 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                <svg width="20" height="3"><line x1="0" y1="1.5" x2="20" y2="1.5" stroke="rgba(255,255,255,0.3)" strokeWidth="1.5" strokeDasharray="4 3" /></svg>
+                <span style={{ color: MUTED }}>{BASELINE_YEAR} baseline</span>
+              </div>
+              <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                <div style={{ width: 20, height: 2, background: RED, borderRadius: 1 }} />
+                <span style={{ color: MUTED }}>{displayYear}</span>
+              </div>
+            </div>
+          </div>
+          <div style={{ display: "grid", gridTemplateColumns: "160px 1fr 158px", gap: 14, alignItems: "start" }}>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6 }}>
+              {[
+                { label: "Annual Mean", value: `${d!.avgTemp.toFixed(1)}°C` },
+                { label: "Change", value: `+${d!.tempChange.toFixed(1)}°`, color: RED },
+                { label: `Min (${MONTHS[d!.minIdx]})`, value: `${d!.monthlyTemps[d!.minIdx].toFixed(1)}°C` },
+                { label: `Max (${MONTHS[d!.maxIdx]})`, value: `${d!.monthlyTemps[d!.maxIdx].toFixed(1)}°C` },
+              ].map(({ label, value, color }) => (
+                <div key={label} style={{ background: "rgba(255,255,255,0.03)", borderRadius: 7, padding: "8px 9px" }}>
+                  <div style={{ fontSize: 9, textTransform: "uppercase", color: MUTED }}>{label}</div>
+                  <div style={{ fontSize: 14, fontWeight: 700, color: color ?? "white", marginTop: 2 }}>{value}</div>
+                </div>
+              ))}
+            </div>
+            <MonthlyTempChart temps={d!.monthlyTemps} baseline={trajectory![0].temperature.monthly} />
+            <div>
+              <div style={{ fontSize: 10, color: MUTED, marginBottom: 6 }}>Monthly (°C)</div>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "2px 8px" }}>
+                {MONTHS.map((m, i) => (
+                  <div key={m} style={{ display: "flex", justifyContent: "space-between", fontSize: 10, padding: "2px 0", borderBottom: "1px solid rgba(255,255,255,0.04)" }}>
+                    <span style={{ color: MUTED }}>{m}</span>
+                    <span style={{ fontFamily: "monospace" }}>{d!.monthlyTemps[i].toFixed(1)}°</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Precipitation */}
+        <div style={{ ...card, padding: 18, marginBottom: 14 }}>
+          <h2 style={{ fontSize: 15, fontWeight: 700, marginBottom: 12 }}>Precipitation Pattern</h2>
+          <div style={{ display: "grid", gridTemplateColumns: "160px 1fr 158px", gap: 14, alignItems: "start" }}>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6 }}>
+              {[
+                { label: "Annual Total", value: `${d!.annualPrecip}mm` },
+                { label: "Change", value: `${d!.precipChange >= 0 ? "+" : ""}${d!.precipChange.toFixed(1)}%`, color: BLUE },
+                { label: "Wettest", value: `${MONTHS[d!.wetIdx]} ${d!.monthlyPrecip[d!.wetIdx]}mm` },
+                { label: "Driest", value: `${MONTHS[d!.dryIdx]} ${d!.monthlyPrecip[d!.dryIdx]}mm` },
+              ].map(({ label, value, color }) => (
+                <div key={label} style={{ background: "rgba(255,255,255,0.03)", borderRadius: 7, padding: "8px 9px" }}>
+                  <div style={{ fontSize: 9, textTransform: "uppercase", color: MUTED }}>{label}</div>
+                  <div style={{ fontSize: 12, fontWeight: 700, color: color ?? "white", marginTop: 2 }}>{value}</div>
+                </div>
+              ))}
+            </div>
+            <PrecipBars vals={d!.monthlyPrecip} />
+            <div>
+              <div style={{ fontSize: 10, color: MUTED, marginBottom: 6 }}>Monthly (mm)</div>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "2px 8px" }}>
+                {MONTHS.map((m, i) => (
+                  <div key={m} style={{ display: "flex", justifyContent: "space-between", fontSize: 10, padding: "2px 0", borderBottom: "1px solid rgba(255,255,255,0.04)" }}>
+                    <span style={{ color: MUTED }}>{m}</span>
+                    <span style={{ fontFamily: "monospace" }}>{d!.monthlyPrecip[i]}mm</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Risk & Extremes */}
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(170px,1fr))", gap: 10, marginBottom: 14 }}>
+          {[
+            {
+              label: "Heat Stress",
+              termKey: "heat_stress_day" as GlossaryKey,
+              tipValue: d!.heatDays,
+              value: d!.heatDays,
+              unit: "days/yr",
+              delta: `+${Math.max(0, d!.heatDays - d!.baseHeatDays)}d`,
+              detail: `${roundedValue(d!.heatNightsRaw, " tropical nights/yr")} raw`,
+              color: RED,
+              receipt: `Heat stress uses the grounded ETCCDI tropical-nights layer for ${shownScenario.label}: nights per year with daily minimum temperature above ${d!.tropicalNightThreshold ?? 20}°C, linearly interpolated to the selected year. Ensemble spread: ${roundedValue(d!.heatNightsSpread, " days", 1)}. This is a climate screening indicator, not medical or occupational-safety advice.`,
+            },
+            {
+              label: "Humid heat screen",
+              termKey: "wet_bulb" as GlossaryKey,
+              tipValue: d!.humidHeatWetBulb ?? null,
+              value: d!.humidHeatWetBulb == null ? "n/a" : `${d!.humidHeatWetBulb.toFixed(1)}°C`,
+              unit: "monthly mean wet-bulb",
+              sub: d!.humidHeatMonth ?? "max month",
+              detail: `${roundedValue(d!.humidHeatRh, "% RH", 1)} · ${signedNumber(d!.humidHeatRhDelta ?? 0, 1)} pp RH`,
+              color: d!.humidHeatWetBulb != null && d!.humidHeatWetBulb >= 24 ? RED : ORANGE,
+              receipt: `Humid heat screen uses monthly mean air temperature and CMIP6 near-surface relative humidity for ${shownScenario.label}, then applies the registered Stull 2011 empirical wet-bulb approximation. It reports max monthly mean wet-bulb, not WBGT, not daily humid-heat days, and not medical or occupational-safety advice. RH ensemble spread: ${roundedValue(d!.humidHeatRhSpread, " percentage points", 1)}; RH formula-domain clipped months: ${d!.humidHeatClippedMonths ?? 0}; temperature-domain warning months: ${d!.humidHeatTempDomainWarningMonths ?? 0}.`,
+            },
+            {
+              label: "Cold-season context",
+              termKey: "cold_season" as GlossaryKey,
+              tipValue: d!.coldMonthCount,
+              value: d!.coldMonthCount,
+              unit: "monthly mean freeze months",
+              sub: `${MONTHS[d!.minIdx]} ${d!.monthlyTemps[d!.minIdx].toFixed(1)}°C`,
+              detail: `${d!.baselineColdMonthCount} baseline months`,
+              color: d!.coldMonthCount >= 3 ? BLUE : d!.coldMonthCount > 0 ? CYAN : GREEN,
+              receipt: `Cold-season context uses monthly mean temperature from the grounded trajectory for ${shownScenario.label}. It counts months at or below ${FREEZING_MONTHLY_MEAN_C}°C, not daily freeze days, freeze-thaw events, heating demand, road conditions, crop damage, pests, or health risk.`,
+            },
+            {
+              label: "Drought Risk",
+              termKey: "drought_risk" as GlossaryKey,
+              tipValue: d!.drought,
+              value: `${d!.drought}%`,
+              sub: d!.drought < 25 ? "Low" : d!.drought < 40 ? "Elevated" : "High",
+              detail: `${roundedValue(d!.drySpellDays, " dry-spell days")} raw`,
+              bar: d!.drought / 100,
+              color: AMBER,
+              receipt: `Drought risk uses ETCCDI consecutive dry days for ${shownScenario.label}: the longest spell with under 1 mm of rain. The displayed score maps 0 days to 0 and ${roundedValue(d!.droughtMaxCdd, " days")} to 100. Selected raw value: ${roundedValue(d!.drySpellDays, " days", 1)}; ensemble spread: ${roundedValue(d!.drySpellSpread, " days", 1)}. It does not model reservoirs, groundwater, water rights, or demand.`,
+            },
+            {
+              label: "Flood Risk",
+              termKey: "flood_risk" as GlossaryKey,
+              tipValue: d!.flood,
+              value: `${d!.flood}%`,
+              sub: d!.flood < 30 ? "Low" : d!.flood < 60 ? "Elevated" : "High",
+              detail: `${roundedValue(d!.maxFiveDayRain, " mm Rx5day")} raw`,
+              bar: d!.flood / 100,
+              color: BLUE,
+              receipt: `Flood risk uses ETCCDI Rx5day for ${shownScenario.label}: maximum 5-day precipitation, a heavy-rain proxy used in IPCC AR6-style assessment. The displayed score maps 0 mm to 0 and ${roundedValue(d!.floodMaxRx5, " mm")} to 100. Selected raw value: ${roundedValue(d!.maxFiveDayRain, " mm", 1)}; ensemble spread: ${roundedValue(d!.maxFiveDayRainSpread, " mm", 1)}. It is not a parcel flood map or insurance loss estimate.`,
+            },
+            {
+              label: "Sea-level context",
+              termKey: "sea_level_rise" as GlossaryKey,
+              tipValue: d!.seaLevel,
+              value: `${d!.seaLevel}cm`,
+              sub: coastalRelevance?.isLocallyRelevant ? "Coastal screen" : "Regional AR6",
+              detail: d!.seaLow != null && d!.seaHigh != null ? `${Math.round(d!.seaLow)}-${Math.round(d!.seaHigh)} cm range` : "range not exposed",
+              color: CYAN,
+              receipt: `Sea-level context uses the registered NASA/IPCC AR6 regional sea-level layer for ${shownScenario.label}. Selected range: ${d!.seaLow != null && d!.seaHigh != null ? `${Math.round(d!.seaLow)} to ${Math.round(d!.seaHigh)} cm` : "not exposed"}. ${coastalRelevance?.receipt ?? "Coastal relevance is not evaluated, so this is regional context only."}`,
+            },
+          ].map(({ label, termKey, tipValue, value, unit, delta, sub, detail, bar, color, receipt }) => (
+            <div key={label} style={{ ...card, padding: 14, borderTop: `2px solid ${color}` }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
+                <div style={{ fontSize: 10, color: MUTED }}>{termKey ? <MetricTip k={termKey} value={tipValue}>{label}</MetricTip> : label}</div>
+                <ReceiptDetails label="source" text={receipt} />
+              </div>
+              <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", marginTop: 6 }}>
+                <div>
+                  <span style={{ fontSize: 26, fontWeight: 700, color }}>{value}</span>
+                  {unit && <span style={{ fontSize: 10, color: MUTED, display: "block", marginTop: -2 }}>{unit}</span>}
+                  {detail && <span style={{ fontSize: 9, color: MUTED, display: "block", marginTop: 4 }}>{detail}</span>}
+                </div>
+                {delta && <span style={{ fontSize: 10, padding: "2px 5px", background: `${RED}20`, color: RED, borderRadius: 4 }}>{delta}</span>}
+                {sub && <span style={{ fontSize: 10, fontWeight: 600, color }}>{sub}</span>}
+              </div>
+              {bar !== undefined && (
+                <div style={{ marginTop: 8, height: 3, background: "rgba(255,255,255,0.08)", borderRadius: 2 }}>
+                  <div style={{ height: "100%", borderRadius: 2, background: color, width: `${Math.min(bar * 100, 100)}%`, transition: "width 0.25s ease" }} />
+                </div>
+              )}
+            </div>
+          ))}
         </div>
 
         <LocalChanges
@@ -604,66 +833,6 @@ export default function ClimateResultSectionsTop({ vm }: { vm: ClimateAppVM }) {
             </div>
           </div>
         )}
-
-        {/* Habitability Assessment */}
-        <div style={{ ...card, padding: 18, marginBottom: 14 }}>
-          <h2 style={{ fontSize: 15, fontWeight: 700, marginBottom: 14 }}><MetricTip k="habitability_score" value={d!.score}>Habitability Assessment</MetricTip></h2>
-          <div style={{ display: "flex", gap: 28, alignItems: "flex-start", flexWrap: "wrap" }}>
-            <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 6, minWidth: 110 }}>
-              <div style={{ position: "relative", width: 100, height: 100 }}>
-                <svg viewBox="0 0 36 36" style={{ width: "100%", height: "100%", transform: "rotate(-90deg)" }}>
-                  <path d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="rgba(255,255,255,0.08)" strokeWidth="3" />
-                  <path d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke={sc} strokeWidth="3" strokeDasharray={`${d!.score}, 100`} strokeLinecap="round" style={{ transition: "stroke-dasharray 0.25s ease" }} />
-                </svg>
-                <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
-                  <span style={{ fontSize: 26, fontWeight: 800, color: sc }}>{d!.score}</span>
-                  <span style={{ fontSize: 10, color: MUTED }}>/100</span>
-                </div>
-              </div>
-              <span style={{ fontSize: 13, fontWeight: 700, color: sc }}>{d!.category}</span>
-              <ScoreSparkline years={traj!.years} data={traj!.score} color={sc} year={year} />
-              <div style={{ fontSize: 8, color: MUTED }}>{BASELINE_YEAR} baseline to {MAX_YEAR} trajectory</div>
-            </div>
-            {d!.breakdown.length > 0 && (
-              <div style={{ flex: 1, minWidth: 280 }}>
-                {/* Diverging axis legend: penalties grow left, contributions grow right */}
-                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
-                  <div style={{ width: 175, flexShrink: 0 }} />
-                  <div style={{ flex: 1, position: "relative", height: 11 }}>
-                    <span style={{ position: "absolute", left: 0, fontSize: 9, color: MUTED }}>− penalty</span>
-                    <span style={{ position: "absolute", left: "50%", transform: "translateX(-50%)", fontSize: 9, color: MUTED }}>0</span>
-                    <span style={{ position: "absolute", right: 0, fontSize: 9, color: MUTED }}>+ contribution</span>
-                  </div>
-                  <div style={{ width: 40, flexShrink: 0 }} />
-                </div>
-                {d!.breakdown.map((item) => {
-                  const half = Math.min((Math.abs(item.val) / maxBreakdown) * 50, 50);
-                  return (
-                    <div key={item.key} style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 7 }}>
-                      <div style={{ fontSize: 11, width: 175, color: MUTED, flexShrink: 0 }}>{item.label}</div>
-                      <div style={{ flex: 1, position: "relative", height: 10, background: "rgba(255,255,255,0.04)", borderRadius: 3 }}>
-                        <div style={{ position: "absolute", left: "50%", top: -2, bottom: -2, width: 1, background: "rgba(255,255,255,0.22)" }} />
-                        <div style={{ position: "absolute", top: 0, bottom: 0, width: `${half}%`, left: item.neg ? undefined : "50%", right: item.neg ? "50%" : undefined, background: item.neg ? RED : GREEN, borderRadius: item.neg ? "3px 0 0 3px" : "0 3px 3px 0", transition: "width 0.25s ease, left 0.25s ease, right 0.25s ease" }} />
-                      </div>
-                      <div style={{ fontSize: 11, fontFamily: "monospace", color: item.neg ? RED : GREEN, width: 40, textAlign: "right" }}>
-                        {item.neg ? "−" : "+"}{Math.abs(item.val).toFixed(1)}
-                      </div>
-                    </div>
-                  );
-                })}
-                <div style={{ display: "flex", justifyContent: "flex-end", paddingTop: 8, borderTop: "1px solid rgba(255,255,255,0.08)", fontSize: 13, fontWeight: 700, color: sc }}>
-                  Total: {d!.score}
-                </div>
-              </div>
-            )}
-          </div>
-          <div style={{ marginTop: 14, paddingTop: 12, borderTop: "1px solid rgba(255,255,255,0.06)", display: "flex", gap: 6, flexWrap: "wrap" }}>
-            {[{ r: "0–39", l: "Severe", c: RED }, { r: "40–59", l: "Poor", c: ORANGE }, { r: "60–69", l: "Fair", c: AMBER }, { r: "70–84", l: "Good", c: GREEN }, { r: "85–100", l: "Excellent", c: "#4ade80" }].map((b) => {
-              const active = b.l === d!.category;
-              return <div key={b.r} style={{ padding: "3px 10px", borderRadius: 10, fontSize: 10, background: active ? `${b.c}18` : "rgba(255,255,255,0.04)", color: active ? b.c : MUTED, fontWeight: active ? 700 : 400, border: active ? `1px solid ${b.c}35` : "none" }}>{b.l} ({b.r})</div>;
-            })}
-          </div>
-        </div>
 
         {/* Sea-level rise — promoted to a prominent widget for coastal points.
             Previously this only appeared as a buried "context" line, which made
@@ -1181,50 +1350,6 @@ export default function ClimateResultSectionsTop({ vm }: { vm: ClimateAppVM }) {
           </div>
         )}
 
-        {shareStory && (
-          <div style={{ ...card, padding: 18, marginBottom: 14, borderLeft: `3px solid ${ACCENT}` }}>
-            <div style={{ display: "flex", justifyContent: "space-between", gap: 12, alignItems: "flex-start", flexWrap: "wrap", marginBottom: 12 }}>
-              <div style={{ minWidth: 0, flex: "1 1 420px" }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", marginBottom: 8 }}>
-                  <Share2 style={{ width: 15, height: 15, color: ACCENT }} />
-                  <h2 style={{ fontSize: 12, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.07em", color: MUTED }}>Shareable climate story</h2>
-                  <ReceiptDetails label="receipt" text={shareStory.caveat} />
-                </div>
-                <p style={{ margin: 0, fontSize: 16, fontWeight: 800, lineHeight: 1.45, color: "white" }}>{shareStory.headline}</p>
-                <p style={{ margin: "8px 0 0", fontSize: 12.5, lineHeight: 1.6, color: "rgba(255,255,255,0.76)" }}>
-                  {shareStory.metricLine}
-                </p>
-              </div>
-              <div style={{ display: "flex", gap: 8, flexWrap: "wrap", justifyContent: "flex-end" }}>
-                <button onClick={shareForecast} style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "8px 12px", borderRadius: 7, border: `1px solid ${ACCENT}55`, background: `${ACCENT}18`, color: "white", fontSize: 12, fontWeight: 800, cursor: "pointer" }}>
-                  <Share2 style={{ width: 13, height: 13 }} />
-                  Share story
-                </button>
-                <button onClick={copyShareStory} style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "8px 12px", borderRadius: 7, border: `1px solid ${shareStoryCopied ? GREEN : BORDER}`, background: shareStoryCopied ? `${GREEN}18` : "rgba(255,255,255,0.035)", color: shareStoryCopied ? GREEN : "white", fontSize: 12, fontWeight: 800, cursor: "pointer" }}>
-                  {shareStoryCopied ? <Check style={{ width: 13, height: 13 }} /> : <Share2 style={{ width: 13, height: 13 }} />}
-                  {shareStoryCopied ? "Copied story" : "Copy story"}
-                </button>
-                <button onClick={downloadShareImage} disabled={shareImageBusy} style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "8px 12px", borderRadius: 7, border: `1px solid ${shareImageSaved ? GREEN : BORDER}`, background: shareImageSaved ? `${GREEN}18` : "rgba(255,255,255,0.035)", color: shareImageSaved ? GREEN : "white", fontSize: 12, fontWeight: 800, cursor: shareImageBusy ? "wait" : "pointer", opacity: shareImageBusy ? 0.72 : 1 }}>
-                  {shareImageBusy ? <Loader2 style={{ width: 13, height: 13, animation: "spin 1s linear infinite" }} /> : shareImageSaved ? <Check style={{ width: 13, height: 13 }} /> : <Download style={{ width: 13, height: 13 }} />}
-                  {shareImageBusy ? "Rendering image" : shareImageSaved ? "Saved image" : "Download image"}
-                </button>
-              </div>
-            </div>
-
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 9 }}>
-              {[
-                { label: "Trend driver", text: shareStory.driverLine, color: AMBER },
-                { label: "Climate twin", text: shareStory.analogLine, color: PURPLE },
-              ].map((item) => (
-                <div key={item.label} style={{ background: "rgba(255,255,255,0.035)", border: `1px solid ${BORDER}`, borderRadius: 8, padding: 10 }}>
-                  <div style={{ fontSize: 10, color: item.color, textTransform: "uppercase", letterSpacing: "0.06em", fontWeight: 800, marginBottom: 5 }}>{item.label}</div>
-                  <div style={{ fontSize: 12.5, lineHeight: 1.55, color: "rgba(255,255,255,0.82)" }}>{item.text}</div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
         {learningPrompts.length > 0 && (
           <div style={{ ...card, padding: 18, marginBottom: 14, borderLeft: `3px solid ${BLUE}` }}>
             <div style={{ display: "flex", justifyContent: "space-between", gap: 12, alignItems: "flex-start", flexWrap: "wrap", marginBottom: 12 }}>
@@ -1268,59 +1393,6 @@ export default function ClimateResultSectionsTop({ vm }: { vm: ClimateAppVM }) {
             </div>
           </div>
         )}
-
-        {/* KPI Strip */}
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(170px,1fr))", gap: 10, marginBottom: 14 }}>
-          <div style={{ ...card, padding: 14 }}>
-            <div style={{ fontSize: 9, textTransform: "uppercase", letterSpacing: "0.08em", color: MUTED, marginBottom: 4 }}>Avg Temperature</div>
-            <div style={{ display: "flex", alignItems: "baseline", gap: 5 }}>
-              <span style={{ fontSize: 24, fontWeight: 700 }}>{d!.avgTemp.toFixed(1)}°C</span>
-              <span style={{ fontSize: 12, fontWeight: 600, color: RED }}>+{d!.tempChange.toFixed(1)}°</span>
-            </div>
-            <div style={{ marginTop: 7 }}>
-              <ReceiptDetails label="source" text="Raw CMIP6 model-consensus annual_mean and anomaly for the selected SSP scenario. Trend range uses temperature.uncertainty.annual_mean_low/high when exposed by the grounded API." />
-            </div>
-          </div>
-          <div style={{ ...card, padding: 14 }}>
-            <div style={{ fontSize: 9, textTransform: "uppercase", letterSpacing: "0.08em", color: MUTED, marginBottom: 4 }}>Annual Precip</div>
-            <div style={{ display: "flex", alignItems: "baseline", gap: 5 }}>
-              <span style={{ fontSize: 24, fontWeight: 700 }}>{d!.annualPrecip}mm</span>
-              <span style={{ fontSize: 12, fontWeight: 600, color: BLUE }}>{d!.precipChange >= 0 ? "+" : ""}{d!.precipChange.toFixed(1)}%</span>
-            </div>
-            <div style={{ marginTop: 7 }}>
-              <ReceiptDetails label="source" text="Annual precipitation total and anomaly_percent from the grounded precipitation projection. It does not include groundwater, reservoirs, demand, or local drainage capacity." />
-            </div>
-          </div>
-          <div style={{ ...card, padding: 14 }}>
-            <div style={{ fontSize: 9, textTransform: "uppercase", letterSpacing: "0.08em", color: MUTED, marginBottom: 4 }}>Heat Stress</div>
-            <div style={{ display: "flex", alignItems: "baseline", gap: 5 }}>
-              <span style={{ fontSize: 24, fontWeight: 700 }}>{d!.heatDays}</span>
-              <span style={{ fontSize: 12, color: MUTED }}>days/yr</span>
-            </div>
-            <div style={{ marginTop: 6, height: 3, background: "rgba(255,255,255,0.08)", borderRadius: 2 }}>
-              <div style={{ height: "100%", borderRadius: 2, background: ORANGE, width: `${Math.min((d!.heatDays / Math.max(...traj!.heat, 1)) * 100, 100)}%`, transition: "width 0.25s ease" }} />
-            </div>
-            <div style={{ marginTop: 7 }}>
-              <ReceiptDetails label="source" text="Heat-stress days come from the grounded extremes layer returned by /api/climate-trajectory. Treat as a climate screening indicator, not medical or occupational-safety advice." />
-            </div>
-          </div>
-          <div style={{ ...card, padding: 14, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-            <div>
-              <div style={{ fontSize: 9, textTransform: "uppercase", letterSpacing: "0.08em", color: MUTED, marginBottom: 4 }}>Habitability</div>
-              <div style={{ fontSize: 24, fontWeight: 700 }}>{d!.score}<span style={{ fontSize: 14, color: MUTED }}>/100</span></div>
-              <div style={{ fontSize: 11, fontWeight: 600, color: sc, marginTop: 2 }}>{d!.category}</div>
-              <div style={{ marginTop: 7 }}>
-                <ReceiptDetails label="method" text="Habitability is the score returned by the grounded grid engine from its visible climate component breakdown. It is educational context, not a safety certificate or relocation recommendation." />
-              </div>
-            </div>
-            <div style={{ position: "relative", width: 54, height: 54 }}>
-              <svg viewBox="0 0 36 36" style={{ width: "100%", height: "100%", transform: "rotate(-90deg)" }}>
-                <path d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="rgba(255,255,255,0.08)" strokeWidth="4" />
-                <path d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke={sc} strokeWidth="4" strokeDasharray={`${d!.score}, 100`} strokeLinecap="round" style={{ transition: "stroke-dasharray 0.3s ease" }} />
-              </svg>
-            </div>
-          </div>
-        </div>
 
     </>
   );
