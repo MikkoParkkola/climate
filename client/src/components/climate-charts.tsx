@@ -1,23 +1,39 @@
+import { useState } from "react";
 import {
   ACCENT, BG, BLUE, BORDER, MUTED, RED, MONTHS,
   BASELINE_YEAR, MAX_YEAR, CURRENT_FORECAST_YEAR,
 } from "@/lib/climate-constants";
 import { interpArr } from "@/lib/climate-helpers";
 
+// A source/receipt chip that reveals its note as an absolutely-positioned hover
+// tooltip. It overlays rather than reflowing, so it can never push surrounding
+// layout (previously a native <details> whose in-flow panel broke the sticky
+// header). Opens on hover AND focus (keyboard/touch), closes on leave/blur.
 export function ReceiptDetails({ label = "source", text }: { label?: string; text: string }) {
+  const [open, setOpen] = useState(false);
   return (
-    <details style={{ display: "inline-block", maxWidth: "100%" }}>
-      <summary
+    <span
+      style={{ position: "relative", display: "inline-block", maxWidth: "100%" }}
+      onMouseEnter={() => setOpen(true)}
+      onMouseLeave={() => setOpen(false)}
+    >
+      <button
+        type="button"
         aria-label={`${label}: ${text}`}
+        aria-expanded={open}
+        onFocus={() => setOpen(true)}
+        onBlur={() => setOpen(false)}
+        onClick={() => setOpen((v) => !v)}
         style={{
           display: "inline-flex",
           alignItems: "center",
           minHeight: 18,
-          cursor: "pointer",
+          cursor: "help",
           fontSize: 9,
           textTransform: "uppercase",
           letterSpacing: "0.06em",
           color: MUTED,
+          background: "transparent",
           border: `1px solid ${BORDER}`,
           borderRadius: 999,
           padding: "2px 6px",
@@ -25,24 +41,35 @@ export function ReceiptDetails({ label = "source", text }: { label?: string; tex
         }}
       >
         {label}
-      </summary>
-      <div
-        role="note"
-        style={{
-          marginTop: 6,
-          maxWidth: 340,
-          padding: "8px 9px",
-          border: `1px solid ${BORDER}`,
-          borderRadius: 8,
-          background: "rgba(6,9,16,0.94)",
-          color: "rgba(255,255,255,0.78)",
-          fontSize: 11,
-          lineHeight: 1.5,
-        }}
-      >
-        {text}
-      </div>
-    </details>
+      </button>
+      {open && (
+        <div
+          role="tooltip"
+          style={{
+            position: "absolute",
+            zIndex: 60,
+            top: "calc(100% + 6px)",
+            left: 0,
+            width: 340,
+            maxWidth: "80vw",
+            padding: "8px 9px",
+            border: `1px solid ${BORDER}`,
+            borderRadius: 8,
+            background: "rgba(6,9,16,0.97)",
+            color: "rgba(255,255,255,0.82)",
+            fontSize: 11,
+            lineHeight: 1.5,
+            textTransform: "none",
+            letterSpacing: "normal",
+            boxShadow: "0 8px 24px rgba(0,0,0,0.45)",
+            pointerEvents: "none",
+            whiteSpace: "normal",
+          }}
+        >
+          {text}
+        </div>
+      )}
+    </span>
   );
 }
 
