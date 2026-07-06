@@ -352,7 +352,7 @@ export function heatLifeText(days: number, delta: number): string {
     return `Heat stress is modeled for ${days} days per year, so the change is likely felt as a recurring seasonal constraint on outdoor activity and cooling needs.`;
   }
   if (days > 0) {
-    return `Heat stress remains occasional at ${days} days per year, but the direction matters: ${delta >= 0 ? "the modeled burden rises from baseline" : "the modeled burden eases from baseline"}.`;
+    return `Heat stress remains occasional at ${days} days per year, but the direction matters: ${delta === 0 ? "the modeled burden holds steady versus baseline" : delta > 0 ? "the modeled burden rises from baseline" : "the modeled burden eases from baseline"}.`;
   }
   return "Heat stress is not a prominent modeled signal here; precipitation, flood, drought, or cold-season effects may matter more locally.";
 }

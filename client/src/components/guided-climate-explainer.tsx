@@ -66,7 +66,13 @@ const RED = "#ef4444";
 const ORANGE = "#f97316";
 const BLUE = "#3b82f6";
 const GREEN = "#22c55e";
-const PURPLE = "#a78bfa";
+// AC.VISUAL.2 (MIK-6779): PURPLE ("#a78bfa") used to be declared here but was
+// never referenced anywhere in this file -- dead code that also happened to
+// carry a hue DESIGN.md bans from chrome outright ("never in buttons,
+// accents, or the favicon"). Removed rather than swapped for another color,
+// since there is no semantic role to preserve. (BLUE above stays: it colors
+// the rainfall/precipitation figure at line ~156, the "reads as water"
+// carve-out DESIGN.md explicitly allows.)
 
 const panelStyle: CSSProperties = {
   backgroundColor: "rgba(255,255,255,0.04)",
