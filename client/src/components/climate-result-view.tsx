@@ -4,7 +4,7 @@ import GuidedClimateExplainer from "@/components/guided-climate-explainer";
 import ScenarioSmallMultiples, { type ScenarioSmallMultipleMetric } from "@/components/scenario-small-multiples";
 import {
   BG, CARD, BORDER, ACCENT, MUTED, RED, BLUE, ORANGE, GREEN, AMBER, PURPLE, CYAN,
-  FONT_DISPLAY, FONT_MONO, card, MONTHS, BASELINE_YEAR, MAX_YEAR, CURRENT_FORECAST_YEAR,
+  FONT_DISPLAY, FONT_BODY, FONT_MONO, card, MONTHS, BASELINE_YEAR, MAX_YEAR, CURRENT_FORECAST_YEAR,
   YEAR_TICKS, QUICK_YEAR_BUTTONS, FREEZING_MONTHLY_MEAN_C, SCENARIOS, DEFAULT_SCENARIO, DEFAULT_SCENARIO_POLICY_VERSION,
   DEFAULT_SCENARIO_EXPLANATION, SCENARIO_LINE_COLORS, CURRENT_POLICIES_BAND,
 } from "@/lib/climate-constants";
@@ -51,7 +51,7 @@ export default function ClimateResultView({ vm }: { vm: ClimateAppVM }) {
   const crossedTips = tipping.filter((t) => t.year != null && (t.year as number) <= displayYear).length;
 
   return (
-    <div style={{ backgroundColor: BG, color: "white", minHeight: "100vh", fontFamily: "Inter, system-ui, sans-serif" }}>
+    <div style={{ backgroundColor: BG, color: "white", minHeight: "100vh", fontFamily: FONT_BODY }}>
       {/* Sticky Header */}
       <header style={{ background: "hsl(222,16%,9%)", borderBottom: `1px solid ${BORDER}`, position: "sticky", top: 0, zIndex: 50 }}>
         <div style={{ maxWidth: 1200, margin: "0 auto", padding: "0 20px", height: 48, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
