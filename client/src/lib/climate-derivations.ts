@@ -483,7 +483,9 @@ export function deriveShareStory(
     ? `Top visible score driver: ${topDriver.label} ${topDriver.movement}, ${signedNumber(topDriver.effect, 1)} score points.`
     : "Top visible score driver: no single score component moved enough to dominate this horizon.";
   const analogLine = climateAnalog
-    ? `Current-day climate twin: ${climateAnalog.candidate.name}, ${climateAnalog.candidate.country}; distance ${climateAnalog.distance.toFixed(2)} standardized climate units across ${climateAnalog.comparedCount} bounded-catalog cities.`
+    ? (climateAnalog.noAnalog
+        ? `Current-day climate twin: none — this location's projected climate has no present-day equivalent in the ${climateAnalog.comparedCount}-city catalog (novel climate, >4σ dissimilarity).`
+        : `Current-day climate twin: ${climateAnalog.candidate.name}, ${climateAnalog.candidate.country} (${climateAnalog.matchLabel} match, ${climateAnalog.sigma.toFixed(1)}σ); distance ${climateAnalog.distance.toFixed(2)} standardized climate units across ${climateAnalog.comparedCount} bounded-catalog cities.`)
     : `Current-day climate twin: bounded climate-twin catalog ${analogCatalog ? `${analogCatalog.candidateCount} cities loaded; match still resolving` : "loading"}.`;
   const caveat = "Educational projection only. The share text uses already visible grounded fields and the bounded climate-twin catalog, with no unregistered enrichments and no safe-city claim.";
   const text = [metricLine, driverLine, analogLine, caveat].join("\n");

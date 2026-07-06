@@ -19,6 +19,7 @@
     "smoke:runtime-cache": "tsx scripts/smoke-runtime-cache.ts",
     "smoke:rankings": "tsx scripts/smoke-ranking-artifacts.ts",
     "smoke:twin": "tsx scripts/smoke-climate-twin.ts",
+    "smoke:sigma": "tsx scripts/smoke-sigma-analog.ts",
     "smoke:comparison-layout": "node scripts/smoke-comparison-layout.mjs",
     "smoke:projection-route": "node scripts/smoke-climate-projection-route.mjs",
     "smoke:raw-json": "node scripts/smoke-raw-json-export.mjs",

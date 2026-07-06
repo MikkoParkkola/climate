@@ -15,6 +15,7 @@ import {
   RED,
   SCENARIOS,
 } from "./climate-constants";
+import { analogLabel, effectiveDof, sigmaDissimilarity } from "./sigma-dissimilarity";
 import type {
   AnalogCandidate,
   AnalogCatalog,
@@ -277,21 +278,36 @@ export function findClimateAnalog(
   const scored = candidateRows
     .filter((row) => !(excludeSelf && sameCatalogPlace(row.candidate, location)))
     .map((row) => {
-      const squared = row.vector.reduce((sum, v, i) => {
+      const sumSq = row.vector.reduce((sum, v, i) => {
         const z = (target[i] - v) / stds[i];
         return sum + z * z;
       }, 0);
-      return { candidate: row.candidate, distance: Math.sqrt(squared / dims) };
+      return { candidate: row.candidate, sumSq, distance: Math.sqrt(sumSq / dims) };
     })
     .sort((a, b) => a.distance - b.distance);
 
   const best = scored[0];
   if (!best) return null;
+
+  // Sigma-dissimilarity novelty (Mahony 2017): read the standardized deviation
+  // as a Mahalanobis distance and convert to sigma under the chi distribution.
+  // The 24 monthly dimensions are strongly correlated, so use the catalog's
+  // EFFECTIVE degrees of freedom, not the raw dimension count — otherwise
+  // novelty is badly under-flagged. Above 4 sigma there is no modern equivalent.
+  const zRows = candidateRows.map((row) => row.vector.map((v, i) => (v - means[i]) / stds[i]));
+  const dof = effectiveDof(zRows, dims);
+  const sigma = sigmaDissimilarity(Math.sqrt(best.sumSq), dof);
+  const matchLabel = analogLabel(sigma);
+
   const c = best.candidate;
   return {
     candidate: c,
     distance: best.distance,
     comparedCount: scored.length,
+    sigma,
+    sigmaDof: dof,
+    matchLabel,
+    noAnalog: matchLabel === "none",
     annualTempDelta: snapshot.avgTemp - c.temperature.annual_mean,
     annualPrecipDelta: snapshot.annualPrecip - c.precipitation.annual_total,
     heatDaysDelta: snapshot.heatDays - c.extremes.heat_stress_days,
