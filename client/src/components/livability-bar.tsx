@@ -12,10 +12,14 @@ export function LivabilityBar({ score, baselineScore, year }: { score: number; b
   const zones = "linear-gradient(90deg, hsl(6,72%,50%) 0%, hsl(6,72%,50%) 40%, hsl(38,72%,52%) 55%, hsl(150,38%,46%) 72%, hsl(150,38%,46%) 100%)";
 
   const tick = (v: number, color: string, label: string, above: boolean) => (
-    <div style={{ position: "absolute", left: `${v}%`, top: 0, transform: "translateX(-50%)" }}>
-      {above && <div style={{ fontFamily: FONT_MONO, fontSize: 10.5, color, whiteSpace: "nowrap", marginBottom: 2, textAlign: "center" }}>{label}</div>}
-      <div style={{ width: 2, height: 22, background: color, margin: "0 auto", boxShadow: "0 0 0 1px hsl(222,16%,8%)" }} />
-      {!above && <div style={{ fontFamily: FONT_MONO, fontSize: 10.5, color, whiteSpace: "nowrap", marginTop: 2, textAlign: "center" }}>{label}</div>}
+    <div style={{ position: "absolute", left: `${v}%`, top: 0, width: 0 }}>
+      {above && (
+        <div style={{ position: "absolute", bottom: 15, left: 0, transform: "translateX(-50%)", fontFamily: FONT_MONO, fontSize: 10.5, color, whiteSpace: "nowrap" }}>{label}</div>
+      )}
+      <div style={{ position: "absolute", top: -6, left: 0, transform: "translateX(-50%)", width: 2, height: 22, background: color }} />
+      {!above && (
+        <div style={{ position: "absolute", top: 19, left: 0, transform: "translateX(-50%)", fontFamily: FONT_MONO, fontSize: 10.5, color, whiteSpace: "nowrap" }}>{label}</div>
+      )}
     </div>
   );
 
