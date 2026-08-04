@@ -1,0 +1,33 @@
+name: Dependabot auto-merge
+
+# Hands-off dependency maintenance: auto-merge patch + minor dependabot PRs once
+# CI passes. Major bumps are deliberately LEFT OPEN for human review, because a
+# major can change behaviour silently and someone should decide whether to adapt
+# to it — and whether it brings capabilities worth using.
+#
+# Safe pattern: this workflow reads PR metadata and merges. It NEVER checks out
+# or executes PR code, which is what makes `pull_request_target` acceptable here.
+
+on: pull_request_target
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  auto-merge:
+    if: ${{ github.actor == 'dependabot[bot]' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Fetch dependabot metadata
+        id: meta
+        uses: dependabot/fetch-metadata@25dd0e34f4fe68f24cc83900b1fe3fe149efef98
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Enable auto-merge for patch + minor
+        if: ${{ steps.meta.outputs.update-type == 'version-update:semver-patch' || steps.meta.outputs.update-type == 'version-update:semver-minor' }}
+        run: gh pr merge --auto --squash "$PR_URL"
+        env:
+          PR_URL: ${{ github.event.pull_request.html_url }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
