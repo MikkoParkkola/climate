@@ -98,7 +98,7 @@
     "@types/leaflet": "^1.9.18",
     "@types/memoizee": "^0.4.12",
     "@types/pg": "^8.20.0",
-    "brace-expansion": "^3.0.2",
+    "brace-expansion": "^5.0.9",
     "chart.js": "^4.4.9",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
