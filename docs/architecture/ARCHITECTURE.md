@@ -1,13 +1,15 @@
 # Architecture: grounded forecast pipeline
 
-**One-line shape:** offline data pipeline (CMIP6 + AR6 + sea-level) → precomputed global grid cache → stateless public serve. The web app never calls a model at request time; it reads grounded, cited values from cache.
+**One-line shape:** offline data pipeline (CMIP6 + AR6 + sea-level) → precomputed global grid, committed to the repo as `data/grid.i16.gz` + `data/manifest.json` → stateless public serve.
+
+The web app runs no climate model and no Python subprocess at request time. It loads the committed grid into memory and interpolates it per request (`server/grid-reader.ts`, `server/grounded-node-model.ts`), so every value traces back to that grid and its provenance. Postgres (`climate_model_cache`) memoizes the computed responses (stores each result so a repeat request skips the work); it is not the source of the grid, and the server boots and serves artifact-only routes with no `DATABASE_URL` set.
 
 > Decided by research 2026-06-26 (see `SCIENTIFIC_GROUNDING.md`): IPCC AR6 / CMIP6 is the projection engine; cBottle is shelved (license + not-a-projection-model). This doc is the "how".
 
 ## Why this shape
 
 - The 2100 signal is **slow to compute** (regridding multi-model CMIP6 NetCDF, per-location aggregation) but **static** once computed — perfect for precompute-and-cache. The existing `climate_model_cache` table is already built for exactly this.
-- Replit autoscale serves the SPA + API cheaply but is **not** where heavy compute runs. All ingestion/regridding happens **offline on a workstation/GPU/cloud box** (per global compute-routing rule: never on Replit, never on Mac). Output is committed/loaded into Postgres.
+- Replit autoscale serves the SPA + API cheaply but is **not** where heavy compute runs. All ingestion/regridding happens **offline on a workstation/GPU/cloud box** (per global compute-routing rule: never on Replit, never on Mac). Output is committed to the repo under `data/` and loaded into memory at startup.
 - Statelessness in the request path = fast (<200ms), no rate-limit gymnastics, no Python subprocess in production.
 
 ## Components
@@ -26,18 +28,23 @@
   │   │                      SSP2-4.5, SSP5-8.5}; derive risk        │
   │   │                      indices via documented formulas;        │
   │   │                      attach provenance + uncertainty range   │
-  │   └─ load_cache.py       upsert → climate_model_cache (+scenario)│
+  │   └─ build_export.py     pack grids → data/grid.i16.gz +         │
+  │                          data/manifest.json (committed)          │
+  │      load_cache.py       upserts climate_grid in Postgres; NOT   │
+  │                          read by the server, kept for offline use│
   └────────────────────────────────────────────────────────────────┘
-                                   │  (DB write)
+                                   │  (committed artifact, read at startup)
                                    ▼
                         ONLINE (Replit — serve only)
   ┌────────────────────────────────────────────────────────────────┐
+  │  server/grid-reader.ts + server/grounded-node-model.ts           │
   │  server/routes.ts                                                │
   │   GET /api/climate-projection?lat&lng&year&scenario             │
   │     → nearest grid cells → bilinear interp in space +           │
   │       linear interp across decades → attach provenance          │
   │     → returns value + range + source + scenario                 │
-  │   (NO python subprocess, NO model call)                         │
+  │   (in-process; NO python subprocess, NO external model call)    │
+  │   Postgres climate_model_cache memoizes the computed response   │
   └────────────────────────────────────────────────────────────────┘
 ```
 

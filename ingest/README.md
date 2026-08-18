@@ -1,8 +1,12 @@
 # ingest/: offline grounding pipeline (Phase 2)
 
-Builds the global forecast grid from real climate science, then loads it into
-Postgres for the web app to serve. **Runs offline on a GPU/compute box (Spark),
-never on Replit or a laptop.** The web app only reads the cache it produces.
+Builds the global forecast grid from real climate science, then packs it with
+`build_export.py` into `data/grid.i16.gz` + `data/manifest.json`, which are
+committed to the repo. **Runs offline on a GPU/compute box (Spark), never on
+Replit or a laptop.** The web app loads those two files at startup and
+interpolates them per request; it does not read the grid from Postgres.
+`load_cache.py` still writes the `climate_grid` table, but nothing in `server/`
+reads it.
 
 Engine: IPCC AR6 / CMIP6 + NASA AR6 sea level. NOT cBottle (see
 `../docs/architecture/SCIENTIFIC_GROUNDING.md` for why). No invented numbers —
