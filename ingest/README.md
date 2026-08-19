@@ -3,8 +3,9 @@
 Builds the global forecast grid from real climate science, then packs it with
 `build_export.py` into `data/grid.i16.gz` + `data/manifest.json`, which are
 committed to the repo. **Runs offline on a GPU/compute box (Spark), never on
-Replit or a laptop.** The web app loads those two files at startup and
-interpolates them per request; it does not read the grid from Postgres.
+Replit or a laptop.** The web app reads those two files on the first request
+that needs them, keeps them in memory, and interpolates them per request; it
+does not read the grid from Postgres.
 `load_cache.py` still writes the `climate_grid` table, but nothing in `server/`
 reads it.
 
