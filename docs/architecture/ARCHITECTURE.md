@@ -2,14 +2,14 @@
 
 **One-line shape:** offline data pipeline (CMIP6 + AR6 + sea-level) → precomputed global grid, committed to the repo as `data/grid.i16.gz` + `data/manifest.json` → stateless public serve.
 
-The web app runs no climate model and no Python subprocess at request time. It loads the committed grid into memory and interpolates it per request (`server/grid-reader.ts`, `server/grounded-node-model.ts`), so every value traces back to that grid and its provenance. Postgres (`climate_model_cache`) memoizes the computed responses (stores each result so a repeat request skips the work); it is not the source of the grid, and the server boots and serves artifact-only routes with no `DATABASE_URL` set.
+The web app runs no climate model and no Python subprocess at request time. It reads the committed grid into memory on the first request that needs it and keeps it for the process lifetime, then interpolates it per request (`server/grid-reader.ts:117-124`, `server/grounded-node-model.ts`), so every value traces back to that grid and its provenance. Postgres (`climate_model_cache`) memoizes the computed responses (stores each result so a repeat request skips the work); it is not the source of the grid, and the server boots and serves artifact-only routes with no `DATABASE_URL` set.
 
 > Decided by research 2026-06-26 (see `SCIENTIFIC_GROUNDING.md`): IPCC AR6 / CMIP6 is the projection engine; cBottle is shelved (license + not-a-projection-model). This doc is the "how".
 
 ## Why this shape
 
 - The 2100 signal is **slow to compute** (regridding multi-model CMIP6 NetCDF, per-location aggregation) but **static** once computed — perfect for precompute-and-cache. The existing `climate_model_cache` table is already built for exactly this.
-- Replit autoscale serves the SPA + API cheaply but is **not** where heavy compute runs. All ingestion/regridding happens **offline on a workstation/GPU/cloud box** (per global compute-routing rule: never on Replit, never on Mac). Output is committed to the repo under `data/` and loaded into memory at startup.
+- Replit autoscale serves the SPA + API cheaply but is **not** where heavy compute runs. All ingestion/regridding happens **offline on a workstation/GPU/cloud box** (per global compute-routing rule: never on Replit, never on Mac). Output is committed to the repo under `data/` and read into memory on first use, not at startup.
 - Statelessness in the request path = fast (<200ms), no rate-limit gymnastics, no Python subprocess in production.
 
 ## Components
@@ -33,7 +33,7 @@ The web app runs no climate model and no Python subprocess at request time. It l
   │      load_cache.py       upserts climate_grid in Postgres; NOT   │
   │                          read by the server, kept for offline use│
   └────────────────────────────────────────────────────────────────┘
-                                   │  (committed artifact, read at startup)
+                                   │  (committed artifact, read on first use)
                                    ▼
                         ONLINE (Replit — serve only)
   ┌────────────────────────────────────────────────────────────────┐
