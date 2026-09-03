@@ -183,6 +183,7 @@
   "overrides": {
     "@esbuild-kit/core-utils": {
       "esbuild": "^0.25.0"
-    }
+    },
+    "nanoid@3": "3.3.18"
   }
 }
