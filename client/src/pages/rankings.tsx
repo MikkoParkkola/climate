@@ -156,7 +156,7 @@ export default function RankingsPage() {
             <select
               value={catalog}
               onChange={(event) => setCatalog(event.target.value as (typeof CATALOGS)[number]["id"])}
-              className="w-full rounded border border-[hsl(220,13%,22%)] bg-[hsl(222,15%,16%)] px-3 py-2"
+              className="mt-1 w-full rounded border border-[hsl(220,13%,22%)] bg-[hsl(222,15%,16%)] px-3 py-2"
             >
               {CATALOGS.map((item) => <option key={item.id} value={item.id}>{item.label}</option>)}
             </select>
@@ -172,7 +172,7 @@ export default function RankingsPage() {
                 const nextSpec = METRICS.find((item) => item.id === nextMetric);
                 setDirection((nextSpec?.defaultDirection ?? "highest") as Direction);
               }}
-              className="w-full rounded border border-[hsl(220,13%,22%)] bg-[hsl(222,15%,16%)] px-3 py-2"
+              className="mt-1 w-full rounded border border-[hsl(220,13%,22%)] bg-[hsl(222,15%,16%)] px-3 py-2"
             >
               {METRICS.map((item) => <option key={item.id} value={item.id}>{item.label}</option>)}
             </select>
@@ -182,7 +182,7 @@ export default function RankingsPage() {
           </label>
           <label className="space-y-1 text-sm">
             <span className="font-medium text-slate-300">Scenario</span>
-            <select value={scenario} onChange={(event) => setScenario(event.target.value)} className="w-full rounded border border-[hsl(220,13%,22%)] bg-[hsl(222,15%,16%)] px-3 py-2">
+            <select value={scenario} onChange={(event) => setScenario(event.target.value)} className="mt-1 w-full rounded border border-[hsl(220,13%,22%)] bg-[hsl(222,15%,16%)] px-3 py-2">
               {SCENARIOS.map((item) => <option key={item.id} value={item.id}>{scenarioOptionLabel(item)}</option>)}
             </select>
             {scenario === DEFAULT_SCENARIO && (
@@ -193,13 +193,13 @@ export default function RankingsPage() {
           </label>
           <label className="space-y-1 text-sm">
             <span className="font-medium text-slate-300">Year</span>
-            <select value={year} onChange={(event) => setYear(Number(event.target.value))} className="w-full rounded border border-[hsl(220,13%,22%)] bg-[hsl(222,15%,16%)] px-3 py-2">
+            <select value={year} onChange={(event) => setYear(Number(event.target.value))} className="mt-1 w-full rounded border border-[hsl(220,13%,22%)] bg-[hsl(222,15%,16%)] px-3 py-2">
               {YEARS.map((item) => <option key={item} value={item}>{item}</option>)}
             </select>
           </label>
           <label className="space-y-1 text-sm">
             <span className="font-medium text-slate-300">Direction</span>
-            <select value={direction} onChange={(event) => setDirection(event.target.value as Direction)} className="w-full rounded border border-[hsl(220,13%,22%)] bg-[hsl(222,15%,16%)] px-3 py-2">
+            <select value={direction} onChange={(event) => setDirection(event.target.value as Direction)} className="mt-1 w-full rounded border border-[hsl(220,13%,22%)] bg-[hsl(222,15%,16%)] px-3 py-2">
               <option value="highest">Highest values</option>
               <option value="lowest">Lowest values</option>
             </select>
@@ -315,7 +315,7 @@ export default function RankingsPage() {
                   </div>
                   <dl className="space-y-2 text-sm">
                     <div><dt className="font-medium text-slate-400">Source registry</dt><dd>{data.sourceRegistryVersion}</dd></div>
-                    <div><dt className="font-medium text-slate-400">Source IDs</dt><dd className="break-words">{data.sourceIds.join(", ")}</dd></div>
+                    <div><dt className="font-medium text-slate-400">Source IDs</dt><dd className="wrap-break-word">{data.sourceIds.join(", ")}</dd></div>
                     <div><dt className="font-medium text-slate-400">Exclusions</dt><dd>{data.exclusions.length ? data.exclusions.join("; ") : "None in this bounded catalog slice."}</dd></div>
                   </dl>
                   <p className="flex gap-2 text-xs text-slate-400">

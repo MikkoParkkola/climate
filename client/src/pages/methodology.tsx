@@ -12,7 +12,7 @@ export default function Methodology() {
       <div className="mx-auto max-w-3xl space-y-6">
         <header className="space-y-2">
           <a href="/" className="text-sm text-[hsl(24,88%,66%)] hover:underline">← Back to the map</a>
-          <h1 className="text-3xl font-bold text-white">How fupit gets its numbers</h1>
+          <h1 className="mt-2 text-3xl font-bold text-white">How fupit gets its numbers</h1>
           <p className="text-slate-400">
             Every value on this site traces to real climate science. We do not invent
             coefficients or warming rates. Where we cannot ground a number, we leave it

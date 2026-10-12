@@ -672,6 +672,7 @@ export default function ClimateComparison({ onBack }: ClimateComparisonProps) {
               <div className="space-y-2">
                 <Label htmlFor="location-search">Search for locations</Label>
                 <Input
+                  className="mt-2"
                   id="location-search"
                   placeholder="Search cities, countries, or coordinates..."
                   value={searchQuery}
