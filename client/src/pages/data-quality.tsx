@@ -247,7 +247,7 @@ export default function DataQualityPage() {
                   <Stat label="Policy version" value={data.defaultScenarioPolicy.policyVersion} />
                   <Stat label="Forecast scenarios" value={data.defaultScenarioPolicy.supportedFullForecastScenarios.join(", ")} />
                 </div>
-                <p className="break-words text-xs text-slate-400">
+                <p className="wrap-break-word text-xs text-slate-400">
                   Policy context sources: {data.defaultScenarioPolicy.sourceIds.join(", ")}
                 </p>
                 {data.defaultScenarioPolicy.gridHash && (
@@ -531,7 +531,7 @@ export default function DataQualityPage() {
                         <div className="text-slate-400">
                           {catalog.catalog} · {catalog.catalogSize} places · {catalog.entryCount} slices · years {catalog.yearRange[0]}-{catalog.yearRange[1]}
                         </div>
-                        <div className="mt-1 break-words text-xs text-slate-400">Sources: {catalog.sourceIds.join(", ")}</div>
+                        <div className="mt-1 wrap-break-word text-xs text-slate-400">Sources: {catalog.sourceIds.join(", ")}</div>
                       </div>
                     ))}
                   </div>

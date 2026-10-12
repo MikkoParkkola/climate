@@ -1,75 +1,268 @@
-@import "./fonts.css";
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import './fonts.css' layer(base);
+@import 'tailwindcss';
 
-:root {
-  --background: hsl(222, 16%, 8%);
-  --foreground: hsl(220, 16%, 93%);
-  --muted: hsl(220, 10%, 16%);
-  --muted-foreground: hsl(220, 9%, 63%);
-  --popover: hsl(222, 15%, 12%);
-  --popover-foreground: hsl(220, 16%, 93%);
-  --card: hsl(222, 15%, 12%);
-  --card-foreground: hsl(220, 16%, 93%);
-  --border: hsl(220, 13%, 22%);
-  --input: hsl(220, 10%, 16%);
-  --primary: hsl(24, 88%, 56%);
-  --primary-foreground: hsl(222, 16%, 9%);
-  --secondary: hsl(220, 10%, 16%);
-  --secondary-foreground: hsl(220, 16%, 93%);
-  --accent: hsl(220, 11%, 18%);
-  --accent-foreground: hsl(220, 16%, 93%);
-  --destructive: hsl(4, 70%, 52%);
-  --destructive-foreground: hsl(220, 16%, 96%);
-  --ring: hsl(24, 88%, 56%);
-  --radius: 0.25rem;
-  --chart-1: hsl(24, 88%, 56%);
-  --chart-2: hsl(150, 38%, 48%);
-  --chart-3: hsl(8, 72%, 56%);
-  --chart-4: hsl(38, 70%, 55%);
-  --chart-5: hsl(200, 45%, 56%);
+@plugin 'tailwindcss-animate';
+@plugin '@tailwindcss/typography';
 
-  --climate-blue: hsl(200, 45%, 56%);
-  --climate-green: hsl(150, 38%, 48%);
-  --climate-red: hsl(6, 72%, 55%);
-  --climate-orange: hsl(28, 82%, 55%);
+@custom-variant dark (&:is(.dark *));
 
-  /* opaque warm panels — no glassmorphism */
-  --glass-bg: hsl(222, 15%, 13%);
-  --glass-border: hsl(220, 13%, 22%);
-  --glass-hover: hsl(220, 11%, 15%);
+@theme {
+  --radius-lg: var(--radius);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-sm: calc(var(--radius) - 4px);
 
-  --font-display: 'Fraunces', Georgia, 'Times New Roman', serif;
-  --font-body: 'Public Sans', system-ui, sans-serif;
-  --font-mono: 'Space Mono', ui-monospace, 'SFMono-Regular', monospace;
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+
+  --color-sidebar: var(--sidebar-background);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+
+  --animate-accordion-down: accordion-down 0.2s ease-out;
+  --animate-accordion-up: accordion-up 0.2s ease-out;
+
+  @keyframes accordion-down {
+    from {
+      height: 0;
+    }
+    to {
+      height: var(--radix-accordion-content-height);
+    }
+  }
+  @keyframes accordion-up {
+    from {
+      height: var(--radix-accordion-content-height);
+    }
+    to {
+      height: 0;
+    }
+  }
 }
 
-.dark {
-  --background: hsl(222, 16%, 8%);
-  --foreground: hsl(220, 16%, 93%);
-  --muted: hsl(220, 10%, 16%);
-  --muted-foreground: hsl(220, 9%, 63%);
-  --popover: hsl(222, 15%, 12%);
-  --popover-foreground: hsl(220, 16%, 93%);
-  --card: hsl(222, 15%, 12%);
-  --card-foreground: hsl(220, 16%, 93%);
-  --border: hsl(220, 13%, 22%);
-  --input: hsl(220, 10%, 16%);
-  --primary: hsl(24, 88%, 56%);
-  --primary-foreground: hsl(222, 16%, 9%);
-  --secondary: hsl(220, 10%, 16%);
-  --secondary-foreground: hsl(220, 16%, 93%);
-  --accent: hsl(220, 11%, 18%);
-  --accent-foreground: hsl(220, 16%, 93%);
-  --destructive: hsl(4, 70%, 52%);
-  --destructive-foreground: hsl(220, 16%, 96%);
-  --ring: hsl(24, 88%, 56%);
-  --chart-1: hsl(24, 88%, 56%);
-  --chart-2: hsl(150, 38%, 48%);
-  --chart-3: hsl(8, 72%, 56%);
-  --chart-4: hsl(38, 70%, 55%);
-  --chart-5: hsl(200, 45%, 56%);
+/*
+  The default border color has changed to `currentcolor` in Tailwind CSS v4,
+  so we've added these compatibility styles to make sure everything still
+  looks the same as it did with Tailwind CSS v3.
+
+  If we ever want to remove these styles, we need to add an explicit border
+  color utility to any element that depends on these defaults.
+*/
+@layer base {
+  *,
+  ::after,
+  ::before,
+  ::backdrop,
+  ::file-selector-button {
+    border-color: var(--color-gray-200, currentcolor);
+  }
+}
+
+@utility glass-card {
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  /* opaque panels per DESIGN.md §14 — glassmorphism blur intentionally removed */
+
+  &:hover {
+    background: var(--glass-hover);
+  }
+}
+
+@utility stat-card {
+  @apply rounded-lg p-4 border transition-all duration-200;
+  background: var(--glass-bg);
+  border-color: var(--glass-border);
+
+  &:hover {
+    background: var(--glass-hover);
+    transform: translateY(-1px);
+  }
+}
+
+@utility section-card {
+  @apply rounded-2xl border overflow-hidden;
+  background: hsl(222, 47%, 12%);
+  border-color: hsl(217, 33%, 22%);
+}
+
+@utility section-header {
+  @apply px-6 py-4 border-b flex items-center gap-3;
+  border-color: hsl(217, 33%, 22%);
+  background: hsl(222, 47%, 10%);
+}
+
+@utility climate-blue {
+  color: var(--climate-blue);
+}
+
+@utility bg-climate-blue {
+  background-color: var(--climate-blue);
+}
+
+@utility climate-green {
+  color: var(--climate-green);
+}
+
+@utility bg-climate-green {
+  background-color: var(--climate-green);
+}
+
+@utility climate-red {
+  color: var(--climate-red);
+}
+
+@utility bg-climate-red {
+  background-color: var(--climate-red);
+}
+
+@utility climate-orange {
+  color: var(--climate-orange);
+}
+
+@utility bg-climate-orange {
+  background-color: var(--climate-orange);
+}
+
+@utility habitability-excellent {
+  @apply text-emerald-400 bg-emerald-950 border-emerald-800;
+}
+
+@utility habitability-fair {
+  @apply text-yellow-400 bg-yellow-950 border-yellow-800;
+}
+
+@utility habitability-poor {
+  @apply text-orange-400 bg-orange-950 border-orange-800;
+}
+
+@utility habitability-severe {
+  @apply text-red-400 bg-red-950 border-red-800;
+}
+
+@utility animate-pulse-slow {
+  animation: pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+@utility animate-fade-in {
+  animation: fadeIn 0.4s ease-out both;
+}
+
+@utility animate-slide-up {
+  animation: slideUp 0.4s ease-out both;
+
+  /* AC.VISUAL.1 (MIK-6779): .text-gradient, .hero-gradient, .glow-cyan and
+     .glow-cyan-sm were all leftover pre-"Ember Instrument" CSS -- unreferenced
+     anywhere in client/src -- carrying exactly the banned blue gradient
+     DESIGN.md says is gone ("the old blue CTA gradient (hsl(192...215)) is
+     gone"). Confirmed dead via `rg` before deleting rather than re-tinting
+     them to ember, since keeping unused rules around only invites the banned
+     hue to resurface the next time someone reaches for a class by name. */
+}
+
+@layer utilities {
+  :root {
+    --background: hsl(222, 16%, 8%);
+    --foreground: hsl(220, 16%, 93%);
+    --muted: hsl(220, 10%, 16%);
+    --muted-foreground: hsl(220, 9%, 63%);
+    --popover: hsl(222, 15%, 12%);
+    --popover-foreground: hsl(220, 16%, 93%);
+    --card: hsl(222, 15%, 12%);
+    --card-foreground: hsl(220, 16%, 93%);
+    --border: hsl(220, 13%, 22%);
+    --input: hsl(220, 10%, 16%);
+    --primary: hsl(24, 88%, 56%);
+    --primary-foreground: hsl(222, 16%, 9%);
+    --secondary: hsl(220, 10%, 16%);
+    --secondary-foreground: hsl(220, 16%, 93%);
+    --accent: hsl(220, 11%, 18%);
+    --accent-foreground: hsl(220, 16%, 93%);
+    --destructive: hsl(4, 70%, 52%);
+    --destructive-foreground: hsl(220, 16%, 96%);
+    --ring: hsl(24, 88%, 56%);
+    --radius: 0.25rem;
+    --chart-1: hsl(24, 88%, 56%);
+    --chart-2: hsl(150, 38%, 48%);
+    --chart-3: hsl(8, 72%, 56%);
+    --chart-4: hsl(38, 70%, 55%);
+    --chart-5: hsl(200, 45%, 56%);
+
+    --climate-blue: hsl(200, 45%, 56%);
+    --climate-green: hsl(150, 38%, 48%);
+    --climate-red: hsl(6, 72%, 55%);
+    --climate-orange: hsl(28, 82%, 55%);
+
+    /* opaque warm panels — no glassmorphism */
+    --glass-bg: hsl(222, 15%, 13%);
+    --glass-border: hsl(220, 13%, 22%);
+    --glass-hover: hsl(220, 11%, 15%);
+
+    --font-display: 'Fraunces', Georgia, 'Times New Roman', serif;
+    --font-body: 'Public Sans', system-ui, sans-serif;
+    --font-mono: 'Space Mono', ui-monospace, 'SFMono-Regular', monospace;
+  }
+
+  .dark {
+    --background: hsl(222, 16%, 8%);
+    --foreground: hsl(220, 16%, 93%);
+    --muted: hsl(220, 10%, 16%);
+    --muted-foreground: hsl(220, 9%, 63%);
+    --popover: hsl(222, 15%, 12%);
+    --popover-foreground: hsl(220, 16%, 93%);
+    --card: hsl(222, 15%, 12%);
+    --card-foreground: hsl(220, 16%, 93%);
+    --border: hsl(220, 13%, 22%);
+    --input: hsl(220, 10%, 16%);
+    --primary: hsl(24, 88%, 56%);
+    --primary-foreground: hsl(222, 16%, 9%);
+    --secondary: hsl(220, 10%, 16%);
+    --secondary-foreground: hsl(220, 16%, 93%);
+    --accent: hsl(220, 11%, 18%);
+    --accent-foreground: hsl(220, 16%, 93%);
+    --destructive: hsl(4, 70%, 52%);
+    --destructive-foreground: hsl(220, 16%, 96%);
+    --ring: hsl(24, 88%, 56%);
+    --chart-1: hsl(24, 88%, 56%);
+    --chart-2: hsl(150, 38%, 48%);
+    --chart-3: hsl(8, 72%, 56%);
+    --chart-4: hsl(38, 70%, 55%);
+    --chart-5: hsl(200, 45%, 56%);
+  }
 }
 
 @layer base {
@@ -108,193 +301,134 @@
   details[open] > summary [data-disclosure]::after { content: "collapse ▴"; }
 }
 
-.fupit-landing {
-  position: relative;
-  overflow: hidden;
-  background: hsl(222, 16%, 8%);
-  color: hsl(220, 16%, 94%);
-  min-height: 100vh;
-  font-family: var(--font-body);
-  display: flex;
-  flex-direction: column;
-}
+@layer utilities {
+  .fupit-landing {
+    position: relative;
+    overflow: hidden;
+    background: hsl(222, 16%, 8%);
+    color: hsl(220, 16%, 94%);
+    min-height: 100vh;
+    font-family: var(--font-body);
+    display: flex;
+    flex-direction: column;
+  }
 
-.fupit-landing::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background-image:
-    linear-gradient(90deg, rgba(8, 11, 18, 0.92) 0%, rgba(8, 11, 18, 0.78) 38%, rgba(8, 11, 18, 0.36) 72%, rgba(8, 11, 18, 0.54) 100%),
-    linear-gradient(180deg, rgba(8, 11, 18, 0.12) 0%, rgba(8, 11, 18, 0.16) 56%, rgba(8, 11, 18, 0.76) 100%),
-    url("/landing-climate-field.webp");
-  background-size: cover;
-  background-position: center;
-  transform: scale(1.01);
-}
-
-.fupit-landing::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background-image:
-    linear-gradient(rgba(255, 255, 255, 0.035) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255, 255, 255, 0.035) 1px, transparent 1px);
-  background-size: 72px 72px;
-  -webkit-mask-image: linear-gradient(90deg, transparent 0%, black 18%, black 78%, transparent 100%);
-  mask-image: linear-gradient(90deg, transparent 0%, black 18%, black 78%, transparent 100%);
-  pointer-events: none;
-  opacity: 0.42;
-}
-
-.fupit-landing > * {
-  position: relative;
-  z-index: 1;
-}
-
-.fupit-landing-main {
-  flex: 1;
-  width: 100%;
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: clamp(44px, 8vh, 96px) 20px;
-  display: flex;
-  align-items: center;
-  justify-content: flex-start;
-}
-
-.fupit-landing-content {
-  max-width: 600px;
-  width: 100%;
-  text-align: left;
-}
-
-.fupit-landing-title {
-  font-size: clamp(2.55rem, 6vw, 4.8rem);
-  font-weight: 850;
-  line-height: 0.95;
-  margin-bottom: 16px;
-  letter-spacing: 0;
-}
-
-.fupit-landing-copy {
-  max-width: 560px;
-}
-
-@media (max-width: 760px) {
   .fupit-landing::before {
-    background-position: 62% center;
+    content: '';
+    position: absolute;
+    inset: 0;
     background-image:
-      linear-gradient(90deg, rgba(8, 11, 18, 0.88) 0%, rgba(8, 11, 18, 0.72) 56%, rgba(8, 11, 18, 0.55) 100%),
-      linear-gradient(180deg, rgba(8, 11, 18, 0.2) 0%, rgba(8, 11, 18, 0.34) 58%, rgba(8, 11, 18, 0.82) 100%),
-      url("/landing-climate-field.webp");
+      linear-gradient(
+        90deg,
+        rgba(8, 11, 18, 0.92) 0%,
+        rgba(8, 11, 18, 0.78) 38%,
+        rgba(8, 11, 18, 0.36) 72%,
+        rgba(8, 11, 18, 0.54) 100%
+      ),
+      linear-gradient(
+        180deg,
+        rgba(8, 11, 18, 0.12) 0%,
+        rgba(8, 11, 18, 0.16) 56%,
+        rgba(8, 11, 18, 0.76) 100%
+      ),
+      url('/landing-climate-field.webp');
+    background-size: cover;
+    background-position: center;
+    transform: scale(1.01);
+  }
+
+  .fupit-landing::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(255, 255, 255, 0.035) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255, 255, 255, 0.035) 1px, transparent 1px);
+    background-size: 72px 72px;
+    -webkit-mask-image: linear-gradient(
+      90deg,
+      transparent 0%,
+      black 18%,
+      black 78%,
+      transparent 100%
+    );
+    mask-image: linear-gradient(
+      90deg,
+      transparent 0%,
+      black 18%,
+      black 78%,
+      transparent 100%
+    );
+    pointer-events: none;
+    opacity: 0.42;
+  }
+
+  .fupit-landing > * {
+    position: relative;
+    z-index: 1;
   }
 
   .fupit-landing-main {
-    justify-content: center;
-    padding: 40px 20px 56px;
+    flex: 1;
+    width: 100%;
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: clamp(44px, 8vh, 96px) 20px;
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
   }
 
   .fupit-landing-content {
-    text-align: center;
+    max-width: 600px;
+    width: 100%;
+    text-align: left;
+  }
+
+  .fupit-landing-title {
+    font-size: clamp(2.55rem, 6vw, 4.8rem);
+    font-weight: 850;
+    line-height: 0.95;
+    margin-bottom: 16px;
+    letter-spacing: 0;
   }
 
   .fupit-landing-copy {
-    max-width: none;
-  }
-}
-
-@layer components {
-  .glass-card {
-    background: var(--glass-bg);
-    border: 1px solid var(--glass-border);
-    /* opaque panels per DESIGN.md §14 — glassmorphism blur intentionally removed */
+    max-width: 560px;
   }
 
-  .glass-card:hover {
-    background: var(--glass-hover);
+  @media (max-width: 760px) {
+    .fupit-landing::before {
+      background-position: 62% center;
+      background-image:
+        linear-gradient(
+          90deg,
+          rgba(8, 11, 18, 0.88) 0%,
+          rgba(8, 11, 18, 0.72) 56%,
+          rgba(8, 11, 18, 0.55) 100%
+        ),
+        linear-gradient(
+          180deg,
+          rgba(8, 11, 18, 0.2) 0%,
+          rgba(8, 11, 18, 0.34) 58%,
+          rgba(8, 11, 18, 0.82) 100%
+        ),
+        url('/landing-climate-field.webp');
+    }
+
+    .fupit-landing-main {
+      justify-content: center;
+      padding: 40px 20px 56px;
+    }
+
+    .fupit-landing-content {
+      text-align: center;
+    }
+
+    .fupit-landing-copy {
+      max-width: none;
+    }
   }
-
-  .stat-card {
-    @apply rounded-lg p-4 border transition-all duration-200;
-    background: var(--glass-bg);
-    border-color: var(--glass-border);
-  }
-
-  .stat-card:hover {
-    background: var(--glass-hover);
-    transform: translateY(-1px);
-  }
-
-  .section-card {
-    @apply rounded-2xl border overflow-hidden;
-    background: hsl(222, 47%, 12%);
-    border-color: hsl(217, 33%, 22%);
-  }
-
-  .section-header {
-    @apply px-6 py-4 border-b flex items-center gap-3;
-    border-color: hsl(217, 33%, 22%);
-    background: hsl(222, 47%, 10%);
-  }
-
-  .climate-blue {
-    color: var(--climate-blue);
-  }
-
-  .bg-climate-blue {
-    background-color: var(--climate-blue);
-  }
-
-  .climate-green {
-    color: var(--climate-green);
-  }
-
-  .bg-climate-green {
-    background-color: var(--climate-green);
-  }
-
-  .climate-red {
-    color: var(--climate-red);
-  }
-
-  .bg-climate-red {
-    background-color: var(--climate-red);
-  }
-
-  .climate-orange {
-    color: var(--climate-orange);
-  }
-
-  .bg-climate-orange {
-    background-color: var(--climate-orange);
-  }
-
-  .habitability-excellent { @apply text-emerald-400 bg-emerald-950 border-emerald-800; }
-  .habitability-fair { @apply text-yellow-400 bg-yellow-950 border-yellow-800; }
-  .habitability-poor { @apply text-orange-400 bg-orange-950 border-orange-800; }
-  .habitability-severe { @apply text-red-400 bg-red-950 border-red-800; }
-}
-
-@layer utilities {
-  .animate-pulse-slow {
-    animation: pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
-  }
-
-  .animate-fade-in {
-    animation: fadeIn 0.4s ease-out both;
-  }
-
-  .animate-slide-up {
-    animation: slideUp 0.4s ease-out both;
-  }
-
-  /* AC.VISUAL.1 (MIK-6779): .text-gradient, .hero-gradient, .glow-cyan and
-     .glow-cyan-sm were all leftover pre-"Ember Instrument" CSS -- unreferenced
-     anywhere in client/src -- carrying exactly the banned blue gradient
-     DESIGN.md says is gone ("the old blue CTA gradient (hsl(192...215)) is
-     gone"). Confirmed dead via `rg` before deleting rather than re-tinting
-     them to ember, since keeping unused rules around only invites the banned
-     hue to resurface the next time someone reaches for a class by name. */
 }
 
 @keyframes fadeIn {
