@@ -1,4 +1,6 @@
-import { Activity, AlertTriangle, BarChart3, BookOpen, Github } from "lucide-react";
+import { Activity, AlertTriangle, BarChart3, BookOpen } from "lucide-react";
+// lucide-react 1.0 removed brand logos.
+import { SiGithub } from "react-icons/si";
 
 /**
  * Grounded beta banner. Forecasts now come from the CMIP6/IPCC grid, but the
@@ -61,7 +63,7 @@ export default function PreviewBanner() {
           rel="noopener noreferrer"
           style={{ display: "inline-flex", alignItems: "center", gap: 5, color: "#fde68a", textDecoration: "underline", textUnderlineOffset: 3, fontWeight: 600 }}
         >
-          <Github size={14} aria-hidden />
+          <SiGithub size={14} aria-hidden />
           Source
         </a>
       </nav>
