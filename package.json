@@ -141,27 +141,27 @@
   },
   "devDependencies": {
     "@replit/vite-plugin-cartographer": "^0.6.1",
-    "@replit/vite-plugin-runtime-error-modal": "^0.0.3",
+    "@replit/vite-plugin-runtime-error-modal": "^0.0.6",
     "@tailwindcss/postcss": "^4.3.3",
     "@tailwindcss/typography": "^0.5.20",
     "@tailwindcss/vite": "^4.3.3",
     "@types/connect-pg-simple": "^7.0.3",
     "@types/express": "^5.0.6",
     "@types/express-session": "^1.19.0",
-    "@types/node": "20.16.11",
+    "@types/node": "^20.19.43",
     "@types/passport": "^1.0.17",
     "@types/passport-local": "^1.0.38",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
     "@types/ws": "^8.18.2",
-    "@vitejs/plugin-react": "^4.7.0",
+    "@vitejs/plugin-react": "^6.1.2",
     "drizzle-kit": "^0.31.11",
-    "esbuild": "^0.25.12",
+    "esbuild": "^0.28.2",
     "postcss": "^8.5.31",
     "tailwindcss": "^4.3.3",
     "tsx": "^4.23.15",
     "typescript": "5.6.3",
-    "vite": "^6.4.3"
+    "vite": "^8.3.5"
   },
   "optionalDependencies": {
     "bufferutil": "^4.0.8"
@@ -174,5 +174,8 @@
     "@tailwindcss/typography": {
       "postcss-selector-parser": "^7.1.6"
     }
+  },
+  "engines": {
+    "node": "^20.19.0 || >=22.12.0"
   }
 }
