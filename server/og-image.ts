@@ -216,6 +216,8 @@ function buildCard(params: OgParams): El {
       display: "flex",
       flexDirection: "column",
       justifyContent: "space-between",
+      // Explicit: newer satori sizes boxes as content-box, which pushes the footer off the card.
+      boxSizing: "border-box",
       width: OG_WIDTH,
       height: OG_HEIGHT,
       padding: 72,

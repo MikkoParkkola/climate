@@ -5,13 +5,8 @@
 // holds. No server, no DB — exercises the exact render path and nothing else.
 import assert from "node:assert";
 import { renderOgPng } from "../server/og-image";
+import { decodeRgba, inkIn, pngDims } from "./png-ink";
 
-function pngDims(buf: Uint8Array): { w: number; h: number } {
-  const sig = [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a];
-  for (let i = 0; i < 8; i++) assert.equal(buf[i], sig[i], "not a PNG (bad signature)");
-  const dv = new DataView(buf.buffer, buf.byteOffset, buf.byteLength);
-  return { w: dv.getUint32(16), h: dv.getUint32(20) }; // IHDR width/height
-}
 
 async function main(): Promise<void> {
   const withScore = await renderOgPng({ place: "Lisbon", lat: 38.72, lng: -9.14, year: 2075, score: 48, scenario: "ssp245" });
@@ -31,6 +26,18 @@ async function main(): Promise<void> {
     Buffer.from(noScore).toString("base64"),
     "card with a score must differ from the same card without one",
   );
+
+  // Layout: the bottom-right "fupit.com" footer must land inside the card. A box-sizing
+  // change in satori once pushed the whole footer row below the 630px canvas. A healthy
+  // footer measures 673 light pixels here and the broken layout 0; 400 also fails a
+  // half-clipped footer. (The chip row is not ink-checked: the broken layout slides the
+  // score digits into that region, so ink there rises instead of falling.)
+  const longHeadline = await renderOgPng({ place: "Llanfairpwllgwyngyllgogerychwyrndrobwllllantysiliogogogoch", year: 2050, scenario: "ssp585", score: 12 });
+  const cards = { withScore, noScore, default: noParams, longHeadline };
+  for (const [name, png] of Object.entries(cards)) {
+    const ink = inkIn(decodeRgba(png), 1000, 515, 1140, 560);
+    assert.ok(ink >= 400, `${name}: footer domain missing or clipped in the bottom-right of the card (${ink} light pixels)`);
+  }
 
   console.log(`smoke:og OK — withScore ${withScore.length}B / noScore ${noScore.length}B / default ${noParams.length}B; all 1200x630`);
 }
