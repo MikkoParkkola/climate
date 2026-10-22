@@ -25,8 +25,8 @@ export default defineConfig({
   },
   root: path.resolve(import.meta.dirname, "client"),
   build: {
-    // Vite 7 raised the default target to baseline-widely-available (Safari 16.4,
-    // Chrome 111). Keep the Vite 6 browser floor until dropping it is a product call.
+    // Vite 7+ defaults to baseline-widely-available (Safari 16.4 / Chrome 111 in
+    // Vite 8). Keep the Vite 6 browser floor until dropping it is a product call.
     target: ["es2020", "edge88", "firefox78", "chrome87", "safari14"],
     outDir: path.resolve(import.meta.dirname, "dist/public"),
     emptyOutDir: true,
