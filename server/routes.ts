@@ -976,7 +976,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (isDatabaseUnavailable(error)) return databaseUnavailable(res);
       console.error("Error creating location:", error);
       if (error instanceof z.ZodError) {
-        return res.status(400).json({ message: "Invalid location data", errors: error.errors });
+        return res.status(400).json({ message: "Invalid location data", errors: error.issues });
       }
       res.status(500).json({ message: "Failed to create location" });
     }
