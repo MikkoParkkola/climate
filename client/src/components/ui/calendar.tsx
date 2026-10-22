@@ -1,5 +1,5 @@
 import * as React from "react"
-import { ChevronLeft, ChevronRight } from "lucide-react"
+import { ChevronDown, ChevronLeft, ChevronRight, ChevronUp } from "lucide-react"
 import { DayPicker } from "react-day-picker"
 
 import { cn } from "@/lib/utils"
@@ -47,20 +47,18 @@ function Calendar({
           "selected [&>button]:bg-primary [&>button]:text-primary-foreground [&>button]:hover:bg-primary [&>button]:hover:text-primary-foreground [&>button]:focus:bg-primary [&>button]:focus:text-primary-foreground",
         today: "[&>button]:bg-accent [&>button]:text-accent-foreground",
         outside:
-          "outside text-muted-foreground aria-selected:bg-accent/50 aria-selected:text-muted-foreground",
+          "outside text-muted-foreground [&.selected>button]:bg-accent/50 [&.selected>button]:text-muted-foreground",
         disabled: "text-muted-foreground opacity-50",
         range_middle:
-          "aria-selected:bg-accent aria-selected:text-accent-foreground",
+          "[&.selected>button]:bg-accent [&.selected>button]:text-accent-foreground",
         hidden: "invisible",
         ...classNames,
       }}
       components={{
-        Chevron: ({ className, orientation }) =>
-          orientation === "left" ? (
-            <ChevronLeft className={cn("h-4 w-4", className)} />
-          ) : (
-            <ChevronRight className={cn("h-4 w-4", className)} />
-          ),
+        Chevron: ({ className, orientation, size, style }) => {
+          const Icon = { up: ChevronUp, down: ChevronDown, left: ChevronLeft, right: ChevronRight }[orientation ?? "left"]
+          return <Icon className={cn("h-4 w-4", className)} size={size} style={style} />
+        },
       }}
       {...props}
     />
